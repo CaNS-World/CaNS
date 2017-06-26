@@ -1,0 +1,57 @@
+  !--------------------------------------------------------------
+  ! velocity boundary contitions
+  !
+  ! P -> periodic, D -> Dirichlet, N -> Neumann
+    character(len=1), parameter, dimension(2,3,3) ::  cbcvel = &
+      reshape((/'D','N',   & ! u in x left,right bound
+                'P','P',   & ! u in y left,right bound
+                'D','D',   & ! u in z left,right bound
+                'N','N',   & ! v in x left,right bound
+                'P','P',   & ! v in y left,right bound
+                'D','D',   & ! v in z left,right bound
+                'N','N',   & ! w in x left,right bound
+                'P','P',   & ! w in y left,right bound
+                'D','D'/), & ! w in z left,right bound
+                shape(cbcvel))
+  ! values pertaining to the velocity BCs (arbitrary for 'P')
+      real(8)         , parameter, dimension(2,3,3) :: bcvel = &
+        reshape((/1.d0,0.d0,   & 
+                  0.d0,0.d0,   &
+                  0.d0,0.d0,   &
+                  0.d0,0.d0,   &
+                  0.d0,0.d0,   &
+                  0.d0,0.d0,   &
+                  0.d0,0.d0,   &
+                  0.d0,0.d0,   &
+                  0.d0,0.d0/), &
+                  shape(bcvel))
+  !-------------------------------------------------------------------
+  ! pressure (homogeneous) boundary contitions
+  !
+  ! bcpx/y = 'PP' -> Periodic  - Periodic
+  ! bcpx/y = 'NN' -> Neumann   - Neumann
+  ! bcpx/y = 'DD' -> Dirichlet - Dirichlet
+  ! bcpx/y = 'ND' -> Neumann   - Dirichlet
+  !
+  character(len=2), parameter, dimension(2) :: bcpxy = (/'ND','PP'/)
+  !
+  ! bcpz(k) =  1 -> Neumann   in the bottom (k=1) or top (k=2) wall
+  ! bcpz(:) =  0 -> Periodic
+  ! bcpz(k) = -1 -> Dirichlet in the bottom (k=1) or top (k=2) wall
+  !
+  integer, dimension(2) :: bcpz = 1*(/1,1/)
+  !-------------------------------------------------------------------
+  ! forcing the flow with a pressure gradient
+  ! that balances the total wall shear 
+  ! (e.g. for a pressure-driven channel)
+  !
+  logical, parameter :: forceinx = .false., &
+                        forceiny = .false., &
+                        forceinz = .false.
+  real(8), parameter :: velfx    = 0.d0, &
+                        velfy    = 0.d0, &
+                        velfz    = 0.d0
+  !
+  ! inflow/outflow directions
+  !
+  integer, parameter :: ioutflowdir = 1!, & ! 0 for no outflow

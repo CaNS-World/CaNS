@@ -1,0 +1,52 @@
+  !--------------------------------------------------------------
+  ! boundary conditions
+  ! P -> periodic, D -> Dirichlet, N -> Neumann
+  !--------------------------------------------------------------
+  ! velocity
+  !
+    character(len=1), parameter, dimension(2,3,3) ::  cbcvel = &
+      reshape((/'P','P',   & ! u in x lower,upper bound
+                'P','P',   & ! u in y lower,upper bound
+                'D','D',   & ! u in z lower,upper bound
+                'P','P',   & ! v in x lower,upper bound
+                'P','P',   & ! v in y lower,upper bound
+                'D','D',   & ! v in z lower,upper bound
+                'P','P',   & ! w in x lower,upper bound
+                'P','P',   & ! w in y lower,upper bound
+                'D','D'/), & ! w in z lower,upper bound
+                shape(cbcvel))
+  ! values pertaining to the velocity BCs (arbitrary for 'P')
+      real(8)         , parameter, dimension(2,3,3) :: bcvel = &
+        reshape((/0.d0,0.d0,   & 
+                  0.d0,0.d0,   &
+                  .5d0,-.5d0,   &
+                  0.d0,0.d0,   &
+                  0.d0,0.d0,   &
+                  0.d0,0.d0,   &
+                  0.d0,0.d0,   &
+                  0.d0,0.d0,   &
+                  0.d0,0.d0/), &
+                  shape(bcvel))
+  !-------------------------------------------------------------------
+  ! pressure (homogeneous)
+  !
+    character(len=1), parameter, dimension(2,3) ::  cbcpre = &
+      reshape((/'P','P',   & ! p in x lower,upper bound
+                'P','P',   & ! p in y lower,upper bound
+                'N','N'/), & ! p in z lower,upper bound
+                shape(cbcpre))
+  !-------------------------------------------------------------------
+  ! forcing the flow with a pressure gradient
+  ! that balances the total wall shear 
+  ! (e.g. for a pressure-driven channel)
+  !
+  logical, parameter :: forceinx = .false., &
+                        forceiny = .false., &
+                        forceinz = .false.
+  real(8), parameter :: velfx    = 0.d0, &
+                        velfy    = 0.d0, &
+                        velfz    = 0.d0
+  !
+  ! inflow/outflow directions
+  !
+  integer, parameter :: ioutflowdir = 0!, & ! 0 for no outflow
