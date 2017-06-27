@@ -7,7 +7,7 @@
  * Neumann-Dirichlet
  * Periodic
 
-In the third domain direction, the code is more flexible as it solves it with Gauss elimination, there the grid can also be non-uniform.
+In the third domain direction, the code is more flexible as it uses Gauss elimination. There the grid can also be non-uniform.
 
 **Update**
 
