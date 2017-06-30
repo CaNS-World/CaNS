@@ -7,7 +7,7 @@
  * Neumann-Dirichlet
  * Periodic
 
-In the third domain direction, the code is more flexible as it solves it with Gauss elimination, there the grid can also be non-uniform.
+In the third domain direction, the code is more flexible as it uses Gauss elimination. There the grid can also be non-uniform.
 
 **Update**
 
@@ -43,9 +43,9 @@ The fluid flow is solved with a second-order finite-volume pressure correction s
 
 ### Input files
 
-The input (header) files inside the `src/` folder, `setup.h90` and `bc.h90` setup a case. `setup.h90` sets most of the physical and computational parameters, and `bc.h90` the boundary conditions for the Pressure and velocity fields, together with some options for forcing the flow and inflow/outflow boundary conditions. The comments in these files make them self-explanatory.
+The input (header) files inside the `src/` folder, `setup.h90` and `bc.h90` setup a case. `setup.h90` sets most of the physical and computational parameters, and `bc.h90` the boundary conditions for the Pressure and velocity fields, together with some options for forcing the flow and inflow/outflow conditions. The comments in these files make them self-explanatory.
 
-In the `examples/` folder we provide examples of these files for several canonical flows.
+In the `examples/` folder are examples of these files for several canonical flows.
 
 ### Compilation
 
@@ -67,11 +67,11 @@ The Makefile should be modified in agreement to the installation paths of each l
 
 ### Running the code
 
-Run the executable with `mpirun` with a number of tasks and shared threads complying with what has been set in the input file `setup.h90`.
+Run the executable with `mpirun` with a number of tasks and shared threads complying to what has been set in the input file `setup.h90`.
 
 ### Notes
 
-This is the first open-source release of this tool. **I appreciate any feedback that can improve it.** Also, you are encouraged to send case files pertaining to flows not listed in the examples folder, and I will add it. Comments/suggestions can be sent to p.simoes.costa@gmail.com.
+This is the first open-source release of this tool. **I appreciate any feedback that can improve it.** Also, you are encouraged to send case files pertaining to flows not listed in the examples folder. Comments/suggestions can be sent to p.simoes.costa@gmail.com.
 
 Please read the `ACKNOWLEDGEMENTS` and `LICENSE` files.
 
