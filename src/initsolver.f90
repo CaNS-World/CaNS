@@ -33,9 +33,9 @@ module mod_initsolver
     !
     ng(:) = n(:)
     ng(1:2) = ng(1:2)*dims(1:2)
-    call eigenvalues(ng(1),bc(:,1),lambdax)
+    call eigenvalues(ng(1),bc(:,1),c_or_f(1),lambdax)
     lambdax(:) = lambdax(:)*dli(1)**2.
-    call eigenvalues(ng(2),bc(:,2),lambday)
+    call eigenvalues(ng(2),bc(:,2),c_or_f(2),lambday)
     lambday(:) = lambday(:)*dli(2)**2.
     do j=1,n(2)
       jj = coord(2)*n(2)+j
@@ -55,10 +55,11 @@ module mod_initsolver
     return
   end subroutine initsolver
   !
-  subroutine eigenvalues(n,bc,lambda)
+  subroutine eigenvalues(n,bc,c_or_f,lambda)
     implicit none
     integer, intent(in ) :: n
     character(len=1), intent(in), dimension(2) :: bc
+    character(len=1), intent(in) :: c_or_f ! c -> cell-centered; f-face-centered
     real(8), intent(out), dimension(n) :: lambda
     integer :: l 
     select case(bc(1)//bc(2))
@@ -72,13 +73,25 @@ module mod_initsolver
         l = n/2+1
         lambda(l)    = -4.*sin((1.*(l-1))*pi/(1.*n))**2
       case('NN')
-        do l=1,n
-          lambda(l)   = -4.*sin((1.*(l-1))*pi/(2.*n))**2
-        enddo
+        if(    c_or_f.eq.'c') then
+          do l=1,n
+            lambda(l)   = -4.*sin((1.*(l-1))*pi/(2.*n))**2
+          enddo
+        elseif(c_or_f.eq.'f') then
+          do l=1,n
+            lambda(l)   = -4.*sin((1.*(l-1))*pi/(2.*(n-1)))**2
+          enddo
+        endif
       case('DD')
-        do l=1,n
-          lambda(l)   = -4.*sin((1.*(l-0))*pi/(2.*n))**2
-        enddo
+        if(    c_or_f.eq.'c') then
+          do l=1,n
+            lambda(l)   = -4.*sin((1.*(l-0))*pi/(2.*n))**2
+          enddo
+        elseif(c_or_f.eq.'f') then
+          do l=1,n
+            lambda(l)   = -4.*sin((1.*(l-0))*pi/(2.*(n+1)))**2
+          enddo
+        endif
       case('ND')
         do l=1,n
           lambda(l)   = -4.*sin((1.*(2*l-1))*pi/(4.*n))**2
