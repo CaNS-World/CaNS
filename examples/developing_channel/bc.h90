@@ -1,17 +1,19 @@
   !--------------------------------------------------------------
-  ! velocity boundary contitions
-  !
+  ! boundary conditions
   ! P -> periodic, D -> Dirichlet, N -> Neumann
+  !--------------------------------------------------------------
+  ! velocity
+  !
     character(len=1), parameter, dimension(2,3,3) ::  cbcvel = &
-      reshape((/'D','N',   & ! u in x left,right bound
-                'P','P',   & ! u in y left,right bound
-                'D','D',   & ! u in z left,right bound
-                'N','N',   & ! v in x left,right bound
-                'P','P',   & ! v in y left,right bound
-                'D','D',   & ! v in z left,right bound
-                'N','N',   & ! w in x left,right bound
-                'P','P',   & ! w in y left,right bound
-                'D','D'/), & ! w in z left,right bound
+      reshape((/'D','N',   & ! u in x lower,upper bound
+                'P','P',   & ! u in y lower,upper bound
+                'D','D',   & ! u in z lower,upper bound
+                'N','N',   & ! v in x lower,upper bound
+                'P','P',   & ! v in y lower,upper bound
+                'D','D',   & ! v in z lower,upper bound
+                'N','N',   & ! w in x lower,upper bound
+                'P','P',   & ! w in y lower,upper bound
+                'D','D'/), & ! w in z lower,upper bound
                 shape(cbcvel))
   ! values pertaining to the velocity BCs (arbitrary for 'P')
       real(8)         , parameter, dimension(2,3,3) :: bcvel = &
@@ -26,20 +28,13 @@
                   0.d0,0.d0/), &
                   shape(bcvel))
   !-------------------------------------------------------------------
-  ! pressure (homogeneous) boundary contitions
+  ! pressure (homogeneous)
   !
-  ! bcpx/y = 'PP' -> Periodic  - Periodic
-  ! bcpx/y = 'NN' -> Neumann   - Neumann
-  ! bcpx/y = 'DD' -> Dirichlet - Dirichlet
-  ! bcpx/y = 'ND' -> Neumann   - Dirichlet
-  !
-  character(len=2), parameter, dimension(2) :: bcpxy = (/'ND','PP'/)
-  !
-  ! bcpz(k) =  1 -> Neumann   in the bottom (k=1) or top (k=2) wall
-  ! bcpz(:) =  0 -> Periodic
-  ! bcpz(k) = -1 -> Dirichlet in the bottom (k=1) or top (k=2) wall
-  !
-  integer, dimension(2) :: bcpz = 1*(/1,1/)
+    character(len=1), parameter, dimension(2,3) ::  cbcpre = &
+      reshape((/'N','D',   & ! p in x lower,upper bound
+                'P','P',   & ! p in y lower,upper bound
+                'N','N'/), & ! p in z lower,upper bound
+                shape(cbcpre))
   !-------------------------------------------------------------------
   ! forcing the flow with a pressure gradient
   ! that balances the total wall shear 
@@ -48,10 +43,21 @@
   logical, parameter :: forceinx = .false., &
                         forceiny = .false., &
                         forceinz = .false.
+  !
+  ! desired values of bulk velocities 
+  ! (only relevant if the corresponding boolean
+  !  above is .true.)
+  !
   real(8), parameter :: velfx    = 0.d0, &
                         velfy    = 0.d0, &
                         velfz    = 0.d0
   !
   ! inflow/outflow directions
-  !
-  integer, parameter :: ioutflowdir = 1!, & ! 0 for no outflow
+  ! ioutflowdir is the domain direction for which
+  ! an inflow/outflow combination of BCs are prescribed. That is:
+  ! -> streamwise velocity BC upstream   -- D
+  ! -> streamwise velocity BC downstream -- obtained from continuity
+  ! -> pressure            BC upstream   -- N
+  ! -> pressure            BC downstream -- Homogeneous D
+  ! ioutflowdir = 0 for no inflow/outflow BCs
+  integer, parameter :: ioutflowdir = 1

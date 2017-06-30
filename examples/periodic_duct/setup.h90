@@ -22,7 +22,7 @@
    !      = 'log' --> logarithmic profile + noise           (u->streamwise velocity)
    !      = 'hcl' --> half channel with log profile + noise (u->streamwise velocity)
    !      = 'hcp' --> half channel with poiseuille profile  (u->streamwise velocity)
-   character(len=3), parameter :: inivel = 'zer'
+   character(len=3), parameter :: inivel = 'log'
    !
    integer, parameter :: nstep = 100000      ! number of time steps
    logical, parameter :: restart = .false. ! .true. -> restart from a checkpoint
