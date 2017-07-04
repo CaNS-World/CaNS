@@ -1,0 +1,38 @@
+   ! total number of points in x,y and z
+   integer, parameter :: itot = 64, jtot = 64, ktot = 64
+   ! domain length in x,y and z
+   real(8), parameter :: lx =3.d0, ly = 1.5d0, lz = 1.d0
+   real(8), parameter :: dx = lx/(1.d0*itot), & ! grid parameters
+                         dy = ly/(1.d0*jtot), &
+                         dz = lz/(1.d0*ktot), &
+                         dxi    = dx**(-1),   &
+                         dyi    = dy**(-1),   &
+                         dzi    = dz**(-1),   &
+                         dzmin  = dz      ,   &
+                         gr     = 1.d0! bottom-to-top grid size ratio 
+   real(8), parameter :: cfl = .05d0
+   real(8), parameter :: rey = 1000.d0, uref = 1.d0, lref = lz/2.d0, visc = uref*(2.d0*lref)/rey
+   !
+   include 'bc.h90' ! boundary conditions file
+   !
+   ! type of initial velocity field (see init.f90)
+   ! iniu = 'cou' --> plane Couette flow                    (u->streamwise velocity)
+   !      = 'poi' --> plane Poiseuille flow                 (u->streamwise velocity)
+   !      = 'zer' --> zero velocity everywhere
+   !      = 'log' --> logarithmic profile + noise           (u->streamwise velocity)
+   !      = 'hcl' --> half channel with log profile + noise (u->streamwise velocity)
+   !      = 'hcp' --> half channel with poiseuille profile  (u->streamwise velocity)
+   character(len=3), parameter :: inivel = 'zer'
+   !
+   integer, parameter :: nstep = 100000      ! number of time steps
+   logical, parameter :: restart = .false. ! .true. -> restart from a checkpoint
+   integer, parameter :: icheck =  20, iout0d =   10, iout1d =   20, &
+                         iout2d = 500, iout3d = 1000, isave  = 2000
+   !
+   ! grid of computational subdomains
+   integer, parameter, dimension(2) :: dims = (/2,2/)
+   ! x and y sizes of local arrays in the basic 2D z-pencil decomposition
+   integer, parameter :: imax = itot/dims(1), jmax = jtot/dims(2)
+   !
+   ! number of OpenMP threads
+   integer, parameter :: nthreadsmax = 4
