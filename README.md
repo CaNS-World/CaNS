@@ -27,7 +27,6 @@ Some examples of flows that this code can solve are:
 
  * periodic or developping channel
  * periodic or developping square duct
- * 'closed box'
  * tri-periodic domain
  * lid-driven cavity
 
