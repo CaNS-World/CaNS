@@ -68,7 +68,7 @@ The Makefile should be modified in agreement to the installation paths of each l
 
 Run the executable with `mpirun` with a number of tasks and shared threads complying to what has been set in the input file `setup.h90`.
 
-### Notes
+## Notes
 
 This is the first open-source release of this tool. **I appreciate any feedback that can improve it.** Also, you are encouraged to send case files pertaining to flows not listed in the examples folder. Comments/suggestions can be sent to p.simoes.costa@gmail.com.
 
