@@ -291,7 +291,7 @@ module mod_bound
           i = 0.
           do k=1,n(3)
             do j=1,n(2)
-              u(i,j,k) = vel2d(j,j)
+              u(i,j,k) = vel2d(j,k)
             enddo
           enddo 
         endif
