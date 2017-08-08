@@ -288,7 +288,7 @@ module mod_bound
     select case(idir)
       case(1) ! x direction
         if(left.eq.MPI_PROC_NULL) then
-          i = 0.
+          i = 0
           do k=1,n(3)
             do j=1,n(2)
               u(i,j,k) = vel2d(j,k)
@@ -296,7 +296,7 @@ module mod_bound
           enddo 
         endif
       case(2) ! y direction
-        j = 0.
+        j = 0
         if(front.eq.MPI_PROC_NULL) then
           do k=1,n(3)
             do i=1,n(1)
@@ -305,7 +305,7 @@ module mod_bound
           enddo 
         endif
       case(3) ! z direction
-        k = 0.
+        k = 0
         do j=1,n(2)
           do i=1,n(1)
             w(i,j,k) = vel2d(i,j)
