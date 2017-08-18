@@ -19,7 +19,7 @@
 ! CaNS -- Canonical Navier-Stokes Solver
 ! Pedro Costa (p.simoes.costa@gmail.com)
 !-------------------------------------------------------------------------------------
-program fhs
+program cans
   use iso_c_binding  , only: C_PTR
   use mpi
   use decomp_2d
@@ -285,4 +285,4 @@ program fhs
   call decomp_2d_finalize
   call MPI_FINALIZE(ierr)
   call exit
-end program fhs
+end program cans
