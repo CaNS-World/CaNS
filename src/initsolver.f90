@@ -24,7 +24,7 @@ module mod_initsolver
     integer, dimension(3) :: ng
     integer :: ii,jj
     !
-    ! generating eigenvalues for a bi-periodic configuration
+    ! generating eigenvalues consistent with the BCs
     !
     ! note, for periodic this is redundant and the tri-diagonal solver could be optimized, lets leave this for later
     ! call eigenvalues(bctype)
