@@ -1,5 +1,5 @@
 # fortran compiler
-FC   = mpif90
+FC   = mpif90-openmpi-mp
 #
 BIG := # -mcmodel=medium
 DBG := # -g -fbacktrace -Wall -O0 -Wextra -pedantic -fcheck=all
@@ -12,7 +12,7 @@ FFLAGS := -cpp $(OPT) $(BIG) $(DBG) $(PROF) $(OMP) $(OTH)
 #
 TARGET = cans
 #
-OBJ = bound.o chkdiv.o chkdt.o common_mpi.o correc.o debug.o fillps.o fft.o fftw.o initflow.o initgrid.o initmpi.o initsolver.o load.o main.o mom.o momd.o output.o param.o rk.o solver.o decomp_2d.o io.o
+OBJ = bound.o chkdiv.o chkdt.o common_mpi.o correc.o debug.o fft.o fftw.o fillps.o initflow.o initgrid.o initmpi.o initsolver.o load.o main.o mom.o momd.o output.o param.o rk.o solver.o decomp_2d.o io.o
 #
 LIBS = -lfftw3 -lm -lfftw3_threads -llapack -lblas
 #
@@ -53,7 +53,7 @@ initsolver.o: initsolver.f90 param.o
 	$(FC) $(FFLAGS) -c  initsolver.f90 
 load.o: load.f90 common_mpi.o decomp_2d.o io.o
 	$(FC) $(FFLAGS) -c  load.f90 
-main.o: main.f90 debug.o fft.o initgrid.o initflow.o initmpi.o output.o param.o rk.o solver.o
+main.o: main.f90 bound.o chkdiv.o chkdt.o debug.o fft.o fillps.o initflow.o initflow.o initgrid.o initmpi.o initsolver.o load.o output.o param.o rk.o solver.o
 	$(FC) $(FFLAGS) -c  main.f90
 mom.o: mom.f90
 	$(FC) $(FFLAGS) -c  mom.f90
