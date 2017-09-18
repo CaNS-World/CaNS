@@ -18,10 +18,10 @@ module mod_chkdt
     real(8) :: dtix,dtiy,dtiz,dti,dlmin
     integer :: i,j,k
     !
-    dti = 0.
-    dxi = 1./dl(1)
-    dyi = 1./dl(2)
-    dzi = 1./dl(3)
+    dti = 0.d0
+    dxi = 1.d0/dl(1)
+    dyi = 1.d0/dl(2)
+    dzi = 1.d0/dl(3)
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP  SHARED(n,u,v,w,dxi,dyi,dzi,dzci,dzfi) &
     !$OMP  PRIVATE(i,j,k,ux,uy,uz,vx,vy,vz,wx,wy,wz,dtix,dtiy,dtiz) &
@@ -47,7 +47,7 @@ module mod_chkdt
     enddo
     !$OMP END PARALLEL DO
     call mpi_allreduce(MPI_IN_PLACE,dti,1,MPI_REAL8,MPI_MAX,MPI_COMM_WORLD,ierr)
-    if(dti.eq.0.d0) dti = 1.
+    if(dti.eq.0.d0) dti = 1.d0
     dlmin     = minval(dl)
 #ifdef IMPDIFF
     dtmax = sqrt(3.d0)/dti
