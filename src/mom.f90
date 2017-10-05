@@ -265,15 +265,15 @@ module mod_mom
     !$OMP PRIVATE(i,j,k,jp) &
     !$OMP SHARED(nx,ny,nz,dyi,p,dvdt)
     do k=1,nz
-       do j=1,ny
-          jp = j + 1
-          do i=1,nx
-             !
-             ! Momentum balance
-             !
-             dvdt(i,j,k) = - dyi*( p(i,jp,k)-p(i,j,k) )
-          enddo
-       enddo
+      do j=1,ny
+        jp = j + 1
+        do i=1,nx
+           !
+           ! Momentum balance
+           !
+           dvdt(i,j,k) = - dyi*( p(i,jp,k)-p(i,j,k) )
+        enddo
+      enddo
     enddo
     !$OMP END PARALLEL DO
     return
@@ -292,15 +292,15 @@ module mod_mom
     !$OMP PRIVATE(i,j,k,kp) &
     !$OMP SHARED(nx,ny,nz,p,dwdt,dzci)
     do k=1,nz
-       kp = k + 1
-       do j=1,ny
-          do i=1,nx
-             !
-             ! Momentum balance
-             !
-             dwdt(i,j,k) = - dzci(k)*( p(i,j,kp)-p(i,j,k) )
-          enddo
-       enddo
+      kp = k + 1
+      do j=1,ny
+        do i=1,nx
+          !
+          ! Momentum balance
+          !
+          dwdt(i,j,k) = - dzci(k)*( p(i,j,kp)-p(i,j,k) )
+        enddo
+      enddo
     enddo
     !$OMP END PARALLEL DO
     return
