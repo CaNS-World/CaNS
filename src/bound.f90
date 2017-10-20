@@ -130,12 +130,12 @@ module mod_bound
     !
     factor = rvalue
     if(ctype.eq.'D'.and..not.iface) then
-      factor = 2.*factor
-      sgn    = -1.
+      factor = 2.d0*factor
+      sgn    = -1.d0
     endif
     if(ctype.eq.'N'.and..not.iface) then
       factor = dr*factor
-      sgn    = 1.
+      sgn    = 1.d0
     endif
     !
     select case(ctype)
