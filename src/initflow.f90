@@ -25,28 +25,28 @@ module mod_initflow
     ismean  = .false.
     q = .5d0
     select case(inivel)
-      case('cou')
-        call couette(   q,n(3),zclzi,norm,u1d)
-      case('poi')
-        call poiseuille(q,n(3),zclzi,norm,u1d)
-        ismean=.true.
-      case('zer')
-        u1d(:) = 0.
-      case('log')
-        call log_profile(q,n(3),zclzi,visc,u1d)
-        isnoise = .true.
-        ismean = .true.
-      case('hcl')
-        deallocate(u1d)
-        allocate(u1d(2*n(3)))
-        call log_profile(q,2*n(3),zclzi,visc,u1d)
-        isnoise = .true.
-        ismean=.true.
-      case('hcp')
-        deallocate(u1d)
-        allocate(u1d(2*n(3)))
-        call poiseuille(q,2*n(3),zclzi,norm,u1d)
-        ismean = .true.
+    case('cou')
+      call couette(   q,n(3),zclzi,norm,u1d)
+    case('poi')
+      call poiseuille(q,n(3),zclzi,norm,u1d)
+      ismean=.true.
+    case('zer')
+      u1d(:) = 0.
+    case('log')
+      call log_profile(q,n(3),zclzi,visc,u1d)
+      isnoise = .true.
+      ismean = .true.
+    case('hcl')
+      deallocate(u1d)
+      allocate(u1d(2*n(3)))
+      call log_profile(q,2*n(3),zclzi,visc,u1d)
+      isnoise = .true.
+      ismean=.true.
+    case('hcp')
+      deallocate(u1d)
+      allocate(u1d(2*n(3)))
+      call poiseuille(q,2*n(3),zclzi,norm,u1d)
+      ismean = .true.
     end select
     do k=1,n(3)
       do j=1,n(2)

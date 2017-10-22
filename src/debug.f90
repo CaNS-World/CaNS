@@ -41,45 +41,45 @@ module mod_debug
     real(8) :: val
     integer :: i,j,k,im,ip,jm,jp,km,kp
     select case(c_or_f)
-      case('c')
-        do k=1,n(3)
-          kp = k + 1
-          km = k - 1
-          do j=1,n(2)
-            jp = j + 1
-            jm = j - 1
-            do i=1,n(1)
-              ip = i + 1
-              im = i - 1
-              val =  upp(i,j,k)+(1./alpha)*( &
-                    (upp(ip,j,k)-2.*upp(i,j,k)+upp(im,j,k))*(dxi**2) + &
-                    (upp(i,jp,k)-2.*upp(i,j,k)+upp(i,jm,k))*(dyi**2) + &
-                   ((upp(i,j,kp)-upp(i,j,k))*dzci(k) - &
-                    (upp(i,j,k )-upp(i,j,km))*dzci(km))*dzfi(k) )
-              if(abs(val-up(i,j,k)).gt.1.e-12) print*, 'Large difference : ', val-up(i,j,k),i,j,k
-            enddo
+    case('c')
+      do k=1,n(3)
+        kp = k + 1
+        km = k - 1
+        do j=1,n(2)
+          jp = j + 1
+          jm = j - 1
+          do i=1,n(1)
+            ip = i + 1
+            im = i - 1
+            val =  upp(i,j,k)+(1./alpha)*( &
+                  (upp(ip,j,k)-2.*upp(i,j,k)+upp(im,j,k))*(dxi**2) + &
+                  (upp(i,jp,k)-2.*upp(i,j,k)+upp(i,jm,k))*(dyi**2) + &
+                 ((upp(i,j,kp)-upp(i,j,k))*dzci(k) - &
+                  (upp(i,j,k )-upp(i,j,km))*dzci(km))*dzfi(k) )
+            if(abs(val-up(i,j,k)).gt.1.e-12) print*, 'Large difference : ', val-up(i,j,k),i,j,k
           enddo
         enddo
-      case('f')
-        do k=1,n(3)-1
-          kp = k + 1
-          km = k - 1
-          do j=1,n(2)
-            jp = j + 1
-            jm = j - 1
-            do i=1,n(1)
-              ip = i + 1
-              im = i - 1
-              val =  upp(i,j,k)+(1./alpha)*( &
-                    (upp(ip,j,k)-2.*upp(i,j,k)+upp(im,j,k))*(dxi**2) + &
-                    (upp(i,jp,k)-2.*upp(i,j,k)+upp(i,jm,k))*(dyi**2) + &
-                   ((upp(i,j,kp)-upp(i,j,k))*dzfi(kp) - &
-                    (upp(i,j,k )-upp(i,j,km))*dzfi(k))*dzci(k) )
-              if(abs(val-up(i,j,k)).gt.1.e-12) print*, 'Large difference : ', val-up(i,j,k),i,j,k
-            enddo
+      enddo
+    case('f')
+      do k=1,n(3)-1
+        kp = k + 1
+        km = k - 1
+        do j=1,n(2)
+          jp = j + 1
+          jm = j - 1
+          do i=1,n(1)
+            ip = i + 1
+            im = i - 1
+            val =  upp(i,j,k)+(1./alpha)*( &
+                  (upp(ip,j,k)-2.*upp(i,j,k)+upp(im,j,k))*(dxi**2) + &
+                  (upp(i,jp,k)-2.*upp(i,j,k)+upp(i,jm,k))*(dyi**2) + &
+                 ((upp(i,j,kp)-upp(i,j,k))*dzfi(kp) - &
+                  (upp(i,j,k )-upp(i,j,km))*dzfi(k))*dzci(k) )
+            if(abs(val-up(i,j,k)).gt.1.e-12) print*, 'Large difference : ', val-up(i,j,k),i,j,k
           enddo
         enddo
-      end select
+      enddo
+    end select
     return
   end subroutine chkhelmholtz
 end module mod_debug

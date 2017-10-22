@@ -18,31 +18,31 @@ module mod_load
     integer :: fh
     integer(kind=MPI_OFFSET_KIND) :: filesize,disp
     select case(io)
-      case('r')
-        call MPI_FILE_OPEN(MPI_COMM_WORLD, filename                 , &
-             MPI_MODE_RDONLY, MPI_INFO_NULL,fh, ierr)
-        disp = 0_MPI_OFFSET_KIND
-        call decomp_2d_read_var(fh,disp,3,u)
-        call decomp_2d_read_var(fh,disp,3,v)
-        call decomp_2d_read_var(fh,disp,3,w)
-        call decomp_2d_read_var(fh,disp,3,p)
-        call decomp_2d_read_scalar(fh,disp,2,fldinfo)
-        call MPI_FILE_CLOSE(fh,ierr)
-        time  = fldinfo(1)
-        istep = fldinfo(2)
-      case('w')
-        fldinfo = (/time,istep/)
-        call MPI_FILE_OPEN(MPI_COMM_WORLD, filename                 , &
-             MPI_MODE_CREATE+MPI_MODE_WRONLY, MPI_INFO_NULL,fh, ierr)
-        filesize = 0_MPI_OFFSET_KIND
-        call MPI_FILE_SET_SIZE(fh,filesize,ierr)  ! guarantee overwriting
-        disp = 0_MPI_OFFSET_KIND
-        call decomp_2d_write_var(fh,disp,3,u)
-        call decomp_2d_write_var(fh,disp,3,v)
-        call decomp_2d_write_var(fh,disp,3,w)
-        call decomp_2d_write_var(fh,disp,3,p)
-        call decomp_2d_write_scalar(fh,disp,2,fldinfo)
-        call MPI_FILE_CLOSE(fh,ierr)
+    case('r')
+      call MPI_FILE_OPEN(MPI_COMM_WORLD, filename                 , &
+           MPI_MODE_RDONLY, MPI_INFO_NULL,fh, ierr)
+      disp = 0_MPI_OFFSET_KIND
+      call decomp_2d_read_var(fh,disp,3,u)
+      call decomp_2d_read_var(fh,disp,3,v)
+      call decomp_2d_read_var(fh,disp,3,w)
+      call decomp_2d_read_var(fh,disp,3,p)
+      call decomp_2d_read_scalar(fh,disp,2,fldinfo)
+      call MPI_FILE_CLOSE(fh,ierr)
+      time  = fldinfo(1)
+      istep = fldinfo(2)
+    case('w')
+      fldinfo = (/time,istep/)
+      call MPI_FILE_OPEN(MPI_COMM_WORLD, filename                 , &
+           MPI_MODE_CREATE+MPI_MODE_WRONLY, MPI_INFO_NULL,fh, ierr)
+      filesize = 0_MPI_OFFSET_KIND
+      call MPI_FILE_SET_SIZE(fh,filesize,ierr)  ! guarantee overwriting
+      disp = 0_MPI_OFFSET_KIND
+      call decomp_2d_write_var(fh,disp,3,u)
+      call decomp_2d_write_var(fh,disp,3,v)
+      call decomp_2d_write_var(fh,disp,3,w)
+      call decomp_2d_write_var(fh,disp,3,p)
+      call decomp_2d_write_scalar(fh,disp,2,fldinfo)
+      call MPI_FILE_CLOSE(fh,ierr)
     end select
     return
   end subroutine load

@@ -62,59 +62,59 @@ module mod_bound
     call updthalo((/n(1),n(2)/),2,p)
     if(left .eq.MPI_PROC_NULL) then
       select case(cbc(1,1))
-        !case('P')
-        !  p(0     ,:,:) =  p(n(1),:,:)
-        case('N')
-          p(0     ,:,:) =  p(1   ,:,:)
-        case('D')
-          p(0     ,:,:) = -p(1   ,:,:)
+      !case('P')
+      !  p(0     ,:,:) =  p(n(1),:,:)
+      case('N')
+        p(0     ,:,:) =  p(1   ,:,:)
+      case('D')
+        p(0     ,:,:) = -p(1   ,:,:)
       end select
     endif
     if(right.eq.MPI_PROC_NULL) then
       select case(cbc(2,1))
-        !case('PP')
-        !  p(n(1)+1,:,:) =  p(1   ,:,:)
-        case('N')
-          p(n(1)+1,:,:) =  p(n(1),:,:)
-        case('D')
-          p(n(1)+1,:,:) = -p(n(1),:,:)
+      !case('PP')
+      !  p(n(1)+1,:,:) =  p(1   ,:,:)
+      case('N')
+        p(n(1)+1,:,:) =  p(n(1),:,:)
+      case('D')
+        p(n(1)+1,:,:) = -p(n(1),:,:)
       end select
     endif
     if(front.eq.MPI_PROC_NULL) then
       select case(cbc(1,2))
-        !case('P')
-        !   p(:,0     ,:) =  p(:,n(2),:)
-        case('N')
-          p(:,0     ,:) =  p(:,1   ,:)
-        case('D')
-          p(:,0     ,:) = -p(:,1   ,:)
+      !case('P')
+      !   p(:,0     ,:) =  p(:,n(2),:)
+      case('N')
+        p(:,0     ,:) =  p(:,1   ,:)
+      case('D')
+        p(:,0     ,:) = -p(:,1   ,:)
       end select
     endif
     if(back .eq.MPI_PROC_NULL) then
       select case(cbc(2,2))
-        !case('P')
-        !  p(:,n(2)+1,:) =  p(:,1   ,:)
-        case('N')
-          p(:,n(2)+1,:) =  p(:,n(2),:)
-        case('D')
-          p(:,n(2)+1,:) = -p(:,n(2),:)
+      !case('P')
+      !  p(:,n(2)+1,:) =  p(:,1   ,:)
+      case('N')
+        p(:,n(2)+1,:) =  p(:,n(2),:)
+      case('D')
+        p(:,n(2)+1,:) = -p(:,n(2),:)
       end select
     endif
     select case(cbc(1,3))
-      case('P')
-        p(:,:,0) = p(:,:,n(3))
-      case('N')
-        p(:,:,0) =  p(:,:,1)
-      case('D')
-        p(:,:,0) = -p(:,:,1)
+    case('P')
+      p(:,:,0) = p(:,:,n(3))
+    case('N')
+      p(:,:,0) =  p(:,:,1)
+    case('D')
+      p(:,:,0) = -p(:,:,1)
     end select
     select case(cbc(2,3))
-      case('P')
-        p(:,:,n(3)+1) = p(:,:,1   )
-      case('N')
-        p(:,:,n(3)+1) =  p(:,:,n(3))
-      case('D')
-        p(:,:,n(3)+1) = -p(:,:,n(3))
+    case('P')
+      p(:,:,n(3)+1) = p(:,:,1   )
+    case('N')
+      p(:,:,n(3)+1) =  p(:,:,n(3))
+    case('D')
+      p(:,:,n(3)+1) = -p(:,:,n(3))
     end select
     return
   end subroutine boundp
@@ -139,85 +139,83 @@ module mod_bound
     endif
     !
     select case(ctype)
-      case('P')
+    case('P')
+      select case(idir)
+      case(1)
+        p(0  ,:,:) = p(n,:,:)
+        p(n+1,:,:) = p(1,:,:)
+      case(2)
+        p(:,0  ,:) = p(:,n,:)
+        p(:,n+1,:) = p(:,1,:)
+      case(3)
+        p(:,:,0  ) = p(:,:,n)
+        p(:,:,n+1) = p(:,:,1)
+      end select
+    case('D','N')
+      if(iface.and.ctype.eq.'D') then
         select case(idir)
-          case(1)
-            p(0  ,:,:) = p(n,:,:)
-            p(n+1,:,:) = p(1,:,:)
-          case(2)
-            p(:,0  ,:) = p(:,n,:)
-            p(:,n+1,:) = p(:,1,:)
-          case(3)
-            p(:,:,0  ) = p(:,:,n)
-            p(:,:,n+1) = p(:,:,1)
+        case(1)
+          if    (ibound.eq.0) then
+            p(0,:,:) = factor 
+          elseif(ibound.eq.1) then
+            p(n,:,:) = factor
+          endif
+        case(2)
+          if    (ibound.eq.0) then
+            p(:,0,:) = factor 
+          elseif(ibound.eq.1) then
+            p(:,n,:) = factor
+          endif
+        case(3)
+          if    (ibound.eq.0) then
+            p(:,:,0) = factor 
+          elseif(ibound.eq.1) then
+            p(:,:,n) = factor
+          endif
         end select
-      ! end case('P')
-      case('D','N')
-        if(iface.and.ctype.eq.'D') then
-          select case(idir)
-            case(1)
-              if    (ibound.eq.0) then
-                p(0,:,:) = factor 
-              elseif(ibound.eq.1) then
-                p(n,:,:) = factor
-              endif
-            case(2)
-              if    (ibound.eq.0) then
-                p(:,0,:) = factor 
-              elseif(ibound.eq.1) then
-                p(:,n,:) = factor
-              endif
-            case(3)
-              if    (ibound.eq.0) then
-                p(:,:,0) = factor 
-              elseif(ibound.eq.1) then
-                p(:,:,n) = factor
-              endif
-          end select
-        elseif(iface.and.ctype.eq.'N') then
-          select case(idir)
-            case(1)
-              if    (ibound.eq.0) then
-                p(0,  :,:) = factor + p(2  ,:,:) 
-              elseif(ibound.eq.1) then
-                p(n+1,:,:) = factor + p(n-1,:,:)
-              endif
-            case(2)
-              if    (ibound.eq.0) then
-                p(:,0  ,:) = factor + p(:,2  ,:) 
-              elseif(ibound.eq.1) then
-                p(:,n+1,:) = factor + p(:,n-1,:)
-              endif
-            case(3)
-              if    (ibound.eq.0) then
-                p(:,:,0  ) = factor + p(:,:,2  )
-              elseif(ibound.eq.1) then
-                p(:,:,n+1) = factor + p(:,:,n-1)
-              endif
-          end select
-        elseif(.not.iface) then
-          select case(idir)
-            case(1)
-              if    (ibound.eq.0) then
-                p(0  ,:,:) = factor+sgn*p(1,:,:)
-              elseif(ibound.eq.1) then
-                p(n+1,:,:) = factor+sgn*p(n,:,:)
-              endif
-            case(2)
-              if    (ibound.eq.0) then
-                p(:,0  ,:) = factor+sgn*p(:,1,:)
-              elseif(ibound.eq.1) then
-                p(:,n+1,:) = factor+sgn*p(:,n,:)
-              endif
-            case(3)
-              if    (ibound.eq.0) then
-                p(:,:,0  ) = factor+sgn*p(:,:,1)
-              elseif(ibound.eq.1) then
-                p(:,:,n+1) = factor+sgn*p(:,:,n)
-              endif
-          end select
-        endif
-      ! end case
+      elseif(iface.and.ctype.eq.'N') then
+        select case(idir)
+        case(1)
+          if    (ibound.eq.0) then
+            p(0,  :,:) = factor + p(2  ,:,:) 
+          elseif(ibound.eq.1) then
+            p(n+1,:,:) = factor + p(n-1,:,:)
+          endif
+        case(2)
+          if    (ibound.eq.0) then
+            p(:,0  ,:) = factor + p(:,2  ,:) 
+          elseif(ibound.eq.1) then
+            p(:,n+1,:) = factor + p(:,n-1,:)
+          endif
+        case(3)
+          if    (ibound.eq.0) then
+            p(:,:,0  ) = factor + p(:,:,2  )
+          elseif(ibound.eq.1) then
+            p(:,:,n+1) = factor + p(:,:,n-1)
+          endif
+        end select
+      elseif(.not.iface) then
+        select case(idir)
+        case(1)
+          if    (ibound.eq.0) then
+            p(0  ,:,:) = factor+sgn*p(1,:,:)
+          elseif(ibound.eq.1) then
+            p(n+1,:,:) = factor+sgn*p(n,:,:)
+          endif
+        case(2)
+          if    (ibound.eq.0) then
+            p(:,0  ,:) = factor+sgn*p(:,1,:)
+          elseif(ibound.eq.1) then
+            p(:,n+1,:) = factor+sgn*p(:,n,:)
+          endif
+        case(3)
+          if    (ibound.eq.0) then
+            p(:,:,0  ) = factor+sgn*p(:,:,1)
+          elseif(ibound.eq.1) then
+            p(:,:,n+1) = factor+sgn*p(:,:,n)
+          endif
+        end select
+      endif
     end select
     return
   end subroutine set_bc
