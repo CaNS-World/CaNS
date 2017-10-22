@@ -34,9 +34,9 @@ module mod_initsolver
     ng(:) = n(:)
     ng(1:2) = ng(1:2)*dims(1:2)
     call eigenvalues(ng(1),bc(:,1),c_or_f(1),lambdax)
-    lambdax(:) = lambdax(:)*dli(1)**2.
+    lambdax(:) = lambdax(:)*dli(1)**2
     call eigenvalues(ng(2),bc(:,2),c_or_f(2),lambday)
-    lambday(:) = lambday(:)*dli(2)**2.
+    lambday(:) = lambday(:)*dli(2)**2
     do j=1,n(2)
       jj = coord(2)*n(2)+j
       do i=1,n(1)
