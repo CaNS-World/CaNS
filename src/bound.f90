@@ -259,7 +259,7 @@ module mod_bound
         k = n(3) + 1
         do j=1,n(2)
           do i=1,n(1)
-            w(i,j,k) = w(i,j,k-1) -dzf(k)*((u(i,j,k)-v(i-1,j,k))*dxi+(v(i,j,k)-v(i,j-1,k))*dyi)
+            w(i,j,k) = w(i,j,k-1) -dzf(k)*((u(i,j,k)-u(i-1,j,k))*dxi+(v(i,j,k)-v(i,j-1,k))*dyi)
           enddo
         enddo 
     end select
