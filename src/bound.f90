@@ -173,21 +173,25 @@ module mod_bound
             p(:,:,n) = factor
           endif
         end select
-      elseif(iface.and.ctype.eq.'N') then
+      elseif(iface.and.ctype.eq.'N') then !changed to second-order 1-sided difference
         select case(idir)
         case(1)
           if    (ibound.eq.0) then
-            p(0,  :,:) = factor + p(2  ,:,:) 
+            !p(0,  :,:) = factor + p(2  ,:,:)
+            p(0  ,:,:) = 1.d0/3.d0*(-2.d0*factor+4.d0*p(1,:,:)-p(2  ,:,:))
           elseif(ibound.eq.1) then
-            p(n+1,:,:) = factor + p(n-1,:,:)
+            !p(n+1,:,:) = factor + p(n-1,:,:)
+            p(n+1,:,:) = 1.d0/3.d0*(-2.d0*factor+4.d0*p(n,:,:)-p(n-1,:,:))
           endif
         case(2)
           if    (ibound.eq.0) then
-            p(:,0  ,:) = factor + p(:,2  ,:) 
+            p(:,0  ,:) = 1.d0/3.d0*(-2.d0*factor+4.d0*p(:,1,:)-p(:,2  ,:))
+            !p(:,0  ,:) = factor + p(:,2  ,:) 
           elseif(ibound.eq.1) then
-            p(:,n+1,:) = factor + p(:,n-1,:)
+            !p(:,n+1,:) = factor + p(:,n-1,:)
+            p(:,n+1,:) = 1.d0/3.d0*(-2.d0*factor+4.d0*p(:,n,:)-p(:,n-1,:))
           endif
-        case(3)
+        case(3) ! not supported for now
           if    (ibound.eq.0) then
             p(:,:,0  ) = factor + p(:,:,2  )
           elseif(ibound.eq.1) then
@@ -236,32 +240,60 @@ module mod_bound
     dy   = dl(2)     
     dyi  = dl(2)**(-1)
     dzfi = dzf**(-1)
+    !
+    ! determine face velocity from zero divergence
+    !
     select case(idir)
-      case(1) ! x direction
-        if(right.eq.MPI_PROC_NULL) then
-          i = n(1) + 1
-          do k=1,n(3)
-            do j=1,n(2)
-              u(i,j,k) = u(i-1,j,k) -dx*((v(i,j,k)-v(i,j-1,k))*dyi+(w(i,j,k)-w(i,j,k-1))*dzfi(k))
-            enddo
-          enddo 
-        endif
-      case(2) ! y direction
-        j = n(2) + 1
-        if(back.eq.MPI_PROC_NULL) then
-          do k=1,n(3)
-            do i=1,n(1)
-              v(i,j,k) = v(i,j-1,k) -dy*((u(i,j,k)-u(i-1,j,k))*dxi+(w(i,j,k)-w(i,j,k-1))*dzfi(k))
-            enddo
-          enddo 
-        endif
-      case(3) ! z direction
-        k = n(3) + 1
-        do j=1,n(2)
-          do i=1,n(1)
-            w(i,j,k) = w(i,j,k-1) -dzf(k)*((u(i,j,k)-u(i-1,j,k))*dxi+(v(i,j,k)-v(i,j-1,k))*dyi)
+    case(1) ! x directio, right
+      if(right.eq.MPI_PROC_NULL) then
+        i = n(1) + 1
+        do k=1,n(3)
+          do j=1,n(2)
+            u(i,j,k) = u(i-1,j,k) -dx*((v(i-1,j,k)-v(i-1,j-1,k))*dyi+(w(i-1,j,k)-w(i-1,j,k-1))*dzfi(k))
           enddo
         enddo 
+      endif
+    case(2) ! y direction, back
+      j = n(2) + 1
+      if(back.eq.MPI_PROC_NULL) then
+        do k=1,n(3)
+          do i=1,n(1)
+            v(i,j,k) = v(i,j-1,k) -dy*((u(i,j-1,k)-u(i-1,j-1,k))*dxi+(w(i,j-1,k)-w(i,j-1,k-1))*dzfi(k))
+          enddo
+        enddo 
+      endif
+    case(3) ! z direction, top
+      k = n(3) + 1
+      do j=1,n(2)
+        do i=1,n(1)
+          w(i,j,k) = w(i,j,k-1) -dzf(k)*((u(i,j,k-1)-u(i-1,j,k-1))*dxi+(v(i,j,k-1)-v(i,j-1,k-1))*dyi)
+        enddo
+      enddo 
+    case(-1) ! x direction, left
+      if(left.eq.MPI_PROC_NULL) then
+        i = 0
+        do k=1,n(3)
+          do j=1,n(2)
+            u(i,j,k) = u(i+1,j,k) -dx*((v(i+1,j,k)-v(i+1,j-1,k))*dyi+(w(i+1,j,k)-w(i+1,j,k-1))*dzfi(k))
+          enddo
+        enddo 
+      endif
+    case(-2) ! y direction, front
+      j = 0
+      if(front.eq.MPI_PROC_NULL) then
+        do k=1,n(3)
+          do i=1,n(1)
+            v(i,j,k) = v(i,j+1,k) -dy*((u(i,j+1,k)-u(i-1,j+1,k))*dxi+(w(i,j+1,k)-w(i,j+1,k-1))*dzfi(k))
+          enddo
+        enddo 
+      endif
+    case(-3) ! z direction, bottom
+      k = 0
+      do j=1,n(2)
+        do i=1,n(1)
+          w(i,j,k) = w(i,j,k+1) -dzf(k)*((u(i,j,k+1)-u(i-1,j,k+1))*dxi+(v(i,j,k+1)-v(i,j-1,k+1))*dyi)
+        enddo
+      enddo 
     end select
     return
   end subroutine outflow
