@@ -5,15 +5,16 @@ module mod_bound
   private
   public boundp,bounduvw
   contains
-  subroutine bounduvw(cbc,n,bc,ioutflowdir,dl,dzc,dzf,u,v,w)
+  subroutine bounduvw(cbc,n,bc,isoutflow,dl,dzc,dzf,u,v,w)
     implicit none
     character(len=1), intent(in), dimension(2,3,3) :: cbc
     integer, intent(in), dimension(3) :: n 
     real(8)         , intent(in), dimension(2,3,3) :: bc
-    integer, intent(in) :: ioutflowdir
+    logical, intent(in), dimension(2,3) :: isoutflow
     real(8), intent(in), dimension(3) :: dl
     real(8), intent(in), dimension(0:) :: dzc,dzf
     real(8), intent(inout), dimension(0:,0:,0:) :: u,v,w
+    integer :: q,idir,sgn,ioutflowdir
     !
     call updthalo((/n(1),n(2)/),1,u)
     call updthalo((/n(1),n(2)/),2,u)
@@ -48,7 +49,17 @@ module mod_bound
     call set_bc(cbc(2,3,1),1,n(3),3,.false.,bc(2,3,1),dzc(n(3)),u) ! check
     call set_bc(cbc(2,3,2),1,n(3),3,.false.,bc(2,3,2),dzc(n(3)),v) ! check
     call set_bc(cbc(2,3,3),1,n(3),3,.true. ,bc(2,3,3),dzf(n(3)),w) ! check
-    call outflow(n,ioutflowdir,dl,dzf,u,v,w)
+    !
+    do q = 1,3
+      do idir = 1,2
+        if(isoutflow(idir,q)) then
+          if(idir.eq.1) sgn = -1
+          if(idir.eq.2) sgn = +1
+          ioutflowdir = q*sgn
+          call outflow(n,ioutflowdir,dl,dzf,u,v,w)
+        endif
+      enddo
+    enddo
     return
   end subroutine bounduvw
   !
