@@ -52,7 +52,7 @@
                         velfy    = 0.d0, &
                         velfz    = 0.d0
   !
-  ! outflow directions
+  ! outflow boundary condition
   ! if isoutflow(i,j) is true, an outflow condition is prescribed for the
   ! face-centered velocity at that boundary
   ! the outflow BC is determined from the condition of zero divergence
