@@ -145,7 +145,11 @@ module mod_bound
       sgn    = -1.d0
     endif
     if(ctype.eq.'N'.and..not.iface) then
-      factor = dr*factor
+      if(    ibound.eq.0) then
+        factor = -dr*factor
+      elseif(ibound.eq.1) then
+        factor =  dr*factor
+      endif
       sgn    = 1.d0
     endif
     !
