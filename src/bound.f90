@@ -249,7 +249,7 @@ module mod_bound
         i = n(1) + 1
         do k=1,n(3)
           do j=1,n(2)
-            u(i,j,k) = u(i-1,j,k) -dx*((v(i-1,j,k)-v(i-1,j-1,k))*dyi+(w(i-1,j,k)-w(i-1,j,k-1))*dzfi(k))
+            u(i,j,k) = u(i-1,j,k) -dx*((v(i,j,k)-v(i,j-1,k))*dyi+(w(i,j,k)-w(i,j,k-1))*dzfi(k))
           enddo
         enddo 
       endif
@@ -258,7 +258,7 @@ module mod_bound
       if(back.eq.MPI_PROC_NULL) then
         do k=1,n(3)
           do i=1,n(1)
-            v(i,j,k) = v(i,j-1,k) -dy*((u(i,j-1,k)-u(i-1,j-1,k))*dxi+(w(i,j-1,k)-w(i,j-1,k-1))*dzfi(k))
+            v(i,j,k) = v(i,j-1,k) -dy*((u(i,j,k)-u(i-1,j,k))*dxi+(w(i,j,k)-w(i,j,k-1))*dzfi(k))
           enddo
         enddo 
       endif
@@ -266,7 +266,7 @@ module mod_bound
       k = n(3) + 1
       do j=1,n(2)
         do i=1,n(1)
-          w(i,j,k) = w(i,j,k-1) -dzf(k)*((u(i,j,k-1)-u(i-1,j,k-1))*dxi+(v(i,j,k-1)-v(i,j-1,k-1))*dyi)
+          w(i,j,k) = w(i,j,k-1) -dzf(k)*((u(i,j,k)-u(i-1,j,k))*dxi+(v(i,j,k)-v(i,j-1,k))*dyi)
         enddo
       enddo 
     case(-1) ! x direction, left
