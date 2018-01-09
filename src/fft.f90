@@ -38,7 +38,7 @@ module mod_fft
     ny_y = ny
     nz_y = nz/dims(2)
     !
-    normfft = 1.
+    normfft = 1.d0
     iodim(1)%n  = nx_x
     iodim(1)%is = 1
     iodim(1)%os = 1
