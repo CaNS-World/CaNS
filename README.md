@@ -36,7 +36,7 @@ This project aimed first at being a modern alternative to the well-known FISHPAC
 
 ## Method
 
-The fluid flow is solved with a second-order finite-volume pressure correction scheme, discretized in a MAC grid arrangement. Time is advanced with a three-step low storage Runge-Kutta scheme. Optionally, for increased stability at the price of higher computational demand, the diffusion term can be treated implicitly. (see e.g. Wesseling, Principles of computational fluid dynamics. Vol. 29. Springer Science & Business Media, 2009).
+The fluid flow is solved with a second-order finite-volume pressure correction scheme, discretized in a MAC grid arrangement. Time is advanced with a three-step low storage Runge-Kutta scheme. Optionally, for increased stability at low Reynolds numbers, at the price of higher computational demand, the diffusion term can be treated implicitly. (see e.g. Wesseling, Principles of computational fluid dynamics. Vol. 29. Springer Science & Business Media, 2009).
 
 ## Usage
 
