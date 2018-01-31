@@ -50,7 +50,7 @@ program cans
                              imax,jmax,dims, &
                              nthreadsmax, &
                              gr, &
-                             ioutflowdir
+                             isoutflow,no_outflow
   use mod_solver     , only: solver
   !$ use omp_lib
   implicit none
@@ -115,7 +115,7 @@ program cans
                                              time,ristep)
     istep = nint(ristep)
   endif
-  call bounduvw(cbcvel,n,bcvel,ioutflowdir,dl,dzc,dzf,u,v,w)
+  call bounduvw(cbcvel,n,bcvel,isoutflow,dl,dzc,dzf,u,v,w)
   call boundp(n,cbcpre,pp)
   call chkdt(n,dl,dzci,dzfi,visc,u,v,w,dtmax)
   dt = cfl*dtmax
@@ -177,12 +177,12 @@ program cans
         if(myid.eq.0) print*,'Mean w = ', meanvel
       endif
 #endif
-      call bounduvw(cbcvel,n,bcvel,0,dl,dzc,dzf,up,vp,wp)
+      call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! outflow BC only at final velocity
       call fillps(n,dli,dzfi,dtrki,up,vp,wp,pp)
       call solver(n,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre(:,3),(/'c','c','c'/),pp(1:imax,1:jmax,1:ktot))
       call boundp(n,cbcpre,pp)
       call correc(n,dli,dzci,dtrk,pp,up,vp,wp,u,v,w)
-      call bounduvw(cbcvel,n,bcvel,ioutflowdir,dl,dzc,dzf,u,v,w)
+      call bounduvw(cbcvel,n,bcvel,isoutflow,dl,dzc,dzf,u,v,w)
 #ifdef IMPDIFF
       alphai = alpha**(-1)
       !$OMP PARALLEL DO DEFAULT(none) &

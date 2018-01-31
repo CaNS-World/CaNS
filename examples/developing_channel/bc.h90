@@ -52,12 +52,13 @@
                         velfy    = 0.d0, &
                         velfz    = 0.d0
   !
-  ! inflow/outflow directions
-  ! ioutflowdir is the domain direction for which
-  ! an inflow/outflow combination of BCs are prescribed. That is:
-  ! -> streamwise velocity BC upstream   -- D
-  ! -> streamwise velocity BC downstream -- obtained from continuity
-  ! -> pressure            BC upstream   -- N
-  ! -> pressure            BC downstream -- Homogeneous D
-  ! ioutflowdir = 0 for no inflow/outflow BCs
-  integer, parameter :: ioutflowdir = 1
+  ! outflow boundary condition
+  ! if isoutflow(i,j) is true, an outflow condition is prescribed for the
+  ! face-centered velocity at that boundary
+  ! the outflow BC is determined from the condition of zero divergence
+  !
+  logical, parameter, dimension(2,3) :: isoutflow = & 
+      reshape((/.false.,.true. ,   & ! outflow in x lower,upper bound
+                .false.,.false.,   & ! outflow in y lower,upper bound
+                .false.,.false./), & ! outflow in z lower,upper bound
+                shape(isoutflow))
