@@ -38,7 +38,7 @@ module mod_initgrid
       dzc(k) = .5d0*(dzf(k+1)+dzf(k))
     enddo
     dzc(n+1) = dzc(n)
-    zc(0) = -dzc(0)/2.
+    zc(0) = -dzc(0)/2.d0
     zf(0) = 0.
     do k=0,n
       zc(k+1) = zc(k) + dzc(k)
@@ -55,7 +55,7 @@ module mod_initgrid
   real(8) function gridpoint(alpha,z0,period,dz,z)
     implicit none
     real(8), intent(in) :: alpha,z0,period,dz,z
-    gridpoint = dz*( 1.d0+.5d0*(alpha-1.)*( 1.+cos( 2.*pi*(z-z0)/period ) ) )
+    gridpoint = dz*( 1.d0+.5d0*(alpha-1.d0)*( 1.d0+cos( 2.d0*pi*(z-z0)/period ) ) )
     return
   end function gridpoint
 end module mod_initgrid
