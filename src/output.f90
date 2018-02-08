@@ -157,11 +157,11 @@ module mod_output
       call mpi_allreduce(MPI_IN_PLACE,uw(1),n(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
       um(:) = um(:)/(1.*ng(1)*ng(2))
       vm(:) = vm(:)/(1.*ng(1)*ng(2))
-      wm(:) = wm(:)/(1.*ng(1)*ng(2))
+      wm(:) = wm(:)/(1.*ng(1)*ng(2)) ! NB: replace with 0.5*(um(k+1)+um(k)) to have all the points at the same locations
       u2(:) = sqrt(u2(:)/(1.*ng(1)*ng(2)) - um(:)**2)
       v2(:) = sqrt(v2(:)/(1.*ng(1)*ng(2)) - vm(:)**2)
       w2(:) = sqrt(w2(:)/(1.*ng(1)*ng(2)) - wm(:)**2)
-      uw(:) = uw(:)/(1.*ng(1)*ng(2)) - um(:)*wm(:)
+      uw(:) = uw(:)/(1.*ng(1)*ng(2)) - um(:)*wm(:) ! NB: to be precise, um should be 0.5*(um(k+1)+um(k))
       if(myid.eq.0) then
         open(unit=iunit,file=fname)
         do k=1,n(3)
