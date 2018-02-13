@@ -61,9 +61,9 @@ use mod_debug, only: chkmean
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
-           up(i,j,k) = u(i,j,k) + factor12*dudtrk(i,j,k)
-           vp(i,j,k) = v(i,j,k) + factor12*dvdtrk(i,j,k)
-           wp(i,j,k) = w(i,j,k) + factor12*dwdtrk(i,j,k)
+          up(i,j,k) = u(i,j,k) + factor12*dudtrk(i,j,k)
+          vp(i,j,k) = v(i,j,k) + factor12*dvdtrk(i,j,k)
+          wp(i,j,k) = w(i,j,k) + factor12*dwdtrk(i,j,k)
         enddo
       enddo
     enddo
