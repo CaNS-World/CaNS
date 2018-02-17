@@ -33,17 +33,17 @@ module mod_fillps
     !$OMP SHARED(n,p,up,vp,wp,dtidzfi,dtidyi,dtidxi) &
     !$OMP PRIVATE(i,j,k,im,jm,km)
     do k=1,n(3)
-       km = k-1
-       do j=1,n(2)
-          jm = j-1
-          do i=1,n(1)
-             im = i-1
-             p(i,j,k) = ( &
-                         (wp(i,j,k)-wp(i,j,km))*dtidzfi(k)+ &
-                         (vp(i,j,k)-vp(i,jm,k))*dtidyi    + &
-                         (up(i,j,k)-up(im,j,k))*dtidxi    )
-          enddo
-       enddo
+      km = k-1
+      do j=1,n(2)
+        jm = j-1
+        do i=1,n(1)
+          im = i-1
+          p(i,j,k) = ( &
+                      (wp(i,j,k)-wp(i,j,km))*dtidzfi(k)+ &
+                      (vp(i,j,k)-vp(i,jm,k))*dtidyi    + &
+                      (up(i,j,k)-up(im,j,k))*dtidxi    )
+        enddo
+      enddo
     enddo
     !$OMP END PARALLEL DO
     !
