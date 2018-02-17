@@ -27,16 +27,16 @@ module mod_correc
     !$OMP SHARED(n,factori,factorj,factork,u,v,w,up,vp,wp,p) &
     !$OMP PRIVATE(i,j,k,ip,jp,kp)
     do k=1,n(3)
-       kp = k+1
-       do j=1,n(2)
-          jp = j+1
-          do i=1,n(1)
-             ip = i+1
-             u(i,j,k) = up(i,j,k) - factori*(   p(ip,j,k)-p(i,j,k))
-             v(i,j,k) = vp(i,j,k) - factorj*(   p(i,jp,k)-p(i,j,k))
-             w(i,j,k) = wp(i,j,k) - factork(k)*(p(i,j,kp)-p(i,j,k))
-          enddo
-       enddo
+      kp = k+1
+      do j=1,n(2)
+        jp = j+1
+        do i=1,n(1)
+          ip = i+1
+          u(i,j,k) = up(i,j,k) - factori*(   p(ip,j,k)-p(i,j,k))
+          v(i,j,k) = vp(i,j,k) - factorj*(   p(i,jp,k)-p(i,j,k))
+          w(i,j,k) = wp(i,j,k) - factork(k)*(p(i,j,kp)-p(i,j,k))
+        enddo
+      enddo
     enddo
     !$OMP END PARALLEL DO
     return
