@@ -23,9 +23,9 @@ use mod_debug, only: chkmean
     real(8), intent(in   ), dimension(3) :: dli,l 
     real(8), intent(in   ), dimension(0:) :: dzci,dzfi,dzflzi
     real(8), intent(in   ), dimension(0:,0:,0:) :: u ,v ,w,p
-    real(8), intent(inout), dimension(n(1),n(2),n(3)) :: dudtrko,dvdtrko,dwdtrko
+    real(8), intent(inout), dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
     real(8), intent(inout), dimension(3) :: tauxo,tauyo,tauzo
-    real(8), intent(out), dimension(0:n(1)+1,0:n(2)+1,0:n(3)+1) :: up,vp,wp
+    real(8), intent(out), dimension(0:,0:,0:) :: up,vp,wp
     real(8), intent(out), dimension(3) :: f
     real(8),              dimension(n(1),n(2),n(3)) ::          dudtrk, dvdtrk, dwdtrk
 #ifdef IMPDIFF
