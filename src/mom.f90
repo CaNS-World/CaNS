@@ -268,10 +268,7 @@ module mod_mom
       do j=1,ny
         jp = j + 1
         do i=1,nx
-           !
-           ! Momentum balance
-           !
-           dvdt(i,j,k) = - dyi*( p(i,jp,k)-p(i,j,k) )
+          dvdt(i,j,k) = - dyi*( p(i,jp,k)-p(i,j,k) )
         enddo
       enddo
     enddo
@@ -295,9 +292,6 @@ module mod_mom
       kp = k + 1
       do j=1,ny
         do i=1,nx
-          !
-          ! Momentum balance
-          !
           dwdt(i,j,k) = - dzci(k)*( p(i,j,kp)-p(i,j,k) )
         enddo
       enddo
