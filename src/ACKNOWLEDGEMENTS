@@ -9,6 +9,6 @@ routines it have been performed in the CFD code AFiD
 (https://github.com/PhysicsofFluids/AFiD), and ported to this code.
 
 Moreover, the initialization of Multi-Threaded FFTS with the FFTW guru interface
-were inspired by AFiD's implementation.
+was inspired by AFiD's implementation.
 
 								Pedro Costa
