@@ -70,7 +70,7 @@ Run the executable with `mpirun` with a number of tasks and shared threads compl
 
 ## Notes
 
-This is the first open-source release of this tool. **I appreciate any feedback that can improve it.** Also, you are encouraged to send case files pertaining to flows not listed in the examples folder. Comments/suggestions can be sent to p.simoes.costa@gmail.com.
+I appreciate any feedback that can improve the code. Also, feel free to send case files pertaining to flows not listed in the examples folder.
 
 Please read the `ACKNOWLEDGEMENTS` and `LICENSE` files.
 
