@@ -42,7 +42,7 @@
   !
   logical, parameter :: forceinx = .true. , &
                         forceiny = .false., &
-                        forceinz = .false. ! TURN THIS INTO ARRAY
+                        forceinz = .false.
   !
   ! desired values of bulk velocities 
   ! (only relevant if the corresponding boolean
@@ -50,7 +50,7 @@
   !
   real(8), parameter :: velfx    = 1.d0, &
                         velfy    = 0.d0, &
-                        velfz    = 0.d0    ! TURN THIS INTO ARRAY
+                        velfz    = 0.d0
   !
   ! outflow boundary condition
   ! if isoutflow(i,j) is true, an outflow condition is prescribed for the
