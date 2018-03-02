@@ -10,15 +10,15 @@ module mod_initmpi
   subroutine initmpi(n,bc)
     implicit none
     integer, intent(in), dimension(3) :: n
-    character(len=1), intent(in), dimension(2,3) :: bc
+    character(len=1), intent(in), dimension(0:1,3) :: bc
     integer :: ntx,nty,ntz
     logical, dimension(3) :: periods
     !
     call MPI_INIT(ierr)
     periods(:) = .false.
-    if( bc(1,1)//bc(2,1).eq.'PP' ) periods(1) = .true.
-    if( bc(1,2)//bc(2,2).eq.'PP' ) periods(2) = .true.
-    if( bc(1,3)//bc(2,3).eq.'PP' ) periods(3) = .true.
+    if( bc(0,1)//bc(1,1).eq.'PP' ) periods(1) = .true.
+    if( bc(0,2)//bc(1,2).eq.'PP' ) periods(2) = .true.
+    if( bc(0,3)//bc(1,3).eq.'PP' ) periods(3) = .true.
     call decomp_2d_init(n(1),n(2),n(3),dims(1),dims(2),periods)
     myid = nrank
     comm_cart = DECOMP_2D_COMM_CART_Z

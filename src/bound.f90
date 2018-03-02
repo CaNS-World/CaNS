@@ -7,10 +7,10 @@ module mod_bound
   contains
   subroutine bounduvw(cbc,n,bc,isoutflow,dl,dzc,dzf,u,v,w)
     implicit none
-    character(len=1), intent(in), dimension(2,3,3) :: cbc
+    character(len=1), intent(in), dimension(0:1,3,3) :: cbc
     integer, intent(in), dimension(3) :: n 
-    real(8)         , intent(in), dimension(2,3,3) :: bc
-    logical, intent(in), dimension(2,3) :: isoutflow
+    real(8)         , intent(in), dimension(0:!,3,3) :: bc
+    logical, intent(in), dimension(0:1,3) :: isoutflow
     real(8), intent(in), dimension(3) :: dl
     real(8), intent(in), dimension(0:) :: dzc,dzf
     real(8), intent(inout), dimension(0:,0:,0:) :: u,v,w
@@ -24,37 +24,37 @@ module mod_bound
     call updthalo((/n(1),n(2)/),2,w)
     !
     if(left .eq.MPI_PROC_NULL) then
-      call set_bc(cbc(1,1,1),0,n(1),1,.true. ,bc(1,1,1),dl(1),u)
-      call set_bc(cbc(1,1,2),0,n(1),1,.false.,bc(1,1,2),dl(1),v)
-      call set_bc(cbc(1,1,3),0,n(1),1,.false.,bc(1,1,3),dl(1),w)
+      call set_bc(cbc(0,1,1),0,n(1),1,.true. ,bc(0,1,1),dl(1),u)
+      call set_bc(cbc(0,1,2),0,n(1),1,.false.,bc(0,1,2),dl(1),v)
+      call set_bc(cbc(0,1,3),0,n(1),1,.false.,bc(0,1,3),dl(1),w)
     endif
     if(right.eq.MPI_PROC_NULL) then
-      call set_bc(cbc(2,1,1),1,n(1),1,.true. ,bc(2,1,1),dl(1),u)
-      call set_bc(cbc(2,1,2),1,n(1),1,.false.,bc(2,1,2),dl(1),v)
-      call set_bc(cbc(2,1,3),1,n(1),1,.false.,bc(2,1,3),dl(1),w)
+      call set_bc(cbc(1,1,1),1,n(1),1,.true. ,bc(1,1,1),dl(1),u)
+      call set_bc(cbc(1,1,2),1,n(1),1,.false.,bc(1,1,2),dl(1),v)
+      call set_bc(cbc(1,1,3),1,n(1),1,.false.,bc(1,1,3),dl(1),w)
     endif
     if(front.eq.MPI_PROC_NULL) then
-      call set_bc(cbc(1,2,1),0,n(2),2,.false.,bc(1,2,1),dl(2),u)
-      call set_bc(cbc(1,2,2),0,n(2),2,.true. ,bc(1,2,2),dl(2),v)
-      call set_bc(cbc(1,2,3),0,n(2),2,.false.,bc(1,2,3),dl(2),w)
+      call set_bc(cbc(0,2,1),0,n(2),2,.false.,bc(0,2,1),dl(2),u)
+      call set_bc(cbc(0,2,2),0,n(2),2,.true. ,bc(0,2,2),dl(2),v)
+      call set_bc(cbc(0,2,3),0,n(2),2,.false.,bc(0,2,3),dl(2),w)
      endif
     if(back .eq.MPI_PROC_NULL) then
-      call set_bc(cbc(2,2,1),1,n(2),2,.false.,bc(2,2,1),dl(2),u)
-      call set_bc(cbc(2,2,2),1,n(2),2,.true. ,bc(2,2,2),dl(2),v)
-      call set_bc(cbc(2,2,3),1,n(2),2,.false.,bc(2,2,3),dl(2),w)
+      call set_bc(cbc(1,2,1),1,n(2),2,.false.,bc(1,2,1),dl(2),u)
+      call set_bc(cbc(1,2,2),1,n(2),2,.true. ,bc(1,2,2),dl(2),v)
+      call set_bc(cbc(1,2,3),1,n(2),2,.false.,bc(1,2,3),dl(2),w)
     endif
-    call set_bc(cbc(1,3,1),0,n(3),3,.false.,bc(1,3,1),dzc(0)   ,u)
-    call set_bc(cbc(1,3,2),0,n(3),3,.false.,bc(1,3,2),dzc(0)   ,v)
-    call set_bc(cbc(1,3,3),0,n(3),3,.true. ,bc(1,3,3),dzf(0)   ,w)
-    call set_bc(cbc(2,3,1),1,n(3),3,.false.,bc(2,3,1),dzc(n(3)),u) ! check
-    call set_bc(cbc(2,3,2),1,n(3),3,.false.,bc(2,3,2),dzc(n(3)),v) ! check
-    call set_bc(cbc(2,3,3),1,n(3),3,.true. ,bc(2,3,3),dzf(n(3)),w) ! check
+    call set_bc(cbc(0,3,1),0,n(3),3,.false.,bc(0,3,1),dzc(0)   ,u)
+    call set_bc(cbc(0,3,2),0,n(3),3,.false.,bc(0,3,2),dzc(0)   ,v)
+    call set_bc(cbc(0,3,3),0,n(3),3,.true. ,bc(0,3,3),dzf(0)   ,w)
+    call set_bc(cbc(1,3,1),1,n(3),3,.false.,bc(1,3,1),dzc(n(3)),u) ! check
+    call set_bc(cbc(1,3,2),1,n(3),3,.false.,bc(1,3,2),dzc(n(3)),v) ! check
+    call set_bc(cbc(1,3,3),1,n(3),3,.true. ,bc(1,3,3),dzf(n(3)),w) ! check
     !
     do q = 1,3
-      do idir = 1,2
+      do idir = 0,1
         if(isoutflow(idir,q)) then
-          if(idir.eq.1) sgn = -1
-          if(idir.eq.2) sgn = +1
+          if(idir.eq.0) sgn = -1
+          if(idir.eq.1) sgn = +1
           ioutflowdir = q*sgn
           call outflow(n,ioutflowdir,dl,dzf,u,v,w)
         endif
@@ -66,13 +66,13 @@ module mod_bound
   subroutine boundp(n,cbc,p)
     implicit none
     integer, intent(in), dimension(3) :: n
-    character(len=1), intent(in), dimension(2,3) :: cbc
+    character(len=1), intent(in), dimension(0:1,3) :: cbc
     real(8), intent(inout), dimension(0:,0:,0:) :: p
     !
     call updthalo((/n(1),n(2)/),1,p)
     call updthalo((/n(1),n(2)/),2,p)
     if(left .eq.MPI_PROC_NULL) then
-      select case(cbc(1,1))
+      select case(cbc(0,1))
       !case('P')
       !  p(0     ,:,:) =  p(n(1),:,:)
       case('N')
@@ -82,7 +82,7 @@ module mod_bound
       end select
     endif
     if(right.eq.MPI_PROC_NULL) then
-      select case(cbc(2,1))
+      select case(cbc(1,1))
       !case('PP')
       !  p(n(1)+1,:,:) =  p(1   ,:,:)
       case('N')
@@ -92,7 +92,7 @@ module mod_bound
       end select
     endif
     if(front.eq.MPI_PROC_NULL) then
-      select case(cbc(1,2))
+      select case(cbc(0,2))
       !case('P')
       !   p(:,0     ,:) =  p(:,n(2),:)
       case('N')
@@ -102,7 +102,7 @@ module mod_bound
       end select
     endif
     if(back .eq.MPI_PROC_NULL) then
-      select case(cbc(2,2))
+      select case(cbc(1,2))
       !case('P')
       !  p(:,n(2)+1,:) =  p(:,1   ,:)
       case('N')
@@ -111,7 +111,7 @@ module mod_bound
         p(:,n(2)+1,:) = -p(:,n(2),:)
       end select
     endif
-    select case(cbc(1,3))
+    select case(cbc(0,3))
     case('P')
       p(:,:,0) = p(:,:,n(3))
     case('N')
@@ -119,7 +119,7 @@ module mod_bound
     case('D')
       p(:,:,0) = -p(:,:,1)
     end select
-    select case(cbc(2,3))
+    select case(cbc(1,3))
     case('P')
       p(:,:,n(3)+1) = p(:,:,1   )
     case('N')

@@ -12,7 +12,7 @@ module mod_initsolver
     integer, intent(in), dimension(3) :: n
     real(8), intent(in), dimension(3) :: dli
     real(8), intent(in), dimension(0:) :: dzci,dzfi
-    character(len=1), intent(in), dimension(2,3) :: bc
+    character(len=1), intent(in), dimension(0:1,3) :: bc
     real(8), intent(out), dimension(n(1),n(2)) :: lambdaxy
     character(len=1), intent(in), dimension(3) :: c_or_f
     real(8), intent(out), dimension(n(3)) :: a,b,c
@@ -58,11 +58,11 @@ module mod_initsolver
   subroutine eigenvalues(n,bc,c_or_f,lambda)
     implicit none
     integer, intent(in ) :: n
-    character(len=1), intent(in), dimension(2) :: bc
+    character(len=1), intent(in), dimension(0:1) :: bc
     character(len=1), intent(in) :: c_or_f ! c -> cell-centered; f-face-centered
     real(8), intent(out), dimension(n) :: lambda
     integer :: l 
-    select case(bc(1)//bc(2))
+    select case(bc(0)//bc(1))
     case('PP')
       l = 1
       lambda(l)     = -4.*sin((1.*(l-1))*pi/(1.*n))**2
@@ -103,7 +103,7 @@ module mod_initsolver
   subroutine tridmatrix(bc,n,dzi,dzci,dzfi,c_or_f,a,b,c)
     implicit none
     real(8), parameter :: eps = 1.e-10
-    character(len=1), intent(in), dimension(2) :: bc
+    character(len=1), intent(in), dimension(0:1) :: bc
     integer, intent(in) :: n
     real(8), intent(in) :: dzi
     real(8), intent(in), dimension(0:) :: dzci,dzfi
@@ -127,7 +127,7 @@ module mod_initsolver
       enddo
     end select
       b(:) = -(a(:)+c(:))
-    select case(bc(1))
+    select case(bc(-))
     case('P')
       factor1 = 0.
     case('D')
@@ -135,7 +135,7 @@ module mod_initsolver
     case('N')
       factor1 = 1.
     end select
-    select case(bc(2))
+    select case(bc(1))
     case('P')
       factor2 = 0.
     case('D')
