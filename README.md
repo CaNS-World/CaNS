@@ -40,7 +40,7 @@ This project aimed first at being a modern alternative to the well-known FISHPAC
 
 ## Method
 
-The fluid flow is solved with a second-order finite-volume pressure correction scheme, discretized in a MAC grid arrangement. Time is advanced with a three-step low storage Runge-Kutta scheme. Optionally, for increased stability at low Reynolds numbers, at the price of higher computational demand, the diffusion term can be treated implicitly. (see e.g. Wesseling, Principles of computational fluid dynamics. Vol. 29. Springer Science & Business Media, 2009).
+The fluid flow is solved with a second-order finite-volume pressure correction scheme, discretized in a MAC grid arrangement. Time is advanced with a three-step low storage Runge-Kutta scheme. Optionally, for increased stability at low Reynolds numbers, at the price of higher computational demand, the diffusion term can be treated implicitly. See the arXiv reference above for details.
 
 ## Usage
 
@@ -66,7 +66,7 @@ The Makefile should be modified in agreement to the installation paths of each l
 
  * `-DDEBUG`   : performs some basic checks for debugging purposes
  * `-DTIMING`  : wall-clock time per timestep is computed
- * `-DIMPDIFF` : diffusion term of the N-S equations is treated implicitly (thereby increasing the stability of the numerical algorithm for viscous-dominated flows)
+ * `-DIMPDIFF` : diffusion term of the N-S equations is treated implicitly (thereby improving the stability of the numerical algorithm for viscous-dominated flows)
 
 ### Running the code
 
