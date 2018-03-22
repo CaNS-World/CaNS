@@ -13,6 +13,10 @@ In the third domain direction, the code is more flexible as it uses Gauss elimin
 
 CaNS now allows for choosing an implicit temporal discretization of the diffusion term of the N-S equations. This results in solving a Helmholtz equation for each velocity component. Since FFT-based solvers are also used, the same options described above for pressure BCs apply to the velocity boundary conditions.
 
+**Reference**
+
+P. Costa. *A FFT-based finite-difference solver for massively-parallel direct numerical simulations of turbulent flows.* [arXiv:1802.10323](https://arxiv.org/pdf/1802.10323.pdf) (2018).
+
 ## Features
 
 Some features are:
