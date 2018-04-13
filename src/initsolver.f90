@@ -127,7 +127,7 @@ module mod_initsolver
       enddo
     end select
       b(:) = -(a(:)+c(:))
-    select case(bc(-))
+    select case(bc(0))
     case('P')
       factor1 = 0.
     case('D')

@@ -9,7 +9,7 @@ module mod_bound
     implicit none
     character(len=1), intent(in), dimension(0:1,3,3) :: cbc
     integer, intent(in), dimension(3) :: n 
-    real(8)         , intent(in), dimension(0:!,3,3) :: bc
+    real(8)         , intent(in), dimension(0:1,3,3) :: bc
     logical, intent(in), dimension(0:1,3) :: isoutflow
     real(8), intent(in), dimension(3) :: dl
     real(8), intent(in), dimension(0:) :: dzc,dzf
