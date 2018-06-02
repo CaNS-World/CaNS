@@ -3,7 +3,7 @@ module mod_bound
   use mod_common_mpi, only: ierr,status,comm_cart,left,right,front,back,xhalo,yhalo
   implicit none
   private
-  public boundp,bounduvw,add_to_rhs
+  public boundp,bounduvw,updt_rhs_b
   contains
   subroutine bounduvw(cbc,n,bc,isoutflow,dl,dzc,dzf,u,v,w)
     implicit none
