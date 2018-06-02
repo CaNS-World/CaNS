@@ -68,6 +68,11 @@ program cans
   real(8), dimension(imax,jmax) :: lambdaxyp
   real(8), dimension(ktot) :: ap,bp,cp
   real(8) :: normfftp
+  type rhs_bound
+    real(8), dimension(0:1,n(2),n(3)) :: x
+    real(8), dimension(0:1,n(1),n(3)) :: y
+    real(8), dimension(0:1,n(1),n(2)) :: z
+  end type rhs_bound 
 #ifdef IMPDIFF
   type(C_PTR), dimension(2,2) :: arrplanu,arrplanv,arrplanw
   real(8), dimension(imax,jmax) :: lambdaxyu,lambdaxyv,lambdaxyw
@@ -77,13 +82,9 @@ program cans
   real(8) :: alpha,alphai
   integer :: i,j,k,im,ip,jm,jp,km,kp
   real(8) :: mean
-  type rhs_bound 
-    real(8), dimension(0:1,n(2),n(3)) :: x
-    real(8), dimension(0:1,n(1),n(3)) :: y
-    real(8), dimension(0:1,n(1),n(2)) :: z
-  end type rhs_bound 
-  type(rhs_bound) :: rhsbu,rhsbv,rhsbw,rhsbp
+  type(rhs_bound) :: rhsbu,rhsbv,rhsbw
 #endif
+  type(rhs_bound) :: rhsbp
   real(8) :: ristep
   real(8) :: dt,dti,dtmax,time,dtrk,dtrki
   integer :: irk,istep
