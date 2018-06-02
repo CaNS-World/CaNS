@@ -35,6 +35,11 @@
                 'P','P',   & ! p in y lower,upper bound
                 'N','N'/), & ! p in z lower,upper bound
                 shape(cbcpre))
+    real(8)         , parameter, dimension(2,3) ::   bcpre = &
+      reshape((/0.d0,0.d0,   & ! p in x lower,upper bound
+                0.d0,0.d0,   & ! p in y lower,upper bound
+                0.d0,0.d0/), & ! p in z lower,upper bound
+                shape(bcpre))
   !-------------------------------------------------------------------
   ! forcing the flow with a pressure gradient
   ! that balances the total wall shear 

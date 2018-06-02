@@ -3,7 +3,7 @@ module mod_bound
   use mod_common_mpi, only: ierr,status,comm_cart,left,right,front,back,xhalo,yhalo
   implicit none
   private
-  public boundp,bounduvw
+  public boundp,bounduvw,add_to_rhs
   contains
   subroutine bounduvw(cbc,n,bc,isoutflow,dl,dzc,dzf,u,v,w)
     implicit none
@@ -63,70 +63,32 @@ module mod_bound
     return
   end subroutine bounduvw
   !
-  subroutine boundp(n,cbc,p)
+  subroutine boundp(cbc,n,bc,dl,dzc,dzf,p)
     implicit none
-    integer, intent(in), dimension(3) :: n
     character(len=1), intent(in), dimension(2,3) :: cbc
+    integer, intent(in), dimension(3) :: n 
+    real(8)         , intent(in), dimension(2,3) :: bc
+    real(8), intent(in), dimension(3) :: dl
+    real(8), intent(in), dimension(0:) :: dzc,dzf
     real(8), intent(inout), dimension(0:,0:,0:) :: p
     !
     call updthalo((/n(1),n(2)/),1,p)
     call updthalo((/n(1),n(2)/),2,p)
+    !
     if(left .eq.MPI_PROC_NULL) then
-      select case(cbc(1,1))
-      !case('P')
-      !  p(0     ,:,:) =  p(n(1),:,:)
-      case('N')
-        p(0     ,:,:) =  p(1   ,:,:)
-      case('D')
-        p(0     ,:,:) = -p(1   ,:,:)
-      end select
+      call set_bc(cbc(1,1),0,n(1),1,.false.,bc(1,1),dl(1),p)
     endif
     if(right.eq.MPI_PROC_NULL) then
-      select case(cbc(2,1))
-      !case('PP')
-      !  p(n(1)+1,:,:) =  p(1   ,:,:)
-      case('N')
-        p(n(1)+1,:,:) =  p(n(1),:,:)
-      case('D')
-        p(n(1)+1,:,:) = -p(n(1),:,:)
-      end select
+      call set_bc(cbc(2,1),1,n(1),1,.false.,bc(2,1),dl(1),p)
     endif
     if(front.eq.MPI_PROC_NULL) then
-      select case(cbc(1,2))
-      !case('P')
-      !   p(:,0     ,:) =  p(:,n(2),:)
-      case('N')
-        p(:,0     ,:) =  p(:,1   ,:)
-      case('D')
-        p(:,0     ,:) = -p(:,1   ,:)
-      end select
-    endif
+      call set_bc(cbc(1,2),0,n(2),2,.false.,bc(1,2),dl(2),p)
+     endif
     if(back .eq.MPI_PROC_NULL) then
-      select case(cbc(2,2))
-      !case('P')
-      !  p(:,n(2)+1,:) =  p(:,1   ,:)
-      case('N')
-        p(:,n(2)+1,:) =  p(:,n(2),:)
-      case('D')
-        p(:,n(2)+1,:) = -p(:,n(2),:)
-      end select
+      call set_bc(cbc(2,2),1,n(2),2,.false.,bc(2,2),dl(2),p)
     endif
-    select case(cbc(1,3))
-    case('P')
-      p(:,:,0) = p(:,:,n(3))
-    case('N')
-      p(:,:,0) =  p(:,:,1)
-    case('D')
-      p(:,:,0) = -p(:,:,1)
-    end select
-    select case(cbc(2,3))
-    case('P')
-      p(:,:,n(3)+1) = p(:,:,1   )
-    case('N')
-      p(:,:,n(3)+1) =  p(:,:,n(3))
-    case('D')
-      p(:,:,n(3)+1) = -p(:,:,n(3))
-    end select
+    call set_bc(cbc(1,3),0,n(3),3,.false.,bc(1,3),dzc(0)   ,p)
+    call set_bc(cbc(2,3),1,n(3),3,.false.,bc(2,3),dzc(n(3)),p)
     return
   end subroutine boundp
   !
@@ -360,6 +322,27 @@ module mod_bound
     return
   end subroutine inflow
   !
+  subroutine updt_rhs_b(n,rhsbx,rhsby,rhsbz,p)
+    implicit none
+    integer, intent(in), dimension(3) :: n
+    real(8), intent(in), dimension(0:,:,:) :: rhsbx,rhsby,rhsbz
+    real(8), intent(inout), dimension(1:,1:,1:) :: p
+    if(left.eq.MPI_PROC_NULL) then
+      p(1   ,:,:) = p(1   ,:,:) + rhsbx(0,:,:)
+    endif  
+    if(right.eq.MPI_PROC_NULL) then
+      p(n(1),:,:) = p(n(1),:,:) + rhsbx(1,:,:)
+    endif
+    if(front.eq.MPI_PROC_NULL) then
+      p(:,1   ,:) = p(:,1   ,:) + rhsby(0,:,:)
+    endif
+    if(back.eq.MPI_PROC_NULL) then
+      p(:,n(2),:) = p(:,n(2),:) + rhsby(1,:,:)
+    endif
+    p(:,:,1   ) = p(:,:,1   ) + rhsbz(0,:,:)
+    p(:,:,n(3)) = p(:,:,n(3)) + rhsbz(1,:,:)
+    return
+  end subroutine updt_rhs_b
   subroutine updthalo(n,idir,p)
     implicit none
     integer, dimension(2), intent(in) :: n

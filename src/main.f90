@@ -23,7 +23,7 @@ program cans
   use iso_c_binding  , only: C_PTR
   use mpi
   use decomp_2d
-  use mod_bound      , only: boundp,bounduvw
+  use mod_bound      , only: boundp,bounduvw,updt_rhs_b
   use mod_chkdiv     , only: chkdiv
   use mod_chkdt      , only: chkdt
   use mod_common_mpi , only: myid,ierr
@@ -34,11 +34,11 @@ program cans
   use mod_initflow   , only: initflow
   use mod_initgrid   , only: initgrid
   use mod_initmpi    , only: initmpi
-  use mod_initsolver , only: initsolver
+  use mod_initsolver , only: initsolver,to_rhs
   use mod_load       , only: load
   use mod_rk         , only: rk
   use mod_output     , only: out0d,out1d,out1d_2,out2d,out3d
-  use mod_param      , only: itot,jtot,ktot,lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,visc,pi,cbcvel,bcvel,cbcpre, &
+  use mod_param      , only: itot,jtot,ktot,lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,visc,pi,cbcvel,bcvel,cbcpre,bcpre, &
                              icheck,iout0d,iout1d,iout2d,iout3d,isave, &
                              nstep,restart, &
                              rkcoeff, &
@@ -77,6 +77,12 @@ program cans
   real(8) :: alpha,alphai
   integer :: i,j,k,im,ip,jm,jp,km,kp
   real(8) :: mean
+  type rhs_bound 
+    real(8), dimension(0:1,n(2),n(3)) :: x
+    real(8), dimension(0:1,n(1),n(3)) :: y
+    real(8), dimension(0:1,n(1),n(2)) :: z
+  end type rhs_bound 
+  type(rhs_bound) :: rhsbu,rhsbv,rhsbw,rhsbp
 #endif
   real(8) :: ristep
   real(8) :: dt,dti,dtmax,time,dtrk,dtrki
@@ -116,7 +122,7 @@ program cans
     istep = nint(ristep)
   endif
   call bounduvw(cbcvel,n,bcvel,isoutflow,dl,dzc,dzf,u,v,w)
-  call boundp(n,cbcpre,pp)
+  call boundp(cbcpre,n,bcpre,dl,dzc,dzf,pp)
   call chkdt(n,dl,dzci,dzfi,visc,u,v,w,dtmax)
   dt = cfl*dtmax
   if(myid.eq.0) print*, 'dtmax = ', dtmax, 'dt = ',dt
@@ -125,10 +131,14 @@ program cans
   ! initialize Poisson solver
   !
   call initsolver(n,dli,dzci,dzfi,cbcpre       ,lambdaxyp,(/'c','c','c'/),ap,bp,cp,arrplanp,normfftp)
+  call to_rhs(n,dl,dzc,dzf,cbcpre(:,:),bcpre(:,:),(/'c','c','c'/),rhsbp%x,rhsbp%y,rhsbp%z) ! incorporate in initsolver
 #ifdef IMPDIFF
   call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,1),lambdaxyu,(/'f','c','c'/),au,bu,cu,arrplanu,normfftu)
+  call to_rhs(n,dl,dzc,dzf,cbcvel(:,:,1),bcvel(:,:,1),(/'f','c','c'/),rhsbu%x,rhsbu%y,rhsbu%z)
   call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,2),lambdaxyv,(/'c','f','c'/),av,bv,cv,arrplanv,normfftv)
+  call to_rhs(n,dl,dzc,dzf,cbcvel(:,:,2),bcvel(:,:,2),(/'c','f','c'/),rhsbv%x,rhsbv%y,rhsbv%z)
   call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,3),lambdaxyw,(/'c','c','f'/),aw,bw,cw,arrplanw,normfftw)
+  call to_rhs(n,dl,dzc,dzf,cbcvel(:,:,3),bcvel(:,:,3),(/'c','c','f'/),rhsbw%x,rhsbw%y,rhsbw%z)
 #endif
   !
   ! main loop
@@ -152,10 +162,13 @@ program cans
 #ifdef IMPDIFF
       alpha = -1.d0/(.5d0*visc*dtrk)
       bb(:) = bu(:) + alpha
+      call updt_rhs_b(n,rhsbu%x,rhsbu%y,rhsbu%z,u(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanu,normfftu,lambdaxyu,au,bb,cu,cbcvel(:,3,1),(/'f','c','c'/),up(1:imax,1:jmax,1:ktot))
       bb(:) = bv(:) + alpha
+      call updt_rhs_b(n,rhsbv%x,rhsbv%y,rhsbv%z,v(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanv,normfftv,lambdaxyv,av,bb,cv,cbcvel(:,3,2),(/'c','f','c'/),vp(1:imax,1:jmax,1:ktot))
       bb(:) = bw(:) + alpha
+      call updt_rhs_b(n,rhsbw%x,rhsbw%y,rhsbw%z,w(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanw,normfftw,lambdaxyw,aw,bb,cw,cbcvel(:,3,3),(/'c','c','f'/),wp(1:imax,1:jmax,1:ktot))
 #else
     if(isforced(1)) up(1:n(1),1:n(2),1:n(3)) = up(1:n(1),1:n(2),1:n(3)) + f(1)
@@ -179,8 +192,9 @@ program cans
 #endif
       call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! outflow BC only at final velocity
       call fillps(n,dli,dzfi,dtrki,up,vp,wp,pp)
+      call updt_rhs_b(n,rhsbp%x,rhsbp%y,rhsbp%z,pp(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre(:,3),(/'c','c','c'/),pp(1:imax,1:jmax,1:ktot))
-      call boundp(n,cbcpre,pp)
+      call boundp(cbcpre,n,bcpre,dl,dzc,dzf,pp)
       call correc(n,dli,dzci,dtrk,pp,up,vp,wp,u,v,w)
       call bounduvw(cbcvel,n,bcvel,isoutflow,dl,dzc,dzf,u,v,w)
 #ifdef IMPDIFF
@@ -211,7 +225,7 @@ program cans
       p(:,:,:) = p(:,:,:) + pp(:,:,:)
       !$OMP END WORKSHARE
 #endif
-      call boundp(n,cbcpre,p)
+      call boundp(cbcpre,n,bcpre,dl,dzc,dzf,p)
     enddo
     dpdl(:) = -dpdl(:)*dti
     if(mod(istep,icheck).eq.0) then

@@ -5,7 +5,7 @@ module mod_initsolver
   use mod_param     , only: pi,dims
   implicit none
   private
-  public initsolver
+  public initsolver,to_rhs
   contains
   subroutine initsolver(n,dli,dzci,dzfi,bc,lambdaxy,c_or_f,a,b,c,arrplan,normfft)
     implicit none
@@ -148,11 +148,82 @@ module mod_initsolver
       b(1) = b(1) + factor1*a(1)
       b(n) = b(n) + factor2*c(n)
     case('f')
-      ! needs to be changed; factor should go to the RHS for solving the system of eqs right!
     end select
+    a(1) = 0.d0 ! value not used anyway in solver.f90
+    a(n) = 0.d0 ! idem
+    c(1) = 0.d0 ! idem
+    c(n) = 0.d0 ! idem
     a(:) = a(:) + eps
     b(:) = b(:) + eps
     c(:) = c(:) + eps
     return
   end subroutine tridmatrix
+  subroutine to_rhs(n,dl,dzc,dzf,cbc,bc,c_or_f,rhsbx,rhsby,rhsbz)
+    implicit none
+    integer, intent(in), dimension(3) :: n
+    real(8), intent(in), dimension(3) :: dl
+    real(8), intent(in), dimension(0:) :: dzc,dzf
+    character(len=1), intent(in), dimension(0:1,3) :: cbc
+    real(8), intent(in), dimension(0:1,3) :: bc
+    real(8), dimension(2) :: dlcx,dlcy,dlcz,dlfx,dlfy,dlfz
+    character(len=1), intent(in), dimension(3) :: c_or_f
+    real(8), dimension(n(2),n(3),0:1) :: rhsbx
+    real(8), dimension(n(1),n(3),0:1) :: rhsby
+    real(8), dimension(n(1),n(2),0:1) :: rhsbz
+    dlcx(:) = dl(1)
+    dlfx(:) = dl(1)
+    dlcy(:) = dl(2)
+    dlfy(:) = dl(2)
+    dlcz(:) = (/dzc(0),dzc(n(3))/)
+    dlfz(:) = (/dzf(0),dzf(n(3))/)
+    call bc_rhs(cbc(:,1),n(1),bc(:,1),1,dlcx(:),dlfx(:),c_or_f(1),rhsbx)
+    call bc_rhs(cbc(:,2),n(2),bc(:,2),1,dlcy(:),dlfy(:),c_or_f(2),rhsby)
+    call bc_rhs(cbc(:,3),n(3),bc(:,3),1,dlcz(:),dlfz(:),c_or_f(3),rhsbz)
+    return 
+  end subroutine to_rhs
+  subroutine bc_rhs(cbc,n,bc,idir,dlc,dlf,c_or_f,rhs)
+    implicit none
+    character(len=1), intent(in), dimension(2) :: cbc
+    integer, intent(in) :: n
+    real(8), intent(in), dimension(0:1) :: bc
+    integer, intent(in) :: idir
+    real(8), intent(in), dimension(0:1) :: dlc,dlf
+    real(8), intent(out), dimension(0:,:,:) :: rhs
+    character(len=1), intent(in) :: c_or_f ! c -> cell-centered; f -> face-centered
+    real(8), dimension(0:1) :: factor
+    real(8) :: sgn
+    integer :: ibound
+    !
+    select case(c_or_f)
+    case('c')
+      do ibound = 0,1
+        select case(cbc(ibound))
+        case('P')
+          factor(ibound) = 0.d0
+        case('D')
+          factor(ibound) = -2.d0*bc(ibound)
+        case('N')
+          if(ibound.eq.0) sgn = +1.d0
+          if(ibound.eq.1) sgn = -1.d0
+          factor(ibound) = sgn*dlc(ibound)*bc(ibound)
+        end select
+      enddo
+    case('f')
+      do ibound = 0,1
+        select case(cbc(ibound))
+        case('P')
+          factor(ibound) = 0.d0
+        case('D')
+          factor(ibound) = -bc(ibound)
+        case('N')
+          factor(ibound) = 0.d0 ! not supported for now
+        end select
+      enddo
+    end select
+    forall(ibound=0:1)
+      rhs(ibound,:,:) = factor(ibound)/dlc(ibound)/dlf(ibound)
+      rhs(ibound,:,:) = factor(ibound)/dlc(ibound)/dlf(ibound)
+    end forall
+    return
+  end subroutine bc_rhs
 end module mod_initsolver
