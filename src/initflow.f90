@@ -80,7 +80,7 @@ module mod_initflow
     real(8) :: rn
     integer, dimension(3) :: ng
     integer :: i,j,k,ii,jj
-    allocate(seed(16))
+    allocate(seed(64))
     seed(:) = iseed
     call random_seed( put = seed )
     ng(:) = n(:)

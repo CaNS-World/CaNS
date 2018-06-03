@@ -5,19 +5,25 @@ module mod_initsolver
   use mod_param     , only: pi,dims
   implicit none
   private
-  public initsolver,to_rhs
+  public initsolver
   contains
-  subroutine initsolver(n,dli,dzci,dzfi,bc,lambdaxy,c_or_f,a,b,c,arrplan,normfft)
+  subroutine initsolver(n,dli,dzci,dzfi,cbc,bc,lambdaxy,c_or_f,a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
     implicit none
     integer, intent(in), dimension(3) :: n
     real(8), intent(in), dimension(3) :: dli
     real(8), intent(in), dimension(0:) :: dzci,dzfi
-    character(len=1), intent(in), dimension(0:1,3) :: bc
+    character(len=1), intent(in), dimension(0:1,3) :: cbc
+    real(8)         , intent(in), dimension(0:1,3) :: bc
     real(8), intent(out), dimension(n(1),n(2)) :: lambdaxy
     character(len=1), intent(in), dimension(3) :: c_or_f
     real(8), intent(out), dimension(n(3)) :: a,b,c
     type(C_PTR), intent(out), dimension(2,2) :: arrplan
+    real(8), intent(out), dimension(n(2),n(3),0:1) :: rhsbx
+    real(8), intent(out), dimension(n(1),n(3),0:1) :: rhsby
+    real(8), intent(out), dimension(n(1),n(2),0:1) :: rhsbz
     real(8), intent(out) :: normfft
+    real(8), dimension(3)        :: dl
+    real(8), dimension(0:n(3)+1) :: dzc,dzf
     integer :: i,j
     real(8), dimension(n(1)*dims(1))      :: lambdax
     real(8), dimension(n(2)*dims(2))      :: lambday
@@ -33,9 +39,9 @@ module mod_initsolver
     !
     ng(:) = n(:)
     ng(1:2) = ng(1:2)*dims(1:2)
-    call eigenvalues(ng(1),bc(:,1),c_or_f(1),lambdax)
+    call eigenvalues(ng(1),cbc(:,1),c_or_f(1),lambdax)
     lambdax(:) = lambdax(:)*dli(1)**2
-    call eigenvalues(ng(2),bc(:,2),c_or_f(2),lambday)
+    call eigenvalues(ng(2),cbc(:,2),c_or_f(2),lambday)
     lambday(:) = lambday(:)*dli(2)**2
     do j=1,n(2)
       jj = coord(2)*n(2)+j
@@ -47,11 +53,20 @@ module mod_initsolver
     !
     ! compute coefficients for tridiagonal solver
     !
-    call tridmatrix(bc(:,3),n(3),dli(3),dzci,dzfi,c_or_f(3),a,b,c)
+    call tridmatrix(cbc(:,3),n(3),dli(3),dzci,dzfi,c_or_f(3),a,b,c)
+    !
+    ! compute values to be added to the right hand side
+    !
+    dl(:)  = dli( :)**(-1)
+    dzc(:) = dzci(:)**(-1)
+    dzf(:) = dzfi(:)**(-1)
+    call bc_rhs(cbc(:,1),n(1),bc(:,1),1,(/dl(1) ,dl(1)    /),(/dl(1) ,dl(1)    /),c_or_f(1),rhsbx)
+    call bc_rhs(cbc(:,2),n(2),bc(:,2),1,(/dl(2) ,dl(2)    /),(/dl(2) ,dl(2)    /),c_or_f(2),rhsby)
+    call bc_rhs(cbc(:,3),n(3),bc(:,3),1,(/dzc(0),dzc(n(3))/),(/dzf(0),dzf(n(3))/),c_or_f(3),rhsbz)
     !
     ! prepare ffts
     !
-    call fftini(ng(1),ng(2),ng(3),bc(:,1:2),c_or_f(1:2),arrplan,normfft)
+    call fftini(ng(1),ng(2),ng(3),cbc(:,1:2),c_or_f(1:2),arrplan,normfft)
     return
   end subroutine initsolver
   !
@@ -158,32 +173,9 @@ module mod_initsolver
     c(:) = c(:) + eps
     return
   end subroutine tridmatrix
-  subroutine to_rhs(n,dl,dzc,dzf,cbc,bc,c_or_f,rhsbx,rhsby,rhsbz)
-    implicit none
-    integer, intent(in), dimension(3) :: n
-    real(8), intent(in), dimension(3) :: dl
-    real(8), intent(in), dimension(0:) :: dzc,dzf
-    character(len=1), intent(in), dimension(0:1,3) :: cbc
-    real(8), intent(in), dimension(0:1,3) :: bc
-    real(8), dimension(2) :: dlcx,dlcy,dlcz,dlfx,dlfy,dlfz
-    character(len=1), intent(in), dimension(3) :: c_or_f
-    real(8), dimension(n(2),n(3),0:1) :: rhsbx
-    real(8), dimension(n(1),n(3),0:1) :: rhsby
-    real(8), dimension(n(1),n(2),0:1) :: rhsbz
-    dlcx(:) = dl(1)
-    dlfx(:) = dl(1)
-    dlcy(:) = dl(2)
-    dlfy(:) = dl(2)
-    dlcz(:) = (/dzc(0),dzc(n(3))/)
-    dlfz(:) = (/dzf(0),dzf(n(3))/)
-    call bc_rhs(cbc(:,1),n(1),bc(:,1),1,dlcx(:),dlfx(:),c_or_f(1),rhsbx)
-    call bc_rhs(cbc(:,2),n(2),bc(:,2),1,dlcy(:),dlfy(:),c_or_f(2),rhsby)
-    call bc_rhs(cbc(:,3),n(3),bc(:,3),1,dlcz(:),dlfz(:),c_or_f(3),rhsbz)
-    return 
-  end subroutine to_rhs
   subroutine bc_rhs(cbc,n,bc,idir,dlc,dlf,c_or_f,rhs)
     implicit none
-    character(len=1), intent(in), dimension(2) :: cbc
+    character(len=1), intent(in), dimension(0:1) :: cbc
     integer, intent(in) :: n
     real(8), intent(in), dimension(0:1) :: bc
     integer, intent(in) :: idir

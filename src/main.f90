@@ -34,7 +34,7 @@ program cans
   use mod_initflow   , only: initflow
   use mod_initgrid   , only: initgrid
   use mod_initmpi    , only: initmpi
-  use mod_initsolver , only: initsolver,to_rhs
+  use mod_initsolver , only: initsolver
   use mod_load       , only: load
   use mod_rk         , only: rk
   use mod_output     , only: out0d,out1d,out1d_2,out2d,out3d
@@ -69,9 +69,9 @@ program cans
   real(8), dimension(ktot) :: ap,bp,cp
   real(8) :: normfftp
   type rhs_bound
-    real(8), dimension(0:1,n(2),n(3)) :: x
-    real(8), dimension(0:1,n(1),n(3)) :: y
-    real(8), dimension(0:1,n(1),n(2)) :: z
+    real(8), dimension(n(2),n(3),0:1) :: x
+    real(8), dimension(n(1),n(3),0:1) :: y
+    real(8), dimension(n(1),n(2),0:1) :: z
   end type rhs_bound 
 #ifdef IMPDIFF
   type(C_PTR), dimension(2,2) :: arrplanu,arrplanv,arrplanw
@@ -131,15 +131,11 @@ program cans
   !
   ! initialize Poisson solver
   !
-  call initsolver(n,dli,dzci,dzfi,cbcpre       ,lambdaxyp,(/'c','c','c'/),ap,bp,cp,arrplanp,normfftp)
-  call to_rhs(n,dl,dzc,dzf,cbcpre(:,:),bcpre(:,:),(/'c','c','c'/),rhsbp%x,rhsbp%y,rhsbp%z) ! incorporate in initsolver
+  call initsolver(n,dli,dzci,dzfi,cbcpre,bcpre(:,:),lambdaxyp,(/'c','c','c'/),ap,bp,cp,arrplanp,normfftp,rhsbp%x,rhsbp%y,rhsbp%z)
 #ifdef IMPDIFF
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,1),lambdaxyu,(/'f','c','c'/),au,bu,cu,arrplanu,normfftu)
-  call to_rhs(n,dl,dzc,dzf,cbcvel(:,:,1),bcvel(:,:,1),(/'f','c','c'/),rhsbu%x,rhsbu%y,rhsbu%z)
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,2),lambdaxyv,(/'c','f','c'/),av,bv,cv,arrplanv,normfftv)
-  call to_rhs(n,dl,dzc,dzf,cbcvel(:,:,2),bcvel(:,:,2),(/'c','f','c'/),rhsbv%x,rhsbv%y,rhsbv%z)
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,3),lambdaxyw,(/'c','c','f'/),aw,bw,cw,arrplanw,normfftw)
-  call to_rhs(n,dl,dzc,dzf,cbcvel(:,:,3),bcvel(:,:,3),(/'c','c','f'/),rhsbw%x,rhsbw%y,rhsbw%z)
+  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,1),lambdaxyu,(/'f','c','c'/),au,bu,cu,arrplanu,normfftu,rhsu%x,rhsu%y,rhsu%z)
+  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,2),lambdaxyv,(/'c','f','c'/),av,bv,cv,arrplanv,normfftv,rhsv%x,rhsv%y,rhsv%z)
+  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,3),lambdaxyw,(/'c','c','f'/),aw,bw,cw,arrplanw,normfftw,rhsw%x,rhsw%y,rhsw%z)
 #endif
   !
   ! main loop
