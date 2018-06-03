@@ -133,9 +133,12 @@ program cans
   !
   call initsolver(n,dli,dzci,dzfi,cbcpre,bcpre(:,:),lambdaxyp,(/'c','c','c'/),ap,bp,cp,arrplanp,normfftp,rhsbp%x,rhsbp%y,rhsbp%z)
 #ifdef IMPDIFF
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,1),lambdaxyu,(/'f','c','c'/),au,bu,cu,arrplanu,normfftu,rhsu%x,rhsu%y,rhsu%z)
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,2),lambdaxyv,(/'c','f','c'/),av,bv,cv,arrplanv,normfftv,rhsv%x,rhsv%y,rhsv%z)
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,3),lambdaxyw,(/'c','c','f'/),aw,bw,cw,arrplanw,normfftw,rhsw%x,rhsw%y,rhsw%z)
+  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,1),bcvel(:,:,1),lambdaxyu,(/'f','c','c'/),au,bu,cu,arrplanu,normfftu, &
+                  rhsbu%x,rhsbu%y,rhsbu%z)
+  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,2),bcvel(:,:,2),lambdaxyv,(/'c','f','c'/),av,bv,cv,arrplanv,normfftv, &
+                  rhsbv%x,rhsbv%y,rhsbv%z)
+  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,3),bcvel(:,:,3),lambdaxyw,(/'c','c','f'/),aw,bw,cw,arrplanw,normfftw, &
+                  rhsbw%x,rhsbw%y,rhsbw%z)
 #endif
   !
   ! main loop
@@ -159,13 +162,13 @@ program cans
 #ifdef IMPDIFF
       alpha = -1.d0/(.5d0*visc*dtrk)
       bb(:) = bu(:) + alpha
-      call updt_rhs_b(n,rhsbu%x,rhsbu%y,rhsbu%z,u(1:imax,1:jmax,1:ktot))
+      call updt_rhs_b(n,rhsbu%x,rhsbu%y,rhsbu%z,up(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanu,normfftu,lambdaxyu,au,bb,cu,cbcvel(:,3,1),(/'f','c','c'/),up(1:imax,1:jmax,1:ktot))
       bb(:) = bv(:) + alpha
-      call updt_rhs_b(n,rhsbv%x,rhsbv%y,rhsbv%z,v(1:imax,1:jmax,1:ktot))
+      call updt_rhs_b(n,rhsbv%x,rhsbv%y,rhsbv%z,vp(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanv,normfftv,lambdaxyv,av,bb,cv,cbcvel(:,3,2),(/'c','f','c'/),vp(1:imax,1:jmax,1:ktot))
       bb(:) = bw(:) + alpha
-      call updt_rhs_b(n,rhsbw%x,rhsbw%y,rhsbw%z,w(1:imax,1:jmax,1:ktot))
+      call updt_rhs_b(n,rhsbw%x,rhsbw%y,rhsbw%z,wp(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanw,normfftw,lambdaxyw,aw,bb,cw,cbcvel(:,3,3),(/'c','c','f'/),wp(1:imax,1:jmax,1:ktot))
 #else
     if(isforced(1)) up(1:n(1),1:n(2),1:n(3)) = up(1:n(1),1:n(2),1:n(3)) + f(1)

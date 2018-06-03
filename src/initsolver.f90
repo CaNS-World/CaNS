@@ -125,7 +125,8 @@ module mod_initsolver
     character(len=1), intent(in) :: c_or_f ! c -> cell-centered; f-face-centered
     real(8), intent(out), dimension(n) :: a,b,c
     integer :: k
-    real(8) :: factor1,factor2
+    integer :: ibound
+    real(8), dimension(0:1) :: factor
     ! bc(l) =  1 -> Neumann   BC in the lth direction
     ! bc(l) =  0 -> Periodic  BC in the lth direction
     ! bc(l) = -1 -> Dirichlet BC in the lth direction
@@ -141,28 +142,23 @@ module mod_initsolver
         c(k) = dzfi(k+1)*dzci(k)
       enddo
     end select
-      b(:) = -(a(:)+c(:))
-    select case(bc(0))
-    case('P')
-      factor1 = 0.
-    case('D')
-      factor1 = -1.
-    case('N')
-      factor1 = 1.
-    end select
-    select case(bc(1))
-    case('P')
-      factor2 = 0.
-    case('D')
-      factor2 = -1.
-    case('N')
-      factor2 = 1.
-    end select
+    b(:) = -(a(:)+c(:))
+    do ibound = 0,1
+      select case(bc(ibound))
+      case('P')
+        factor(ibound) = 0.
+      case('D')
+        factor(ibound) = -1.
+      case('N')
+        factor(ibound) = 1.
+      end select
+    enddo
     select case(c_or_f)
     case('c')
-      b(1) = b(1) + factor1*a(1)
-      b(n) = b(n) + factor2*c(n)
+      b(1) = b(1) + factor(0)*a(1)
+      b(n) = b(n) + factor(1)*c(n)
     case('f')
+      b(n-1) = b(n-1) + factor(1)*c(n-1) !!DELETE, just a test!
     end select
     a(1) = 0.d0 ! value not used anyway in solver.f90
     c(n) = 0.d0 ! idem
@@ -193,7 +189,7 @@ module mod_initsolver
         case('D')
           factor(ibound) = -2.d0*bc(ibound)
         case('N')
-          if(ibound.eq.0) sgn = +1.d0
+          if(ibound.eq.0) sgn =  1.d0
           if(ibound.eq.1) sgn = -1.d0
           factor(ibound) = sgn*dlc(ibound)*bc(ibound)
         end select

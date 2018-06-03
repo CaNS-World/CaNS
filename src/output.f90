@@ -99,7 +99,7 @@ module mod_output
       if(myid.eq.0) then
         open(unit=iunit,file=fname)
         do i=1,ng(1)
-          write(iunit,'(2E15.7)') (1.d0*i-.5d0)/(1.d0*n(1)),p1d(j)
+          write(iunit,'(2E15.7)') (1.d0*i-.5d0)/(1.d0*ng(1)),p1d(i)
         enddo
         close(iunit)
       endif
