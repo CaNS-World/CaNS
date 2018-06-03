@@ -10,7 +10,7 @@ module mod_fft
   subroutine fftini(nx,ny,nz,bcxy,c_or_f,arrplan,normfft)
     implicit none
     integer, intent(in) :: nx,ny,nz
-    character(len=1), intent(in), dimension(2,2) :: bcxy
+    character(len=1), intent(in), dimension(0:1,2) :: bcxy
     character(len=1), intent(in), dimension(2) :: c_or_f
     type(C_PTR), intent(out), dimension(2,2) :: arrplan
     real(8), intent(out) :: normfft
@@ -108,12 +108,12 @@ module mod_fft
   !
   subroutine find_fft(bc,c_or_f,kind_fwd,kind_bwd,norm)
   implicit none
-  character(len=1), intent(in), dimension(2) :: bc
+  character(len=1), intent(in), dimension(0:1) :: bc
   character(len=1), intent(in) :: c_or_f
   integer, intent(out) :: kind_fwd,kind_bwd
   real(8), intent(out), dimension(2) :: norm
     if(c_or_f.eq.'c') then
-      select case(bc(1)//bc(2))
+      select case(bc(0)//bc(1))
       case('PP')
         kind_fwd = FFTW_R2HC
         kind_bwd = FFTW_HC2R
@@ -136,7 +136,7 @@ module mod_fft
         norm = (/2.d0,0.d0/)
       end select
     elseif(c_or_f.eq.'f') then
-      select case(bc(1)//bc(2))
+      select case(bc(0)//bc(1))
       case('PP')
         kind_fwd = FFTW_R2HC
         kind_bwd = FFTW_HC2R

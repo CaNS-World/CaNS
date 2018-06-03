@@ -14,7 +14,7 @@ module mod_solver
     real(8), intent(in) :: normfft
     real(8), intent(in), dimension(n(1),n(2)) :: lambdaxy
     real(8), intent(in), dimension(n(3)   ) :: a,b,c
-    character(len=1), dimension(2), intent(in) :: bcz
+    character(len=1), dimension(0:1), intent(in) :: bcz
     character(len=1), intent(in), dimension(3) :: c_or_f
     real(8), intent(inout), dimension(:,:,:) :: pz
     real(8), dimension(n(1)*dims(1),n(2)*dims(2)/dims(1),n(3)/dims(2)) :: px
@@ -38,7 +38,7 @@ module mod_solver
     call transpose_y_to_z(py,pz)
     q = 0
     if(c_or_f(3).eq.'f') q = 1
-    if(bcz(1).eq.'P'.and.bcz(2).eq.'P') then
+    if(bcz(0).eq.'P'.and.bcz(1).eq.'P') then
       call gaussel_dgtsv_periodic(n(1),n(2),n(3)-q,a,b,c,lambdaxy,pz)
     else
       call gaussel_dgtsv(         n(1),n(2),n(3)-q,a,b,c,lambdaxy,pz)
