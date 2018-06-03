@@ -165,8 +165,6 @@ module mod_initsolver
     case('f')
     end select
     a(1) = 0.d0 ! value not used anyway in solver.f90
-    a(n) = 0.d0 ! idem
-    c(1) = 0.d0 ! idem
     c(n) = 0.d0 ! idem
     a(:) = a(:) + eps
     b(:) = b(:) + eps
@@ -180,7 +178,7 @@ module mod_initsolver
     real(8), intent(in), dimension(0:1) :: bc
     integer, intent(in) :: idir
     real(8), intent(in), dimension(0:1) :: dlc,dlf
-    real(8), intent(out), dimension(0:,:,:) :: rhs
+    real(8), intent(out), dimension(:,:,0:) :: rhs
     character(len=1), intent(in) :: c_or_f ! c -> cell-centered; f -> face-centered
     real(8), dimension(0:1) :: factor
     real(8) :: sgn
@@ -213,8 +211,8 @@ module mod_initsolver
       enddo
     end select
     forall(ibound=0:1)
-      rhs(ibound,:,:) = factor(ibound)/dlc(ibound)/dlf(ibound)
-      rhs(ibound,:,:) = factor(ibound)/dlc(ibound)/dlf(ibound)
+      rhs(:,:,ibound) = factor(ibound)/dlc(ibound)/dlf(ibound)
+      rhs(:,:,ibound) = factor(ibound)/dlc(ibound)/dlf(ibound)
     end forall
     return
   end subroutine bc_rhs
