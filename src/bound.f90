@@ -175,25 +175,28 @@ module mod_bound
         select case(idir)
         case(1)
           if    (ibound.eq.0) then
-            !p(0,  :,:) = factor + p(2  ,:,:)
-            p(0  ,:,:) = 1.d0/3.d0*(-2.d0*factor+4.d0*p(1,:,:)-p(2  ,:,:))
+            p(0,  :,:) = factor + p(2  ,:,:)
+            !p(0  ,:,:) = 1.d0/3.d0*(-2.d0*factor+4.d0*p(1,:,:)-p(2  ,:,:))
           elseif(ibound.eq.1) then
-            p(n+1,:,:) = factor + p(n-1,:,:)
+            p(n+1,:,:) = 2.*factor + p(n-1,:,:)
+            p(n  ,:,:) =    factor + p(n-1,:,:)
             !p(n+1,:,:) = 1.d0/3.d0*(-2.d0*factor+4.d0*p(n,:,:)-p(n-1,:,:))
           endif
         case(2)
           if    (ibound.eq.0) then
-            p(:,0  ,:) = 1.d0/3.d0*(-2.d0*factor+4.d0*p(:,1,:)-p(:,2  ,:))
-            !p(:,0  ,:) = factor + p(:,2  ,:) 
+            !p(:,0  ,:) = 1.d0/3.d0*(-2.d0*factor+4.d0*p(:,1,:)-p(:,2  ,:))
+            p(:,0  ,:) = 2.*factor + p(:,2  ,:) 
           elseif(ibound.eq.1) then
-            p(:,n+1,:) = factor + p(:,n-1,:)
+            p(:,n+1,:) = 2.*factor + p(:,n-1,:)
+            p(:,n  ,:) =    factor + p(:,n-1,:)
             !p(:,n+1,:) = 1.d0/3.d0*(-2.d0*factor+4.d0*p(:,n,:)-p(:,n-1,:))
           endif
         case(3) ! not supported for now
           if    (ibound.eq.0) then
-            p(:,:,0  ) = factor + p(:,:,2  )
+            p(:,:,0  ) = 2.*factor + p(:,:,2  )
           elseif(ibound.eq.1) then
-            p(:,:,n+1) = factor + p(:,:,n-1)
+            p(:,:,n+1) = 2.*factor + p(:,:,n-1)
+            p(:,:,n  ) =    factor + p(:,:,n-1)
           endif
         end select
       endif
