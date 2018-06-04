@@ -322,25 +322,32 @@ module mod_bound
     return
   end subroutine inflow
   !
-  subroutine updt_rhs_b(n,rhsbx,rhsby,rhsbz,p)
+  subroutine updt_rhs_b(c_or_f,n,rhsbx,rhsby,rhsbz,p)
     implicit none
+    character, intent(in), dimension(3) :: c_or_f
     integer, intent(in), dimension(3) :: n
     real(8), intent(in), dimension(:,:,0:) :: rhsbx,rhsby,rhsbz
     real(8), intent(inout), dimension(1:,1:,1:) :: p
+    integer, dimension(3) :: q
+    integer :: idir
+    q(:) = 0
+    do idir = 1,3
+      if(c_or_f(idir).eq.'f') q(idir) = 1
+    enddo
     if(left.eq.MPI_PROC_NULL) then
       p(1   ,:,:) = p(1   ,:,:) + rhsbx(:,:,0)
     endif  
     if(right.eq.MPI_PROC_NULL) then
-      p(n(1),:,:) = p(n(1),:,:) + rhsbx(:,:,1)
+      p(n(1)-q(1),:,:) = p(n(1)-q(1),:,:) + rhsbx(:,:,1)
     endif
     if(front.eq.MPI_PROC_NULL) then
       p(:,1   ,:) = p(:,1   ,:) + rhsby(:,:,0)
     endif
     if(back.eq.MPI_PROC_NULL) then
-      p(:,n(2),:) = p(:,n(2),:) + rhsby(:,:,1)
+      p(:,n(2)-q(2),:) = p(:,n(2)-q(2),:) + rhsby(:,:,1)
     endif
     p(:,:,1   ) = p(:,:,1   ) + rhsbz(:,:,0)
-    p(:,:,n(3)) = p(:,:,n(3)) + rhsbz(:,:,1)
+    p(:,:,n(3)-q(3)) = p(:,:,n(3)-q(3)) + rhsbz(:,:,1)
     return
   end subroutine updt_rhs_b
   subroutine updthalo(n,idir,p)

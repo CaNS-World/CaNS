@@ -62,7 +62,11 @@ module mod_initsolver
     dzf(:) = dzfi(:)**(-1)
     call bc_rhs(cbc(:,1),n(1),bc(:,1),1,(/dl(1) ,dl(1)    /),(/dl(1) ,dl(1)    /),c_or_f(1),rhsbx)
     call bc_rhs(cbc(:,2),n(2),bc(:,2),1,(/dl(2) ,dl(2)    /),(/dl(2) ,dl(2)    /),c_or_f(2),rhsby)
-    call bc_rhs(cbc(:,3),n(3),bc(:,3),1,(/dzc(0),dzc(n(3))/),(/dzf(0),dzf(n(3))/),c_or_f(3),rhsbz)
+    if(    c_or_f(3).eq.'c') then
+      call bc_rhs(cbc(:,3),n(3),bc(:,3),1,(/dzc(0),dzc(n(3)  )/),(/dzf(1),dzf(n(3))/),c_or_f(3),rhsbz)
+    elseif(c_or_f(3).eq.'f') then
+      call bc_rhs(cbc(:,3),n(3),bc(:,3),1,(/dzc(1),dzc(n(3)-1)/),(/dzf(1),dzf(n(3))/),c_or_f(3),rhsbz)
+    endif
     !
     ! prepare ffts
     !
@@ -158,6 +162,8 @@ module mod_initsolver
       b(1) = b(1) + factor(0)*a(1)
       b(n) = b(n) + factor(1)*c(n)
     case('f')
+      if(bc(0).eq.'N') b(1)   = b(1)   + factor(0)*a(1) 
+      if(bc(1).eq.'N') b(n-1) = b(n-1) + factor(1)*c(n-1)
     end select
     a(1) = 0.d0 ! value not used anyway in solver.f90
     c(n) = 0.d0 ! idem
@@ -201,7 +207,9 @@ module mod_initsolver
         case('D')
           factor(ibound) = -bc(ibound)
         case('N')
-          factor(ibound) = 0.d0 ! not supported for now
+          if(ibound.eq.0) sgn =  1.d0
+          if(ibound.eq.1) sgn = -1.d0
+          factor(ibound) = sgn*dlf(ibound)*bc(ibound)
         end select
       enddo
     end select
