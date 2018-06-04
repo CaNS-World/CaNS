@@ -150,30 +150,32 @@ program cans
     istep = istep + 1
     time = time + dt
     if(myid.eq.0) print*, 'Timestep #', istep, 'Time = ', time
-    dpdl(:) = 0.
-    tauxo(:) = 0.
-    tauyo(:) = 0.
-    tauzo(:) = 0.
+    dpdl(:) = 0.d0
+    tauxo(:) = 0.d0
+    tauyo(:) = 0.d0
+    tauzo(:) = 0.d0
     do irk=1,3
       dtrk = sum(rkcoeff(:,irk))*dt
       dtrki = dtrk**(-1)
-      call rk(rkcoeff(:,irk),n,dli,dzci,dzfi,dzf/lz,visc,dt,l, &
+      call rk(rkcoeff(:,irk),n,dli,dzci,dzfi,dzf/lz,dzc/lz,visc,dt,l, &
               u,v,w,p,dudtrko,dvdtrko,dwdtrko,tauxo,tauyo,tauzo,up,vp,wp,f)
+      if(isforced(1)) up(1:n(1),1:n(2),1:n(3)) = up(1:n(1),1:n(2),1:n(3)) + f(1)
+      if(isforced(2)) vp(1:n(1),1:n(2),1:n(3)) = vp(1:n(1),1:n(2),1:n(3)) + f(2)
+      if(isforced(3)) wp(1:n(1),1:n(2),1:n(3)) = wp(1:n(1),1:n(2),1:n(3)) + f(3)
 #ifdef IMPDIFF
       alpha = -1.d0/(.5d0*visc*dtrk)
+      up(:,:,:) = up(:,:,:)*alpha
       bb(:) = bu(:) + alpha
       call updt_rhs_b((/'f','c','c'/),cbcvel(:,:,1),n,rhsbu%x,rhsbu%y,rhsbu%z,up(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanu,normfftu,lambdaxyu,au,bb,cu,cbcvel(:,3,1),(/'f','c','c'/),up(1:imax,1:jmax,1:ktot))
+      vp(:,:,:) = vp(:,:,:)*alpha
       bb(:) = bv(:) + alpha
       call updt_rhs_b((/'c','f','c'/),cbcvel(:,:,2),n,rhsbv%x,rhsbv%y,rhsbv%z,vp(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanv,normfftv,lambdaxyv,av,bb,cv,cbcvel(:,3,2),(/'c','f','c'/),vp(1:imax,1:jmax,1:ktot))
+      wp(:,:,:) = wp(:,:,:)*alpha
       bb(:) = bw(:) + alpha
       call updt_rhs_b((/'c','c','f'/),cbcvel(:,:,3),n,rhsbw%x,rhsbw%y,rhsbw%z,wp(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanw,normfftw,lambdaxyw,aw,bb,cw,cbcvel(:,3,3),(/'c','c','f'/),wp(1:imax,1:jmax,1:ktot))
-#else
-    if(isforced(1)) up(1:n(1),1:n(2),1:n(3)) = up(1:n(1),1:n(2),1:n(3)) + f(1)
-    if(isforced(2)) vp(1:n(1),1:n(2),1:n(3)) = vp(1:n(1),1:n(2),1:n(3)) + f(2)
-    if(isforced(3)) wp(1:n(1),1:n(2),1:n(3)) = wp(1:n(1),1:n(2),1:n(3)) + f(3)
 #endif
     dpdl(:) = dpdl(:) + f(:)
 #ifdef DEBUG
@@ -182,11 +184,11 @@ program cans
         if(myid.eq.0) print*,'Mean u = ', meanvel
       endif
       if(isforced(2)) then
-        call chkmean(n,dzf/lz,v,meanvel)
+        call chkmean(n,dzf/lz,vp,meanvel)
         if(myid.eq.0) print*,'Mean v = ', meanvel
       endif
       if(isforced(3)) then
-        call chkmean(n,dzf/lz,w,meanvel)
+        call chkmean(n,dzc/lz,wp,meanvel)
         if(myid.eq.0) print*,'Mean w = ', meanvel
       endif
 #endif
@@ -212,8 +214,8 @@ program cans
             ip = i + 1
             im = i - 1
             p(i,j,k) = p(i,j,k) + pp(i,j,k) + alphai*( &
-                        (pp(ip,j,k)-2.*pp(i,j,k)+pp(im,j,k))*(dxi**2) + &
-                        (pp(i,jp,k)-2.*pp(i,j,k)+pp(i,jm,k))*(dyi**2) + &
+                        (pp(ip,j,k)-2.d0*pp(i,j,k)+pp(im,j,k))*(dxi**2) + &
+                        (pp(i,jp,k)-2.d0*pp(i,j,k)+pp(i,jm,k))*(dyi**2) + &
                         ((pp(i,j,kp)-pp(i,j,k))*dzci(k) - &
                          (pp(i,j,k)-pp(i,j,km))*dzci(km))*dzfi(k) )
           enddo
@@ -238,7 +240,7 @@ program cans
     endif
     if(mod(istep,iout0d).eq.0) then
       !allocate(var(4))
-      var(1) = 1.*istep
+      var(1) = 1.d0*istep
       var(2) = dt
       var(3) = time 
       call out0d(trim(datadir)//'time.out',3,var)

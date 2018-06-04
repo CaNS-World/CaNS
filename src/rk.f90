@@ -11,7 +11,7 @@ use mod_debug, only: chkmean
   private
   public rk
   contains
-  subroutine rk(rkpar,n,dli,dzci,dzfi,dzflzi,visc,dt,l,u,v,w,p,dudtrko,dvdtrko,dwdtrko,tauxo,tauyo,tauzo,up,vp,wp,f)
+  subroutine rk(rkpar,n,dli,dzci,dzfi,dzflzi,dzclzi,visc,dt,l,u,v,w,p,dudtrko,dvdtrko,dwdtrko,tauxo,tauyo,tauzo,up,vp,wp,f)
     !
     ! low-storage 3rd-order Runge-Kutta scheme 
     ! for time integration of the momentum equations.
@@ -21,7 +21,7 @@ use mod_debug, only: chkmean
     integer, intent(in), dimension(3) :: n
     real(8), intent(in) :: visc,dt
     real(8), intent(in   ), dimension(3) :: dli,l 
-    real(8), intent(in   ), dimension(0:) :: dzci,dzfi,dzflzi
+    real(8), intent(in   ), dimension(0:) :: dzci,dzfi,dzflzi,dzclzi
     real(8), intent(in   ), dimension(0:,0:,0:) :: u ,v ,w,p
     real(8), intent(inout), dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
     real(8), intent(inout), dimension(3) :: tauxo,tauyo,tauzo
@@ -30,7 +30,6 @@ use mod_debug, only: chkmean
     real(8),              dimension(n(1),n(2),n(3)) ::          dudtrk, dvdtrk, dwdtrk
 #ifdef IMPDIFF
     real(8),              dimension(n(1),n(2),n(3)) ::          dudtrkd, dvdtrkd, dwdtrkd
-    real(8) :: alpha
 #endif
     real(8) :: factor1,factor2,factor12
     real(8), dimension(3) :: taux,tauy,tauz
@@ -103,7 +102,7 @@ use mod_debug, only: chkmean
     !
     ! bulk velocity forcing
     !
-    f(:) = 0.
+    f(:) = 0.d0
     if(forceinx) then
       call chkmean(n,dzflzi,up,mean)
       f(1) = velfx - mean
@@ -113,21 +112,20 @@ use mod_debug, only: chkmean
       f(2) = velfy - mean
     endif
     if(forceinz) then
-      call chkmean(n,dzflzi,wp,mean) ! here should be dzclzi
+      call chkmean(n,dzclzi,wp,mean)
       f(3) = velfz - mean
     endif
 #ifdef IMPDIFF
     ! compute rhs of helmholtz equation
-    alpha = -1.d0/(.5d0*visc*factor12)
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP PRIVATE(i,j,k) &
-    !$OMP SHARED(n,factor12,factor2,visc,up,vp,wp,dudtrkd,dvdtrkd,dwdtrkd,alpha,f)
+    !$OMP SHARED(n,factor12,factor2,visc,up,vp,wp,dudtrkd,dvdtrkd,dwdtrkd)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
-          up(i,j,k) = ( up(i,j,k) + f(1) - .5d0*factor12*dudtrkd(i,j,k) )*alpha
-          vp(i,j,k) = ( vp(i,j,k) + f(2) - .5d0*factor12*dvdtrkd(i,j,k) )*alpha
-          wp(i,j,k) = ( wp(i,j,k) + f(3) - .5d0*factor12*dwdtrkd(i,j,k) )*alpha
+          up(i,j,k) = up(i,j,k) - .5d0*factor12*dudtrkd(i,j,k)
+          vp(i,j,k) = vp(i,j,k) - .5d0*factor12*dvdtrkd(i,j,k)
+          wp(i,j,k) = wp(i,j,k) - .5d0*factor12*dwdtrkd(i,j,k)
         enddo
       enddo
     enddo

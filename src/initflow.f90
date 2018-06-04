@@ -93,7 +93,7 @@ module mod_initflow
           call random_number(rn)
           if(ii.ge.1.and.ii.le.n(1) .and. &
              jj.ge.1.and.jj.le.n(2) ) then
-             p(ii,jj,k) = p(ii,jj,k) + 2.d0*(rn-0.5)*norm
+             p(ii,jj,k) = p(ii,jj,k) + 2.d0*(rn-.5d0)*norm
           endif
         enddo
       enddo

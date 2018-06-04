@@ -84,36 +84,36 @@ module mod_initsolver
     select case(bc(0)//bc(1))
     case('PP')
       l = 1
-      lambda(l)     = -4.*sin((1.*(l-1))*pi/(1.*n))**2
+      lambda(l)     = -4.d0*sin((1.d0*(l-1))*pi/(1.d0*n))**2
       do l=2,n/2
-        lambda(l  )   = -4.*sin((1.*(l-1))*pi/(1.*n))**2
+        lambda(l  )   = -4.d0*sin((1.d0*(l-1))*pi/(1.d0*n))**2
         lambda(n-l+2) = lambda(l) ! according to the half-complex format of fftw
       enddo
       l = n/2+1
-      lambda(l)    = -4.*sin((1.*(l-1))*pi/(1.*n))**2
+      lambda(l)    = -4.d0*sin((1.d0*(l-1))*pi/(1.d0*n))**2
     case('NN')
       if(    c_or_f.eq.'c') then
         do l=1,n
-          lambda(l)   = -4.*sin((1.*(l-1))*pi/(2.*n))**2
+          lambda(l)   = -4.d0*sin((1.d0*(l-1))*pi/(2.d0*n))**2
         enddo
       elseif(c_or_f.eq.'f') then
         do l=1,n
-          lambda(l)   = -4.*sin((1.*(l-1))*pi/(2.*(n-1)))**2
+          lambda(l)   = -4.d0*sin((1.d0*(l-1))*pi/(2.d0*(n-1)))**2
         enddo
       endif
     case('DD')
       if(    c_or_f.eq.'c') then
         do l=1,n
-          lambda(l)   = -4.*sin((1.*(l-0))*pi/(2.*n))**2
+          lambda(l)   = -4.d0*sin((1.d0*(l-0))*pi/(2.d0*n))**2
         enddo
       elseif(c_or_f.eq.'f') then
         do l=1,n
-          lambda(l)   = -4.*sin((1.*(l-0))*pi/(2.*(n+1)))**2
+          lambda(l)   = -4.d0*sin((1.d0*(l-0))*pi/(2.d0*(n+1)))**2
         enddo
       endif
     case('ND')
       do l=1,n
-        lambda(l)   = -4.*sin((1.*(2*l-1))*pi/(4.*n))**2
+        lambda(l)   = -4.d0*sin((1.d0*(2*l-1))*pi/(4.d0*n))**2
       enddo
     end select   
     return

@@ -175,21 +175,21 @@ module mod_bound
         select case(idir)
         case(1)
           if    (ibound.eq.0) then
-            p(0,  :,:) = 2.*factor + p(2  ,:,:)
+            p(0,  :,:) = 2.d0*factor + p(2  ,:,:)
           elseif(ibound.eq.1) then
-            p(n+1,:,:) = 2.*factor + p(n-1,:,:)
+            p(n+1,:,:) = 2.d0*factor + p(n-1,:,:)
           endif
         case(2)
           if    (ibound.eq.0) then
-            p(:,0  ,:) = 2.*factor + p(:,2  ,:) 
+            p(:,0  ,:) = 2.d0*factor + p(:,2  ,:) 
           elseif(ibound.eq.1) then
-            p(:,n+1,:) = 2.*factor + p(:,n-1,:)
+            p(:,n+1,:) = 2.d0*factor + p(:,n-1,:)
           endif
         case(3) ! not supported for now
           if    (ibound.eq.0) then
-            p(:,:,0  ) = 2.*factor + p(:,:,2  )
+            p(:,:,0  ) = 2.d0*factor + p(:,:,2  )
           elseif(ibound.eq.1) then
-            p(:,:,n+1) = 2.*factor + p(:,:,n-1)
+            p(:,:,n+1) = 2.d0*factor + p(:,:,n-1)
           endif
         end select
       endif
@@ -329,7 +329,7 @@ module mod_bound
     integer :: idir
     q(:) = 0
     do idir = 1,3
-      if(c_or_f(idir).eq.'f'.and.cbc(0,idir).eq.'D') q(idir) = 1
+      if(c_or_f(idir).eq.'f'.and.cbc(1,idir).eq.'D') q(idir) = 1
     enddo
     if(left.eq.MPI_PROC_NULL) then
       p(1   ,:,:) = p(1   ,:,:) + rhsbx(:,:,0)

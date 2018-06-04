@@ -39,7 +39,7 @@ module mod_chkdiv
              divtot = divtot + div
              !     ii = coord(1)*n(1)+i
              !     jj = coord(2)*n(2)+j
-             !if(abs(div).ge.1.e-12) print*,div,'Large divergence at grid cell: ',ii,jj,k
+             !if(abs(div).ge.1.e-12) print*,div,'Large divergence at grid cell: ',ii,jj,k,div
           enddo
        enddo
     enddo

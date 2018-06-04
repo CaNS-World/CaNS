@@ -52,8 +52,8 @@ module mod_debug
             ip = i + 1
             im = i - 1
             val =  upp(i,j,k)+(1./alpha)*( &
-                  (upp(ip,j,k)-2.*upp(i,j,k)+upp(im,j,k))*(dxi**2) + &
-                  (upp(i,jp,k)-2.*upp(i,j,k)+upp(i,jm,k))*(dyi**2) + &
+                  (upp(ip,j,k)-2.d0*upp(i,j,k)+upp(im,j,k))*(dxi**2) + &
+                  (upp(i,jp,k)-2.d0*upp(i,j,k)+upp(i,jm,k))*(dyi**2) + &
                  ((upp(i,j,kp)-upp(i,j,k))*dzci(k) - &
                   (upp(i,j,k )-upp(i,j,km))*dzci(km))*dzfi(k) )
             if(abs(val-up(i,j,k)).gt.1.e-12) print*, 'Large difference : ', val-up(i,j,k),i,j,k
@@ -71,11 +71,11 @@ module mod_debug
             ip = i + 1
             im = i - 1
             val =  upp(i,j,k)+(1./alpha)*( &
-                  (upp(ip,j,k)-2.*upp(i,j,k)+upp(im,j,k))*(dxi**2) + &
-                  (upp(i,jp,k)-2.*upp(i,j,k)+upp(i,jm,k))*(dyi**2) + &
+                  (upp(ip,j,k)-2.d0*upp(i,j,k)+upp(im,j,k))*(dxi**2) + &
+                  (upp(i,jp,k)-2.d0*upp(i,j,k)+upp(i,jm,k))*(dyi**2) + &
                  ((upp(i,j,kp)-upp(i,j,k))*dzfi(kp) - &
                   (upp(i,j,k )-upp(i,j,km))*dzfi(k))*dzci(k) )
-            if(abs(val-up(i,j,k)).gt.1.e-12) print*, 'Large difference : ', val-up(i,j,k),i,j,k
+            if(abs(val-up(i,j,k)).gt.1.d-12) print*, 'Large difference : ', val-up(i,j,k),i,j,k
           enddo
         enddo
       enddo
