@@ -37,7 +37,7 @@ module mod_solver
     !
     call transpose_y_to_z(py,pz)
     q = 0
-    if(c_or_f(3).eq.'f') q = 1
+    if(c_or_f(3).eq.'f'.and.bcz(1).eq.'D') q = 1
     if(bcz(0).eq.'P'.and.bcz(1).eq.'P') then
       call gaussel_dgtsv_periodic(n(1),n(2),n(3)-q,a,b,c,lambdaxy,pz)
     else

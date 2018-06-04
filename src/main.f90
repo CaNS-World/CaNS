@@ -162,13 +162,13 @@ program cans
 #ifdef IMPDIFF
       alpha = -1.d0/(.5d0*visc*dtrk)
       bb(:) = bu(:) + alpha
-      call updt_rhs_b((/'f','c','c'/),n,rhsbu%x,rhsbu%y,rhsbu%z,up(1:imax,1:jmax,1:ktot))
+      call updt_rhs_b((/'f','c','c'/),cbcvel(:,:,1),n,rhsbu%x,rhsbu%y,rhsbu%z,up(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanu,normfftu,lambdaxyu,au,bb,cu,cbcvel(:,3,1),(/'f','c','c'/),up(1:imax,1:jmax,1:ktot))
       bb(:) = bv(:) + alpha
-      call updt_rhs_b((/'c','f','c'/),n,rhsbv%x,rhsbv%y,rhsbv%z,vp(1:imax,1:jmax,1:ktot))
+      call updt_rhs_b((/'c','f','c'/),cbcvel(:,:,2),n,rhsbv%x,rhsbv%y,rhsbv%z,vp(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanv,normfftv,lambdaxyv,av,bb,cv,cbcvel(:,3,2),(/'c','f','c'/),vp(1:imax,1:jmax,1:ktot))
       bb(:) = bw(:) + alpha
-      call updt_rhs_b((/'c','c','f'/),n,rhsbw%x,rhsbw%y,rhsbw%z,wp(1:imax,1:jmax,1:ktot))
+      call updt_rhs_b((/'c','c','f'/),cbcvel(:,:,3),n,rhsbw%x,rhsbw%y,rhsbw%z,wp(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanw,normfftw,lambdaxyw,aw,bb,cw,cbcvel(:,3,3),(/'c','c','f'/),wp(1:imax,1:jmax,1:ktot))
 #else
     if(isforced(1)) up(1:n(1),1:n(2),1:n(3)) = up(1:n(1),1:n(2),1:n(3)) + f(1)
@@ -192,7 +192,7 @@ program cans
 #endif
       call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! outflow BC only at final velocity
       call fillps(n,dli,dzfi,dtrki,up,vp,wp,pp)
-      call updt_rhs_b((/'c','c','c'/),n,rhsbp%x,rhsbp%y,rhsbp%z,pp(1:imax,1:jmax,1:ktot))
+      call updt_rhs_b((/'c','c','c'/),cbcpre,n,rhsbp%x,rhsbp%y,rhsbp%z,pp(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre(:,3),(/'c','c','c'/),pp(1:imax,1:jmax,1:ktot))
       call boundp(cbcpre,n,bcpre,dl,dzc,dzf,pp)
       call correc(n,dli,dzci,dtrk,pp,up,vp,wp,u,v,w)
@@ -264,6 +264,7 @@ program cans
       call out1d(trim(datadir)//'umean_y.out',n,2,zc/lz,dzf/lz,u)
       call out1d(trim(datadir)//'vmean_y.out',n,2,zf/lz,dzc/lz,v)
       call out1d(trim(datadir)//'wmean_y.out',n,2,zc/lz,dzf/lz,w)
+      call out1d(trim(datadir)//'wmean_x.out',n,1,zc/lz,dzf/lz,w)
       call out1d_2(trim(datadir)//'velstats.out',n,3,zc/lz,u,v,w)
     endif
     if(mod(istep,iout2d).eq.0) then

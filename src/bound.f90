@@ -171,32 +171,25 @@ module mod_bound
             p(:,:,n) = factor
           endif
         end select
-      elseif(.not.stag.and.ctype.eq.'N') then !changed to second-order 1-sided difference
+      elseif(.not.stag.and.ctype.eq.'N') then
         select case(idir)
         case(1)
           if    (ibound.eq.0) then
-            p(0,  :,:) = factor + p(2  ,:,:)
-            !p(0  ,:,:) = 1.d0/3.d0*(-2.d0*factor+4.d0*p(1,:,:)-p(2  ,:,:))
+            p(0,  :,:) = 2.*factor + p(2  ,:,:)
           elseif(ibound.eq.1) then
             p(n+1,:,:) = 2.*factor + p(n-1,:,:)
-            p(n  ,:,:) =    factor + p(n-1,:,:)
-            !p(n+1,:,:) = 1.d0/3.d0*(-2.d0*factor+4.d0*p(n,:,:)-p(n-1,:,:))
           endif
         case(2)
           if    (ibound.eq.0) then
-            !p(:,0  ,:) = 1.d0/3.d0*(-2.d0*factor+4.d0*p(:,1,:)-p(:,2  ,:))
             p(:,0  ,:) = 2.*factor + p(:,2  ,:) 
           elseif(ibound.eq.1) then
             p(:,n+1,:) = 2.*factor + p(:,n-1,:)
-            p(:,n  ,:) =    factor + p(:,n-1,:)
-            !p(:,n+1,:) = 1.d0/3.d0*(-2.d0*factor+4.d0*p(:,n,:)-p(:,n-1,:))
           endif
         case(3) ! not supported for now
           if    (ibound.eq.0) then
             p(:,:,0  ) = 2.*factor + p(:,:,2  )
           elseif(ibound.eq.1) then
             p(:,:,n+1) = 2.*factor + p(:,:,n-1)
-            p(:,:,n  ) =    factor + p(:,:,n-1)
           endif
         end select
       endif
@@ -325,9 +318,10 @@ module mod_bound
     return
   end subroutine inflow
   !
-  subroutine updt_rhs_b(c_or_f,n,rhsbx,rhsby,rhsbz,p)
+  subroutine updt_rhs_b(c_or_f,cbc,n,rhsbx,rhsby,rhsbz,p)
     implicit none
     character, intent(in), dimension(3) :: c_or_f
+    character(len=1), intent(in), dimension(0:1,3) :: cbc
     integer, intent(in), dimension(3) :: n
     real(8), intent(in), dimension(:,:,0:) :: rhsbx,rhsby,rhsbz
     real(8), intent(inout), dimension(1:,1:,1:) :: p
@@ -335,7 +329,7 @@ module mod_bound
     integer :: idir
     q(:) = 0
     do idir = 1,3
-      if(c_or_f(idir).eq.'f') q(idir) = 1
+      if(c_or_f(idir).eq.'f'.and.cbc(0,idir).eq.'D') q(idir) = 1
     enddo
     if(left.eq.MPI_PROC_NULL) then
       p(1   ,:,:) = p(1   ,:,:) + rhsbx(:,:,0)

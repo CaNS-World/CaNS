@@ -141,7 +141,7 @@ module mod_initsolver
         c(k) = dzfi(k)*dzci(k)
       enddo
     case('f')
-      do k = 1,n-1 ! needs to be changed; factor should go to the RHS for solving the system of eqs right!
+      do k = 1,n ! needs to be changed; factor should go to the RHS for solving the system of eqs right!
         a(k) = dzfi(k)*dzci(k)
         c(k) = dzfi(k+1)*dzci(k)
       enddo
@@ -162,8 +162,8 @@ module mod_initsolver
       b(1) = b(1) + factor(0)*a(1)
       b(n) = b(n) + factor(1)*c(n)
     case('f')
-      if(bc(0).eq.'N') b(1)   = b(1)   + factor(0)*a(1) 
-      if(bc(1).eq.'N') b(n-1) = b(n-1) + factor(1)*c(n-1)
+      if(bc(0).eq.'N') b(1) = b(1) + factor(0)*a(1)
+      if(bc(1).eq.'N') b(n) = b(n) + factor(1)*c(n)
     end select
     a(1) = 0.d0 ! value not used anyway in solver.f90
     c(n) = 0.d0 ! idem
