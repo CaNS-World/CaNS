@@ -158,7 +158,6 @@ module mod_initsolver
       b(1) = b(1) + factor(0)*a(1)
       b(n) = b(n) + factor(1)*c(n)
     case('f')
-      b(n-1) = b(n-1) + factor(1)*c(n-1) !!DELETE, just a test!
     end select
     a(1) = 0.d0 ! value not used anyway in solver.f90
     c(n) = 0.d0 ! idem
