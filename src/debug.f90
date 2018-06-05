@@ -31,32 +31,33 @@ module mod_debug
     return
   end subroutine chkmean
   !
-  subroutine chkhelmholtz(n,dxi,dyi,dzci,dzfi,alpha,up,upp,c_or_f)
+  subroutine chkhelmholtz(n,dxi,dyi,dzci,dzfi,alpha,fp,fpp,c_or_f_z)
     implicit none
     integer, intent(in), dimension(3) :: n
     real(8), intent(in) :: dxi,dyi,alpha
     real(8), intent(in), dimension(0:) :: dzfi,dzci
-    real(8), intent(in), dimension(0:,0:,0:) :: up,upp
-    character(len=1), intent(in) :: c_or_f
+    real(8), intent(in), dimension(0:,0:,0:) :: fp,fpp
+    character(len=1), intent(in) :: c_or_f_z
     real(8) :: val
     integer :: i,j,k,im,ip,jm,jp,km,kp
-    select case(c_or_f)
+    select case(c_or_f_z)
     case('c')
-      do k=1,n(3)
+      do k=1,n(3)-1
         kp = k + 1
         km = k - 1
-        do j=1,n(2)
+        do j=1,n(2)-1
           jp = j + 1
           jm = j - 1
-          do i=1,n(1)
+          do i=1,n(1)-1
             ip = i + 1
             im = i - 1
-            val =  upp(i,j,k)+(1./alpha)*( &
-                  (upp(ip,j,k)-2.d0*upp(i,j,k)+upp(im,j,k))*(dxi**2) + &
-                  (upp(i,jp,k)-2.d0*upp(i,j,k)+upp(i,jm,k))*(dyi**2) + &
-                 ((upp(i,j,kp)-upp(i,j,k))*dzci(k) - &
-                  (upp(i,j,k )-upp(i,j,km))*dzci(km))*dzfi(k) )
-            if(abs(val-up(i,j,k)).gt.1.e-12) print*, 'Large difference : ', val-up(i,j,k),i,j,k
+            val =  fpp(i,j,k)+(1./alpha)*( &
+                  (fpp(ip,j,k)-2.d0*fpp(i,j,k)+fpp(im,j,k))*(dxi**2) + &
+                  (fpp(i,jp,k)-2.d0*fpp(i,j,k)+fpp(i,jm,k))*(dyi**2) + &
+                 ((fpp(i,j,kp)-fpp(i,j,k))*dzci(k) - &
+                  (fpp(i,j,k )-fpp(i,j,km))*dzci(km))*dzfi(k) )
+            val = val*alpha
+            if(abs(val-fp(i,j,k)).gt.1.e-9) print*, 'Large difference : ', val,fp(i,j,k),i,j,k
           enddo
         enddo
       enddo
@@ -64,18 +65,19 @@ module mod_debug
       do k=1,n(3)-1
         kp = k + 1
         km = k - 1
-        do j=1,n(2)
+        do j=1,n(2)-1
           jp = j + 1
           jm = j - 1
-          do i=1,n(1)
+          do i=1,n(1)-1
             ip = i + 1
             im = i - 1
-            val =  upp(i,j,k)+(1./alpha)*( &
-                  (upp(ip,j,k)-2.d0*upp(i,j,k)+upp(im,j,k))*(dxi**2) + &
-                  (upp(i,jp,k)-2.d0*upp(i,j,k)+upp(i,jm,k))*(dyi**2) + &
-                 ((upp(i,j,kp)-upp(i,j,k))*dzfi(kp) - &
-                  (upp(i,j,k )-upp(i,j,km))*dzfi(k))*dzci(k) )
-            if(abs(val-up(i,j,k)).gt.1.d-12) print*, 'Large difference : ', val-up(i,j,k),i,j,k
+            val =  fpp(i,j,k)+(1./alpha)*( &
+                  (fpp(ip,j,k)-2.d0*fpp(i,j,k)+fpp(im,j,k))*(dxi**2) + &
+                  (fpp(i,jp,k)-2.d0*fpp(i,j,k)+fpp(i,jm,k))*(dyi**2) + &
+                 ((fpp(i,j,kp)-fpp(i,j,k))*dzfi(kp) - &
+                  (fpp(i,j,k )-fpp(i,j,km))*dzfi(k))*dzci(k) )
+            val = val*alpha
+            if(abs(val-fp(i,j,k)).gt.1.e-9) print*, 'Large difference : ', val,fp(i,j,k),i,j,k
           enddo
         enddo
       enddo

@@ -107,8 +107,8 @@ module mod_initsolver
           lambda(l)   = -4.d0*sin((1.d0*(l-0))*pi/(2.d0*n))**2
         enddo
       elseif(c_or_f.eq.'f') then
-        do l=1,n
-          lambda(l)   = -4.d0*sin((1.d0*(l-0))*pi/(2.d0*(n+1)))**2
+        do l=1,n-1
+          lambda(l)   = -4.d0*sin((1.d0*(l-0))*pi/(2.d0*(n+1-1)))**2
         enddo
       endif
     case('ND')

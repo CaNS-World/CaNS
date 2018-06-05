@@ -83,6 +83,9 @@ program cans
   integer :: i,j,k,im,ip,jm,jp,km,kp
   real(8) :: mean
   type(rhs_bound) :: rhsbu,rhsbv,rhsbw
+!#ifdef DEBUG
+  real(8), dimension(0:imax+1,0:jmax+1,0:ktot+1) :: up_aux,vp_aux,wp_aux
+!#endif
 #endif
   type(rhs_bound) :: rhsbp
   real(8) :: ristep
@@ -165,14 +168,23 @@ program cans
 #ifdef IMPDIFF
       alpha = -1.d0/(.5d0*visc*dtrk)
       up(:,:,:) = up(:,:,:)*alpha
+!ifdef debug
+      up_aux(:,:,:) = up(:,:,:)
+!endif
       bb(:) = bu(:) + alpha
       call updt_rhs_b((/'f','c','c'/),cbcvel(:,:,1),n,rhsbu%x,rhsbu%y,rhsbu%z,up(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanu,normfftu,lambdaxyu,au,bb,cu,cbcvel(:,3,1),(/'f','c','c'/),up(1:imax,1:jmax,1:ktot))
       vp(:,:,:) = vp(:,:,:)*alpha
+!ifdef debug
+      vp_aux(:,:,:) = vp(:,:,:)
+!endif
       bb(:) = bv(:) + alpha
       call updt_rhs_b((/'c','f','c'/),cbcvel(:,:,2),n,rhsbv%x,rhsbv%y,rhsbv%z,vp(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanv,normfftv,lambdaxyv,av,bb,cv,cbcvel(:,3,2),(/'c','f','c'/),vp(1:imax,1:jmax,1:ktot))
       wp(:,:,:) = wp(:,:,:)*alpha
+!ifdef debug
+      wp_aux(:,:,:) = wp(:,:,:)
+!endif
       bb(:) = bw(:) + alpha
       call updt_rhs_b((/'c','c','f'/),cbcvel(:,:,3),n,rhsbw%x,rhsbw%y,rhsbw%z,wp(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanw,normfftw,lambdaxyw,aw,bb,cw,cbcvel(:,3,3),(/'c','c','f'/),wp(1:imax,1:jmax,1:ktot))
@@ -193,6 +205,11 @@ program cans
       endif
 #endif
       call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! outflow BC only at final velocity
+!#ifdef DEBUG
+      call chkhelmholtz(n,dxi,dyi,dzci,dzfi,alpha,up_aux,up,'c')
+      call chkhelmholtz(n,dxi,dyi,dzci,dzfi,alpha,vp_aux,vp,'c')
+      call chkhelmholtz(n,dxi,dyi,dzci,dzfi,alpha,wp_aux,wp,'f')
+!#endif
       call fillps(n,dli,dzfi,dtrki,up,vp,wp,pp)
       call updt_rhs_b((/'c','c','c'/),cbcpre,n,rhsbp%x,rhsbp%y,rhsbp%z,pp(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre(:,3),(/'c','c','c'/),pp(1:imax,1:jmax,1:ktot))
