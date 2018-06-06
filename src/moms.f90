@@ -18,7 +18,7 @@ module mod_moms
     !$OMP PRIVATE(i,j,k,im,jm,km,ip,jp,kp) &
     !$OMP PRIVATE(usip,usim,vsjp,vsjm,wskp,wskm) &
     !$OMP PRIVATE(dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm) &
-    !$OMP SHARED(nx,ny,nz,dxi,dyi,dzi,visc,u,v,w,dsdt,dzci,dzfi)
+    !$OMP SHARED(nx,ny,nz,dxi,dyi,dzi,visc,u,v,w,s,dsdt,dzci,dzfi)
     do k=1,nz
       kp = k + 1
       km = k - 1
