@@ -5,15 +5,15 @@ module mod_chkdiv
   private
   public chkdiv
   contains
-  subroutine chkdiv(n,dli,dzfi,u,v,w)
+  subroutine chkdiv(n,dli,dzfi,u,v,w,divtot,divmax)
     implicit none
     integer, intent(in), dimension(3) :: n
     real(8), intent(in), dimension(3) :: dli
     real(8), intent(in), dimension(0:) :: dzfi
     real(8), intent(in), dimension(0:,0:,0:) :: u,v,w
+    real(8), intent(out) :: divtot,divmax
     real(8) :: dxi,dyi,div!,dzi,div
     integer :: i,j,k,im,jm,km
-    real(8) :: divtot,divmax
     !integer :: ii,jj
     !
     dxi = dli(1)

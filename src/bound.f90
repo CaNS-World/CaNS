@@ -175,19 +175,19 @@ module mod_bound
         select case(idir)
         case(1)
           if    (ibound.eq.0) then
-            p(0,  :,:) = 2.d0*factor + p(2  ,:,:)
+            p(0,  :,:) = 1.d0*factor + p(1  ,:,:)
           elseif(ibound.eq.1) then
             p(n+1,:,:) = 2.d0*factor + p(n-1,:,:)
           endif
         case(2)
           if    (ibound.eq.0) then
-            p(:,0  ,:) = 2.d0*factor + p(:,2  ,:) 
+            p(:,0  ,:) = 1.d0*factor + p(:,1  ,:) 
           elseif(ibound.eq.1) then
             p(:,n+1,:) = 2.d0*factor + p(:,n-1,:)
           endif
         case(3) ! not supported for now
           if    (ibound.eq.0) then
-            p(:,:,0  ) = 2.d0*factor + p(:,:,2  )
+            p(:,:,0  ) = 1.d0*factor + p(:,:,1  )
           elseif(ibound.eq.1) then
             p(:,:,n+1) = 2.d0*factor + p(:,:,n-1)
           endif

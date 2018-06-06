@@ -2,6 +2,7 @@ module mod_param
 implicit none
 public
    real(8), parameter :: pi = acos(-1.d0)
+   real(8), parameter :: small = 1.d-9
    include 'setup.h90'
    logical, parameter, dimension(2,3) :: no_outflow = & 
        reshape((/.false.,.false.,   & ! no outflow in x lower,upper bound

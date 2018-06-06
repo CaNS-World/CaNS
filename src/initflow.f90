@@ -4,7 +4,7 @@ module mod_initflow
   use mod_param     , only: dims,rey
   implicit none
   private
-  public initflow
+  public initflow,add_noise
   contains
   subroutine initflow(inivel,n,zclzi,dzclzi,dzflzi,visc,norm,u,v,w,p)
     implicit none
@@ -18,35 +18,35 @@ module mod_initflow
     !real(8), allocatable, dimension(:,:) :: u2d
     integer :: i,j,k
     real(8) :: q
-    logical :: isnoise,ismean
+    logical :: is_noise,is_mean
     !
     allocate(u1d(n(3)))
-    isnoise = .false.
-    ismean  = .false.
+    is_noise = .false.
+    is_mean  = .false.
     q = .5d0
     select case(inivel)
     case('cou')
       call couette(   q,n(3),zclzi,norm,u1d)
     case('poi')
       call poiseuille(q,n(3),zclzi,norm,u1d)
-      ismean=.true.
+      is_mean=.true.
     case('zer')
       u1d(:) = 0.
     case('log')
       call log_profile(q,n(3),zclzi,visc,u1d)
-      isnoise = .true.
-      ismean = .true.
+      is_noise = .true.
+      is_mean = .true.
     case('hcl')
       deallocate(u1d)
       allocate(u1d(2*n(3)))
       call log_profile(q,2*n(3),zclzi,visc,u1d)
-      isnoise = .true.
-      ismean=.true.
+      is_noise = .true.
+      is_mean=.true.
     case('hcp')
       deallocate(u1d)
       allocate(u1d(2*n(3)))
       call poiseuille(q,2*n(3),zclzi,norm,u1d)
-      ismean = .true.
+      is_mean = .true.
     end select
     do k=1,n(3)
       do j=1,n(2)
@@ -59,12 +59,12 @@ module mod_initflow
       enddo
     enddo
     deallocate(u1d)
-    if(isnoise) then
+    if(is_noise) then
       call add_noise(n,123,.50d0,u(1:n(1),1:n(2),1:n(3)))
       call add_noise(n,456,.50d0,v(1:n(1),1:n(2),1:n(3)))
       call add_noise(n,789,.50d0,w(1:n(1),1:n(2),1:n(3)))
     endif
-    if(ismean) then
+    if(is_mean) then
       call set_mean(n,1.d0,dzflzi,u(1:n(1),1:n(2),1:n(3)))
     endif
     return

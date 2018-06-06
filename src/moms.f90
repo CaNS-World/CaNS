@@ -1,20 +1,18 @@
-module mod_mom
-  use mpi
+module mod_moms
   implicit none
   private
   public momsad
   contains
-  subroutine momxad(nx,ny,nz,dxi,dyi,dzi,dzci,dzfi,dzflzi,visc,u,v,w,s,dsdt)
+  subroutine momsad(nx,ny,nz,dxi,dyi,dzi,dzci,dzfi,dzflzi,visc,u,v,w,s,dsdt)
     implicit none
     integer, intent(in) :: nx,ny,nz
     real(8), intent(in) :: dxi,dyi,dzi,visc
     real(8), intent(in), dimension(0:) :: dzci,dzfi,dzflzi
-    real(8), dimension(0:,0:,0:), intent(in) :: u,v,w
+    real(8), dimension(0:,0:,0:), intent(in) :: u,v,w,s
     real(8), dimension(:,:,:), intent(out) :: dsdt
     integer :: im,ip,jm,jp,km,kp,i,j,k
     real(8) :: usip,usim,vsjp,vsjm,wskp,wskm
     real(8) :: dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm
-    integer :: nxg,nyg,nzg
     !
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP PRIVATE(i,j,k,im,jm,km,ip,jp,kp) &

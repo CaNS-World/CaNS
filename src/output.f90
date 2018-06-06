@@ -143,8 +143,8 @@ module mod_output
             u2(k) = u2(k) + u(i,j,k)**2
             v2(k) = v2(k) + v(i,j,k)**2
             w2(k) = w2(k) + w(i,j,k)**2
-            uw(k) = uw(k) + 0.25*(u(i,j,k+1) + u(i,j,k))* & ! varying z grids should be taken into account
-                                 (w(i+1,j,k) + w(i,j,k))    ! varying z grids should be taken into account
+            uw(k) = uw(k) + 0.25d0*(u(i,j,k+1) + u(i,j,k))* & ! varying z grids should be taken into account
+                                   (w(i+1,j,k) + w(i,j,k))    ! varying z grids should be taken into account
           enddo
         enddo
       enddo

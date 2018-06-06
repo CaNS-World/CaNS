@@ -98,7 +98,7 @@ module mod_initsolver
         enddo
       elseif(c_or_f.eq.'f') then
         do l=1,n
-          lambda(l)   = -4.d0*sin((1.d0*(l-1))*pi/(2.d0*(n-1)))**2
+          lambda(l)   = -4.d0*sin((1.d0*(l-1))*pi/(2.d0*(n-1+1)))**2
         enddo
       endif
     case('DD')
@@ -107,7 +107,7 @@ module mod_initsolver
           lambda(l)   = -4.d0*sin((1.d0*(l-0))*pi/(2.d0*n))**2
         enddo
       elseif(c_or_f.eq.'f') then
-        do l=1,n-1
+        do l=1,n-1 ! point at n is a boundary and is excluded here
           lambda(l)   = -4.d0*sin((1.d0*(l-0))*pi/(2.d0*(n+1-1)))**2
         enddo
       endif
@@ -141,7 +141,7 @@ module mod_initsolver
         c(k) = dzfi(k)*dzci(k)
       enddo
     case('f')
-      do k = 1,n ! needs to be changed; factor should go to the RHS for solving the system of eqs right!
+      do k = 1,n
         a(k) = dzfi(k)*dzci(k)
         c(k) = dzfi(k+1)*dzci(k)
       enddo

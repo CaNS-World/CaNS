@@ -24,6 +24,7 @@ module mod_fft
     real(8), dimension(2) :: norm
     integer(C_INT) :: nx_x,ny_x,nz_x, &
                       nx_y,ny_y,nz_y
+    integer :: ix,iy
     !$ call dfftw_init_threads(ierr)
     !$ call dfftw_plan_with_nthreads(omp_get_max_threads())
 
@@ -39,8 +40,10 @@ module mod_fft
     nz_y = nz/dims(2)
     !
     normfft = 1.d0
-    iodim(1)%n  = nx_x
-    if(bcxy(0,1)//bcxy(1,1).eq.'DD'.and.c_or_f(1).eq.'f') iodim(1)%n = nx_x - 1
+    ix = 0 
+    ! size of transform reduced by 1 point with Dirichlet BC in face
+    if(bcxy(0,1)//bcxy(1,1).eq.'DD'.and.c_or_f(1).eq.'f') ix = 1
+    iodim(1)%n  = nx_x-ix
     iodim(1)%is = 1
     iodim(1)%os = 1
     iodim_howmany(1)%n  = ny_x
@@ -52,18 +55,16 @@ module mod_fft
     call find_fft(bcxy(:,1),c_or_f(1),kind_fwd,kind_bwd,norm)
     plan_fwd_x=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arrx,arrx,kind_fwd,FFTW_ESTIMATE)
     plan_bwd_x=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arrx,arrx,kind_bwd,FFTW_ESTIMATE)
-    if(bcxy(0,1)//bcxy(1,1).eq.'DD'.and.c_or_f(1).eq.'f') then
-      normfft = normfft*norm(1)*(nx_x+norm(2)-1)
-    else
-      normfft = normfft*norm(1)*(nx_x+norm(2))
-    endif
+    normfft = normfft*norm(1)*(nx_x+norm(2)-ix)
     !
     ! fft in y
     !
     ! prepare plans with guru interface
     !
-    iodim(1)%n  = ny_y
-    if(bcxy(0,2)//bcxy(1,2).eq.'DD'.and.c_or_f(2).eq.'f') iodim(1)%n = ny_y - 1
+    iy = 0
+    ! size of transform reduced by 1 point with Dirichlet BC in face
+    if(bcxy(0,2)//bcxy(1,2).eq.'DD'.and.c_or_f(2).eq.'f') iy = 1
+    iodim(1)%n  = ny_y-iy
     iodim(1)%is = nx_y
     iodim(1)%os = nx_y
     iodim_howmany(1)%n  = nx_y
@@ -75,11 +76,7 @@ module mod_fft
     call find_fft(bcxy(:,2),c_or_f(2),kind_fwd,kind_bwd,norm)
     plan_fwd_y=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arry,arry,kind_fwd,FFTW_ESTIMATE)
     plan_bwd_y=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arry,arry,kind_bwd,FFTW_ESTIMATE)
-    if(bcxy(0,2)//bcxy(1,2).eq.'DD'.and.c_or_f(2).eq.'f') then
-      normfft = normfft*norm(1)*(ny_y+norm(2)-1)
-    else
-      normfft = normfft*norm(1)*(ny_y+norm(2))
-    endif
+    normfft = normfft*norm(1)*(ny_y+norm(2)-iy)
     !
     normfft = normfft**(-1)
     arrplan(1,1) = plan_fwd_x
