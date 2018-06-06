@@ -1,0 +1,7 @@
+*.o
+*.mod
+*.out
+*.bin
+*.MOD
+*.log
+cans
