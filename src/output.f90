@@ -1,7 +1,7 @@
 module mod_output
   use mpi
   use decomp_2d_io
-  use mod_param     , only: dims
+  use mod_param     , only: dims,dx,dy,dz
   use mod_common_mpi, only:ierr,myid,coord
   implicit none
   private
@@ -99,7 +99,7 @@ module mod_output
       if(myid.eq.0) then
         open(unit=iunit,file=fname)
         do i=1,ng(1)
-          write(iunit,'(2E15.7)') (1.d0*i-.5d0)/(1.d0*ng(1)),p1d(i)
+          write(iunit,'(2E15.7)') (1.d0*i-.5d0)/(1.d0*n(1)),p1d(j)
         enddo
         close(iunit)
       endif
@@ -107,7 +107,7 @@ module mod_output
     deallocate(p1d)
   end subroutine out1d
   !
-  subroutine out1d_2(fname,n,idir,z,u,v,w)
+  subroutine out1d_2(fname,n,idir,z,u,v,w) ! e.g. for a channel with streamwise dir in x
     implicit none
     character(len=*), intent(in) :: fname
     integer, intent(in), dimension(3) :: n
@@ -126,7 +126,7 @@ module mod_output
     select case(idir)
     case(3)
       q = n(3)
-      allocate(um(q),vm(q),wm(q),u2(q),v2(q),w2(q),uw(q))
+      allocate(um(0:q+1),vm(0:q+1),wm(0:q+1),u2(0:q+1),v2(0:q+1),w2(0:q+1),uw(0:q+1))
       do k=1,n(3)
         um(k) = 0.
         vm(k) = 0.
@@ -139,12 +139,12 @@ module mod_output
           do i=1,n(1)
             um(k) = um(k) + u(i,j,k)
             vm(k) = vm(k) + v(i,j,k)
-            wm(k) = wm(k) + w(i,j,k)
+            wm(k) = wm(k) + 0.50d0*(w(i,j,k-1) + w(i,j,k))
             u2(k) = u2(k) + u(i,j,k)**2
             v2(k) = v2(k) + v(i,j,k)**2
-            w2(k) = w2(k) + w(i,j,k)**2
-            uw(k) = uw(k) + 0.25d0*(u(i,j,k+1) + u(i,j,k))* & ! varying z grids should be taken into account
-                                   (w(i+1,j,k) + w(i,j,k))    ! varying z grids should be taken into account
+            w2(k) = w2(k) + 0.50d0*(w(i,j,k)**2+w(i,j,k-1)**2)
+            uw(k) = uw(k) + 0.25d0*(u(i-1,j,k) + u(i,j,k))* & ! varying z grids should be taken into account
+                                   (w(i,j,k-1) + w(i,j,k))    ! varying z grids should be taken into account
           enddo
         enddo
       enddo
@@ -157,11 +157,11 @@ module mod_output
       call mpi_allreduce(MPI_IN_PLACE,uw(1),n(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
       um(:) = um(:)/(1.*ng(1)*ng(2))
       vm(:) = vm(:)/(1.*ng(1)*ng(2))
-      wm(:) = wm(:)/(1.*ng(1)*ng(2)) ! NB: replace with 0.5*(um(k+1)+um(k)) to have all the points at the same locations
+      wm(:) = wm(:)/(1.*ng(1)*ng(2)) ! needs to be interpolated
       u2(:) = sqrt(u2(:)/(1.*ng(1)*ng(2)) - um(:)**2)
       v2(:) = sqrt(v2(:)/(1.*ng(1)*ng(2)) - vm(:)**2)
-      w2(:) = sqrt(w2(:)/(1.*ng(1)*ng(2)) - wm(:)**2)
-      uw(:) = uw(:)/(1.*ng(1)*ng(2)) - um(:)*wm(:) ! NB: to be precise, um should be 0.5*(um(k+1)+um(k))
+      w2(:) = sqrt(w2(:)/(1.*ng(1)*ng(2)) - wm(:)**2) ! needs to be interpolated
+      uw(:) = uw(:)/(1.*ng(1)*ng(2)) - um(:)*wm(:) ! needs to be interpolated
       if(myid.eq.0) then
         open(unit=iunit,file=fname)
         do k=1,n(3)
@@ -177,6 +177,97 @@ module mod_output
     end select
   end subroutine out1d_2
   !
+  subroutine out2d_2(fname,n,idir,z,u,v,w) ! e.g. for a duct with streamwise dir in x
+    implicit none
+    character(len=*), intent(in) :: fname
+    integer, intent(in), dimension(3) :: n
+    integer, intent(in) :: idir
+    real(8), intent(in), dimension(0:) :: z
+    real(8), intent(in), dimension(0:,0:,0:) :: u,v,w
+    real(8), allocatable, dimension(:,:) :: um,vm,wm,u2,v2,w2,uv,vw
+    integer :: i,j,k,ii,jj,kk
+    integer :: iunit
+    integer, dimension(3) :: ng
+    integer :: p,q
+    real(8) :: y
+    !
+    ng(:) = n(:)
+    ng(1:2) = n(1:2)*dims(1:2)
+    iunit = 10
+    select case(idir)
+    case(3)
+      p = ng(1)
+      q = ng(3)
+      allocate(um(p,q),vm(p,q),wm(p,q),u2(p,q),v2(p,q),w2(p,q),uv(p,q),vw(p,q))
+      !
+      um(:,:) = 0.d0
+      vm(:,:) = 0.d0
+      wm(:,:) = 0.d0
+      u2(:,:) = 0.d0
+      v2(:,:) = 0.d0
+      w2(:,:) = 0.d0
+      uv(:,:) = 0.d0
+      vw(:,:) = 0.d0
+      do k=1,n(3)
+        kk = k
+        do i=1,n(1)
+          ii = i+coord(1)*n(1)
+          um(ii,kk) = 0.d0
+          vm(ii,kk) = 0.d0
+          wm(ii,kk) = 0.d0
+          u2(ii,kk) = 0.d0
+          v2(ii,kk) = 0.d0
+          w2(ii,kk) = 0.d0
+          vw(ii,kk) = 0.d0
+          uv(ii,kk) = 0.d0
+          do j=1,n(2)
+            jj = j+coord(2)*n(2)
+            um(ii,kk) = um(ii,kk) + 0.5d0*(u(i-1,j,k)+u(i,j,k))
+            vm(ii,kk) = vm(ii,kk) + v(i,j,k)
+            wm(ii,kk) = wm(ii,kk) + 0.5d0*(w(i,j,k-1)+w(i,j,k))
+            u2(ii,kk) = u2(ii,kk) + 0.5d0*(u(i-1,j,k)**2+u(i,j,k)**2)
+            v2(ii,kk) = v2(ii,kk) + v(i,j,k)**2
+            w2(ii,kk) = w2(ii,kk) + 0.5d0*(w(i,j,k-1)**2+w(i,j,k)**2)
+            vw(ii,kk) = vw(ii,kk) + 0.25d0*(v(i,j-1,k) + v(i,j,k))* &
+                                           (w(i,j,k-1) + w(i,j,k))
+            uv(ii,kk) = uv(ii,kk) + 0.25d0*(u(i-1,j,k) + u(i,j,k))* &
+                                           (v(i,j-1,k) + v(i,j,k))
+          enddo
+        enddo
+      enddo
+      call mpi_allreduce(MPI_IN_PLACE,um(1,1),ng(1)*ng(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,vm(1,1),ng(1)*ng(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,wm(1,1),ng(1)*ng(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,u2(1,1),ng(1)*ng(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,v2(1,1),ng(1)*ng(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,w2(1,1),ng(1)*ng(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,vw(1,1),ng(1)*ng(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,uv(1,1),ng(1)*ng(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+      um(:,:) =      um(:,:)/(1.*ng(2))
+      vm(:,:) =      vm(:,:)/(1.*ng(2))
+      wm(:,:) =      wm(:,:)/(1.*ng(2))
+      u2(:,:) = sqrt(u2(:,:)/(1.*ng(2)) - um(:,:)**2)
+      v2(:,:) = sqrt(v2(:,:)/(1.*ng(2)) - vm(:,:)**2)
+      w2(:,:) = sqrt(w2(:,:)/(1.*ng(2)) - wm(:,:)**2)
+      vw(:,:) =      vw(:,:)/(1.*ng(2)) - vm(:,:)*wm(:,:)
+      uv(:,:) =      uv(:,:)/(1.*ng(2)) - um(:,:)*vm(:,:)
+      if(myid.eq.0) then
+        open(unit=iunit,file=fname)
+        do k=1,ng(3)
+          do i=1,ng(1)
+            y = (i-.5d0)*dx
+            write(iunit,'(10E15.7)') y,z(k),um(i,k),vm(i,k),wm(i,k), &
+                                            u2(i,k),v2(i,k),w2(i,k), &
+                                            vw(i,k),uv(i,k)
+          enddo
+        enddo
+        close(iunit)
+      endif
+      deallocate(um,vm,wm,u2,v2,w2,vw,uv)
+    case(2)
+    case(1)
+    end select
+  end subroutine out2d_2
   subroutine out2d(fname,inorm,islice,p)
     implicit none
     character(len=*), intent(in) :: fname

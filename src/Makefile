@@ -5,7 +5,7 @@ BIG := # -mcmodel=medium
 DBG := # -g -fbacktrace -Wall -O0 -Wextra -pedantic -fcheck=all
 OMP := # -fopenmp
 OPT := -O3
-OTH := -DDEBUG -DTIMING #-DIMPDIFF
+OTH := -DDEBUG -DTIMING -DIMPDIFF
 PROF := #-pg
 FFLAGS := -cpp $(OPT) $(BIG) $(DBG) $(PROF) $(OMP) $(OTH)
 

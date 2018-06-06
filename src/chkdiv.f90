@@ -6,6 +6,9 @@ module mod_chkdiv
   public chkdiv
   contains
   subroutine chkdiv(n,dli,dzfi,u,v,w,divtot,divmax)
+    !
+    ! checks the divergence of the velocity field
+    !
     implicit none
     integer, intent(in), dimension(3) :: n
     real(8), intent(in), dimension(3) :: dli
@@ -37,8 +40,8 @@ module mod_chkdiv
                    (u(i,j,k)-u(im,j,k))*dxi
              divmax = max(divmax,abs(div))
              divtot = divtot + div
-             !     ii = coord(1)*n(1)+i
-             !     jj = coord(2)*n(2)+j
+             !ii = coord(1)*n(1)+i
+             !jj = coord(2)*n(2)+j
              !if(abs(div).ge.1.e-12) print*,div,'Large divergence at grid cell: ',ii,jj,k,div
           enddo
        enddo

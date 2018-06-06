@@ -1,4 +1,4 @@
-module mod_rk ! CHANGE TO RK, RK_ID, RKSCL
+module mod_rk
   use mod_param, only: is_forced,velf
   use mod_debug, only: chkmean
   use mod_mom  , only: momxad,momyad,momzad,momxp,momyp,momzp
@@ -194,7 +194,7 @@ module mod_rk ! CHANGE TO RK, RK_ID, RKSCL
     !$OMP END PARALLEL DO
     return
   end subroutine rk_id
-  subroutine rks(rkpar,n,dli,dzci,dzfi,dzflzi,dzclzi,visc,dt,u,v,w,dsdtrko,s)
+  subroutine rk_scal(rkpar,n,dli,dzci,dzfi,dzflzi,dzclzi,visc,dt,u,v,w,dsdtrko,s)
     !
     ! low-storage 3rd-order Runge-Kutta scheme 
     ! for time integration of the scalar field.
@@ -229,5 +229,5 @@ module mod_rk ! CHANGE TO RK, RK_ID, RKSCL
     enddo
     !$OMP END PARALLEL DO
     return
-  end subroutine rks
+  end subroutine rk_scal
 end module mod_rk

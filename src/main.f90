@@ -133,6 +133,7 @@ program cans
   dt = cfl*dtmax
   if(myid.eq.0) print*, 'dtmax = ', dtmax, 'dt = ',dt
   dti = 1.d0/dt
+  kill = .false.
   !
   ! initialize Poisson solver
   !
@@ -246,15 +247,15 @@ program cans
       dt  = cfl*dtmax
       if(myid.eq.0) print*, 'dtmax = ', dtmax, 'dt = ',dt
       if(dtmax.lt.small) then
-        if(myid.eq.0) print*, 'Error. Timestep is too small.'
+        if(myid.eq.0) print*, 'ERROR: timestep is too small.'
         if(myid.eq.0) print*, 'Aborting ...'
         istep = nstep + 1 ! i.e. exit main loop
         kill = .true.
       endif
       dti = 1.d0/dt
       call chkdiv(n,dli,dzfi,u,v,w,divtot,divmax)
-      if(divmax.gt.small) then
-        if(myid.eq.0) print*, 'Error. Maximum divergence is too large.'
+      if(divmax.gt.small.or.divtot.ne.divtot) then
+        if(myid.eq.0) print*, 'ERROR: maximum divergence is too large.'
         if(myid.eq.0) print*, 'Aborting ...'
         istep = nstep + 1 ! i.e. exit main loop
         kill = .true.

@@ -38,7 +38,7 @@ module mod_solver
     call transpose_y_to_z(py,pz)
     q = 0
     if(c_or_f(3).eq.'f'.and.bcz(1).eq.'D') q = 1
-    if(bcz(0).eq.'P'.and.bcz(1).eq.'P') then
+    if(bcz(0)//bcz(1).eq.'PP') then
       call gaussel_dgtsv_periodic(n(1),n(2),n(3)-q,a,b,c,lambdaxy,pz)
     else
       call gaussel_dgtsv(         n(1),n(2),n(3)-q,a,b,c,lambdaxy,pz)
@@ -77,9 +77,9 @@ module mod_solver
     !$OMP DO COLLAPSE(2)
     do j=1,ny
       do i=1,nx
-        aa(:) = a(:)
-        cc(:) = c(:)
-        bb(:) = b(:) + lambdaxy(i,j)
+        aa(:) = a(1:n)
+        cc(:) = c(1:n)
+        bb(:) = b(1:n) + lambdaxy(i,j)
         call dgtsv(n,1,aa(1+1:n),bb(1:n),cc(1:n-1),p(i,j,1:n),n,info)
       enddo
     enddo
@@ -105,18 +105,18 @@ module mod_solver
     !$OMP DO COLLAPSE(2)
     do j=1,ny
       do i=1,nx
-        aa(:) = a(:)
-        bb(:) = b(:) + lambdaxy(i,j)
-        bbb(:) = bb(:)
-        cc(:) = c(:)
+        aa(:)  = a(1:n)
+        bb(:)  = b(1:n) + lambdaxy(i,j)
+        bbb(:) = bb(1:n)
+        cc(:)  = c(1:n)
         p1(1:n-1) = p(i,j,1:n-1)
         call dgtsv(n-1,1,aa(2:n-1),bbb(1:n-1),cc(1:n-2),p1(1:n-1),n-1,info)
         p2(:) = 0.d0
         p2(1  ) = -a(1  )
         p2(n-1) = -c(n-1)
-        aa(:) = a(:)
-        bbb(:) = bb(:)
-        cc(:) = c(:)
+        aa(:)  = a(1:n)
+        bbb(:) = bb(1:n)
+        cc(:)  = c(1:n)
         call dgtsv(n-1,1,aa(2:n-1),bbb(1:n-1),cc(1:n-2),p2(1:n-1),n-1,info)
         p(i,j,n) = (p(i,j,n) - c(n)*p1(1) - a(n)*p1(n-1)) / &
                    (bb(   n) + c(n)*p2(1) + a(n)*p2(n-1))

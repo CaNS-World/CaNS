@@ -3,10 +3,10 @@ module mod_correc
   private
   public correc
   contains
-  !
-  ! corrects the velocity so that it is divergence free
-  !
   subroutine correc(n,dli,dzci,dt,p,up,vp,wp,u,v,w)
+    !
+    ! corrects the velocity so that it is divergence free
+    !
     implicit none
     integer, intent(in), dimension(3) :: n
     real(8), intent(in), dimension(3) :: dli

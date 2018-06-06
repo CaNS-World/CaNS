@@ -18,6 +18,10 @@ module mod_sanity
   contains
   subroutine test_sanity(ng,n,dims,cbcvel,cbcpre,bcvel,bcpre,is_outflow,is_forced, &
                          dli,dzci,dzfi)
+
+    !
+    ! performs some a-priori checks of the input files before the calculation starts
+    !
     implicit none
     integer, intent(in), dimension(3) :: ng,n
     integer, intent(in), dimension(2) :: dims
@@ -35,8 +39,8 @@ module mod_sanity
     call chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed); if(.not.passed) call abortit
     call chk_outflow(cbcpre,is_outflow,passed);    if(.not.passed) call abortit
     call chk_forcing(cbcpre,is_forced  ,passed);   if(.not.passed) call abortit 
-    !call chk_solvers(n,dli,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,is_outflow,passed)
-    !if(.not.passed) call abortit
+    call chk_solvers(n,dli,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,is_outflow,passed)
+    if(.not.passed) call abortit
     return
   end subroutine test_sanity
   !
@@ -48,10 +52,12 @@ module mod_sanity
     logical :: passed_loc
     passed = .true.
     passed_loc = all(mod(ng(:),2).eq.0)
-    if(myid.eq.0.and.(.not.passed_loc)) print*, 'itot, jtot and ktot should be even.'
+    if(myid.eq.0.and.(.not.passed_loc)) &
+      print*, 'ERROR: itot, jtot and ktot should be even.'
     passed = passed.and.passed_loc
     passed_loc = all(mod(ng(1:2),dims(1:2)).eq.0)
-    if(myid.eq.0.and.(.not.passed_loc)) print*, 'itot and jtot should be divisable by dims(1) and dims(2), respectively.'
+    if(myid.eq.0.and.(.not.passed_loc)) &
+      print*, 'ERROR: itot and jtot should be divisable by dims(1) and dims(2), respectively.'
     passed = passed.and.passed_loc
     return
   end subroutine chk_dims
@@ -115,7 +121,7 @@ module mod_sanity
     passed_loc = passed_loc.and.((bcpre(0,idir).eq.0.d0).and.(bcpre(1,idir).eq.0.d0))
   enddo
   if(myid.eq.0.and.(.not.passed_loc)) &
-  print*, 'ERROR: pressure BCs in directions x and y must be homogeneous (value = 0.d0).'
+    print*, 'ERROR: pressure BCs in directions x and y must be homogeneous (value = 0.d0).'
   passed = passed.and.passed_loc
 #ifdef IMPDIFF
   passed_loc = .true.
@@ -126,7 +132,7 @@ module mod_sanity
     enddo
   enddo
   if(myid.eq.0.and.(.not.passed_loc)) &
-  print*, 'ERROR: Neumann-Neumann velocity BCs with implicit diffusion currently not supported in x and y; only in z.'
+    print*, 'ERROR: Neumann-Neumann velocity BCs with implicit diffusion currently not supported in x and y; only in z.'
   passed = passed.and.passed_loc
   !
   passed_loc = .true.
@@ -136,7 +142,7 @@ module mod_sanity
     enddo
   enddo
   if(myid.eq.0.and.(.not.passed_loc)) &
-  print*, 'ERROR: velocity BCs with implicit diffusion in directions x and y must be homogeneous (value = 0.d0).'
+    print*, 'ERROR: velocity BCs with implicit diffusion in directions x and y must be homogeneous (value = 0.d0).'
   passed = passed.and.passed_loc
 #endif
   return 
@@ -159,7 +165,7 @@ module mod_sanity
     enddo
   enddo
   if(myid.eq.0.and.(.not.passed)) &
-  print*, 'ERROR: Dirichlet pressure BC should be an outflow direction; check the BC or is_outflow in bc.h90.'
+    print*, 'ERROR: Dirichlet pressure BC should be an outflow direction; check the BC or is_outflow in bc.h90.'
   return 
   end subroutine chk_outflow
   subroutine chk_forcing(cbcpre,is_forced,passed)
@@ -257,12 +263,12 @@ module mod_sanity
   call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,1),(/'f','c','c'/),up(1:n(1),1:n(2),1:n(3)))
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
-  call chk_helmholtz(n,dli,dzci,dzfi,alpha,u,up,cbcvel(:,:,1),'c',diffmax)
+  call chk_helmholtz(n,dli,dzci,dzfi,alpha,u,up,cbcvel(:,:,1),(/'f','c','c'/),diffmax)
   passed_loc = diffmax.lt.small
   if(myid.eq.0.and.(.not.passed_loc)) &
   print*, 'ERROR: wrong solution of Helmholtz equation in x direction.'
   passed = passed.and.passed_loc
-  
+  !
   call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,2),bcvel(:,:,2),lambdaxy,(/'c','f','c'/),a,b,c,arrplan,normfft, &
                   rhsbx,rhsby,rhsbz)
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp)
@@ -273,7 +279,7 @@ module mod_sanity
   call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,2),(/'c','f','c'/),vp(1:n(1),1:n(2),1:n(3)))
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
-  call chk_helmholtz(n,dli,dzci,dzfi,alpha,v,vp,cbcvel(:,:,2),'c',diffmax)
+  call chk_helmholtz(n,dli,dzci,dzfi,alpha,v,vp,cbcvel(:,:,2),(/'c','f','c'/),diffmax)
   passed_loc = diffmax.lt.small
   if(myid.eq.0.and.(.not.passed_loc)) &
   print*, 'ERROR: wrong solution of Helmholtz equation in y direction.'
@@ -283,13 +289,13 @@ module mod_sanity
                   rhsbx,rhsby,rhsbz)
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp)
   wp(:,:,:) = wp(:,:,:)*alpha
-  v( :,:,:) = wp(:,:,:)
+  w( :,:,:) = wp(:,:,:)
   bb(:) = b(:) + alpha
   call updt_rhs_b((/'c','c','f'/),cbcvel(:,:,3),n,rhsbx,rhsby,rhsbz,wp(1:n(1),1:n(2),1:n(3)))
   call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,3),(/'c','c','f'/),wp(1:n(1),1:n(2),1:n(3)))
   call fftend(arrplan)
-  call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,wp,wp) ! actually we are only interested in boundary condition in up
-  call chk_helmholtz(n,dli,dzci,dzfi,alpha,w,wp,cbcvel(:,:,3),'f',diffmax)
+  call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
+  call chk_helmholtz(n,dli,dzci,dzfi,alpha,w,wp,cbcvel(:,:,3),(/'c','c','f'/),diffmax)
   passed_loc = diffmax.lt.small
   if(myid.eq.0.and.(.not.passed_loc)) &
   print*, 'ERROR: wrong solution of Helmholtz equation in z direction.'

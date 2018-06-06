@@ -4,6 +4,15 @@ module mod_fillps
   public fillps
   contains
   subroutine fillps(n,dli,dzfi,dti,up,vp,wp,p)
+    !
+    !  fill the right-hand side of the Poisson equation for the correction pressure.
+    !
+    !  the discrete divergence is:
+    !
+    !  w(i,j,k)-w(i,j,k-1)   v(i,j,k)-v(i,j-1,k)   u(i,j,k)-u(i-1,j,k)
+    !  ------------------- + ------------------- + -------------------  = div
+    !          dz                    dy                    dx
+    !
     implicit none
     integer, intent(in), dimension(3) :: n
     real(8), intent(in), dimension(3) :: dli
@@ -19,16 +28,6 @@ module mod_fillps
     dtidyi = dti*dli(2)
     !dtidzi = dti*dli(3)
     dtidzfi(:) = dti*dzfi(:)
-    !
-    !
-    !  fill the right-hand side of the Poisson equation for the correction pressure.
-    !
-    !  the discrete divergence is:
-    !
-    !  w(i,j,k)-w(i,j,k-1)   v(i,j,k)-v(i,j-1,k)   u(i,j,k)-u(i-1,j,k)
-    !  ------------------- + ------------------- + -------------------  = div
-    !          dz                    dy                    dx
-    !
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(n,p,up,vp,wp,dtidzfi,dtidyi,dtidxi) &
     !$OMP PRIVATE(i,j,k,im,jm,km)

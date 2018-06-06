@@ -7,6 +7,9 @@ module mod_initflow
   public initflow,add_noise
   contains
   subroutine initflow(inivel,n,zclzi,dzclzi,dzflzi,visc,norm,u,v,w,p)
+    !
+    ! computes initial conditions for the velocity field
+    !
     implicit none
     character(len=3), intent(in) :: inivel
     integer, intent(in), dimension(3) :: n

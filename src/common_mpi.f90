@@ -8,5 +8,4 @@ module mod_common_mpi
   integer :: comm_cart,ierr
   integer :: xhalo,yhalo
   integer :: status(MPI_STATUS_SIZE)
-  !
 end module mod_common_mpi

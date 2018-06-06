@@ -8,6 +8,9 @@ module mod_load
   public load
   contains
   subroutine load(io,filename,n,u,v,w,p,time,istep)
+    !
+    ! reads/writes a restart file
+    !
     implicit none
     character(len=1)  , intent(in) :: io
     character(len=*), intent(in) :: filename

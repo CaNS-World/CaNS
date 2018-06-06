@@ -8,6 +8,9 @@ module mod_initsolver
   public initsolver
   contains
   subroutine initsolver(n,dli,dzci,dzfi,cbc,bc,lambdaxy,c_or_f,a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
+    !
+    ! initializes the Poisson/Helmholtz solver
+    !
     implicit none
     integer, intent(in), dimension(3) :: n
     real(8), intent(in), dimension(3) :: dli
@@ -32,17 +35,15 @@ module mod_initsolver
     !
     ! generating eigenvalues consistent with the BCs
     !
-    ! note, for periodic this is redundant and the tri-diagonal solver could be optimized, lets leave this for later
-    ! call eigenvalues(bctype)
-    !
-    ! add eigenvalues
-    !
     ng(:) = n(:)
     ng(1:2) = ng(1:2)*dims(1:2)
     call eigenvalues(ng(1),cbc(:,1),c_or_f(1),lambdax)
     lambdax(:) = lambdax(:)*dli(1)**2
     call eigenvalues(ng(2),cbc(:,2),c_or_f(2),lambday)
     lambday(:) = lambday(:)*dli(2)**2
+    !
+    ! add eigenvalues
+    !
     do j=1,n(2)
       jj = coord(2)*n(2)+j
       do i=1,n(1)
@@ -78,7 +79,7 @@ module mod_initsolver
     implicit none
     integer, intent(in ) :: n
     character(len=1), intent(in), dimension(0:1) :: bc
-    character(len=1), intent(in) :: c_or_f ! c -> cell-centered; f-face-centered
+    character(len=1), intent(in) :: c_or_f ! c -> cell-centered; f -> face-centered
     real(8), intent(out), dimension(n) :: lambda
     integer :: l 
     select case(bc(0)//bc(1))
@@ -150,11 +151,11 @@ module mod_initsolver
     do ibound = 0,1
       select case(bc(ibound))
       case('P')
-        factor(ibound) = 0.
+        factor(ibound) = 0.d0
       case('D')
-        factor(ibound) = -1.
+        factor(ibound) = -1.d0
       case('N')
-        factor(ibound) = 1.
+        factor(ibound) = 1.d0
       end select
     enddo
     select case(c_or_f)
@@ -172,6 +173,7 @@ module mod_initsolver
     c(:) = c(:) + eps
     return
   end subroutine tridmatrix
+  !
   subroutine bc_rhs(cbc,n,bc,idir,dlc,dlf,c_or_f,rhs)
     implicit none
     character(len=1), intent(in), dimension(0:1) :: cbc

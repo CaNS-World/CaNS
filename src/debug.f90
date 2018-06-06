@@ -1,12 +1,15 @@
 module mod_debug
   use mpi
-  use mod_common_mpi, only: myid,ierr
+  use mod_common_mpi, only: myid,ierr,coord
   use mod_param     , only: dims
   implicit none
   private
   public chkmean,chk_helmholtz
   contains
   subroutine chkmean(n,dzlzi,p,mean)
+    !
+    ! compute the mean value of an observable over the entire domain
+    !
     implicit none
     integer, intent(in), dimension(3) :: n
     real(8), intent(in), dimension(0:) :: dzlzi
@@ -31,7 +34,11 @@ module mod_debug
     return
   end subroutine chkmean
   !
-  subroutine chk_helmholtz(n,dli,dzci,dzfi,alpha,fp,fpp,bc,c_or_f_z,diffmax)
+  subroutine chk_helmholtz(n,dli,dzci,dzfi,alpha,fp,fpp,bc,c_or_f,diffmax)
+    !
+    ! this subroutine checks if the implementation of implicit diffusion is
+    ! correct
+    !
     implicit none
     integer, intent(in), dimension(3) :: n
     real(8), intent(in), dimension(2) :: dli
@@ -39,17 +46,18 @@ module mod_debug
     real(8), intent(in), dimension(0:) :: dzfi,dzci
     real(8), intent(in), dimension(0:,0:,0:) :: fp,fpp
     character(len=1), intent(in), dimension(0:1,3) :: bc
-    character(len=1), intent(in) :: c_or_f_z
+    character(len=1), intent(in), dimension(3) :: c_or_f
     real(8), intent(out) :: diffmax
     real(8) :: val
     integer :: i,j,k,im,ip,jm,jp,km,kp
     integer :: idir
     integer, dimension(3) :: q
+!    integer :: ii,jj
     q(:) = 0
     do idir = 1,3
-      if(bc(1,idir).ne.'P') q(idir) = 1
+      if(bc(1,idir).ne.'P'.and.c_or_f(idir).eq.'f') q(idir) = 1
     enddo
-    select case(c_or_f_z)
+    select case(c_or_f(3))
     !
     ! need to compute the maximum difference!
     !
@@ -71,7 +79,9 @@ module mod_debug
                   (fpp(i,j,k )-fpp(i,j,km))*dzci(km))*dzfi(k) )
             val = val*alpha
             diffmax = max(diffmax,abs(val-fp(i,j,k)))
-            !if(abs(val-fp(i,j,k)).gt.1.e-8) print*, 'Large difference : ', val-fp(i,j,k),i,j,k
+!            ii = coord(1)*n(1)+i
+!            jj = coord(2)*n(2)+j
+!            if(abs(val-fp(i,j,k)).gt.1.e-8) print*, 'Large difference : ', val-fp(i,j,k),ii,jj,k
           enddo
         enddo
       enddo
@@ -93,7 +103,9 @@ module mod_debug
                   (fpp(i,j,k )-fpp(i,j,km))*dzfi(k))*dzci(k) )
             val = val*alpha
             diffmax = max(diffmax,abs(val-fp(i,j,k)))
-            !if(abs(val-fp(i,j,k)).gt.1.e-8) print*, 'Large difference : ', val-fp(i,j,k),i,j,k
+!            ii = coord(1)*n(1)+i
+!            jj = coord(2)*n(2)+j
+!            if(abs(val-fp(i,j,k)).gt.1.e-8) print*, 'Large difference : ', val,fp(i,j,k),ii,jj,k
           enddo
         enddo
       enddo
