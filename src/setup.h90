@@ -9,9 +9,9 @@
                          dyi    = dy**(-1),   &
                          dzi    = dz**(-1),   &
                          dzmin  = dz      ,   &
-                         gr     = 1.d0! bottom-to-center grid size ratio 
+                         gr     = 1.0d0! bottom-to-center grid size ratio 
    real(8), parameter :: cfl = .95d0
-   real(8), parameter :: rey = 1000.d0, uref = 1.d0, lref = lz/2.d0, visc = uref*(2.d0*lref)/rey
+   real(8), parameter :: rey = 1.d0, uref = 1.d0, lref = lz/2.d0, visc = uref*(2.d0*lref)/rey
    !
    include 'bc.h90' ! boundary conditions file
    !
@@ -22,9 +22,9 @@
    !      = 'log' --> logarithmic profile + noise           (u->streamwise velocity in x dir)
    !      = 'hcl' --> half channel with log profile + noise (u->streamwise velocity in x dir)
    !      = 'hcp' --> half channel with poiseuille profile  (u->streamwise velocity in x dir)
-   character(len=3), parameter :: inivel = 'log'
+   character(len=3), parameter :: inivel = 'zer'
    !
-   integer, parameter :: nstep = 20    ! number of time steps
+   integer, parameter :: nstep = 2000 ! number of time steps
    logical, parameter :: restart = .false. ! restart or not from a checkpoint
    !
    ! -> every *icheck* time steps compute the new time step size dt
