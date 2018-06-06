@@ -39,8 +39,8 @@ module mod_sanity
     call chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed); if(.not.passed) call abortit
     call chk_outflow(cbcpre,is_outflow,passed);    if(.not.passed) call abortit
     call chk_forcing(cbcpre,is_forced  ,passed);   if(.not.passed) call abortit 
-    call chk_solvers(n,dli,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,is_outflow,passed)
-    if(.not.passed) call abortit
+    !call chk_solvers(n,dli,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,is_outflow,passed)
+    !if(.not.passed) call abortit
     return
   end subroutine test_sanity
   !

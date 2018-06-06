@@ -4,7 +4,7 @@
   !--------------------------------------------------------------
   ! velocity
   !
-    character(len=1), parameter, dimension(2,3,3) ::  cbcvel = &
+    character(len=1), parameter, dimension(0:1,3,3) ::  cbcvel = &
       reshape((/'D','D',   & ! u in x lower,upper bound
                 'D','D',   & ! u in y lower,upper bound
                 'D','D',   & ! u in z lower,upper bound
@@ -16,7 +16,7 @@
                 'D','D'/), & ! w in z lower,upper bound
                 shape(cbcvel))
   ! values pertaining to the velocity BCs (arbitrary for 'P')
-      real(8)         , parameter, dimension(2,3,3) :: bcvel = &
+      real(8)         , parameter, dimension(0:1,3,3) :: bcvel = &
         reshape((/0.d0,0.d0,   & 
                   0.d0,0.d0,   &
                   0.d0,0.d0,   &
@@ -30,30 +30,44 @@
   !-------------------------------------------------------------------
   ! pressure (homogeneous)
   !
-    character(len=1), parameter, dimension(2,3) ::  cbcpre = &
+    character(len=1), parameter, dimension(0:1,3) ::  cbcpre = &
       reshape((/'N','N',   & ! p in x lower,upper bound
                 'N','N',   & ! p in y lower,upper bound
                 'N','N'/), & ! p in z lower,upper bound
                 shape(cbcpre))
+    real(8)         , parameter, dimension(0:1,3) ::   bcpre = &
+      reshape((/0.d0,0.d0,   & ! p in x lower,upper bound
+                0.d0,0.d0,   & ! p in y lower,upper bound
+                0.d0,0.d0/), & ! p in z lower,upper bound
+                shape(bcpre))
   !-------------------------------------------------------------------
   ! forcing the flow with a pressure gradient
   ! that balances the total wall shear 
-  ! (e.g. for a pressure-driven channel)
+  ! (e.g. for a pressure-driven channel) 
   !
-  logical, parameter :: forceinx = .false., &
-                        forceiny = .false., &
-                        forceinz = .false.
-  real(8), parameter :: velfx    = 0.d0, &
-                        velfy    = 0.d0, &
-                        velfz    = 0.d0
+  logical, parameter, dimension(3) :: is_forced = & 
+      reshape((/.false. ,   & !  in x
+                .false. ,   & !  in y
+                .false. /), & !  in z
+                shape(is_forced))
+  !
+  ! desired values of bulk velocities 
+  ! (only relevant if the corresponding boolean
+  !  above is .true.)
+  !
+  real(8), parameter, dimension(3) :: velf = & 
+      reshape((/0.d0,   & !  in x
+                0.d0,   & !  in y
+                0.d0/), & !  in z
+                shape(velf))
   !
   ! outflow boundary condition
-  ! if isoutflow(i,j) is true, an outflow condition is prescribed for the
+  ! if is_outflow(i,j) is true, an outflow condition is prescribed for the
   ! face-centered velocity at that boundary
   ! the outflow BC is determined from the condition of zero divergence
   !
-  logical, parameter, dimension(2,3) :: isoutflow = & 
-      reshape((/.false.,.false.,   & ! outflow in x lower,upper bound
-                .false.,.false.,   & ! outflow in y lower,upper bound
-                .false.,.false./), & ! outflow in z lower,upper bound
-                shape(isoutflow))
+  logical, parameter, dimension(0:1,3) :: is_outflow = & 
+      reshape((/.false. ,.false. ,   & ! outflow in x lower,upper bound
+                .false. ,.false. ,   & ! outflow in y lower,upper bound
+                .false. ,.false. /), & ! outflow in z lower,upper bound
+                shape(is_outflow))
