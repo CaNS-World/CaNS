@@ -12,19 +12,18 @@ module mod_initgrid
     real(8), intent(out), dimension(0:n+1) :: dzc,dzf,zc,zf
     real(8) :: z,z0
     integer :: k
+    procedure (), pointer :: gridpoint => null()
     select case(inivel)
     case('zer','log','poi','cou')
-      do k=1,n
-        z0  = (k-0.d0)/(1.d0*n)/lz
-        call gridpoint_cluster_two_end(gr,z0,zf(k))
-      enddo
+      gridpoint => gridpoint_cluster_two_end
     case('hcl','hcp')
-      do k=1,n
-        z0  = (k-0.d0)/(1.d0*n)/lz
-        call gridpoint_cluster_one_end(gr,z0,zf(k))
-      enddo
+      gridpoint => gridpoint_cluster_one_end
     case default
     end select
+    do k=1,n
+      z0  = (k-0.d0)/(1.d0*n)/lz
+      call gridpoint(gr,z0,zf(k))
+    enddo
     zf(0) = 0.d0
     do k=1,n
       dzf(k) = zf(k)-zf(k-1)
