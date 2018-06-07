@@ -15,6 +15,8 @@ module mod_sanity
   use mod_param     , only: small
   use mod_solver    , only: solver
   implicit none
+  private
+  public test_sanity
   contains
   subroutine test_sanity(ng,n,dims,cbcvel,cbcpre,bcvel,bcpre,is_outflow,is_forced, &
                          dli,dzci,dzfi)
@@ -210,7 +212,7 @@ module mod_sanity
   real(8), dimension(3) :: dl
   real(8), dimension(0:n(3)+1) :: dzc,dzf
   real(8) :: dt,dti,alpha
-  real(8) :: divtot,divmax,diffmax
+  real(8) :: divtot,divmax,resmax
   logical :: passed_loc
   passed = .true.
   !
@@ -263,8 +265,8 @@ module mod_sanity
   call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,1),(/'f','c','c'/),up(1:n(1),1:n(2),1:n(3)))
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
-  call chk_helmholtz(n,dli,dzci,dzfi,alpha,u,up,cbcvel(:,:,1),(/'f','c','c'/),diffmax)
-  passed_loc = diffmax.lt.small
+  call chk_helmholtz(n,dli,dzci,dzfi,alpha,u,up,cbcvel(:,:,1),(/'f','c','c'/),resmax)
+  passed_loc = resmax.lt.small
   if(myid.eq.0.and.(.not.passed_loc)) &
   print*, 'ERROR: wrong solution of Helmholtz equation in x direction.'
   passed = passed.and.passed_loc
@@ -279,8 +281,8 @@ module mod_sanity
   call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,2),(/'c','f','c'/),vp(1:n(1),1:n(2),1:n(3)))
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
-  call chk_helmholtz(n,dli,dzci,dzfi,alpha,v,vp,cbcvel(:,:,2),(/'c','f','c'/),diffmax)
-  passed_loc = diffmax.lt.small
+  call chk_helmholtz(n,dli,dzci,dzfi,alpha,v,vp,cbcvel(:,:,2),(/'c','f','c'/),resmax)
+  passed_loc = resmax.lt.small
   if(myid.eq.0.and.(.not.passed_loc)) &
   print*, 'ERROR: wrong solution of Helmholtz equation in y direction.'
   passed = passed.and.passed_loc
@@ -295,8 +297,8 @@ module mod_sanity
   call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,3),(/'c','c','f'/),wp(1:n(1),1:n(2),1:n(3)))
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
-  call chk_helmholtz(n,dli,dzci,dzfi,alpha,w,wp,cbcvel(:,:,3),(/'c','c','f'/),diffmax)
-  passed_loc = diffmax.lt.small
+  call chk_helmholtz(n,dli,dzci,dzfi,alpha,w,wp,cbcvel(:,:,3),(/'c','c','f'/),resmax)
+  passed_loc = resmax.lt.small
   if(myid.eq.0.and.(.not.passed_loc)) &
   print*, 'ERROR: wrong solution of Helmholtz equation in z direction.'
   passed = passed.and.passed_loc
