@@ -177,8 +177,9 @@ module mod_rk
       call chkmean(n,dzclzi,wp,mean)
       f(3) = velf(3) - mean
     endif
-    f(:) = 0.d0
+    !
     ! compute rhs of helmholtz equation
+    !
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP PRIVATE(i,j,k) &
     !$OMP SHARED(n,factor12,factor2,visc,up,vp,wp,dudtrkd,dvdtrkd,dwdtrkd)
