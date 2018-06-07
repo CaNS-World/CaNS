@@ -49,7 +49,13 @@ module mod_initgrid
     return
   end subroutine initgrid
   !
+  ! grid stretching functions 
+  ! see e.g., Fluid Flow Phenomena -- A Numerical Toolkit, by P. Orlandi 
+  !
   subroutine gridpoint_cluster_two_end(alpha,z0,z)
+    !
+    ! clustered at the two sides
+    !
     implicit none
     real(8), intent(in) :: alpha,z0
     real(8), intent(out) :: z
@@ -61,6 +67,9 @@ module mod_initgrid
     return
   end subroutine gridpoint_cluster_two_end
   subroutine gridpoint_cluster_one_end(alpha,z0,z)
+    !
+    ! clustered at the lower side
+    !
     implicit none
     real(8), intent(in) :: alpha,z0
     real(8), intent(out) :: z
@@ -72,6 +81,9 @@ module mod_initgrid
     return
   end subroutine gridpoint_cluster_one_end
   subroutine gridpoint_cluster_middle(alpha,z0,z)
+    !
+    ! clustered in the middle
+    !
     implicit none
     real(8), intent(in) :: alpha,z0
     real(8), intent(out) :: z
