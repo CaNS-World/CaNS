@@ -7,10 +7,10 @@
     character(len=1), parameter, dimension(0:1,3,3) ::  cbcvel = &
       reshape((/'P','P',   & ! u in x lower,upper bound
                 'P','P',   & ! u in y lower,upper bound
-                'D','N',   & ! u in z lower,upper bound
+                'D','D',   & ! u in z lower,upper bound
                 'P','P',   & ! v in x lower,upper bound
                 'P','P',   & ! v in y lower,upper bound
-                'D','N',   & ! v in z lower,upper bound
+                'D','D',   & ! v in z lower,upper bound
                 'P','P',   & ! w in x lower,upper bound
                 'P','P',   & ! w in y lower,upper bound
                 'D','D'/), & ! w in z lower,upper bound

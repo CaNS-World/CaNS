@@ -95,24 +95,29 @@ program cans
   real(8) :: dt12,dt12av,dt12min,dt12max
 #endif
   character(len=7) :: fldnum
-  integer :: lenr
+  integer :: lenr,kk
   logical :: kill
   !
   !$call omp_set_num_threads(nthreadsmax)
   call initmpi(ng,cbcpre)
-  call initgrid(inivel,n(3),dz,gr,lz,dzc,dzf,zc,zf)
+  call initgrid(inivel,n(3),gr,lz,dzc,dzf,zc,zf)
+  if(myid.eq.0) then
+    inquire (iolength=lenr) dzc(1)
+    open(99,file=trim(datadir)//'grid.bin',access='direct',recl=4*n(3)*lenr)
+    write(99,rec=1) dzc(1:n(3)),dzf(1:n(3)),zc(1:n(3)),zf(1:n(3))
+    close(99)
+    open(99,file=trim(datadir)//'grid.out')
+    do kk=0,ktot+1
+      write(99,'(5E15.7)') 0.d0,zf(kk),zc(kk),dzf(kk),dzc(kk)
+    enddo
+    close(99)
+  endif
   !
   ! test input files before proceeding with the calculation
   !
   call test_sanity(ng,n,dims,cbcvel,cbcpre,bcvel,bcpre,is_outflow,is_forced, &
                    dli,dzci,dzfi)
   !
-  if(myid.eq.0) then
-    inquire (iolength=lenr) dzc(1)
-    open(99,file=trim(datadir)//'grid.bin',access='direct',recl=4*n(3)*lenr)
-    write(99,rec=1) dzc(1:n(3)),dzf(1:n(3)),zc(1:n(3)),zf(1:n(3))
-    close(99)
-  endif
   dzci = dzc**(-1)
   dzfi = dzf**(-1)
   if(.not.restart) then
