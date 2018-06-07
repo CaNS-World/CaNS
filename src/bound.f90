@@ -347,6 +347,7 @@ module mod_bound
     p(:,:,n(3)-q(3)) = p(:,:,n(3)-q(3)) + rhsbz(:,:,1)
     return
   end subroutine updt_rhs_b
+  !
   subroutine updthalo(n,idir,p)
     implicit none
     integer, dimension(2), intent(in) :: n
