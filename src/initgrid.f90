@@ -10,7 +10,7 @@ module mod_initgrid
     integer, intent(in) :: n
     real(8), intent(in) :: gr,lz
     real(8), intent(out), dimension(0:n+1) :: dzc,dzf,zc,zf
-    real(8) :: z,z0
+    real(8) :: z0
     integer :: k
     procedure (), pointer :: gridpoint => null()
     select case(inivel)
