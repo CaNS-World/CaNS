@@ -48,7 +48,7 @@ initflow.o: initflow.f90 common_mpi.o decomp_2d.o
 initgrid.o: initgrid.f90 param.o
 	$(FC) $(FFLAGS) -c  initgrid.f90 
 initmpi.o: initmpi.f90 decomp_2d.o common_mpi.o
-	$(FC) $(FFLAGS) -c initmpi.f90
+	$(FC) $(FFLAGS) -c  initmpi.f90
 initsolver.o: initsolver.f90 common_mpi.o fft.o param.o
 	$(FC) $(FFLAGS) -c  initsolver.f90 
 load.o: load.f90 common_mpi.o decomp_2d.o io.o
