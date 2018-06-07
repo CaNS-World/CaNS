@@ -1,6 +1,7 @@
 module mod_initflow
   use mpi
-  use mod_common_mpi, only: ierr,coord
+  use decomp_2d
+  use mod_common_mpi, only: ierr,coord,myid
   use mod_param     , only: dims,rey
   implicit none
   private
@@ -50,6 +51,14 @@ module mod_initflow
       allocate(u1d(2*n(3)))
       call poiseuille(q,2*n(3),zclzi,norm,u1d)
       is_mean = .true.
+    case default
+      if(myid.eq.0) print*, 'ERROR: invalid name for initial velocity field'
+      if(myid.eq.0) print*, ''
+      if(myid.eq.0) print*, '*** Simulation abortited due to errors in the case file ***'
+      if(myid.eq.0) print*, '    check setup.h90'
+      call decomp_2d_finalize
+      call MPI_FINALIZE(ierr)
+      call exit
     end select
     do k=1,n(3)
       do j=1,n(2)

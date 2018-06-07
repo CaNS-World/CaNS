@@ -43,7 +43,7 @@ fft.o: fft.f90 common_mpi.o fftw.o
 	$(FC) $(FFLAGS) -c  fft.f90
 fftw.o: fftw.f90
 	$(FC) $(FFLAGS) -c  fftw.f90
-initflow.o: initflow.f90 common_mpi.o
+initflow.o: initflow.f90 common_mpi.o decomp_2d.o
 	$(FC) $(FFLAGS) -c  initflow.f90 
 initgrid.o: initgrid.f90 param.o
 	$(FC) $(FFLAGS) -c  initgrid.f90 
@@ -67,7 +67,7 @@ param.o: param.f90 setup.h90 bc.h90
 	$(FC) $(FFLAGS) -c  param.f90
 rk.o: rk.f90 debug.o mom.o momd.o moms.o param.o
 	$(FC) $(FFLAGS) -c  rk.f90
-sanity.o: sanity.f90 bound.o chkdiv.o common_mpi.o correc.o debug.o fft.o fillps.o initflow.o initmpi.o initsolver.o param.o solver.o
+sanity.o: sanity.f90 bound.o chkdiv.o common_mpi.o correc.o debug.o decomp_2d.o fft.o fillps.o initflow.o initmpi.o initsolver.o param.o solver.o
 	$(FC) $(FFLAGS) -c  sanity.f90
 solver.o: solver.f90 fft.o param.o
 	$(FC) $(FFLAGS) -c  solver.f90
