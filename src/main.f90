@@ -133,7 +133,7 @@ program cans
     istep = nint(ristep)
   endif
   call bounduvw(cbcvel,n,bcvel,is_outflow,dl,dzc,dzf,u,v,w)
-  call boundp(cbcpre,n,bcpre,dl,dzc,dzf,pp)
+  call boundp(cbcpre,n,bcpre,dl,dzc,dzf,p)
   call chkdt(n,dl,dzci,dzfi,visc,u,v,w,dtmax)
   dt = cfl*dtmax
   if(myid.eq.0) print*, 'dtmax = ', dtmax, 'dt = ',dt
