@@ -266,6 +266,9 @@ program cans
         kill = .true.
       endif
     endif
+    !
+    ! output routines below
+    !
     if(mod(istep,iout0d).eq.0) then
       !allocate(var(4))
       var(1) = 1.d0*istep

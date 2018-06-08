@@ -143,8 +143,8 @@ module mod_output
             u2(k) = u2(k) + u(i,j,k)**2
             v2(k) = v2(k) + v(i,j,k)**2
             w2(k) = w2(k) + 0.50d0*(w(i,j,k)**2+w(i,j,k-1)**2)
-            uw(k) = uw(k) + 0.25d0*(u(i-1,j,k) + u(i,j,k))* & ! varying z grids should be taken into account
-                                   (w(i,j,k-1) + w(i,j,k))    ! varying z grids should be taken into account
+            uw(k) = uw(k) + 0.25d0*(u(i-1,j,k) + u(i,j,k))* &
+                                   (w(i,j,k-1) + w(i,j,k))
           enddo
         enddo
       enddo
@@ -157,11 +157,11 @@ module mod_output
       call mpi_allreduce(MPI_IN_PLACE,uw(1),n(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
       um(:) = um(:)/(1.*ng(1)*ng(2))
       vm(:) = vm(:)/(1.*ng(1)*ng(2))
-      wm(:) = wm(:)/(1.*ng(1)*ng(2)) ! needs to be interpolated
+      wm(:) = wm(:)/(1.*ng(1)*ng(2))
       u2(:) = sqrt(u2(:)/(1.*ng(1)*ng(2)) - um(:)**2)
       v2(:) = sqrt(v2(:)/(1.*ng(1)*ng(2)) - vm(:)**2)
-      w2(:) = sqrt(w2(:)/(1.*ng(1)*ng(2)) - wm(:)**2) ! needs to be interpolated
-      uw(:) = uw(:)/(1.*ng(1)*ng(2)) - um(:)*wm(:) ! needs to be interpolated
+      w2(:) = sqrt(w2(:)/(1.*ng(1)*ng(2)) - wm(:)**2)
+      uw(:) = uw(:)/(1.*ng(1)*ng(2)) - um(:)*wm(:)
       if(myid.eq.0) then
         open(unit=iunit,file=fname)
         do k=1,n(3)
