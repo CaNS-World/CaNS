@@ -53,7 +53,7 @@ initsolver.o: initsolver.f90 common_mpi.o fft.o param.o
 	$(FC) $(FFLAGS) -c  initsolver.f90 
 load.o: load.f90 common_mpi.o decomp_2d.o io.o
 	$(FC) $(FFLAGS) -c  load.f90 
-main.o: main.f90 bound.o chkdiv.o chkdt.o debug.o fft.o fillps.o initflow.o initflow.o initgrid.o initmpi.o initsolver.o load.o output.o param.o rk.o sanity.o solver.o
+main.o: main.f90 bound.o chkdiv.o chkdt.o debug.o fft.o fillps.o initflow.o initflow.o initgrid.o initmpi.o initsolver.o load.o output.o param.o rk.o sanity.o solver.o out1d.h90 out2d.h90 out3d.h90
 	$(FC) $(FFLAGS) -c  main.f90
 mom.o: mom.f90 common_mpi.o
 	$(FC) $(FFLAGS) -c  mom.f90

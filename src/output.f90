@@ -8,6 +8,13 @@ module mod_output
   public out0d,out1d,out1d_2,out2d,out3d
   contains
   subroutine out0d(fname,n,var)
+    !
+    ! appends the first n entries of an array
+    ! var to a file
+    ! fname -> name of the file
+    ! n     -> number of entries
+    ! var   -> input array of real values
+    !
     implicit none
     character(len=*), intent(in) :: fname
     integer, intent(in) :: n
@@ -16,7 +23,7 @@ module mod_output
     character(len=30) :: cfmt
     integer :: i
     !
-    write(cfmt,'(A,I3,A)') '(',n,'E15.7)' 
+    write(cfmt,'(A,I3,A)') '(',n,'E15.7)'
     iunit = 10
     if (myid .eq. 0) then
       open(iunit,file=fname,position='append')
@@ -27,6 +34,17 @@ module mod_output
   end subroutine out0d
   !
   subroutine out1d(fname,n,idir,z,dzlzi,p)
+    !
+    ! writes the profile of a variable averaged
+    ! over two domain direction
+    !
+    ! fname -> name of the file
+    ! n     -> size of the input array
+    ! idir  -> direction of the profile
+    ! z     -> z coordinate (grid is non-uniform in z)
+    ! dzlzi -> dz/lz weight of a grid cell for averaging over z
+    ! p     -> 3D input scalar field
+    !
     implicit none
     character(len=*), intent(in) :: fname
     integer, intent(in), dimension(3) :: n
@@ -177,6 +195,33 @@ module mod_output
     end select
   end subroutine out1d_2
   !
+  subroutine out2d(fname,inorm,islice,p)
+    !
+    ! saves a planar slice of a scalar field into a binary file
+    !
+    ! fname  -> name of the output file
+    ! inorm  -> plane is perpendicular to direction
+    !           inorm (1,2,3)
+    ! islice -> plane is of constant index islice 
+    !           in direction inorm
+    ! p      -> 3D input scalar field
+    !
+    implicit none
+    character(len=*), intent(in) :: fname
+    integer, intent(in) :: inorm,islice
+    real(8),intent(in), dimension(:,:,:) :: p
+    !
+    select case(inorm)
+    case(1) !normal to x --> yz plane
+       call decomp_2d_write_plane(3,p,inorm,islice,fname)
+    case(2) !normal to y --> zx plane
+       call decomp_2d_write_plane(3,p,inorm,islice,fname)
+    case(3) !normal to z --> xy plane
+       call decomp_2d_write_plane(3,p,inorm,islice,fname)
+    end select
+    return
+  end subroutine out2d
+  !
   subroutine out2d_2(fname,n,idir,z,u,v,w) ! e.g. for a duct with streamwise dir in x
     implicit none
     character(len=*), intent(in) :: fname
@@ -268,23 +313,17 @@ module mod_output
     case(1)
     end select
   end subroutine out2d_2
-  subroutine out2d(fname,inorm,islice,p)
-    implicit none
-    character(len=*), intent(in) :: fname
-    integer, intent(in) :: inorm,islice
-    real(8),intent(in), dimension(:,:,:) :: p
-    !
-    select case(inorm)
-    case(1) !normal to x --> yz plane
-       call decomp_2d_write_plane(3,p,inorm,islice,fname)
-    case(2) !normal to y --> zx plane
-       call decomp_2d_write_plane(3,p,inorm,islice,fname)
-    case(3) !normal to z --> xy plane
-       call decomp_2d_write_plane(3,p,inorm,islice,fname)
-    end select
-    return
-  end subroutine out2d
+  !
   subroutine out3d(fname,nskip,p)
+    !
+    ! saves a 3D scalar field into a binary file
+    !
+    ! fname  -> name of the output file
+    ! nskip  -> array with the step size for which the
+    !           field is written; i.e.: (/1,1,1/) 
+    !           writes the full field 
+    ! p      -> 3D input scalar field
+    !
     implicit none
     character(len=*), intent(in) :: fname
     integer, intent(in), dimension(3) :: nskip

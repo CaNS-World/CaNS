@@ -284,29 +284,13 @@ program cans
     endif
     write(fldnum,'(i7.7)') istep
     if(mod(istep,iout1d).eq.0) then
-      !call out1d(trim(datadir)//'umean_z_fld_'   //fldnum//'.out',n,3,zc/lz,dzf/lz,u)
-      !call out1d(trim(datadir)//'vmean_z_fld_'   //fldnum//'.out',n,3,zc/lz,dzf/lz,v)
-      !call out1d(trim(datadir)//'wmean_z_fld_'   //fldnum//'.out',n,3,zf/lz,dzc/lz,w)
-      !call out1d(trim(datadir)//'umean_y_fld_'   //fldnum//'.out',n,2,zc/lz,dzf/lz,u)
-      !call out1d(trim(datadir)//'vmean_y_fld_'   //fldnum//'.out',n,2,zf/lz,dzc/lz,v)
-      !call out1d(trim(datadir)//'wmean_y_fld_'   //fldnum//'.out',n,2,zc/lz,dzf/lz,w)
-      !call out1d_2(trim(datadir)//'velstats_fld_'//fldnum//'.out',n,3,zc/lz,u,v,w)
-      call out1d(trim(datadir)//'umean_z.out',n,3,zc/lz,dzf/lz,u)
-      call out1d(trim(datadir)//'vmean_z.out',n,3,zc/lz,dzf/lz,v)
-      call out1d(trim(datadir)//'wmean_z.out',n,3,zf/lz,dzc/lz,w)
-      call out1d(trim(datadir)//'umean_y.out',n,2,zc/lz,dzf/lz,u)
-      call out1d(trim(datadir)//'vmean_y.out',n,2,zf/lz,dzc/lz,v)
-      call out1d(trim(datadir)//'wmean_y.out',n,2,zc/lz,dzf/lz,w)
-      call out1d(trim(datadir)//'wmean_x.out',n,1,zc/lz,dzf/lz,w)
-      call out1d_2(trim(datadir)//'velstats.out',n,3,zc/lz,u,v,w)
+      include 'out1d.h90'
     endif
     if(mod(istep,iout2d).eq.0) then
-      !call out2d(trim(datadir)//'fld_u_slice_fld_'//fldnum//'.bin',2,n(3)/2,u(1:n(1),1:n(2),1:n(3)))
-      call out2d(trim(datadir)//'fld_u_slice.bin',2,n(2)/2,u(1:n(1),1:n(2),1:n(3)))
+      include 'out2d.h90'
     endif
     if(mod(istep,iout3d).eq.0) then
-      !call out3d(trim(datadir)//'fld_u.bin_fld_'//fldnum//'.bin',(/1,1,1/),u(1:n(1),1:n(2),1:n(3)))
-      call out3d(trim(datadir)//'fld_u.bin',(/1,1,1/),u(1:n(1),1:n(2),1:n(3)))
+      include 'out3d.h90'
     endif
     if(mod(istep,isave ).eq.0) then
       ristep = 1.d0*istep
