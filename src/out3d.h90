@@ -1,0 +1,17 @@
+  ! out3d(fname,nskip,p)
+  !
+  ! saves a 3D scalar field into a binary file (see output.f90)
+  !
+  ! fname  -> name of the output file
+  ! nskip  -> array with the step size for which the
+  !           field is written; i.e.: (/1,1,1/) 
+  !           writes the full field 
+  ! p      -> 3D input scalar field
+  !
+  ! modify the calls below as desired
+  !
+  call out3d(trim(datadir)//'fld_u_fld_'//fldnum//'.bin',(/1,1,1/),u(1:n(1),1:n(2),1:n(3)))
+  call out3d(trim(datadir)//'fld_v_fld_'//fldnum//'.bin',(/1,1,1/),v(1:n(1),1:n(2),1:n(3)))
+  call out3d(trim(datadir)//'fld_w_fld_'//fldnum//'.bin',(/1,1,1/),w(1:n(1),1:n(2),1:n(3)))
+  call out3d(trim(datadir)//'fld_p_fld_'//fldnum//'.bin',(/1,1,1/),p(1:n(1),1:n(2),1:n(3)))
+  !call out3d(trim(datadir)//'fld_u.bin',(/1,1,1/),u(1:n(1),1:n(2),1:n(3)))
