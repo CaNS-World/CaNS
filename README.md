@@ -50,11 +50,13 @@ The input (header) files inside the `src/` folder, `setup.h90` and `bc.h90` setu
 
 In the `examples/` folder are examples of these files for several canonical flows.
 
+The files `out1d.h90`, `out2d.h90` and `out3d.h90` set up respectively the 1-, 2- and 3-dimensional output files. The output frequency is set up in `setup.h90`.
+
 ### Compilation
 
-After modifying files `setup.h90` and `bc.h90` the code should be compiled. 
+After modifying files `setup.h90`, `bc.h90` and `out*d.h90`, the code should be compiled. 
 
-The following prerequisites are needed:
+The prerequisites are the following:
 
  * MPI
  * FFTW3
