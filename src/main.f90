@@ -38,7 +38,7 @@ program cans
   use mod_load       , only: load
   use mod_rk         , only: rk,rk_id
   use mod_output     , only: out0d,out1d,out1d_2,out2d,out3d
-  use mod_param      , only: itot,jtot,ktot,lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,visc,pi,small, &
+  use mod_param      , only: itot,jtot,ktot,lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,visc,small, &
                              cbcvel,bcvel,cbcpre,bcpre, &
                              icheck,iout0d,iout1d,iout2d,iout3d,isave, &
                              nstep,restart, &
