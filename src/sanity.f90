@@ -20,9 +20,8 @@ module mod_sanity
   contains
   subroutine test_sanity(ng,n,dims,cbcvel,cbcpre,bcvel,bcpre,is_outflow,is_forced, &
                          dli,dzci,dzfi)
-
     !
-    ! performs some a-priori checks of the input files before the calculation starts
+    ! performs some a priori checks of the input files before the calculation starts
     !
     implicit none
     integer, intent(in), dimension(3) :: ng,n

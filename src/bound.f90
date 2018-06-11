@@ -6,6 +6,9 @@ module mod_bound
   public boundp,bounduvw,updt_rhs_b
   contains
   subroutine bounduvw(cbc,n,bc,isoutflow,dl,dzc,dzf,u,v,w)
+    !
+    ! imposes velocity boundary conditions
+    !
     implicit none
     character(len=1), intent(in), dimension(0:1,3,3) :: cbc
     integer, intent(in), dimension(3) :: n 
@@ -64,6 +67,9 @@ module mod_bound
   end subroutine bounduvw
   !
   subroutine boundp(cbc,n,bc,dl,dzc,dzf,p)
+    !
+    ! imposes pressure boundary conditions
+    !
     implicit none
     character(len=1), intent(in), dimension(0:1,3) :: cbc
     integer, intent(in), dimension(3) :: n 
@@ -185,7 +191,7 @@ module mod_bound
           elseif(ibound.eq.1) then
             p(:,n+1,:) = 2.d0*factor + p(:,n-1,:)
           endif
-        case(3) ! not supported for now
+        case(3)
           if    (ibound.eq.0) then
             p(:,:,0  ) = 1.d0*factor + p(:,:,1  )
           elseif(ibound.eq.1) then
