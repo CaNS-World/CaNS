@@ -1,0 +1,9 @@
+*.o
+*.mod
+*.out
+*.bin
+*.MOD
+*.log
+*dSYM
+*.xdmf
+cans
