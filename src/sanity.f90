@@ -148,6 +148,7 @@ module mod_sanity
 #endif
   return 
   end subroutine chk_bc
+  !
   subroutine chk_outflow(cbcpre,is_outflow,passed)
   implicit none
   logical         , intent(in), dimension(0:1,3  ) :: is_outflow
@@ -169,6 +170,7 @@ module mod_sanity
     print*, 'ERROR: Dirichlet pressure BC should be an outflow direction; check the BC or is_outflow in bc.h90.'
   return 
   end subroutine chk_outflow
+  !
   subroutine chk_forcing(cbcpre,is_forced,passed)
   implicit none
   character(len=1), intent(in), dimension(0:1,3) :: cbcpre
@@ -188,6 +190,7 @@ module mod_sanity
   print*, 'ERROR: Flow cannot be forced in a non-periodic direction; check the BCs and is_forced in bc.h90.'
   return 
   end subroutine chk_forcing
+  !
   subroutine chk_solvers(n,dli,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,is_outflow,passed)
   implicit none
   integer, intent(in), dimension(3) :: n
@@ -304,6 +307,7 @@ module mod_sanity
 #endif
   return
   end subroutine chk_solvers
+  !
   subroutine abortit
       implicit none
       if(myid.eq.0) print*, ''
