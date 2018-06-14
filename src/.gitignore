@@ -1,8 +1,0 @@
-*.o
-*.mod
-*.out
-*.bin
-*.MOD
-*.log
-*dSYM
-cans
