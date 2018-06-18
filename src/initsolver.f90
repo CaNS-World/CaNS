@@ -166,8 +166,6 @@ module mod_initsolver
       if(bc(0).eq.'N') b(1) = b(1) + factor(0)*a(1)
       if(bc(1).eq.'N') b(n) = b(n) + factor(1)*c(n)
     end select
-    a(1) = 0.d0 ! value not used anyway in solver.f90
-    c(n) = 0.d0 ! idem
     a(:) = a(:) + eps
     b(:) = b(:) + eps
     c(:) = c(:) + eps
