@@ -24,7 +24,7 @@ module mod_initgrid
     case default
     end select
     do k=1,n
-      z0  = (k-0.d0)/(1.d0*n)/lz
+      z0  = (k-0.d0)/(1.d0*n)*lz
       call gridpoint(gr,z0,zf(k))
     enddo
     zf(0) = 0.d0
@@ -44,10 +44,6 @@ module mod_initgrid
       zc(k+1) = zc(k) + dzc(k)
       zf(k+1) = zf(k) + dzf(k) ! redundant
     enddo
-    dzc(:) = dzc(:)*lz
-    dzf(:) = dzf(:)*lz
-    zc(:)  =  zc(:)*lz
-    zf(:)  =  zf(:)*lz
     return
   end subroutine initgrid
   !
