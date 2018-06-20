@@ -19,7 +19,7 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 ## News
 
-20/06/2018 -- The master branch updated on 27/05/2018, with several options of non-uniform grid spacing in *z* and sanity checks, contained a bug which makes the results unreliable when *lz!=1*. This has been fixed. Please pull the current master branch if you experience issues.
+20/06/2018 -- *\[bug fix\]* The master branch updated on 27/05/2018, with several options of non-uniform grid spacing in *z* and sanity checks, contained a bug which makes the results unreliable when *lz!=1*. This has been fixed. Please pull the current master branch if you experience issues.
 
 ## Features
 
