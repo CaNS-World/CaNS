@@ -72,7 +72,7 @@ The Makefile should be modified in agreement to the installation paths of each l
 
  * `-DDEBUG`   : performs some basic checks for debugging purposes
  * `-DTIMING`  : wall-clock time per timestep is computed
- * `-DIMPDIFF` : diffusion term of the N-S equations is treated implicitly (thereby improving the stability of the numerical algorithm for viscous-dominated flows)
+ * `-DIMPDIFF` : diffusion term of the N-S equations is integrated in time with an implicit discretization (thereby improving the stability of the numerical algorithm for viscous-dominated flows)
 
 ### Running the code
 
