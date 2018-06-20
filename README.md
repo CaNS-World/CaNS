@@ -17,6 +17,10 @@ CaNS now allows for choosing an implicit temporal discretization of the diffusio
 
 P. Costa. *A FFT-based finite-difference solver for massively-parallel direct numerical simulations of turbulent flows.* [arXiv:1802.10323](https://arxiv.org/pdf/1802.10323.pdf) (2018).
 
+## News
+
+20/06/2018 -- The master branch updated on 27/05/2018, with several options of non-uniform grid spacing in *z* and sanity checks, contained a bug which makes the results unreliable when *lz!=1*. This has been fixed. Please pull the current master branch if you experience issues.
+
 ## Features
 
 Some features are:
