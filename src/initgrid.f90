@@ -42,7 +42,7 @@ module mod_initgrid
     zf(0)    = 0.d0
     do k=0,n
       zc(k+1) = zc(k) + dzc(k)
-      zf(k+1) = zf(k) + dzf(k) ! redundant
+      zf(k+1) = zf(k) + dzf(k)
     enddo
     return
   end subroutine initgrid
