@@ -60,6 +60,11 @@ module mod_sanity
     if(myid.eq.0.and.(.not.passed_loc)) &
       print*, 'ERROR: itot and jtot should be divisable by dims(1) and dims(2), respectively.'
     passed = passed.and.passed_loc
+    passed_loc = (mod(ng(2),dims(1)).eq.0).and.(mod(ng(3),dims(2)).eq.0)
+    if(myid.eq.0.and.(.not.passed_loc)) &
+      print*, 'ERROR: jtot should be divisable by both dims(1) and dims(2), and &
+                      ktot should be divisable by dims(2)'
+    passed = passed.and.passed_loc
     return
   end subroutine chk_dims
   !
@@ -311,7 +316,7 @@ module mod_sanity
   subroutine abortit
       implicit none
       if(myid.eq.0) print*, ''
-      if(myid.eq.0) print*, '*** Simulation abortited due to errors in the case file ***'
+      if(myid.eq.0) print*, '*** Simulation aborted due to errors in the case file ***'
       if(myid.eq.0) print*, '    check bc.h90 and setup.h90'
       call decomp_2d_finalize
       call MPI_FINALIZE(ierr)
