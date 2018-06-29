@@ -7,7 +7,7 @@ import pylab
 #
 f   = open(filenamei,'rb')
 fld = np.fromfile(f,dtype='float64')
-fld = np.reshape(fld,(n2,n1),order='F')
+fld = np.reshape(fld,(n2,n1),order='C')
 f.close()
 #
 # initialize figure
