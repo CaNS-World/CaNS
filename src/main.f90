@@ -100,6 +100,10 @@ program cans
   !
   !$call omp_set_num_threads(nthreadsmax)
   call initmpi(ng,cbcpre)
+  if(myid.eq.0) print*, '******************************'
+  if(myid.eq.0) print*, '*** Beginning of simulation ***'
+  if(myid.eq.0) print*, '******************************'
+  if(myid.eq.0) print*, ''
   call initgrid(inivel,n(3),gr,lz,dzc,dzf,zc,zf)
   if(myid.eq.0) then
     inquire (iolength=lenr) dzc(1)
@@ -124,6 +128,7 @@ program cans
     istep = 0
     time = 0.d0
     call initflow(inivel,n,zc/lz,dzc/lz,dzf/lz,visc,uref,u,v,w,p)
+    if(myid.eq.0) print*, '*** Initial condition succesfully set ***'
   else
     call load('r',trim(datadir)//'fld.bin',n,u(1:n(1),1:n(2),1:n(3)), &
                                              v(1:n(1),1:n(2),1:n(3)), &
@@ -155,7 +160,7 @@ program cans
   !
   ! main loop
   !
-  if(myid.eq.0) print*, '*** The calculation loop starts now ***'
+  if(myid.eq.0) print*, '*** Calculation loop starts now ***'
   do while(istep.lt.nstep)
 #ifdef TIMING
     dt12 = MPI_WTIME()
