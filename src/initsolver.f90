@@ -166,6 +166,9 @@ module mod_initsolver
       if(bc(0).eq.'N') b(1) = b(1) + factor(0)*a(1)
       if(bc(1).eq.'N') b(n) = b(n) + factor(1)*c(n)
     end select
+    ! n.b.: a(1) and c(n) not set to zero here;
+    !       the values are not used in the solver unless
+    !       the direction is periodic
     a(:) = a(:) + eps
     b(:) = b(:) + eps
     c(:) = c(:) + eps
