@@ -41,7 +41,7 @@
    ! main.f90 or even output.f90 accordingly. Currently these assume the z to be
    ! an inhomogeneous direction.
    !
-   integer, parameter :: icheck =    1, iout0d =    10, iout1d =   20, &
+   integer, parameter :: icheck =   10, iout0d =    10, iout1d =   20, &
                          iout2d = 5000, iout3d = 10000, isave  = 2000
    !
    ! grid of computational subdomains
