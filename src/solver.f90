@@ -78,7 +78,7 @@ module mod_solver
     do j=1,ny
       do i=1,nx
         bb(:) = b(1:n) + lambdaxy(i,j)
-        call dgtsv_homebrew(n,a,bb,c,p(i,j,1:n))
+        call dgtsv_homebrewed(n,a,bb,c,p(i,j,1:n))
       enddo
     enddo
     !$OMP END DO
@@ -105,11 +105,11 @@ module mod_solver
       do i=1,nx
         bb(:)  = b(:) + lambdaxy(i,j)
         p1(1:n-1) = p(i,j,1:n-1)
-        call dgtsv_homebrew(n-1,a(1:n-1),bb(1:n-1),c(1:n-2),p1(1:n-1))
+        call dgtsv_homebrewed(n-1,a(1:n-1),bb(1:n-1),c(1:n-2),p1(1:n-1))
         p2(:) = 0.d0
         p2(1  ) = -a(1  )
         p2(n-1) = -c(n-1)
-        call dgtsv_homebrew(n-1,a(2:n-1),bb(1:n-1),c(1:n-2),p2(1:n-1))
+        call dgtsv_homebrewed(n-1,a(2:n-1),bb(1:n-1),c(1:n-2),p2(1:n-1))
         p(i,j,n) = (p(i,j,n) - c(n)*p1(1) - a(n)*p1(n-1)) / &
                    (bb(   n) + c(n)*p2(1) + a(n)*p2(n-1))
         p(i,j,1:n-1) = p1(1:n-1) + p2(1:n-1)*p(i,j,n)
@@ -119,7 +119,7 @@ module mod_solver
     !$OMP END PARALLEL
     return
   end subroutine gaussel_periodic
-  subroutine dgtsv_homebrew(n,a,b,c,p)
+  subroutine dgtsv_homebrewed(n,a,b,c,p)
     implicit none
     integer, intent(in) :: n
     real(8), intent(in   ), dimension(:) :: a,b,c
@@ -134,22 +134,22 @@ module mod_solver
     d(1) = c(1)*z
     p(1) = p(1)*z
     do l=2,n-1
-      z     = 1.d0/(b(l)-a(l)*d(l-1))
-      d(l)  = c(l)*z
+      z    = 1.d0/(b(l)-a(l)*d(l-1))
+      d(l) = c(l)*z
       p(l) = (p(l)-a(l)*p(l-1))*z
     enddo
-    z  = b(n)-a(n)*d(n-1)
+    z = b(n)-a(n)*d(n-1)
     if(z.ne.0.d0) then
       p(n) = (p(n)-a(n)*p(n-1))/z
     else
-      p(n) =0.d0
+      p(n) = 0.d0
     endif
     !
     ! backward substitution
     !
     do l=n-1,1,-1
-      p(l) = p(l)-d(l)*p(l+1)
+      p(l) = p(l) - d(l)*p(l+1)
     enddo
     return
-  end subroutine dgtsv_homebrew
+  end subroutine dgtsv_homebrewed
 end module mod_solver
