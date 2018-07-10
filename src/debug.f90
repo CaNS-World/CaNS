@@ -75,7 +75,7 @@ module mod_debug
             val =  fpp(i,j,k)+(1./alpha)*( &
                   (fpp(ip,j,k)-2.d0*fpp(i,j,k)+fpp(im,j,k))*(dli(1)**2) + &
                   (fpp(i,jp,k)-2.d0*fpp(i,j,k)+fpp(i,jm,k))*(dli(2)**2) + &
-                 ((fpp(i,j,kp)-fpp(i,j,k))*dzci(k) - &
+                 ((fpp(i,j,kp)-fpp(i,j,k ))*dzci(k ) - &
                   (fpp(i,j,k )-fpp(i,j,km))*dzci(km))*dzfi(k) )
             val = val*alpha
             diffmax = max(diffmax,abs(val-fp(i,j,k)))
@@ -99,8 +99,8 @@ module mod_debug
             val =  fpp(i,j,k)+(1./alpha)*( &
                   (fpp(ip,j,k)-2.d0*fpp(i,j,k)+fpp(im,j,k))*(dli(1)**2) + &
                   (fpp(i,jp,k)-2.d0*fpp(i,j,k)+fpp(i,jm,k))*(dli(2)**2) + &
-                 ((fpp(i,j,kp)-fpp(i,j,k))*dzfi(kp) - &
-                  (fpp(i,j,k )-fpp(i,j,km))*dzfi(k))*dzci(k) )
+                 ((fpp(i,j,kp)-fpp(i,j,k ))*dzfi(kp) - &
+                  (fpp(i,j,k )-fpp(i,j,km))*dzfi(k ))*dzci(k) )
             val = val*alpha
             diffmax = max(diffmax,abs(val-fp(i,j,k)))
 !            ii = coord(1)*n(1)+i
