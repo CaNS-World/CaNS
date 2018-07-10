@@ -239,8 +239,8 @@ program cans
             p(i,j,k) = p(i,j,k) + pp(i,j,k) + alphai*( &
                         (pp(ip,j,k)-2.d0*pp(i,j,k)+pp(im,j,k))*(dxi**2) + &
                         (pp(i,jp,k)-2.d0*pp(i,j,k)+pp(i,jm,k))*(dyi**2) + &
-                        ((pp(i,j,kp)-pp(i,j,k))*dzci(k) - &
-                         (pp(i,j,k)-pp(i,j,km))*dzci(km))*dzfi(k) )
+                        ((pp(i,j,kp)-pp(i,j,k ))*dzci(k ) - &
+                         (pp(i,j,k )-pp(i,j,km))*dzci(km))*dzfi(k) )
           enddo
         enddo
       enddo
