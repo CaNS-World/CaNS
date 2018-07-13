@@ -131,71 +131,109 @@ module mod_bound
         !p(:,0  ,:) = p(:,n,:)
         !p(:,n+1,:) = p(:,1,:)
       case(3)
+        !$OMP WORKSHARE
         p(:,:,0  ) = p(:,:,n)
         p(:,:,n+1) = p(:,:,1)
+        !$OMP END WORKSHARE
       end select
     case('D','N')
       if(stag) then
         select case(idir)
         case(1)
           if    (ibound.eq.0) then
+            !$OMP WORKSHARE
             p(0  ,:,:) = factor+sgn*p(1,:,:)
+            !$OMP END WORKSHARE
           elseif(ibound.eq.1) then
+            !$OMP WORKSHARE
             p(n+1,:,:) = factor+sgn*p(n,:,:)
+            !$OMP END WORKSHARE
           endif
         case(2)
           if    (ibound.eq.0) then
+            !$OMP WORKSHARE
             p(:,0  ,:) = factor+sgn*p(:,1,:)
+            !$OMP END WORKSHARE
           elseif(ibound.eq.1) then
+            !$OMP WORKSHARE
             p(:,n+1,:) = factor+sgn*p(:,n,:)
+            !$OMP END WORKSHARE
           endif
         case(3)
           if    (ibound.eq.0) then
+            !$OMP WORKSHARE
             p(:,:,0  ) = factor+sgn*p(:,:,1)
+            !$OMP END WORKSHARE
           elseif(ibound.eq.1) then
+            !$OMP WORKSHARE
             p(:,:,n+1) = factor+sgn*p(:,:,n)
+            !$OMP END WORKSHARE
           endif
         end select
       elseif(.not.stag.and.ctype.eq.'D') then
         select case(idir)
         case(1)
           if    (ibound.eq.0) then
+            !$OMP WORKSHARE
             p(0,:,:) = factor 
+            !$OMP END WORKSHARE
           elseif(ibound.eq.1) then
+            !$OMP WORKSHARE
             p(n,:,:) = factor
+            !$OMP END WORKSHARE
           endif
         case(2)
           if    (ibound.eq.0) then
+            !$OMP WORKSHARE
             p(:,0,:) = factor 
+            !$OMP END WORKSHARE
           elseif(ibound.eq.1) then
+            !$OMP WORKSHARE
             p(:,n,:) = factor
+            !$OMP END WORKSHARE
           endif
         case(3)
           if    (ibound.eq.0) then
+            !$OMP WORKSHARE
             p(:,:,0) = factor 
+            !$OMP END WORKSHARE
           elseif(ibound.eq.1) then
+            !$OMP WORKSHARE
             p(:,:,n) = factor
+            !$OMP END WORKSHARE
           endif
         end select
       elseif(.not.stag.and.ctype.eq.'N') then
         select case(idir)
         case(1)
           if    (ibound.eq.0) then
+            !$OMP WORKSHARE
             p(0,  :,:) = 1.d0*factor + p(1  ,:,:)
+            !$OMP END WORKSHARE
           elseif(ibound.eq.1) then
+            !$OMP WORKSHARE
             p(n+1,:,:) = 2.d0*factor + p(n-1,:,:)
+            !$OMP END WORKSHARE
           endif
         case(2)
           if    (ibound.eq.0) then
+            !$OMP WORKSHARE
             p(:,0  ,:) = 1.d0*factor + p(:,1  ,:) 
+            !$OMP END WORKSHARE
           elseif(ibound.eq.1) then
+            !$OMP WORKSHARE
             p(:,n+1,:) = 2.d0*factor + p(:,n-1,:)
+            !$OMP END WORKSHARE
           endif
         case(3)
           if    (ibound.eq.0) then
+            !$OMP WORKSHARE
             p(:,:,0  ) = 1.d0*factor + p(:,:,1  )
+            !$OMP END WORKSHARE
           elseif(ibound.eq.1) then
+            !$OMP WORKSHARE
             p(:,:,n+1) = 2.d0*factor + p(:,:,n-1)
+            !$OMP END WORKSHARE
           endif
         end select
       endif
@@ -226,53 +264,77 @@ module mod_bound
     case(1) ! x directio, right
       if(right.eq.MPI_PROC_NULL) then
         i = n(1) + 1
+        !$OMP PARALLEL DO DEFAULT(none) &
+        !$OMP PRIVATE(j,k) &
+        !$OMP SHARED(n,i,u,v,w,dx,dyi,dzfi)
         do k=1,n(3)
           do j=1,n(2)
             u(i,j,k) = u(i-1,j,k) -dx*((v(i,j,k)-v(i,j-1,k))*dyi+(w(i,j,k)-w(i,j,k-1))*dzfi(k))
           enddo
-        enddo 
+        enddo
+        !$OMP END PARALLEL DO
       endif
     case(2) ! y direction, back
-      j = n(2) + 1
       if(back.eq.MPI_PROC_NULL) then
+        j = n(2) + 1
+        !$OMP PARALLEL DO DEFAULT(none) &
+        !$OMP PRIVATE(i,k) &
+        !$OMP SHARED(n,j,u,v,w,dy,dxi,dzfi)
         do k=1,n(3)
           do i=1,n(1)
             v(i,j,k) = v(i,j-1,k) -dy*((u(i,j,k)-u(i-1,j,k))*dxi+(w(i,j,k)-w(i,j,k-1))*dzfi(k))
           enddo
         enddo 
+        !$OMP END PARALLEL DO
       endif
     case(3) ! z direction, top
       k = n(3) + 1
+      !$OMP PARALLEL DO DEFAULT(none) &
+      !$OMP PRIVATE(i,j) &
+      !$OMP SHARED(n,k,u,v,w,dzf,dxi,dyi)
       do j=1,n(2)
         do i=1,n(1)
           w(i,j,k) = w(i,j,k-1) -dzf(k)*((u(i,j,k)-u(i-1,j,k))*dxi+(v(i,j,k)-v(i,j-1,k))*dyi)
         enddo
       enddo 
+      !$OMP END PARALLEL DO
     case(-1) ! x direction, left
       if(left.eq.MPI_PROC_NULL) then
         i = 0
+        !$OMP PARALLEL DO DEFAULT(none) &
+        !$OMP PRIVATE(j,k) &
+        !$OMP SHARED(n,i,u,v,w,dx,dyi,dzfi)
         do k=1,n(3)
           do j=1,n(2)
             u(i,j,k) = u(i+1,j,k) +dx*((v(i+1,j,k)-v(i+1,j-1,k))*dyi+(w(i+1,j,k)-w(i+1,j,k-1))*dzfi(k))
           enddo
         enddo 
+        !$OMP END PARALLEL DO
       endif
     case(-2) ! y direction, front
-      j = 0
       if(front.eq.MPI_PROC_NULL) then
+        j = 0
+        !$OMP PARALLEL DO DEFAULT(none) &
+        !$OMP PRIVATE(i,k) &
+        !$OMP SHARED(n,j,u,v,w,dy,dxi,dzfi)
         do k=1,n(3)
           do i=1,n(1)
             v(i,j,k) = v(i,j+1,k) +dy*((u(i,j+1,k)-u(i-1,j+1,k))*dxi+(w(i,j+1,k)-w(i,j+1,k-1))*dzfi(k))
           enddo
         enddo 
+        !$OMP END PARALLEL DO
       endif
     case(-3) ! z direction, bottom
       k = 0
+      !$OMP PARALLEL DO DEFAULT(none) &
+      !$OMP PRIVATE(i,j) &
+      !$OMP SHARED(n,k,u,v,w,dzf,dxi,dyi)
       do j=1,n(2)
         do i=1,n(1)
           w(i,j,k) = w(i,j,k+1) +dzf(k)*((u(i,j,k+1)-u(i-1,j,k+1))*dxi+(v(i,j,k+1)-v(i,j-1,k+1))*dyi)
         enddo
       enddo 
+      !$OMP END PARALLEL DO
     end select
     return
   end subroutine outflow
@@ -338,19 +400,29 @@ module mod_bound
       if(c_or_f(idir).eq.'f'.and.cbc(1,idir).eq.'D') q(idir) = 1
     enddo
     if(left.eq.MPI_PROC_NULL) then
+      !$OMP WORKSHARE
       p(1   ,:,:) = p(1   ,:,:) + rhsbx(:,:,0)
+      !$OMP END WORKSHARE
     endif  
     if(right.eq.MPI_PROC_NULL) then
+      !$OMP WORKSHARE
       p(n(1)-q(1),:,:) = p(n(1)-q(1),:,:) + rhsbx(:,:,1)
+      !$OMP END WORKSHARE
     endif
     if(front.eq.MPI_PROC_NULL) then
+      !$OMP WORKSHARE
       p(:,1   ,:) = p(:,1   ,:) + rhsby(:,:,0)
+      !$OMP END WORKSHARE
     endif
     if(back.eq.MPI_PROC_NULL) then
+      !$OMP WORKSHARE
       p(:,n(2)-q(2),:) = p(:,n(2)-q(2),:) + rhsby(:,:,1)
+      !$OMP END WORKSHARE
     endif
+    !$OMP WORKSHARE
     p(:,:,1   ) = p(:,:,1   ) + rhsbz(:,:,0)
     p(:,:,n(3)-q(3)) = p(:,:,n(3)-q(3)) + rhsbz(:,:,1)
+    !$OMP END WORKSHARE
     return
   end subroutine updt_rhs_b
   !
