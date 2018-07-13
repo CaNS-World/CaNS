@@ -26,9 +26,9 @@ module mod_chkdt
     dyi = 1.d0/dl(2)
     dzi = 1.d0/dl(3)
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP  SHARED(n,u,v,w,dxi,dyi,dzi,dzci,dzfi) &
-    !$OMP  PRIVATE(i,j,k,ux,uy,uz,vx,vy,vz,wx,wy,wz,dtix,dtiy,dtiz) &
-    !$OMP  REDUCTION(max:dti)
+    !$OMP SHARED(n,u,v,w,dxi,dyi,dzi,dzci,dzfi) &
+    !$OMP PRIVATE(i,j,k,ux,uy,uz,vx,vy,vz,wx,wy,wz,dtix,dtiy,dtiz) &
+    !$OMP REDUCTION(max:dti)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
