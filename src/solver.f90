@@ -69,7 +69,7 @@ module mod_solver
     real(8), dimension(n) :: bb
     integer :: i,j
     !
-    !solve tridiagonal system with 
+    !solve tridiagonal system
     !
     !$OMP PARALLEL DEFAULT(none) &
     !$OMP PRIVATE(i,j,bb) &
@@ -95,7 +95,7 @@ module mod_solver
     real(8), dimension(n) :: bb,p1,p2
     integer :: i,j,info
     !
-    !solve tridiagonal system with 
+    !solve tridiagonal system
     !
     !$OMP PARALLEL DEFAULT(none) &
     !$OMP PRIVATE(i,j,bb,p1,p2) &
