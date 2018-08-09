@@ -11,10 +11,10 @@
   !
   ! modify the calls below as desired
   !
-  call out2d(trim(datadir)//'fld_u_slice_fld_'//fldnum//'.bin',2,ng(2)/2,u(1:n(1),1:n(2),1:n(3)))
-  call out2d(trim(datadir)//'fld_v_slice_fld_'//fldnum//'.bin',2,ng(2)/2,v(1:n(1),1:n(2),1:n(3)))
-  call out2d(trim(datadir)//'fld_w_slice_fld_'//fldnum//'.bin',2,ng(2)/2,w(1:n(1),1:n(2),1:n(3)))
-  call out2d(trim(datadir)//'fld_p_slice_fld_'//fldnum//'.bin',2,ng(2)/2,p(1:n(1),1:n(2),1:n(3)))
-  !call out2d(trim(datadir)//'fld_u_slice.bin',2,ng(2)/2,u(1:n(1),1:n(2),1:n(3)))
-  !call out2d(trim(datadir)//'fld_v_slice.bin',2,ng(2)/2,v(1:n(1),1:n(2),1:n(3)))
-  !call out2d(trim(datadir)//'fld_w_slice.bin',2,ng(2)/2,w(1:n(1),1:n(2),1:n(3)))
+  call out2d(trim(datadir)//'u_slice_fld_'//fldnum//'.bin',2,ng(2)/2,u(1:n(1),1:n(2),1:n(3)))
+  call out2d(trim(datadir)//'v_slice_fld_'//fldnum//'.bin',2,ng(2)/2,v(1:n(1),1:n(2),1:n(3)))
+  call out2d(trim(datadir)//'w_slice_fld_'//fldnum//'.bin',2,ng(2)/2,w(1:n(1),1:n(2),1:n(3)))
+  call out2d(trim(datadir)//'p_slice_fld_'//fldnum//'.bin',2,ng(2)/2,p(1:n(1),1:n(2),1:n(3)))
+  !call out2d(trim(datadir)//'u_slice.bin',2,ng(2)/2,u(1:n(1),1:n(2),1:n(3)))
+  !call out2d(trim(datadir)//'v_slice.bin',2,ng(2)/2,v(1:n(1),1:n(2),1:n(3)))
+  !call out2d(trim(datadir)//'w_slice.bin',2,ng(2)/2,w(1:n(1),1:n(2),1:n(3)))
