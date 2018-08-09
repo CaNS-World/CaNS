@@ -1,0 +1,1 @@
+plot_2d_flow_slice.py is a python script that reads an output file from CaNS containing a planar section of a 3D scalar field (unformatted FORTRAN binary file). It intends to give a simple example of how to read and plot planar data. The corresponding parameters should be changed in param.py.
