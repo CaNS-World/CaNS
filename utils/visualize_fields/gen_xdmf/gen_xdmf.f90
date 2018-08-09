@@ -41,7 +41,7 @@ write(unit=ixdmf,fmt='(A)') '<Domain>'
 indent = indent + 4
   write(buffer,fmt='(A,3I5,A)') repeat(' ',indent)//'<Topology name="TOPO" TopologyType="3DCoRectMesh" Dimensions="',nz,ny,nx,'"/>'
   write(unit=ixdmf,fmt='(A)') trim(buffer)
-  write(buffer,fmt='(A)') repeat(' ',indent)//'<Geometry name="GEO" Type="ORIGIN_DXDYDZ">'
+  write(buffer,fmt='(A)') repeat(' ',indent)//'<Geometry name="GEO" GeometryType="ORIGIN_DXDYDZ">'
   write(unit=ixdmf,fmt='(A)')trim(buffer)
   indent = indent + 4
     write(buffer,fmt='(A)') repeat(' ',indent)//'<DataItem Format="XML" Dimensions="3">'
