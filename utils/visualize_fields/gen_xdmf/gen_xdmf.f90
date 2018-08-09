@@ -104,24 +104,26 @@ indent = indent + 4
           write(buffer,fmt='(A)') repeat(' ',indent)//'</Attribute>'
           write(unit=ixdmf,fmt='(A)')trim(buffer)
         enddo
-        do ii = 1,nscal
-          write(buffer,fmt='(A)') repeat(' ',indent)//'<Attribute Name="'//scalname(ii)//'_0" Center="Node">'
-          write(unit=ixdmf,fmt='(A)')trim(buffer)
-          indent = indent + 4
-            write(buffer,fmt='(A,3I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' // &
-                                                                 ' DataType="Float" Precision="8" Endian="Native"' // &
-                                                                 ' Dimensions="',nz,ny,nx,'">'
+        if(is_fldcmp) then
+          do ii = 1,nscal
+            write(buffer,fmt='(A)') repeat(' ',indent)//'<Attribute Name="'//scalname(ii)//'_CMP" Center="Node">'
             write(unit=ixdmf,fmt='(A)')trim(buffer)
             indent = indent + 4
-              write(buffer,fmt='(A,i7.7,A)') repeat(' ',indent)//scalname(ii)//'_fld_',fldinit,'.bin'
+              write(buffer,fmt='(A,3I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' // &
+                                                                   ' DataType="Float" Precision="8" Endian="Native"' // &
+                                                                   ' Dimensions="',nz,ny,nx,'">'
+              write(unit=ixdmf,fmt='(A)')trim(buffer)
+              indent = indent + 4
+                write(buffer,fmt='(A,i7.7,A)') repeat(' ',indent)//scalname(ii)//'_fld_',fldcmp,'.bin'
+                write(unit=ixdmf,fmt='(A)')trim(buffer)
+                indent = indent - 4
+              write(buffer,fmt='(A)') repeat(' ',indent)//'</DataItem>'
               write(unit=ixdmf,fmt='(A)')trim(buffer)
               indent = indent - 4
-            write(buffer,fmt='(A)') repeat(' ',indent)//'</DataItem>'
+            write(buffer,fmt='(A)') repeat(' ',indent)//'</Attribute>'
             write(unit=ixdmf,fmt='(A)')trim(buffer)
-            indent = indent - 4
-          write(buffer,fmt='(A)') repeat(' ',indent)//'</Attribute>'
-          write(unit=ixdmf,fmt='(A)')trim(buffer)
-        enddo
+          enddo
+        endif
         indent = indent - 4
       write(buffer,fmt='(A)') repeat(' ',indent)//'</Grid>'
       write(unit=ixdmf,fmt='(A)')trim(buffer)
