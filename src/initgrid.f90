@@ -34,15 +34,15 @@ module mod_initgrid
     dzf(0  ) = dzf(1)
     dzf(n+1) = dzf(n)
     !
-    dzc(0) = dzf(0)
-    do k=1,n+1
-      dzc(k) = .5d0*(dzf(k-1)+dzf(k))
+    do k=0,n
+      dzc(k) = .5d0*(dzf(k)+dzf(k+1))
     enddo
+    dzc(n+1) = dzc(n)
     zc(0)    = -dzc(0)/2.d0
     zf(0)    = 0.d0
-    do k=0,n
-      zc(k+1) = zc(k) + dzc(k)
-      zf(k+1) = zf(k) + dzf(k)
+    do k=1,n+1
+      zc(k) = zc(k-1) + dzc(k-1)
+      zf(k) = zf(k-1) + dzf(k)
     enddo
     return
   end subroutine initgrid
