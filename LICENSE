@@ -1,4 +1,4 @@
-The source files inside the folder 2decomp are part of the 2DECOMP&FFT library
+The source files inside the folder src/2decomp are part of the 2DECOMP&FFT library
 and follow follow a separate copyright (stated in the header of each file).
 
 All other files follow the MIT License stated hereafter.
