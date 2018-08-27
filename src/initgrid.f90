@@ -27,8 +27,9 @@ module mod_initgrid
     ! step 1) determine coordinates of cell faces zf
     !
     do k=1,n
-      z0  = (k-0.d0)/(1.d0*n)*lz
+      z0  = (k-0.d0)/(1.d0*n)
       call gridpoint(gr,z0,zf(k))
+      zf(k) = zf(k)*lz
     enddo
     zf(0) = 0.d0
     !

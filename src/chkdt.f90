@@ -52,6 +52,7 @@ module mod_chkdt
     call mpi_allreduce(MPI_IN_PLACE,dti,1,MPI_REAL8,MPI_MAX,MPI_COMM_WORLD,ierr)
     if(dti.eq.0.d0) dti = 1.d0
     dlmin     = minval(dl)
+    dlmin     = min(dlmin,minval(1.d0/dzfi)) ! minimum of dzf is an estimate on the safe side
 #ifdef IMPDIFF
     dtmax = sqrt(3.d0)/dti
 #else
