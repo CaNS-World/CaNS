@@ -36,7 +36,7 @@ module mod_output
   subroutine out1d(fname,n,idir,z,dzlzi,p)
     !
     ! writes the profile of a variable averaged
-    ! over two domain direction
+    ! over two domain directions
     !
     ! fname -> name of the file
     ! n     -> size of the input array
