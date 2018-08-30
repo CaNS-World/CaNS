@@ -63,7 +63,7 @@ module mod_sanity
     passed_loc = (mod(ng(2),dims(1)).eq.0).and.(mod(ng(3),dims(2)).eq.0)
     if(myid.eq.0.and.(.not.passed_loc)) &
       print*, 'ERROR: jtot should be divisable by both dims(1) and dims(2), and &
-                      ktot should be divisable by dims(2)'
+                     &ktot should be divisable by dims(2)'
     passed = passed.and.passed_loc
     return
   end subroutine chk_dims
