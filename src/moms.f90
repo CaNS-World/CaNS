@@ -32,8 +32,8 @@ module mod_moms
           usim  = 0.5d0*( u(im,j,k)+u(i,j,k) )*s(i,j,k)
           vsjm  = 0.5d0*( v(i,jm,k)+v(i,j,k) )*s(i,j,k)
           vsjp  = 0.5d0*( v(i,jp,k)+v(i,j,k) )*s(i,j,k)
-          wskm  = 0.5d0*( v(i,j,km)+v(i,j,k) )*s(i,j,k)
-          wskp  = 0.5d0*( v(i,j,kp)+v(i,j,k) )*s(i,j,k)
+          wskm  = 0.5d0*( w(i,j,km)+w(i,j,k) )*s(i,j,k)
+          wskp  = 0.5d0*( w(i,j,kp)+w(i,j,k) )*s(i,j,k)
           dsdxp = (s(ip,j,k)-s(i ,j,k))*dxi
           dsdxm = (s(i ,j,k)-s(im,j,k))*dxi
           dsdyp = (s(i,jp,k)-s(i,j ,k))*dyi

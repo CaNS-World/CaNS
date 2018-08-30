@@ -26,9 +26,9 @@ module mod_chkdt
     dyi = 1.d0/dl(2)
     dzi = 1.d0/dl(3)
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP  SHARED(n,u,v,w,dxi,dyi,dzi,dzci,dzfi) &
-    !$OMP  PRIVATE(i,j,k,ux,uy,uz,vx,vy,vz,wx,wy,wz,dtix,dtiy,dtiz) &
-    !$OMP  REDUCTION(max:dti)
+    !$OMP SHARED(n,u,v,w,dxi,dyi,dzi,dzci,dzfi) &
+    !$OMP PRIVATE(i,j,k,ux,uy,uz,vx,vy,vz,wx,wy,wz,dtix,dtiy,dtiz) &
+    !$OMP REDUCTION(max:dti)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
@@ -52,6 +52,7 @@ module mod_chkdt
     call mpi_allreduce(MPI_IN_PLACE,dti,1,MPI_REAL8,MPI_MAX,MPI_COMM_WORLD,ierr)
     if(dti.eq.0.d0) dti = 1.d0
     dlmin     = minval(dl)
+    dlmin     = min(dlmin,minval(1.d0/dzfi)) ! minimum of dzf is an estimate on the safe side
 #ifdef IMPDIFF
     dtmax = sqrt(3.d0)/dti
 #else

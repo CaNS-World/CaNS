@@ -19,7 +19,7 @@ LIBS = -lfftw3 -lfftw3_threads -llapack
 all: $(TARGET)
 #
 $(TARGET): $(OBJ)
-	$(FC) $(FFLAGS) $(OBJ) $(LIBS) -o $(TARGET)
+	$(FC) $(OPT) $(OBJ) $(LIBS) -o $(TARGET)
 #
 .PHONY: clean
 clean:

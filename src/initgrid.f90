@@ -23,26 +23,38 @@ module mod_initgrid
       gridpoint => gridpoint_cluster_one_end
     case default
     end select
+    !
+    ! step 1) determine coordinates of cell faces zf
+    !
     do k=1,n
-      z0  = (k-0.d0)/(1.d0*n)*lz
+      z0  = (k-0.d0)/(1.d0*n)
       call gridpoint(gr,z0,zf(k))
+      zf(k) = zf(k)*lz
     enddo
     zf(0) = 0.d0
+    !
+    ! step 2) determine grid spacing between faces dzf
+    !
     do k=1,n
       dzf(k) = zf(k)-zf(k-1)
     enddo
     dzf(0  ) = dzf(1)
     dzf(n+1) = dzf(n)
     !
-    dzc(0) = dzf(0)
-    do k=1,n+1
-      dzc(k) = .5d0*(dzf(k-1)+dzf(k))
+    ! step 3) determine grid spacing between centers dzc
+    !
+    do k=0,n
+      dzc(k) = .5d0*(dzf(k)+dzf(k+1))
     enddo
+    dzc(n+1) = dzc(n)
+    !
+    ! step 4) compute coordinates of cell centers zc and faces zf
+    !
     zc(0)    = -dzc(0)/2.d0
     zf(0)    = 0.d0
-    do k=0,n
-      zc(k+1) = zc(k) + dzc(k)
-      zf(k+1) = zf(k) + dzf(k)
+    do k=1,n+1
+      zc(k) = zc(k-1) + dzc(k-1)
+      zf(k) = zf(k-1) + dzf(k)
     enddo
     return
   end subroutine initgrid

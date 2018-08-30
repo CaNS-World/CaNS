@@ -187,15 +187,21 @@ program cans
       if(is_forced(3)) wp(1:n(1),1:n(2),1:n(3)) = wp(1:n(1),1:n(2),1:n(3)) + f(3)
 #ifdef IMPDIFF
       alpha = -1.d0/(.5d0*visc*dtrk)
+      !$OMP WORKSHARE
       up(:,:,:) = up(:,:,:)*alpha
+      !$OMP END WORKSHARE
       bb(:) = bu(:) + alpha
       call updt_rhs_b((/'f','c','c'/),cbcvel(:,:,1),n,rhsbu%x,rhsbu%y,rhsbu%z,up(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanu,normfftu,lambdaxyu,au,bb,cu,cbcvel(:,3,1),(/'f','c','c'/),up(1:imax,1:jmax,1:ktot))
+      !$OMP WORKSHARE
       vp(:,:,:) = vp(:,:,:)*alpha
+      !$OMP END WORKSHARE
       bb(:) = bv(:) + alpha
       call updt_rhs_b((/'c','f','c'/),cbcvel(:,:,2),n,rhsbv%x,rhsbv%y,rhsbv%z,vp(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanv,normfftv,lambdaxyv,av,bb,cv,cbcvel(:,3,2),(/'c','f','c'/),vp(1:imax,1:jmax,1:ktot))
+      !$OMP WORKSHARE
       wp(:,:,:) = wp(:,:,:)*alpha
+      !$OMP END WORKSHARE
       bb(:) = bw(:) + alpha
       call updt_rhs_b((/'c','c','f'/),cbcvel(:,:,3),n,rhsbw%x,rhsbw%y,rhsbw%z,wp(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanw,normfftw,lambdaxyw,aw,bb,cw,cbcvel(:,3,3),(/'c','c','f'/),wp(1:imax,1:jmax,1:ktot))
@@ -239,8 +245,8 @@ program cans
             p(i,j,k) = p(i,j,k) + pp(i,j,k) + alphai*( &
                         (pp(ip,j,k)-2.d0*pp(i,j,k)+pp(im,j,k))*(dxi**2) + &
                         (pp(i,jp,k)-2.d0*pp(i,j,k)+pp(i,jm,k))*(dyi**2) + &
-                        ((pp(i,j,kp)-pp(i,j,k))*dzci(k) - &
-                         (pp(i,j,k)-pp(i,j,km))*dzci(km))*dzfi(k) )
+                        ((pp(i,j,kp)-pp(i,j,k ))*dzci(k ) - &
+                         (pp(i,j,k )-pp(i,j,km))*dzci(km))*dzfi(k) )
           enddo
         enddo
       enddo
