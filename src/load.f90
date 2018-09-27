@@ -1,6 +1,6 @@
 module mod_load
   use mpi
-  use mod_common_mpi, only: ierr 
+  use mod_common_mpi, only: ierr,dims,myid
   use decomp_2d
   use decomp_2d_io
   implicit none
@@ -19,22 +19,46 @@ module mod_load
     real(8), intent(inout) :: time,istep
     real(8), dimension(2) :: fldinfo
     integer :: fh
-    integer(kind=MPI_OFFSET_KIND) :: filesize,disp
+    integer(kind=MPI_OFFSET_KIND) :: filesize,disp,good
+    integer(8), dimension(3) :: ng
+    integer(8) :: lenr
+    !
     select case(io)
     case('r')
       call MPI_FILE_OPEN(MPI_COMM_WORLD, filename                 , &
            MPI_MODE_RDONLY, MPI_INFO_NULL,fh, ierr)
+      !
+      ! check file size first
+      !
+      call MPI_FILE_GET_SIZE(fh,filesize,ierr)
+      ng(:)   = n(:)
+      ng(1:2) = ng(1:2)*dims(:)
+      inquire (iolength=lenr) time
+      good = (product(ng)*4+2)*lenr
+      if(filesize.ne.good) then
+        if(myid.eq.0) print*, ''
+        if(myid.eq.0) print*, '*** Simulation aborted due a checkpoint file with incorrect size ***'
+        if(myid.eq.0) print*, '    file: ', filename, ' | expected size: ', good, '| actual size: ', filesize
+        call decomp_2d_finalize
+        call MPI_FINALIZE(ierr)
+        call exit
+      endif
+      !
+      ! read
+      !
       disp = 0_MPI_OFFSET_KIND
       call decomp_2d_read_var(fh,disp,3,u)
       call decomp_2d_read_var(fh,disp,3,v)
       call decomp_2d_read_var(fh,disp,3,w)
       call decomp_2d_read_var(fh,disp,3,p)
       call decomp_2d_read_scalar(fh,disp,2,fldinfo)
-      call MPI_FILE_CLOSE(fh,ierr)
       time  = fldinfo(1)
       istep = fldinfo(2)
+      call MPI_FILE_CLOSE(fh,ierr)
     case('w')
-      fldinfo = (/time,istep/)
+      !
+      ! write
+      !
       call MPI_FILE_OPEN(MPI_COMM_WORLD, filename                 , &
            MPI_MODE_CREATE+MPI_MODE_WRONLY, MPI_INFO_NULL,fh, ierr)
       filesize = 0_MPI_OFFSET_KIND
@@ -44,6 +68,7 @@ module mod_load
       call decomp_2d_write_var(fh,disp,3,v)
       call decomp_2d_write_var(fh,disp,3,w)
       call decomp_2d_write_var(fh,disp,3,p)
+      fldinfo = (/time,istep/)
       call decomp_2d_write_scalar(fh,disp,2,fldinfo)
       call MPI_FILE_CLOSE(fh,ierr)
     end select
