@@ -39,9 +39,9 @@ module mod_solver
     q = 0
     if(c_or_f(3).eq.'f'.and.bcz(1).eq.'D') q = 1
     if(bcz(0)//bcz(1).eq.'PP') then
-      call gaussel_dgtsv_periodic(n(1),n(2),n(3)-q,a,b,c,lambdaxy,pz)
+      call gaussel_periodic(n(1),n(2),n(3)-q,a,b,c,lambdaxy,pz)
     else
-      call gaussel_dgtsv(         n(1),n(2),n(3)-q,a,b,c,lambdaxy,pz)
+      call gaussel(         n(1),n(2),n(3)-q,a,b,c,lambdaxy,pz)
     endif
     !
     call transpose_z_to_y(pz,py)
@@ -60,64 +60,56 @@ module mod_solver
     return
   end subroutine solver
   !
-  subroutine gaussel_dgtsv(nx,ny,n,a,b,c,lambdaxy,p)
+  subroutine gaussel(nx,ny,n,a,b,c,lambdaxy,p)
     implicit none
     integer, intent(in) :: nx,ny,n
     real(8), intent(in), dimension(:) :: a,b,c
     real(8), intent(in), dimension(nx,ny) :: lambdaxy
     real(8), intent(inout), dimension(:,:,:) :: p
-    real(8), dimension(n) :: aa,bb,cc
-    integer :: i,j,info
+    real(8), dimension(n) :: bb
+    integer :: i,j
     !
-    !solve tridiagonal system with TDMA
+    !solve tridiagonal system
     !
     !$OMP PARALLEL DEFAULT(none) &
-    !$OMP PRIVATE(i,j,aa,bb,cc,info) &
+    !$OMP PRIVATE(i,j,bb) &
     !$OMP SHARED(nx,ny,n,a,b,c,lambdaxy,p)
     !$OMP DO COLLAPSE(2)
     do j=1,ny
       do i=1,nx
-        aa(:) = a(1:n)
-        cc(:) = c(1:n)
         bb(:) = b(1:n) + lambdaxy(i,j)
-        call dgtsv(n,1,aa(1+1:n),bb(1:n),cc(1:n-1),p(i,j,1:n),n,info)
+        call dgtsv_homebrewed(n,a,bb,c,p(i,j,1:n))
       enddo
     enddo
     !$OMP END DO
     !$OMP END PARALLEL
     return
-  end subroutine gaussel_dgtsv
+  end subroutine gaussel
   !
-  subroutine gaussel_dgtsv_periodic(nx,ny,n,a,b,c,lambdaxy,p)
+  subroutine gaussel_periodic(nx,ny,n,a,b,c,lambdaxy,p)
     implicit none
     integer, intent(in) :: nx,ny,n
     real(8), intent(in), dimension(:) :: a,b,c
     real(8), intent(in), dimension(nx,ny) :: lambdaxy
     real(8), intent(inout), dimension(:,:,:) :: p
-    real(8), dimension(n) :: aa,bb,cc,bbb,p1,p2
+    real(8), dimension(n) :: bb,p1,p2
     integer :: i,j,info
     !
-    !solve tridiagonal system with TDMA
+    !solve tridiagonal system
     !
     !$OMP PARALLEL DEFAULT(none) &
-    !$OMP PRIVATE(i,j,aa,bb,cc,bbb,p1,p2,info) &
+    !$OMP PRIVATE(i,j,bb,p1,p2) &
     !$OMP SHARED(nx,ny,n,a,b,c,lambdaxy,p)
     !$OMP DO COLLAPSE(2)
     do j=1,ny
       do i=1,nx
-        aa(:)  = a(1:n)
-        bb(:)  = b(1:n) + lambdaxy(i,j)
-        bbb(:) = bb(1:n)
-        cc(:)  = c(1:n)
+        bb(:)  = b(:) + lambdaxy(i,j)
         p1(1:n-1) = p(i,j,1:n-1)
-        call dgtsv(n-1,1,aa(2:n-1),bbb(1:n-1),cc(1:n-2),p1(1:n-1),n-1,info)
+        call dgtsv_homebrewed(n-1,a(1:n-1),bb(1:n-1),c(1:n-2),p1(1:n-1))
         p2(:) = 0.d0
         p2(1  ) = -a(1  )
         p2(n-1) = -c(n-1)
-        aa(:)  = a(1:n)
-        bbb(:) = bb(1:n)
-        cc(:)  = c(1:n)
-        call dgtsv(n-1,1,aa(2:n-1),bbb(1:n-1),cc(1:n-2),p2(1:n-1),n-1,info)
+        call dgtsv_homebrewed(n-1,a(2:n-1),bb(1:n-1),c(1:n-2),p2(1:n-1))
         p(i,j,n) = (p(i,j,n) - c(n)*p1(1) - a(n)*p1(n-1)) / &
                    (bb(   n) + c(n)*p2(1) + a(n)*p2(n-1))
         p(i,j,1:n-1) = p1(1:n-1) + p2(1:n-1)*p(i,j,n)
@@ -126,5 +118,38 @@ module mod_solver
     !$OMP END DO
     !$OMP END PARALLEL
     return
-  end subroutine gaussel_dgtsv_periodic
+  end subroutine gaussel_periodic
+  subroutine dgtsv_homebrewed(n,a,b,c,p)
+    implicit none
+    integer, intent(in) :: n
+    real(8), intent(in   ), dimension(:) :: a,b,c
+    real(8), intent(inout), dimension(:) :: p
+    real(8), dimension(n) :: d
+    real(8) :: z
+    integer :: l
+    !
+    ! Gauss elimination
+    !
+    z = 1.d0/b(1)
+    d(1) = c(1)*z
+    p(1) = p(1)*z
+    do l=2,n-1
+      z    = 1.d0/(b(l)-a(l)*d(l-1))
+      d(l) = c(l)*z
+      p(l) = (p(l)-a(l)*p(l-1))*z
+    enddo
+    z = b(n)-a(n)*d(n-1)
+    if(z.ne.0.d0) then
+      p(n) = (p(n)-a(n)*p(n-1))/z
+    else
+      p(n) = 0.d0
+    endif
+    !
+    ! backward substitution
+    !
+    do l=n-1,1,-1
+      p(l) = p(l) - d(l)*p(l+1)
+    enddo
+    return
+  end subroutine dgtsv_homebrewed
 end module mod_solver

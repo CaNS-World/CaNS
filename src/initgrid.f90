@@ -22,6 +22,7 @@ module mod_initgrid
     case('hcl','hcp')
       gridpoint => gridpoint_cluster_one_end
     case default
+      gridpoint => gridpoint_cluster_two_end
     end select
     !
     ! step 1) determine coordinates of cell faces zf
