@@ -7,7 +7,7 @@ module mod_chkdt
   contains
   subroutine chkdt(n,dl,dzci,dzfi,visc,u,v,w,dtmax)
     !
-    ! compute maximum allowed timestep
+    ! computes maximum allowed timestep
     !
     implicit none
     integer, intent(in), dimension(3) :: n
