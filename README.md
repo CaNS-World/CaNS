@@ -58,7 +58,7 @@ The files `out1d.h90`, `out2d.h90` and `out3d.h90` in `src/` set which data are 
 
 ### Compilation
 
-After modifying files `setup.h90`, `bc.h90` and `out*d.h90`, the code should be compiled. 
+After modifying files `setup.h90`, `bc.h90` and `out?d.h90`, the code should be compiled. 
 
 The prerequisites are the following:
 
