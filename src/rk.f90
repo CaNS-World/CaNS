@@ -203,9 +203,9 @@ module mod_rk
     implicit none
     real(8), intent(in), dimension(2) :: rkpar
     integer, intent(in), dimension(3) :: n
-    real(8), intent(in) :: visc,dt
     real(8), intent(in   ), dimension(3) :: dli
     real(8), intent(in   ), dimension(0:) :: dzci,dzfi,dzflzi,dzclzi
+    real(8), intent(in) :: visc,dt
     real(8), intent(in   ), dimension(0:,0:,0:) :: u,v,w
     real(8), intent(inout), dimension(:,:,:) :: dsdtrko
     real(8), intent(inout), dimension(0:,0:,0:) :: s
