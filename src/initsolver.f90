@@ -132,9 +132,6 @@ module mod_initsolver
     integer :: k
     integer :: ibound
     real(8), dimension(0:1) :: factor
-    ! bc(l) =  1 -> Neumann   BC in the lth direction
-    ! bc(l) =  0 -> Periodic  BC in the lth direction
-    ! bc(l) = -1 -> Dirichlet BC in the lth direction
     select case(c_or_f)
     case('c')
       do k=1,n
