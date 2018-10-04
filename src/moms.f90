@@ -41,8 +41,6 @@ module mod_moms
           dsdzp = (s(i,j,kp)-s(i,j,k ))*dzci(k)
           dsdzm = (s(i,j,k )-s(i,j,km))*dzci(km)
           !
-          ! Momentum balance
-          !
           dsdt(i,j,k) = dxi*(     -usip + usim ) + (dsdxp-dsdxm)*visc*dxi + &
                         dyi*(     -vsjp + vsjm ) + (dsdyp-dsdym)*visc*dyi + &
                         dzfi(k)*( -wskp + wskm ) + (dsdzp-dsdzm)*visc*dzfi(k)
