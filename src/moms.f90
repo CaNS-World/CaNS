@@ -28,8 +28,8 @@ module mod_moms
         do i=1,nx
           ip = i + 1
           im = i - 1
-          usip  = 0.5d0*( u(ip,j,k)+u(i,j,k) )*s(i,j,k)
           usim  = 0.5d0*( u(im,j,k)+u(i,j,k) )*s(i,j,k)
+          usip  = 0.5d0*( u(ip,j,k)+u(i,j,k) )*s(i,j,k)
           vsjm  = 0.5d0*( v(i,jm,k)+v(i,j,k) )*s(i,j,k)
           vsjp  = 0.5d0*( v(i,jp,k)+v(i,j,k) )*s(i,j,k)
           wskm  = 0.5d0*( w(i,j,km)+w(i,j,k) )*s(i,j,k)
