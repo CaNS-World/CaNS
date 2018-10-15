@@ -28,7 +28,7 @@ Some features are:
  * Hybrid MPI/OpenMP parallelization
  * FFTW guru interface used for computing multi-dimensional vectors of 1D transforms
  * The right type of transformation (Fourier, Cosine, Sine, etc) is automatically determined form the input file
- * 2DECOMP&FFT routines used for performing global data transpositions and data i/o
+ * 2DECOMP&FFT routines used for performing global data transpositions and data I/O
  * A different canonical flow can be simulated just by changing the input files
 
 Some examples of flows that this code can solve are:
