@@ -28,6 +28,7 @@ module mod_initflow
     allocate(u1d(n(3)))
     is_noise = .false.
     is_mean  = .false.
+    is_pair  = .false.
     q = .5d0
     select case(inivel)
     case('cou')
@@ -97,6 +98,7 @@ module mod_initflow
       call set_mean(n,1.d0,dzflzi,u(1:n(1),1:n(2),1:n(3)))
     endif
     if(is_pair) then
+      !
       ! initialize a streamwise vortex pair for a fast transition
       ! to turbulence:
       !        psi(x,y,z)  = f(z)*g(x,y), with
