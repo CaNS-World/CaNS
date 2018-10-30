@@ -206,7 +206,7 @@ program cans
       call updt_rhs_b((/'c','c','f'/),cbcvel(:,:,3),n,rhsbw%x,rhsbw%y,rhsbw%z,wp(1:imax,1:jmax,1:ktot))
       call solver(n,arrplanw,normfftw,lambdaxyw,aw,bb,cw,cbcvel(:,3,3),(/'c','c','f'/),wp(1:imax,1:jmax,1:ktot))
 #endif
-    dpdl(:) = dpdl(:) + f(:)
+      dpdl(:) = dpdl(:) + f(:)
 #ifdef DEBUG
       if(is_forced(1)) then
         call chkmean(n,dzf/lz,up,meanvel)
