@@ -261,7 +261,7 @@ module mod_bound
     ! determine face velocity from zero divergence
     !
     select case(idir)
-    case(1) ! x directio, right
+    case(1) ! x direction, right
       if(right.eq.MPI_PROC_NULL) then
         i = n(1) + 1
         !$OMP PARALLEL DO DEFAULT(none) &
