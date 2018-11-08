@@ -33,14 +33,14 @@ Some features are:
 
 Some examples of flows that this code can solve are:
 
- * periodic or developping channel
- * periodic or developping square duct
+ * periodic or developing channel
+ * periodic or developing square duct
  * tri-periodic domain
  * lid-driven cavity
 
 ## Motivation
 
-This project aimed first at being a modern alternative to the well-known FISHPACK routines (Paul Swarztrauber & Roland Sweet, NCAR) for solving a three-dimensional Helmholtz equation. After noticing some works simulating canonical flows with iterative solvers -- when faster direct solvers could have been used instead -- it seemed natural to create a versatile tool and make it available. This code can be used as a first base code for which solvers for more complex flows can be developed (e.g. extensions with ficticious domain methods).
+This project aimed first at being a modern alternative to the well-known FISHPACK routines (Paul Swarztrauber & Roland Sweet, NCAR) for solving a three-dimensional Helmholtz equation. After noticing some works simulating canonical flows with iterative solvers -- when faster direct solvers could have been used instead -- it seemed natural to create a versatile tool and make it available. This code can be used as a first base code for which solvers for more complex flows can be developed (e.g. extensions with fictitious domain methods).
 
 ## Method
 
@@ -76,7 +76,7 @@ The Makefile should be modified in agreement to the installation paths of each l
 
 ### Running the code
 
-Run the executable with `mpirun` with a number of tasks and shared threads complying to what has been set in the input file `setup.h90`. Data will be written by defailt in a folder named `data`, which must be located where the executable is run.
+Run the executable with `mpirun` with a number of tasks and shared threads complying to what has been set in the input file `setup.h90`. Data will be written by default in a folder named `data`, which must be located where the executable is run.
 
 ## Notes
 
