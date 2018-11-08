@@ -100,13 +100,13 @@ module mod_initflow
     if(is_pair) then
       !
       ! initialize a streamwise vortex pair for a fast transition
-      ! to turbulence:
+      ! to turbulence in a pressure-driven channel:
       !        psi(x,y,z)  = f(z)*g(x,y), with
       !        f(z)        = (1-z**2)**2, and
       !        g(x,y)      = y*exp[-(16x**2-4y**2)]
       ! (x,y,z) --> (streamwise, spanwise, wall-normal) directions
       !
-      ! see Henningson and Kim JFM 1991
+      ! see Henningson and Kim, JFM 1991
       !
       do k=1,n(3)
         zc = 2.d0*zclzi(k) - 1.d0 ! z rescaled to be between -1 and +1

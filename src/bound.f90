@@ -433,7 +433,7 @@ module mod_bound
     real(8), dimension(0:,0:,0:), intent(inout) :: p
     !integer :: requests(4), statuses(MPI_STATUS_SIZE,4)
     !
-    !  This subroutine updates the halos that store info
+    !  this subroutine updates the halos that store info
     !  from the neighboring computational sub-domain
     !
     select case(idir)
