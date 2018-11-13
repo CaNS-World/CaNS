@@ -90,7 +90,6 @@ module mod_initflow
         enddo
       enddo
     endif
-    deallocate(u1d)
     if(is_noise) then
       call add_noise(n,123,.50d0,u(1:n(1),1:n(2),1:n(3)))
       call add_noise(n,456,.50d0,v(1:n(1),1:n(2),1:n(3)))
@@ -127,6 +126,7 @@ module mod_initflow
         enddo
       enddo
     endif
+    deallocate(u1d)
     return
   end subroutine initflow
   !
