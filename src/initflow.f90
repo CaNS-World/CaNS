@@ -78,16 +78,18 @@ module mod_initflow
       call MPI_FINALIZE(ierr)
       call exit
     end select
-    do k=1,n(3)
-      do j=1,n(2)
-        do i=1,n(1)
-          u(i,j,k) = u1d(k)
-          v(i,j,k) = 0.d0
-          w(i,j,k) = 0.d0
-          p(i,j,k) = 0.d0
+    if(inivel.ne.'tgv') then
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            u(i,j,k) = u1d(k)
+            v(i,j,k) = 0.d0
+            w(i,j,k) = 0.d0
+            p(i,j,k) = 0.d0
+          enddo
         enddo
       enddo
-    enddo
+    endif
     deallocate(u1d)
     if(is_noise) then
       call add_noise(n,123,.50d0,u(1:n(1),1:n(2),1:n(3)))
