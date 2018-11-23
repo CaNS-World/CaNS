@@ -1,6 +1,6 @@
 # fortran compiler
 FC   = mpif90
-#
+# flags
 BIG := # -mcmodel=medium
 DBG := # -g -fbacktrace -Wall -O0 -Wextra -pedantic -fcheck=all
 OMP := # -fopenmp
@@ -8,7 +8,6 @@ OPT := -O3
 OTH := -DDEBUG -DTIMING #-DIMPDIFF
 PROF := #-pg
 FFLAGS := $(OPT) $(BIG) $(DBG) $(PROF) $(OMP) $(OTH)
-
 #
 TARGET = cans
 #
@@ -24,7 +23,7 @@ $(TARGET): $(OBJ)
 .PHONY: clean
 clean:
 	rm -rf *.o *.mod *dSYM $(TARGET)
-#
+# dependencies
 bound.o: bound.f90 common_mpi.o
 	$(FC) $(FFLAGS) -cpp -c  bound.f90 
 chkdiv.o: chkdiv.f90 common_mpi.o
@@ -71,7 +70,7 @@ sanity.o: sanity.f90 bound.o chkdiv.o common_mpi.o correc.o debug.o decomp_2d.o 
 	$(FC) $(FFLAGS) -cpp -c  sanity.f90
 solver.o: solver.f90 fft.o param.o
 	$(FC) $(FFLAGS) -cpp -c  solver.f90
-#
+# 2decomp&fft library
 FFLAGS_2DECOMP := -DDOUBLE_PREC# -DOVERWRITE -DEVEN
 2decompdir=2decomp/
 decomp_2d.o: $(2decompdir)decomp_2d.f90
