@@ -286,7 +286,7 @@ program cans
       !allocate(var(4))
       var(1) = 1.d0*istep
       var(2) = dt
-      var(3) = time 
+      var(3) = time
       call out0d(trim(datadir)//'time.out',3,var)
       if(any(is_forced(:))) then
         var(1)   = time
