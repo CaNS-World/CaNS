@@ -5,10 +5,10 @@ FORTRAN code for turbulent channel flow developed by WPB.
 
 The routines for performing global transpositions are based on the 2decomp&fft
 library (http://www.2decomp.org/decomp.html). Some modifications to these
-routines it have been performed in the CFD code AFiD
+routines have been performed in the CFD code AFiD
 (https://github.com/PhysicsofFluids/AFiD), and ported to this code.
 
-Moreover, the initialization of Multi-Threaded FFTS with the FFTW guru interface
+Moreover, the initialization of Multi-Threaded FFTs with the FFTW guru interface
 was inspired by AFiD's implementation.
 
 								Pedro Costa
