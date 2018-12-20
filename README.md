@@ -64,9 +64,8 @@ The prerequisites are the following:
 
  * MPI
  * FFTW3
- * LAPACK
- * BLAS
  * OpenMP (optional)
+ * LAPACK & BLAS (optional)
 
 The Makefile should be modified in agreement to the installation paths of each library. Also, the following preprocessor options are available:
 
@@ -76,7 +75,7 @@ The Makefile should be modified in agreement to the installation paths of each l
 
 ### Running the code
 
-Run the executable with `mpirun` with a number of tasks and shared threads complying to what has been set in the input file `setup.h90`. Data will be written by default in a folder named `data`, which must be located where the executable is run.
+Run the executable with `mpirun` with a number of tasks and shared threads complying to what has been set in the input file `setup.h90`. Data will be written by default in a folder named `data/`, which must be located where the executable is run.
 
 ## Notes
 
