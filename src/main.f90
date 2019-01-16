@@ -140,6 +140,9 @@ program cans
   endif
   call bounduvw(cbcvel,n,bcvel,is_outflow,dl,dzc,dzf,u,v,w)
   call boundp(cbcpre,n,bcpre,dl,dzc,dzf,p)
+  dudtrko(:,:,:) = 0.d0
+  dvdtrko(:,:,:) = 0.d0
+  dwdtrko(:,:,:) = 0.d0
   call chkdt(n,dl,dzci,dzfi,visc,u,v,w,dtmax)
   dt = cfl*dtmax
   if(myid.eq.0) print*, 'dtmax = ', dtmax, 'dt = ',dt
