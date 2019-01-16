@@ -100,9 +100,9 @@ program cans
   !
   !$call omp_set_num_threads(nthreadsmax)
   call initmpi(ng,cbcpre)
-  if(myid.eq.0) print*, '******************************'
+  if(myid.eq.0) print*, '*******************************'
   if(myid.eq.0) print*, '*** Beginning of simulation ***'
-  if(myid.eq.0) print*, '******************************'
+  if(myid.eq.0) print*, '*******************************'
   if(myid.eq.0) print*, ''
   call initgrid(inivel,n(3),gr,lz,dzc,dzf,zc,zf)
   if(myid.eq.0) then
