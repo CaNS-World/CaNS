@@ -105,11 +105,11 @@ module mod_solver
       do i=1,nx
         bb(:)  = b(:) + lambdaxy(i,j)
         p1(1:n-1) = p(i,j,1:n-1)
-        call dgtsv_homebrewed(n-1,a(1:n-1),bb(1:n-1),c(1:n-2),p1(1:n-1))
+        call dgtsv_homebrewed(n-1,a(1:n-1),bb(1:n-1),c(1:n-1),p1(1:n-1))
         p2(:) = 0.d0
         p2(1  ) = -a(1  )
         p2(n-1) = -c(n-1)
-        call dgtsv_homebrewed(n-1,a(2:n-1),bb(1:n-1),c(1:n-2),p2(1:n-1))
+        call dgtsv_homebrewed(n-1,a(1:n-1),bb(1:n-1),c(1:n-1),p2(1:n-1))
         p(i,j,n) = (p(i,j,n) - c(n)*p1(1) - a(n)*p1(n-1)) / &
                    (bb(   n) + c(n)*p2(1) + a(n)*p2(n-1))
         p(i,j,1:n-1) = p1(1:n-1) + p2(1:n-1)*p(i,j,n)
