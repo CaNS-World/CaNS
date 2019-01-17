@@ -179,7 +179,8 @@ module mod_bound
             !$OMP END WORKSHARE
           elseif(ibound.eq.1) then
             !$OMP WORKSHARE
-            p(n,:,:) = factor
+            p(n  ,:,:) = factor
+            p(n+1,:,:) = p(n-1,:,:)
             !$OMP END WORKSHARE
           endif
         case(2)
@@ -189,7 +190,8 @@ module mod_bound
             !$OMP END WORKSHARE
           elseif(ibound.eq.1) then
             !$OMP WORKSHARE
-            p(:,n,:) = factor
+            p(:,n  ,:) = factor
+            p(:,n+1,:) = p(:,n-1,:)
             !$OMP END WORKSHARE
           endif
         case(3)
@@ -199,7 +201,8 @@ module mod_bound
             !$OMP END WORKSHARE
           elseif(ibound.eq.1) then
             !$OMP WORKSHARE
-            p(:,:,n) = factor
+            p(:,:,n  ) = factor
+            p(:,:,n+1) = p(:,:,n-1)
             !$OMP END WORKSHARE
           endif
         end select
