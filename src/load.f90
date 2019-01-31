@@ -21,7 +21,7 @@ module mod_load
     integer :: fh
     integer(kind=MPI_OFFSET_KIND) :: filesize,disp,good
     integer(8), dimension(3) :: ng
-    integer(8) :: lenr
+    integer :: lenr
     !
     select case(io)
     case('r')
