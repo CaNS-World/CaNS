@@ -27,9 +27,9 @@ module mod_solver
     !allocate(px(ng(1),ng(2)/dims(1),ng(3)/dims(2)))
     !allocate(py(ng(1)/dims(1),ng(2),ng(3)/dims(2)))
     !
-    !call transpose_z_to_x(pz,px)
-    call transpose_z_to_y(pz,py)
-    call transpose_y_to_x(py,px)
+    call transpose_z_to_x(pz,px)
+    !call transpose_z_to_y(pz,py)
+    !call transpose_y_to_x(py,px)
     call fftd(arrplan(1,1),px) ! fwd transform in x
     !
     call transpose_x_to_y(px,py)
@@ -50,9 +50,9 @@ module mod_solver
     call transpose_y_to_x(py,px)
     call ffti(arrplan(2,1),px) ! bwd transform in x
     !
-    !call transpose_x_to_z(px,pz)
-    call transpose_x_to_y(px,py)
-    call transpose_y_to_z(py,pz)
+    call transpose_x_to_z(px,pz)
+    !call transpose_x_to_y(px,py)
+    !call transpose_y_to_z(py,pz)
     !$OMP WORKSHARE
     pz(:,:,:) = pz(:,:,:)*normfft
     !$OMP END WORKSHARE
