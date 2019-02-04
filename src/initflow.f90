@@ -119,8 +119,8 @@ module mod_initflow
             xc = ((coord(1)*n(1)+i-0.5)*dx-.5d0*lx)*2.d0/lz
             xf = ((coord(1)*n(1)+i-0.0)*dx-.5d0*lx)*2.d0/lz
             u(i,j,k) = u1d(k)
-            v(i,j,k) =  1.d0 * fz(zc)*dgxy(yf,xc)
-            w(i,j,k) = -1.d0 * gxy(yc,xc)*dfz(zf)
+            v(i,j,k) = -1.d0 * gxy(yf,xc)*dfz(zc)
+            w(i,j,k) =  1.d0 * fz(zf)*dgxy(yc,xc)
             p(i,j,k) = 0.d0
           enddo
         enddo
@@ -263,7 +263,7 @@ module mod_initflow
   function dfz(zc)
   real(8), intent(in) :: zc
   real(8) :: dfz
-    dfz = -4.d0*zc*((1.d0-zc**2)**2)
+    dfz = -4.d0*zc*(1.d0-zc**2)
   end function
   !
   function gxy(xc,yc)
