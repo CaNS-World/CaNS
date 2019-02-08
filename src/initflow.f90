@@ -2,7 +2,7 @@ module mod_initflow
   use mpi
   use decomp_2d
   use mod_common_mpi, only: ierr,coord,myid
-  use mod_param     , only: dims,rey,pi,dx,dy,dz,lx,ly,lz
+  use mod_param     , only: dims,rey,pi,dx,dy,dz,lx,ly,lz,is_wallturb
   implicit none
   private
   public initflow,add_noise
@@ -98,6 +98,7 @@ module mod_initflow
     if(is_mean) then
       call set_mean(n,1.d0,dzflzi,u(1:n(1),1:n(2),1:n(3)))
     endif
+    if(is_wallturb) is_pair = .true.
     if(is_pair) then
       !
       ! initialize a streamwise vortex pair for a fast transition
