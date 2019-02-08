@@ -140,6 +140,14 @@ program cans
   endif
   call bounduvw(cbcvel,n,bcvel,is_outflow,dl,dzc,dzf,u,v,w)
   call boundp(cbcpre,n,bcpre,dl,dzc,dzf,p)
+  !
+  ! post-process and write initial condition
+  !
+  write(fldnum,'(i7.7)') istep
+  include 'out1d.h90'
+  include 'out2d.h90'
+  include 'out3d.h90'
+  !
   dudtrko(:,:,:) = 0.d0
   dvdtrko(:,:,:) = 0.d0
   dwdtrko(:,:,:) = 0.d0
