@@ -91,7 +91,7 @@ write(buffer,fmt='(A,1I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' //
       write(buffer,fmt='(A,I6)') repeat(' ',indent)
       write(ixdmf,fmt='(A)',advance='no') trim(buffer)
       do i = fldstart,fldend,nskip !1,nflds
-        write(ixdmf,fmt='(E15.6)',advance='no') t0 + 1.d0*(i-1)*dt!1.*i
+        write(ixdmf,fmt='(E15.6)',advance='no') t0 + 1.d0*(i-nskip)*dt!1.*i
       enddo
       write(buffer,fmt='(A)') repeat(' ',indent)//'</DataItem>'
       write(unit=ixdmf,fmt='(A)')trim(buffer)
