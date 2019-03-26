@@ -84,14 +84,9 @@ module mod_initsolver
     integer :: l 
     select case(bc(0)//bc(1))
     case('PP')
-      l = 1
-      lambda(l)     = -4.d0*sin((1.d0*(l-1))*pi/(1.d0*n))**2
-      do l=2,n/2
+      do l=1,n
         lambda(l  )   = -4.d0*sin((1.d0*(l-1))*pi/(1.d0*n))**2
-        lambda(n-l+2) = lambda(l) ! according to the half-complex format of fftw
       enddo
-      l = n/2+1
-      lambda(l)    = -4.d0*sin((1.d0*(l-1))*pi/(1.d0*n))**2
     case('NN')
       if(    c_or_f.eq.'c') then
         do l=1,n
