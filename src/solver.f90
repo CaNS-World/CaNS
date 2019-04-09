@@ -7,7 +7,7 @@ module mod_solver
   private
   public solver
   contains
-  subroutine solver(n,arrplan,normfft,lambdaxy,a,b,c,bcz,c_or_f,pz)
+  subroutine solver(n,arrplan,normfft,lambdaxy,a,b,c,bcz,c_or_f,p)
     implicit none
     integer, intent(in), dimension(3) :: n
     type(C_PTR), intent(in), dimension(2,2) :: arrplan
@@ -16,9 +16,10 @@ module mod_solver
     real(8), intent(in), dimension(n(3)) :: a,b,c
     character(len=1), dimension(0:1), intent(in) :: bcz
     character(len=1), intent(in), dimension(3) :: c_or_f
-    real(8), intent(inout), dimension(:,:,:) :: pz
+    real(8), intent(inout), dimension(0:,0:,0:) :: p
     real(8), dimension(n(1)*dims(1),n(2)*dims(2)/dims(1),n(3)/dims(2)) :: px
     real(8), dimension(n(1)*dims(1)/dims(1),n(2)*dims(2),n(3)/dims(2)) :: py
+    real(8), dimension(n(1)        ,n(2)                ,n(3)        ) :: pz
     !real(8), allocatable, dimension(:,:,:) :: px,py
     integer, dimension(3) :: ng
     integer :: q
@@ -27,6 +28,9 @@ module mod_solver
     !allocate(px(ng(1),ng(2)/dims(1),ng(3)/dims(2)))
     !allocate(py(ng(1)/dims(1),ng(2),ng(3)/dims(2)))
     !
+    !$OMP WORKSHARE
+    pz(:,:,:) = p(1:n(1),1:n(2),1:n(3))
+    !$OMP END WORKSHARE
     call transpose_z_to_x(pz,px)
     !call transpose_z_to_y(pz,py)
     !call transpose_y_to_x(py,px)
@@ -55,6 +59,7 @@ module mod_solver
     !call transpose_y_to_z(py,pz)
     !$OMP WORKSHARE
     pz(:,:,:) = pz(:,:,:)*normfft
+    p(1:n(1),1:n(2),1:n(3)) = pz(:,:,:)
     !$OMP END WORKSHARE
     !deallocate(px,py)
     return
