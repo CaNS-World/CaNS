@@ -233,18 +233,6 @@ program cans
       endif
 #endif
       call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! outflow BC only at final velocity
-#ifndef IMPDIFF
-#ifdef ONE_PRESS_CORR
-      if(irk.le.2) then ! pressure correction only at the last RK step!
-        !$OMP WORKSHARE
-        u(:,:,:) = up(:,:,:)
-        v(:,:,:) = vp(:,:,:)
-        w(:,:,:) = wp(:,:,:)
-        !$OMP END WORKSHARE
-        cycle
-      endif
-#endif
-#endif
       call fillps(n,dli,dzfi,dtrki,up,vp,wp,pp)
       call updt_rhs_b((/'c','c','c'/),cbcpre,n,rhsbp%x,rhsbp%y,rhsbp%z,pp)
       call solver(n,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre(:,3),(/'c','c','c'/),pp)
