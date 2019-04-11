@@ -24,7 +24,7 @@ module mod_rk
     real(8), intent(inout), dimension(3) :: tauxo,tauyo,tauzo
     real(8), intent(out), dimension(0:,0:,0:) :: up,vp,wp
     real(8), intent(out), dimension(3) :: f
-    real(8),              dimension(n(1),n(2),n(3)) ::          dudtrk, dvdtrk, dwdtrk
+    real(8),              dimension(n(1),n(2),n(3)) :: dudtrk,dvdtrk,dwdtrk
     real(8) :: factor1,factor2,factor12
     real(8), dimension(3) :: taux,tauy,tauz
     integer :: i,j,k
@@ -110,8 +110,8 @@ module mod_rk
     real(8), intent(inout), dimension(3) :: tauxo,tauyo,tauzo
     real(8), intent(out), dimension(0:,0:,0:) :: up,vp,wp
     real(8), intent(out), dimension(3) :: f
-    real(8),              dimension(n(1),n(2),n(3)) ::          dudtrk, dvdtrk, dwdtrk
-    real(8),              dimension(n(1),n(2),n(3)) ::          dudtrkd, dvdtrkd, dwdtrkd
+    real(8),              dimension(n(1),n(2),n(3)) :: dudtrk , dvdtrk , dwdtrk
+    real(8),              dimension(n(1),n(2),n(3)) :: dudtrkd, dvdtrkd, dwdtrkd
     real(8) :: factor1,factor2,factor12
     real(8), dimension(3) :: taux,tauy,tauz
     integer :: i,j,k
