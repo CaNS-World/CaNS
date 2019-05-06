@@ -3,3 +3,4 @@
 3 -> create data folder inside bin folder with the makefile
 4 -> add universal type declaration
 5 -> add trim() in initvel
+6 -> add markdown file to explain the input file
