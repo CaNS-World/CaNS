@@ -4,10 +4,10 @@
 .95                                             ! CFL number
 0.00001                                         ! kinematic viscosity
 log                                             ! initial velocity field
-.true.                                          ! choose a initial velocity field that triggers transition in wall-bounded turbulence ?
+.false.                                         ! choose initial velocity field that triggers transition in wall-bounded turbulence ?
 10000                                           ! number of time steps
-.false                                          ! restart from a checkpoint ?
-10 10 20 5000 10000 2000                        ! frequency of: stability checking, (0d, 1d, 2d, 3d) output, checkpointing
+.false.                                         ! restart from a checkpoint ?
+10 10 20 5000 10000 2000                        ! frequency of: 1 - stability checking, 2,3,4,5 - 0d,1d,2d,3d output, 6 - checkpointing (overwritten)
 2 2                                             ! domain decomposition in x, y
 4                                               ! number of OpenMP threads
 P P  P P  D D                                   ! type of BC for u (low,up)_x, (low,up)_y, (low,up)_z
