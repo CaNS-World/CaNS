@@ -1,0 +1,5 @@
+1 -> add bin folder
+2 -> cp executable to the bin folder
+3 -> create data folder inside bin folder with the makefile
+4 -> add universal type declaration
+5 -> add trim() in initvel
