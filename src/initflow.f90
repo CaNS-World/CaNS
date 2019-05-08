@@ -30,7 +30,7 @@ module mod_initflow
     is_mean  = .false.
     is_pair  = .false.
     q = .5d0
-    select case(inivel)
+    select case(trim(inivel))
     case('cou')
       call couette(   q,n(3),zclzi,norm,u1d)
     case('poi')

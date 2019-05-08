@@ -5,3 +5,4 @@
 5 -> add trim() in initvel
 6 -> add markdown file to explain the input file
 7 -> remove fftd and ffti, replace with just fft, since the routines are exactly the same
+8 -> move read_input to param.f90
