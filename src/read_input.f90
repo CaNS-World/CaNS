@@ -53,29 +53,33 @@ contains
   subroutine read_input
   implicit none
   integer :: iunit
-    open(newunit=iunit,file='dns.in')
-      read(iunit,*) itot,jtot,ktot
-      read(iunit,*) lx,ly,lz
-      read(iunit,*) gr
-      read(iunit,*) cfl
-      read(iunit,*) inivel
-      read(iunit,*) is_wallturb
-      read(iunit,*) nstep
-      read(iunit,*) restart
-      read(iunit,*) icheck,iout0d,iout1d,iout2d,iout3d,isave
-      read(iunit,*) dims(1),dims(2)
-      read(iunit,*) nthreadsmax
-      read(iunit,*) cbcvel(0,1,1),cbcvel(1,1,1),cbcvel(0,2,1),cbcvel(1,2,1),cbcvel(0,3,1),cbcvel(1,3,1)
-      read(iunit,*) cbcvel(0,1,2),cbcvel(1,1,2),cbcvel(0,2,2),cbcvel(1,2,2),cbcvel(0,3,2),cbcvel(1,3,2)
-      read(iunit,*) cbcvel(0,1,3),cbcvel(1,1,3),cbcvel(0,2,3),cbcvel(1,2,3),cbcvel(0,3,3),cbcvel(1,3,3)
-      read(iunit,*) cbcpre(0,1  ),cbcpre(1,1  ),cbcpre(0,2  ),cbcpre(1,2  ),cbcpre(0,3  ),cbcpre(1,3  )
-      read(iunit,*)  bcvel(0,1,1), bcvel(1,1,1), bcvel(0,2,1), bcvel(1,2,1), bcvel(0,3,1), bcvel(1,3,1)
-      read(iunit,*)  bcvel(0,1,2), bcvel(1,1,2), bcvel(0,2,2), bcvel(1,2,2), bcvel(0,3,2), bcvel(1,3,2)
-      read(iunit,*)  bcvel(0,1,3), bcvel(1,1,3), bcvel(0,2,3), bcvel(1,2,3), bcvel(0,3,3), bcvel(1,3,3)
-      read(iunit,*)  bcpre(0,1  ), bcpre(1,1  ), bcpre(0,2  ), bcpre(1,2  ), bcpre(0,3  ), bcpre(1,3  )
-      read(iunit,*)  is_forced(1),is_forced(2),is_forced(3)
-      read(iunit,*)  velf(1),velf(2),velf(3)
-      read(iunit,*)  is_outflow(0,1),is_outflow(1,1),is_outflow(0,2),is_outflow(1,2),is_outflow(0,3),is_outflow(1,3)
+    open(newunit=iunit,file='dns.in',status='old',action='read',iostat=ierr)
+      if( ierr.eq.0 ) then
+        read(iunit,*) itot,jtot,ktot
+        read(iunit,*) lx,ly,lz
+        read(iunit,*) gr
+        read(iunit,*) cfl
+        read(iunit,*) inivel
+        read(iunit,*) is_wallturb
+        read(iunit,*) nstep
+        read(iunit,*) restart
+        read(iunit,*) icheck,iout0d,iout1d,iout2d,iout3d,isave
+        read(iunit,*) dims(1),dims(2)
+        read(iunit,*) nthreadsmax
+        read(iunit,*) cbcvel(0,1,1),cbcvel(1,1,1),cbcvel(0,2,1),cbcvel(1,2,1),cbcvel(0,3,1),cbcvel(1,3,1)
+        read(iunit,*) cbcvel(0,1,2),cbcvel(1,1,2),cbcvel(0,2,2),cbcvel(1,2,2),cbcvel(0,3,2),cbcvel(1,3,2)
+        read(iunit,*) cbcvel(0,1,3),cbcvel(1,1,3),cbcvel(0,2,3),cbcvel(1,2,3),cbcvel(0,3,3),cbcvel(1,3,3)
+        read(iunit,*) cbcpre(0,1  ),cbcpre(1,1  ),cbcpre(0,2  ),cbcpre(1,2  ),cbcpre(0,3  ),cbcpre(1,3  )
+        read(iunit,*)  bcvel(0,1,1), bcvel(1,1,1), bcvel(0,2,1), bcvel(1,2,1), bcvel(0,3,1), bcvel(1,3,1)
+        read(iunit,*)  bcvel(0,1,2), bcvel(1,1,2), bcvel(0,2,2), bcvel(1,2,2), bcvel(0,3,2), bcvel(1,3,2)
+        read(iunit,*)  bcvel(0,1,3), bcvel(1,1,3), bcvel(0,2,3), bcvel(1,2,3), bcvel(0,3,3), bcvel(1,3,3)
+        read(iunit,*)  bcpre(0,1  ), bcpre(1,1  ), bcpre(0,2  ), bcpre(1,2  ), bcpre(0,3  ), bcpre(1,3  )
+        read(iunit,*)  is_forced(1),is_forced(2),is_forced(3)
+        read(iunit,*)  velf(1),velf(2),velf(3)
+        read(iunit,*)  is_outflow(0,1),is_outflow(1,1),is_outflow(0,2),is_outflow(1,2),is_outflow(0,3),is_outflow(1,3)
+      else
+        ! ADD ERROR MESSAGE HERE!
+    endif
     close(iunit)
     dx = lx/(1.d0*itot)
     dy = ly/(1.d0*jtot)
@@ -85,6 +89,7 @@ contains
     dzi = dz**(-1)
     imax = itot/dims(1)
     jmax = jtot/dims(2)
+    !
     ng  = (/itot,jtot,ktot/)
     n   = (/imax,jmax,ktot/)
     l   = (/lx,ly,lz/)

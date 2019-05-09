@@ -2,7 +2,7 @@
 3. 1.5 1.                                       ! lx, ly, lz                            : dimensions
 0.                                              ! gr                                    : grid stretching parameter (0 -> no stretching)
 .95                                             ! cfl                                   : CFL number
-0.00001                                         ! visci                                 : kinematic viscosity
+0.00001                                         ! visc                                  : kinematic viscosity
 log                                             ! inivel                                : initial velocity field
 .false.                                         ! is_wallturb                           : impose initial velocity field that triggers transition in wall-bounded turbulence ?
 10000                                           ! nstep                                 : number of time steps

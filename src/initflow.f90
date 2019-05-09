@@ -2,20 +2,20 @@ module mod_initflow
   use mpi
   use decomp_2d
   use mod_common_mpi, only: ierr,coord,myid
-  use mod_param     , only: dims,rey,pi,dx,dy,dz,lx,ly,lz,is_wallturb
+  use mod_param     , only: dims,pi,dx,dy,dz,lx,ly,lz,is_wallturb
   implicit none
   private
   public initflow,add_noise
   contains
-  subroutine initflow(inivel,n,zclzi,dzclzi,dzflzi,visc,norm,u,v,w,p)
+  subroutine initflow(inivel,n,zclzi,dzclzi,dzflzi,visc,u,v,w,p)
     !
     ! computes initial conditions for the velocity field
     !
     implicit none
+    real(8), parameter :: norm = 1.d0
     character(len=3), intent(in) :: inivel
     integer, intent(in), dimension(3) :: n
     real(8), intent(in), dimension(0:) :: zclzi,dzclzi,dzflzi
-    real(8), intent(in) :: norm
     real(8), intent(in) :: visc
     real(8), dimension(0:,0:,0:), intent(out) :: u,v,w,p
     real(8), allocatable, dimension(:) :: u1d
@@ -241,7 +241,7 @@ module mod_initflow
     real(8), intent(out), dimension(n) :: p
     integer :: k
     real(8) :: z,reb,retau ! z/lz and bulk Reynolds number
-    reb = rey
+    reb = lz*1./visc
     retau = 0.09*reb**(0.88) ! from Pope's book
     do k=1,n/2
       z    = zc(k)*2.*retau!1.d0*((k-1)+q)/(1.d0*n)*2.*retau

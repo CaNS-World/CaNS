@@ -46,37 +46,32 @@ program cans
                              datadir, &
                              cfl,     &
                              inivel,  &
-                             uref,lref, &
                              imax,jmax,dims, &
                              nthreadsmax, &
                              gr, &
-                             is_outflow,no_outflow,is_forced
+                             is_outflow,no_outflow,is_forced, &
+                             n,ng,l,dl,dli
   use mod_sanity     , only: test_sanity
   use mod_solver     , only: solver
   !$ use omp_lib
   implicit none
-  integer, parameter, dimension(3) :: ng = (/itot,jtot,ktot/)
-  integer, parameter, dimension(3) :: n  = (/imax,jmax,ktot/)
-  real(8), parameter, dimension(3) :: l   = (/lx,ly,lz/)
-  real(8), parameter, dimension(3) :: dl  = (/dx,dy,dz/)
-  real(8), parameter, dimension(3) :: dli = (/dxi,dyi,dzi/)
-  real(8), dimension(0:imax+1,0:jmax+1,0:ktot+1) :: u,v,w,p,up,vp,wp,pp
-  real(8), dimension(imax,jmax,ktot)    :: dudtrko,dvdtrko,dwdtrko
+  real(8), allocatable, dimension(:,:,:) :: u,v,w,p,up,vp,wp,pp
+  real(8), allocatable, dimension(:,:,:)    :: dudtrko,dvdtrko,dwdtrko
   real(8), dimension(3) :: tauxo,tauyo,tauzo
   real(8), dimension(3) :: f
   type(C_PTR), dimension(2,2) :: arrplanp
-  real(8), dimension(imax,jmax) :: lambdaxyp
-  real(8), dimension(ktot) :: ap,bp,cp
+  real(8), allocatable, dimension(:,:) :: lambdaxyp
+  real(8), allocatable, dimension(:) :: ap,bp,cp
   real(8) :: normfftp
   type rhs_bound
-    real(8), dimension(n(2),n(3),0:1) :: x
-    real(8), dimension(n(1),n(3),0:1) :: y
-    real(8), dimension(n(1),n(2),0:1) :: z
+    real(8), allocatable, dimension(:,:,:) :: x
+    real(8), allocatable, dimension(:,:,:) :: y
+    real(8), allocatable, dimension(:,:,:) :: z
   end type rhs_bound 
 #ifdef IMPDIFF
   type(C_PTR), dimension(2,2) :: arrplanu,arrplanv,arrplanw
-  real(8), dimension(imax,jmax) :: lambdaxyu,lambdaxyv,lambdaxyw
-  real(8), dimension(ktot) :: au,av,aw,bu,bv,bw,bb,cu,cv,cw
+  real(8), allocatable dimension(:,:) :: lambdaxyu,lambdaxyv,lambdaxyw
+  real(8), allocatable dimension(:) :: au,av,aw,bu,bv,bw,bb,cu,cv,cw
   real(8) :: normfftu,normfftv,normfftw
   real(8) :: alpha,alphai
   integer :: i,j,k,im,ip,jm,jp,km,kp
@@ -86,7 +81,7 @@ program cans
   real(8) :: ristep
   real(8) :: dt,dti,dtmax,time,dtrk,dtrki,divtot,divmax
   integer :: irk,istep
-  real(8), dimension(0:ktot+1) :: dzc,dzf,zc,zf,dzci,dzfi
+  real(8), allocatable, dimension(:) :: dzc,dzf,zc,zf,dzci,dzfi
   real(8) :: meanvel
   real(8), dimension(3) :: dpdl
   !real(8), allocatable, dimension(:) :: var
@@ -98,8 +93,59 @@ program cans
   integer :: lenr,kk
   logical :: kill
   !
+  call MPI_INIT(ierr)
+  call MPI_COMM_RANK(MPI_COMM_WORLD, myid, ierr)
+  !
+  ! read parameter file
+  !
+  call read_input
+  !
+  ! initialize MPI/OpenMP
+  !
   !$call omp_set_num_threads(nthreadsmax)
   call initmpi(ng,cbcpre)
+  !
+  ! allocate variables
+  !
+  allocate(u( 0:n(1)+1,0:n(2)+1,0:n(3)+1) , &
+           v( 0:n(1)+1,0:n(2)+1,0:n(3)+1) , &
+           w( 0:n(1)+1,0:n(2)+1,0:n(3)+1) , &
+           p( 0:n(1)+1,0:n(2)+1,0:n(3)+1) , &
+           up(0:n(1)+1,0:n(2)+1,0:n(3)+1), &
+           vp(0:n(1)+1,0:n(2)+1,0:n(3)+1), &
+           wp(0:n(1)+1,0:n(2)+1,0:n(3)+1), &
+           pp(0:n(1)+1,0:n(2)+1,0:n(3)+1))
+  allocate(dudtrko(n(1),n(2),n(3)), &
+           dvdtrko(n(1),n(2),n(3)), &
+           dwdtrko(n(1),n(2),n(3)))
+  allocate(lambdaxyp(n(1),n(2)))
+  allocate(ap(n(3)),bp(n(3)),cp(n(3)))
+  allocate(dzc( 0:n(3)+1), &
+           dzf( 0:n(3)+1), &
+           zc(  0:n(3)+1), &
+           zf(  0:n(3)+1), &
+           dzci(0:n(3)+1), &
+           dzfi(0:n(3)+1))
+  allocate(rhsbp%x(n(2),n(3),0:1), &
+           rhsbp%y(n(1),n(3),0:1), &
+           rhsbp%z(n(1),n(2),0:1))
+#ifdef IMPDIFF
+  allocate(lambdaxyu(n(1),n(2)), &
+           lambdaxyv(n(1),n(2)), &
+           lambdaxyw(n(1),n(2)))
+  allocate(au(n(3)),bu(n(3)),cu(n(3)), &
+           av(n(3)),bv(n(3)),cv(n(3)), &
+           aw(n(3)),bw(n(3)),cw(n(3)))
+  allocate(rhsbu%x(n(2),n(3),0:1), &
+           rhsbu%y(n(1),n(3),0:1), &
+           rhsbu%z(n(1),n(2),0:1), &
+           rhsbv%x(n(2),n(3),0:1), &
+           rhsbv%y(n(1),n(3),0:1), &
+           rhsbv%z(n(1),n(2),0:1), &
+           rhsbw%x(n(2),n(3),0:1), &
+           rhsbw%y(n(1),n(3),0:1), &
+           rhsbw%z(n(1),n(2),0:1))
+#endif
   if(myid.eq.0) print*, '*******************************'
   if(myid.eq.0) print*, '*** Beginning of simulation ***'
   if(myid.eq.0) print*, '*******************************'
@@ -127,7 +173,7 @@ program cans
   if(.not.restart) then
     istep = 0
     time = 0.d0
-    call initflow(inivel,n,zc/lz,dzc/lz,dzf/lz,visc,uref,u,v,w,p)
+    call initflow(inivel,n,zc/lz,dzc/lz,dzf/lz,visc,u,v,w,p)
     if(myid.eq.0) print*, '*** Initial condition succesfully set ***'
   else
     call load('r',trim(datadir)//'fld.bin',n,u(1:n(1),1:n(2),1:n(3)), &
@@ -277,7 +323,7 @@ program cans
       if(myid.eq.0) print*, 'dtmax = ', dtmax, 'dt = ',dt
       if(dtmax.lt.small) then
         if(myid.eq.0) print*, 'ERROR: timestep is too small.'
-        if(myid.eq.0) print*, 'Aborting ...'
+        if(myid.eq.0) print*, 'Aborting...'
         istep = nstep + 1 ! i.e. exit main loop
         kill = .true.
       endif
@@ -285,7 +331,7 @@ program cans
       call chkdiv(n,dli,dzfi,u,v,w,divtot,divmax)
       if(divmax.gt.small.or.divtot.ne.divtot) then
         if(myid.eq.0) print*, 'ERROR: maximum divergence is too large.'
-        if(myid.eq.0) print*, 'Aborting ...'
+        if(myid.eq.0) print*, 'Aborting...'
         istep = nstep + 1 ! i.e. exit main loop
         kill = .true.
       endif

@@ -14,7 +14,6 @@ module mod_initmpi
     integer :: ntx,nty,ntz
     logical, dimension(3) :: periods
     !
-    call MPI_INIT(ierr)
     periods(:) = .false.
     if( bc(0,1)//bc(1,1).eq.'PP' ) periods(1) = .true.
     if( bc(0,2)//bc(1,2).eq.'PP' ) periods(2) = .true.
