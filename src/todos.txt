@@ -6,3 +6,4 @@
 7 -> remove fftd and ffti, replace with just fft, since the routines are exactly the same
 8 -> mkdir -p $(RUNDIR) $(RUNDIR)/data
 9 -> echo("Executable file $(TARGET) copyed to run folder $(RUNDIR)")
+10 -> add uref, lref, reynolds and compute visc
