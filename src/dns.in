@@ -1,23 +1,23 @@
-64 64 64                 ! itot, jtot, ktot                      : grid
-3. 1.5 1.                ! lx, ly, lz                            : dimensions
-0.                       ! gr                                    : grid stretching parameter (0 -> no stretching)
-.95                      ! cfl                                   : CFL number
-0.00001                  ! visc                                  : kinematic viscosity
-log                      ! inivel                                : initial velocity field
-F                        ! is_wallturb                           : impose initial velocity field that triggers transition in wall-bounded turbulence ?
-10000                    ! nstep                                 : number of time steps
-F                        ! restart                               : restart from a checkpoint ?
-10 10 20 5000 10000 2000 ! iout0d, iout1d, iout2d, iout3d, isave : frequency of: 1 - stability checking, 2,3,4,5 - 0d,1d,2d,3d output, 6 - checkpointing (overwritten)
-2 2                      ! dims(1:2)                             : domain decomposition in x, y
-4                        ! numthreadsmax                         : number of OpenMP threads
-P P  P P  D D            ! cbcvel(0:1,1:3,1)                     : type of BC for u (low,up)_x, (low,up)_y, (low,up)_z
-P P  P P  D D            ! cbcvel(0:1,1:3,2)                     : type of BC for v (low,up)_x, (low,up)_y, (low,up)_z
-P P  P P  D D            ! cbcvel(0:1,1:3,3)                     : type of BC for w (low,up)_x, (low,up)_y, (low,up)_z
-P P  P P  N N            ! cbcpre(0:1,1:3,1)                     : type of BC for p (low,up)_x, (low,up)_y, (low,up)_z
-0. 0.  0. 0.  0. 0.      ! cbcvel(0:1,1:3,1)                     : value of BC for u (low,up)_x, (low,up)_y, (low,up)_z
-0. 0.  0. 0.  0. 0.      ! cbcvel(0:1,1:3,2)                     : value of BC for v (low,up)_x, (low,up)_y, (low,up)_z
-0. 0.  0. 0.  0. 0.      ! cbcvel(0:1,1:3,3)                     : value of BC for w (low,up)_x, (low,up)_y, (low,up)_z
-0. 0.  0. 0.  0. 0.      ! cbcpre(0:1,1:3,1)                     : value of BC for p (low,up)_x, (low,up)_y, (low,up)_z
-T F F                    ! is_forced(1:3)                        : force the mean velocity in x, y, z to a value ?
-1. 0. 0.                 ! velf(1:3)                             : value of forced velocity in x, y, z (valid if .true. in the previous line)
-F F  F F  F F            ! is_outflow(0:1,1:3)                   : outflow boundary condition in (low,up)_x, (low,up)_y, (low,up)_z ?
+512 256 144              ! itot, jtot, ktot                              : grid
+6. 3. 1.                 ! lx, ly, lz                                    : dimensions
+0.                       ! gr                                            : grid stretching parameter (0 -> no stretching)
+.95                      ! cfl                                           : CFL number
+1. 1. 5640.              ! uref, lref, rey                               : reference velocity and length, and Reynodls number
+poi                      ! inivel                                        : initial velocity field
+T                        ! is_wallturb                                   : impose initial velocity field that triggers transition in wall-bounded turbulence ?
+100000                   ! nstep                                         : number of time steps
+F                        ! restart                                       : restart from a checkpoint ?
+10 10 100 500 10000 5000 ! icheck, iout0d, iout1d, iout2d, iout3d, isave : frequency of: 1 - stability checking, 2,3,4,5 - 0d,1d,2d,3d output, 6 - checkpointing (overwritten)
+P P  P P  D D            ! cbcvel(0:1,1:3,1)                             : type of BC for u (low,up)_x, (low,up)_y, (low,up)_z
+P P  P P  D D            ! cbcvel(0:1,1:3,2)                             : type of BC for v (low,up)_x, (low,up)_y, (low,up)_z
+P P  P P  D D            ! cbcvel(0:1,1:3,3)                             : type of BC for w (low,up)_x, (low,up)_y, (low,up)_z
+P P  P P  N N            ! cbcpre(0:1,1:3,1)                             : type of BC for p (low,up)_x, (low,up)_y, (low,up)_z
+0. 0.  0. 0.  0. 0.      ! cbcvel(0:1,1:3,1)                             : value of BC for u (low,up)_x, (low,up)_y, (low,up)_z
+0. 0.  0. 0.  0. 0.      ! cbcvel(0:1,1:3,2)                             : value of BC for v (low,up)_x, (low,up)_y, (low,up)_z
+0. 0.  0. 0.  0. 0.      ! cbcvel(0:1,1:3,3)                             : value of BC for w (low,up)_x, (low,up)_y, (low,up)_z
+0. 0.  0. 0.  0. 0.      ! cbcpre(0:1,1:3,1)                             : value of BC for p (low,up)_x, (low,up)_y, (low,up)_z
+T F F                    ! is_forced(1:3)                                : force the mean velocity in x, y, z to a value ?
+1. 0. 0.                 ! velf(1:3)                                     : value of forced velocity in x, y, z (valid if .true. in the previous line)
+F F  F F  F F            ! is_outflow(0:1,1:3)                           : outflow boundary condition in (low,up)_x, (low,up)_y, (low,up)_z ?
+2 2                      ! dims(1:2)                                     : domain decomposition in x, y
+4                        ! numthreadsmax                                 : number of OpenMP threads

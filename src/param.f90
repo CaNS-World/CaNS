@@ -22,7 +22,7 @@ real(8), parameter, dimension(3)   :: rkcoeff12 = rkcoeff(1,:)+rkcoeff(2,:)
 integer :: itot,jtot,ktot,imax,jmax
 real(8) :: lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,gr
 real(8) :: cfl
-real(8) :: visc
+real(8) :: uref,lref,rey,visc
 !
 character(len=100) :: inivel ! DON'T FORGET TO ADD A TRIM IN THE SWITCH COMMAND!
 logical :: is_wallturb
@@ -61,14 +61,12 @@ contains
         read(iunit,*) lx,ly,lz
         read(iunit,*) gr
         read(iunit,*) cfl
-        read(iunit,*) visc
+        read(iunit,*) uref,lref,rey
         read(iunit,*) inivel
         read(iunit,*) is_wallturb
         read(iunit,*) nstep
         read(iunit,*) restart
         read(iunit,*) icheck,iout0d,iout1d,iout2d,iout3d,isave
-        read(iunit,*) dims(1),dims(2)
-        read(iunit,*) nthreadsmax
         read(iunit,*) cbcvel(0,1,1),cbcvel(1,1,1),cbcvel(0,2,1),cbcvel(1,2,1),cbcvel(0,3,1),cbcvel(1,3,1)
         read(iunit,*) cbcvel(0,1,2),cbcvel(1,1,2),cbcvel(0,2,2),cbcvel(1,2,2),cbcvel(0,3,2),cbcvel(1,3,2)
         read(iunit,*) cbcvel(0,1,3),cbcvel(1,1,3),cbcvel(0,2,3),cbcvel(1,2,3),cbcvel(0,3,3),cbcvel(1,3,3)
@@ -80,6 +78,8 @@ contains
         read(iunit,*)  is_forced(1),is_forced(2),is_forced(3)
         read(iunit,*)  velf(1),velf(2),velf(3)
         read(iunit,*)  is_outflow(0,1),is_outflow(1,1),is_outflow(0,2),is_outflow(1,2),is_outflow(0,3),is_outflow(1,3)
+        read(iunit,*) dims(1),dims(2)
+        read(iunit,*) nthreadsmax
       else
         if(myid.eq.0) print*, 'Error reading the input file' 
         if(myid.eq.0) print*, 'Aborting...'
@@ -96,6 +96,7 @@ contains
     imax = itot/dims(1)
     jmax = jtot/dims(2)
     !
+    visc = uref*lref/rey
     ng  = (/itot,jtot,ktot/)
     n   = (/imax,jmax,ktot/)
     l   = (/lx,ly,lz/)

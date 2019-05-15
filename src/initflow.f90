@@ -2,7 +2,7 @@ module mod_initflow
   use mpi
   use decomp_2d
   use mod_common_mpi, only: ierr,coord,myid
-  use mod_param     , only: dims,pi,dx,dy,dz,lx,ly,lz,is_wallturb
+  use mod_param     , only: dims,pi,dx,dy,dz,lx,ly,lz,uref,lref,is_wallturb
   implicit none
   private
   public initflow,add_noise
@@ -12,7 +12,6 @@ module mod_initflow
     ! computes initial conditions for the velocity field
     !
     implicit none
-    real(8), parameter :: norm = 1.d0
     character(len=3), intent(in) :: inivel
     integer, intent(in), dimension(3) :: n
     real(8), intent(in), dimension(0:) :: zclzi,dzclzi,dzflzi
@@ -32,9 +31,9 @@ module mod_initflow
     q = .5d0
     select case(trim(inivel))
     case('cou')
-      call couette(   q,n(3),zclzi,norm,u1d)
+      call couette(   q,n(3),zclzi,uref,u1d)
     case('poi')
-      call poiseuille(q,n(3),zclzi,norm,u1d)
+      call poiseuille(q,n(3),zclzi,uref,u1d)
       is_mean=.true.
     case('zer')
       u1d(:) = 0.
@@ -51,7 +50,7 @@ module mod_initflow
     case('hcp')
       deallocate(u1d)
       allocate(u1d(2*n(3)))
-      call poiseuille(q,2*n(3),zclzi,norm,u1d)
+      call poiseuille(q,2*n(3),zclzi,uref,u1d)
       is_mean = .true.
     case('tgv')
       do k=1,n(3)
@@ -96,7 +95,7 @@ module mod_initflow
       call add_noise(n,789,.50d0,w(1:n(1),1:n(2),1:n(3)))
     endif
     if(is_mean) then
-      call set_mean(n,1.d0,dzflzi,u(1:n(1),1:n(2),1:n(3)))
+      call set_mean(n,uref,dzflzi,u(1:n(1),1:n(2),1:n(3)))
     endif
     if(is_wallturb) is_pair = .true.
     if(is_pair) then
@@ -208,7 +207,7 @@ module mod_initflow
     real(8) :: z
     do k=1,n
       z    = zc(k)!1.d0*((k-1)+q)/(1.d0*n)
-      p(k) = .5d0*(1.d0-2.d0*z)/norm
+      p(k) = .5d0*(1.d0-2.d0*z)*norm
     enddo
     return
   end subroutine couette
@@ -227,7 +226,7 @@ module mod_initflow
     !
     do k=1,n
       z    = zc(k)!1.d0*((k-1)+q)/(1.d0*n)
-      p(k) = 6.d0*z*(1.d0-z)/norm
+      p(k) = 6.d0*z*(1.d0-z)*norm
     enddo
     return
   end subroutine poiseuille
@@ -241,7 +240,7 @@ module mod_initflow
     real(8), intent(out), dimension(n) :: p
     integer :: k
     real(8) :: z,reb,retau ! z/lz and bulk Reynolds number
-    reb = lz*1./visc
+    reb = lref*uref/visc
     retau = 0.09*reb**(0.88) ! from Pope's book
     do k=1,n/2
       z    = zc(k)*2.*retau!1.d0*((k-1)+q)/(1.d0*n)*2.*retau
