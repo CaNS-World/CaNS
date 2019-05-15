@@ -50,18 +50,18 @@ real(8), dimension(3) :: dl
 real(8), dimension(3) :: dli
 !
 contains 
-  subroutine read_input
+  subroutine read_input(myid)
   use mpi
   implicit none
-  integer :: iunit,ierr,myid
-    call MPI_INIT(ierr)
-    call MPI_COMM_RANK(MPI_COMM_WORLD, myid, ierr)
+  integer, intent(in) :: myid
+  integer :: iunit,ierr
     open(newunit=iunit,file='dns.in',status='old',action='read',iostat=ierr)
       if( ierr.eq.0 ) then
         read(iunit,*) itot,jtot,ktot
         read(iunit,*) lx,ly,lz
         read(iunit,*) gr
         read(iunit,*) cfl
+        read(iunit,*) visc
         read(iunit,*) inivel
         read(iunit,*) is_wallturb
         read(iunit,*) nstep

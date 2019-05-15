@@ -50,7 +50,8 @@ program cans
                              nthreadsmax, &
                              gr, &
                              is_outflow,no_outflow,is_forced, &
-                             n,ng,l,dl,dli
+                             n,ng,l,dl,dli, &
+                             read_input
   use mod_sanity     , only: test_sanity
   use mod_solver     , only: solver
   !$ use omp_lib
@@ -98,7 +99,7 @@ program cans
   !
   ! read parameter file
   !
-  call read_input
+  call read_input(myid)
   !
   ! initialize MPI/OpenMP
   !

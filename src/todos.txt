@@ -1,8 +1,8 @@
 1 -> add run folder
-2 -> cp executable to the bin folder
-3 -> create data folder inside bin folder with the makefile
+2 -> cp executable to the run folder
+3 -> create data folder inside run folder with the makefile
 4 -> add universal type declaration
-5 -> add trim() in initvel
 6 -> add markdown file to explain the input file
 7 -> remove fftd and ffti, replace with just fft, since the routines are exactly the same
-8 -> move read_input to param.f90
+8 -> mkdir -p $(RUNDIR) $(RUNDIR)/data
+9 -> echo("Executable file $(TARGET) copyed to run folder $(RUNDIR)")

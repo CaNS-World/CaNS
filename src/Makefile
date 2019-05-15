@@ -1,19 +1,22 @@
+# src directory
+SRCDIR := $(pwd)
+RUNDIR := $(SRCDIR)'../run'
+#
 # fortran compiler
 FC   = mpif90
 # flags
 BIG := # -mcmodel=medium
-DBG := # -g -fbacktrace -Wall -O0 -Wextra -pedantic -fcheck=all
+DBG :=  -g -fbacktrace -Wall -O0 -Wextra -pedantic -fcheck=all
 OMP := # -fopenmp
-OPT := -O3
+OPT := #-O3
 OTH := -DDEBUG -DTIMING #-DIMPDIFF
 PROF := #-pg
 FFLAGS := $(OPT) $(BIG) $(DBG) $(PROF) $(OMP) $(OTH)
-#
 TARGET = cans
 #
 OBJ = bound.o chkdiv.o chkdt.o common_mpi.o correc.o debug.o fft.o fftw.o fillps.o initflow.o initgrid.o initmpi.o initsolver.o load.o main.o mom.o momd.o moms.o output.o param.o rk.o sanity.o solver.o decomp_2d.o io.o
 #
-LIBS = -lfftw3 -lfftw3_threads
+LIBS = -L /usr/local/Cellar/fftw/3.3.8_1/lib  -lfftw3 -lfftw3_threads
 #
 all: $(TARGET)
 #
