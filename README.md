@@ -21,7 +21,7 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 08/02/2019 -- Input files corresponding to the simulations presented in the manuscript above have been added to `examples/`.
 
-16/05/2019 -- Now a single input file, `dns.in`, can be used to run the executable without re-compiling the source. The `examples/` folder has been updated accordingly. The code with the old input files (not maintained) can be found in branch `old_input_files`.
+16/05/2019 -- Now a single input file, `dns.in`, can be used to run the executable without recompiling the source. The `examples/` folder has been updated accordingly. The implementation with the former input files (not maintained) can be found in branch `old_input_files`.
 
 ## Features
 
@@ -52,22 +52,20 @@ The fluid flow is solved with a second-order finite-volume pressure correction s
 
 ### Input file
 
-The input file `dns.in` sets up a case, i.e. the physical and computational parameters, boundary conditions, etc. See `src/INFO_INPUT.md` for a detailed description of the input file.
+The input file `dns.in` sets up a case, i.e. the physical and computational parameters, boundary conditions, etc. In the `examples/` folder are examples of input files for several canonical flows. See `src/INFO_INPUT.md` for a detailed description of the input file.
 
-In the `examples/` folder are examples input files for several canonical flows.
-
-Also, files `out1d.h90`, `out2d.h90` and `out3d.h90` in `src/` set which data are written in 1-, 2- and 3-dimensional output files, respectively. *The code should be recompiled after editing these three files*.
+Files `out1d.h90`, `out2d.h90` and `out3d.h90` in `src/` set which data are written in 1-, 2- and 3-dimensional output files, respectively. *The code should be recompiled after editing out?d.h90 files*.
 
 ### Compilation
 
-The prerequisites are the following:
+The code should be compiled in `src/`. The prerequisites are the following:
 
  * MPI
  * FFTW3
  * OpenMP (optional)
  * LAPACK & BLAS (optional)
 
-The Makefile should be modified in agreement to the installation paths of each library. Also, the following preprocessor options are available:
+The Makefile in `src/` should be modified in agreement to the installation paths of each library. Also, the following preprocessor options are available:
 
  * `-DDEBUG`   : performs some basic checks for debugging purposes
  * `-DTIMING`  : wall-clock time per timestep is computed
@@ -79,7 +77,7 @@ Typing `make run` will compile the code and copy the executable `cans` and input
 
 Run the executable with `mpirun` with a number of tasks and shared threads complying to what has been set in the input file `dns.bin`. Data will be written by default in a folder named `data/`, which must be located where the executable is run.
 
-### Visualizing data
+### Visualizing field data
 
 See `src/INFO_VISU.md`.
 

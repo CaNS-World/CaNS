@@ -16,11 +16,11 @@ F                        ! restart
 P P  P P  D D            ! cbcvel(0:1,1:3,1); u BC type
 P P  P P  D D            ! cbcvel(0:1,1:3,2); v BC type
 P P  P P  D D            ! cbcvel(0:1,1:3,3); w BC type
-P P  P P  N N            ! cbcpre(0:1,1:3,1); p BC type
-0. 0.  0. 0.  0. 0.      ! cbcvel(0:1,1:3,1); u BC type
-0. 0.  0. 0.  0. 0.      ! cbcvel(0:1,1:3,2); v BC type
-0. 0.  0. 0.  0. 0.      ! cbcvel(0:1,1:3,3); w BC type
-0. 0.  0. 0.  0. 0.      ! cbcpre(0:1,1:3,1); p BC type
+P P  P P  N N            ! cbcpre(0:1,1:3  ); p BC type
+0. 0.  0. 0.  0. 0.      !  bcvel(0:1,1:3,1); u BC type
+0. 0.  0. 0.  0. 0.      !  bcvel(0:1,1:3,2); v BC type
+0. 0.  0. 0.  0. 0.      !  bcvel(0:1,1:3,3); w BC type
+0. 0.  0. 0.  0. 0.      !  bcpre(0:1,1:3  ); p BC type
 T F F                    ! is_forced(1:3)
 1. 0. 0.                 ! velf(1:3)
 F F  F F  F F            ! is_outflow(0:1,1:3)
@@ -61,7 +61,7 @@ The time step is set to be equal to `cfl` **times the maximum allowable time ste
 
 This line defines the flow governing parameters.
 
-`uref`, `lref` and `rey` are a reference **velocity scale**, **length scale**, and **Reynolds number** defining the problem. The fluid viscosity is computed form these quantities.
+`uref`, `lref` and `rey` are a reference **velocity scale**, **length scale**, and **Reynolds number** defining the problem. The fluid kinematic viscosity is computed form these quantities.
 
 -
 
@@ -92,20 +92,20 @@ See `initflow.f90` for more details.
 P P  P P  D D          ! cbcvel(0:1,1:3,1); u BC type
 P P  P P  D D          ! cbcvel(0:1,1:3,2); v BC type
 P P  P P  D D          ! cbcvel(0:1,1:3,3); w BC type
-P P  P P  N N          ! cbcpre(0:1,1:3,1); p BC type
-0. 0.  0. 0.  0. 0.    ! cbcvel(0:1,1:3,1); u BC value
-0. 0.  0. 0.  0. 0.    ! cbcvel(0:1,1:3,2); v BC value
-0. 0.  0. 0.  0. 0.    ! cbcvel(0:1,1:3,3); w BC value
-0. 0.  0. 0.  0. 0.    ! cbcpre(0:1,1:3,1); p BC value
+P P  P P  N N          ! cbcpre(0:1,1:3  ); p BC type
+0. 0.  0. 0.  0. 0.    !  bcvel(0:1,1:3,1); u BC value
+0. 0.  0. 0.  0. 0.    !  bcvel(0:1,1:3,2); v BC value
+0. 0.  0. 0.  0. 0.    !  bcvel(0:1,1:3,3); w BC value
+0. 0.  0. 0.  0. 0.    !  bcpre(0:1,1:3  ); p BC value
 ~~~
 
 These lines set the boundary conditions (BC). 
 
 The **type** (BC) for each field variable are set by a row of six characters, `X0 X1  Y0 Y1  Z0 Z1` where,
 
-`X0` `X1` set the type of BC the field variable for the **lower** and **upper** boundaries in `x`;
-`Y0` `Y1` set the type of BC the field variable for the **lower** and **upper** boundaries in `y`;
-`Z0` `Z1` set the type of BC the field variable for the **lower** and **upper** boundaries in `z`.
+* `X0` `X1` set the type of BC the field variable for the **lower** and **upper** boundaries in `x`;
+* `Y0` `Y1` set the type of BC the field variable for the **lower** and **upper** boundaries in `y`;
+* `Z0` `Z1` set the type of BC the field variable for the **lower** and **upper** boundaries in `z`.
 
 The four rows correspond to the three velocity components, and pressure, i.e. `u`, `v`, `w`, and `p`.
 
