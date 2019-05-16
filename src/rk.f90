@@ -4,6 +4,7 @@ module mod_rk
   use mod_mom  , only: momxad,momyad,momzad,momxp,momyp,momzp
   use mod_momd , only: momxpd,momypd,momzpd,momxa,momya,momza
   use mod_moms , only: momsad
+  use mod_types
   implicit none
   private
   public rk,rk_id
@@ -14,21 +15,21 @@ module mod_rk
     ! for time integration of the momentum equations.
     !
     implicit none
-    real(8), intent(in), dimension(2) :: rkpar
-    integer, intent(in), dimension(3) :: n
-    real(8), intent(in) :: visc,dt
-    real(8), intent(in   ), dimension(3) :: dli,l 
-    real(8), intent(in   ), dimension(0:) :: dzci,dzfi,dzflzi,dzclzi
-    real(8), intent(in   ), dimension(0:,0:,0:) :: u ,v ,w,p
-    real(8), intent(inout), dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
-    real(8), intent(inout), dimension(3) :: tauxo,tauyo,tauzo
-    real(8), intent(out), dimension(0:,0:,0:) :: up,vp,wp
-    real(8), intent(out), dimension(3) :: f
-    real(8),              dimension(n(1),n(2),n(3)) :: dudtrk,dvdtrk,dwdtrk
-    real(8) :: factor1,factor2,factor12
-    real(8), dimension(3) :: taux,tauy,tauz
+    real(rp), intent(in), dimension(2) :: rkpar
+    integer , intent(in), dimension(3) :: n
+    real(rp), intent(in) :: visc,dt
+    real(rp), intent(in   ), dimension(3) :: dli,l 
+    real(rp), intent(in   ), dimension(0:) :: dzci,dzfi,dzflzi,dzclzi
+    real(rp), intent(in   ), dimension(0:,0:,0:) :: u ,v ,w,p
+    real(rp), intent(inout), dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
+    real(rp), intent(inout), dimension(3) :: tauxo,tauyo,tauzo
+    real(rp), intent(out), dimension(0:,0:,0:) :: up,vp,wp
+    real(rp), intent(out), dimension(3) :: f
+    real(rp),              dimension(n(1),n(2),n(3)) :: dudtrk,dvdtrk,dwdtrk
+    real(rp) :: factor1,factor2,factor12
+    real(rp), dimension(3) :: taux,tauy,tauz
     integer :: i,j,k
-    real(8) :: mean
+    real(rp) :: mean
     !
     factor1 = rkpar(1)*dt
     factor2 = rkpar(2)*dt
@@ -79,7 +80,7 @@ module mod_rk
     !
     ! bulk velocity forcing
     !
-    f(:) = 0.d0
+    f(:) = 0.
     if(is_forced(1)) then
       call chkmean(n,dzflzi,up,mean)
       f(1) = velf(1) - mean
@@ -100,22 +101,22 @@ module mod_rk
     ! for time integration of the momentum equations with implicit diffusion.
     !
     implicit none
-    real(8), intent(in), dimension(2) :: rkpar
-    integer, intent(in), dimension(3) :: n
-    real(8), intent(in) :: visc,dt
-    real(8), intent(in   ), dimension(3) :: dli,l 
-    real(8), intent(in   ), dimension(0:) :: dzci,dzfi,dzflzi,dzclzi
-    real(8), intent(in   ), dimension(0:,0:,0:) :: u ,v ,w,p
-    real(8), intent(inout), dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
-    real(8), intent(inout), dimension(3) :: tauxo,tauyo,tauzo
-    real(8), intent(out), dimension(0:,0:,0:) :: up,vp,wp
-    real(8), intent(out), dimension(3) :: f
-    real(8),              dimension(n(1),n(2),n(3)) :: dudtrk , dvdtrk , dwdtrk
-    real(8),              dimension(n(1),n(2),n(3)) :: dudtrkd, dvdtrkd, dwdtrkd
-    real(8) :: factor1,factor2,factor12
-    real(8), dimension(3) :: taux,tauy,tauz
+    real(rp), intent(in), dimension(2) :: rkpar
+    integer , intent(in), dimension(3) :: n
+    real(rp), intent(in) :: visc,dt
+    real(rp), intent(in   ), dimension(3) :: dli,l 
+    real(rp), intent(in   ), dimension(0:) :: dzci,dzfi,dzflzi,dzclzi
+    real(rp), intent(in   ), dimension(0:,0:,0:) :: u ,v ,w,p
+    real(rp), intent(inout), dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
+    real(rp), intent(inout), dimension(3) :: tauxo,tauyo,tauzo
+    real(rp), intent(out), dimension(0:,0:,0:) :: up,vp,wp
+    real(rp), intent(out), dimension(3) :: f
+    real(rp),              dimension(n(1),n(2),n(3)) :: dudtrk , dvdtrk , dwdtrk
+    real(rp),              dimension(n(1),n(2),n(3)) :: dudtrkd, dvdtrkd, dwdtrkd
+    real(rp) :: factor1,factor2,factor12
+    real(rp), dimension(3) :: taux,tauy,tauz
     integer :: i,j,k
-    real(8) :: mean
+    real(rp) :: mean
     !
     factor1 = rkpar(1)*dt
     factor2 = rkpar(2)*dt
@@ -164,7 +165,7 @@ module mod_rk
     !
     ! bulk velocity forcing
     !
-    f(:) = 0.d0
+    f(:) = 0.
     if(is_forced(1)) then
       call chkmean(n,dzflzi,up,mean)
       f(1) = velf(1) - mean
@@ -186,9 +187,9 @@ module mod_rk
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
-          up(i,j,k) = up(i,j,k) - .5d0*factor12*dudtrkd(i,j,k)
-          vp(i,j,k) = vp(i,j,k) - .5d0*factor12*dvdtrkd(i,j,k)
-          wp(i,j,k) = wp(i,j,k) - .5d0*factor12*dwdtrkd(i,j,k)
+          up(i,j,k) = up(i,j,k) - .5*factor12*dudtrkd(i,j,k)
+          vp(i,j,k) = vp(i,j,k) - .5*factor12*dvdtrkd(i,j,k)
+          wp(i,j,k) = wp(i,j,k) - .5*factor12*dwdtrkd(i,j,k)
         enddo
       enddo
     enddo
@@ -201,16 +202,16 @@ module mod_rk
     ! for time integration of the scalar field.
     !
     implicit none
-    real(8), intent(in   ), dimension(2) :: rkpar
-    integer, intent(in   ), dimension(3) :: n
-    real(8), intent(in   ), dimension(3) :: dli
-    real(8), intent(in   ), dimension(0:) :: dzci,dzfi,dzflzi,dzclzi
-    real(8), intent(in   ) :: visc,dt
-    real(8), intent(in   ), dimension(0:,0:,0:) :: u,v,w
-    real(8), intent(inout), dimension(:,:,:) :: dsdtrko
-    real(8), intent(inout), dimension(0:,0:,0:) :: s
-    real(8),              dimension(n(1),n(2),n(3)) :: dsdtrk
-    real(8) :: factor1,factor2,factor12
+    real(rp), intent(in   ), dimension(2) :: rkpar
+    integer , intent(in   ), dimension(3) :: n
+    real(rp), intent(in   ), dimension(3) :: dli
+    real(rp), intent(in   ), dimension(0:) :: dzci,dzfi,dzflzi,dzclzi
+    real(rp), intent(in   ) :: visc,dt
+    real(rp), intent(in   ), dimension(0:,0:,0:) :: u,v,w
+    real(rp), intent(inout), dimension(:,:,:) :: dsdtrko
+    real(rp), intent(inout), dimension(0:,0:,0:) :: s
+    real(rp),              dimension(n(1),n(2),n(3)) :: dsdtrk
+    real(rp) :: factor1,factor2,factor12
     integer :: i,j,k
     !
     factor1 = rkpar(1)*dt

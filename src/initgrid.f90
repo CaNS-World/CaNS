@@ -1,5 +1,6 @@
 module mod_initgrid
   use mod_param, only:pi
+  use mod_types
   implicit none
   private
   public initgrid
@@ -10,10 +11,10 @@ module mod_initgrid
     !
     implicit none
     character(len=3) :: inivel
-    integer, intent(in) :: n
-    real(8), intent(in) :: gr,lz
-    real(8), intent(out), dimension(0:n+1) :: dzc,dzf,zc,zf
-    real(8) :: z0
+    integer , intent(in) :: n
+    real(rp), intent(in) :: gr,lz
+    real(rp), intent(out), dimension(0:n+1) :: dzc,dzf,zc,zf
+    real(rp) :: z0
     integer :: k
     procedure (), pointer :: gridpoint => null()
     select case(inivel)
@@ -28,11 +29,11 @@ module mod_initgrid
     ! step 1) determine coordinates of cell faces zf
     !
     do k=1,n
-      z0  = (k-0.d0)/(1.d0*n)
+      z0  = (k-0.)/(1.*n)
       call gridpoint(gr,z0,zf(k))
       zf(k) = zf(k)*lz
     enddo
-    zf(0) = 0.d0
+    zf(0) = 0.
     !
     ! step 2) determine grid spacing between faces dzf
     !
@@ -45,14 +46,14 @@ module mod_initgrid
     ! step 3) determine grid spacing between centers dzc
     !
     do k=0,n
-      dzc(k) = .5d0*(dzf(k)+dzf(k+1))
+      dzc(k) = .5*(dzf(k)+dzf(k+1))
     enddo
     dzc(n+1) = dzc(n)
     !
     ! step 4) compute coordinates of cell centers zc and faces zf
     !
-    zc(0)    = -dzc(0)/2.d0
-    zf(0)    = 0.d0
+    zc(0)    = -dzc(0)/2.
+    zf(0)    = 0.
     do k=1,n+1
       zc(k) = zc(k-1) + dzc(k-1)
       zf(k) = zf(k-1) + dzf(k)
@@ -68,10 +69,10 @@ module mod_initgrid
     ! clustered at the two sides
     !
     implicit none
-    real(8), intent(in) :: alpha,z0
-    real(8), intent(out) :: z
-    if(alpha.ne.0.d0) then
-      z = 0.5d0*(1.d0+tanh((z0-0.5d0)*alpha)/tanh(alpha/2.d0))
+    real(rp), intent(in) :: alpha,z0
+    real(rp), intent(out) :: z
+    if(alpha.ne.0.) then
+      z = 0.5*(1.+tanh((z0-0.5)*alpha)/tanh(alpha/2.))
     else
       z = z0
     endif
@@ -82,10 +83,10 @@ module mod_initgrid
     ! clustered at the lower side
     !
     implicit none
-    real(8), intent(in) :: alpha,z0
-    real(8), intent(out) :: z
-    if(alpha.ne.0.d0) then
-      z = 1.0d0*(1.d0+tanh((z0-1.0d0)*alpha)/tanh(alpha/1.d0))
+    real(rp), intent(in) :: alpha,z0
+    real(rp), intent(out) :: z
+    if(alpha.ne.0.) then
+      z = 1.0*(1.+tanh((z0-1.0)*alpha)/tanh(alpha/1.))
     else
       z = z0
     endif
@@ -96,13 +97,13 @@ module mod_initgrid
     ! clustered in the middle
     !
     implicit none
-    real(8), intent(in) :: alpha,z0
-    real(8), intent(out) :: z
-    if(alpha.ne.0.d0) then
-      if(    z0.le.0.5d0) then 
-        z = 0.5d0*(1.d0-1.d0+tanh(2.d0*alpha*(z0-0.d0))/tanh(alpha))
-      elseif(z0.gt.0.5d0) then
-        z = 0.5d0*(1.d0+1.d0+tanh(2.d0*alpha*(z0-1.d0))/tanh(alpha))
+    real(rp), intent(in) :: alpha,z0
+    real(rp), intent(out) :: z
+    if(alpha.ne.0.) then
+      if(    z0.le.0.5) then 
+        z = 0.5*(1.-1.+tanh(2.*alpha*(z0-0.))/tanh(alpha))
+      elseif(z0.gt.0.5) then
+        z = 0.5*(1.+1.+tanh(2.*alpha*(z0-1.))/tanh(alpha))
       endif
     else
       z = z0

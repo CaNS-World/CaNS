@@ -3,25 +3,26 @@ module mod_solver
   use decomp_2d
   use mod_fft   , only: fft
   use mod_param , only: dims
+  use mod_types
   implicit none
   private
   public solver
   contains
   subroutine solver(n,arrplan,normfft,lambdaxy,a,b,c,bcz,c_or_f,p)
     implicit none
-    integer, intent(in), dimension(3) :: n
+    integer , intent(in), dimension(3) :: n
     type(C_PTR), intent(in), dimension(2,2) :: arrplan
-    real(8), intent(in) :: normfft
-    real(8), intent(in), dimension(n(1),n(2)) :: lambdaxy
-    real(8), intent(in), dimension(n(3)) :: a,b,c
+    real(rp), intent(in) :: normfft
+    real(rp), intent(in), dimension(n(1),n(2)) :: lambdaxy
+    real(rp), intent(in), dimension(n(3)) :: a,b,c
     character(len=1), dimension(0:1), intent(in) :: bcz
     character(len=1), intent(in), dimension(3) :: c_or_f
-    real(8), intent(inout), dimension(0:,0:,0:) :: p
-    real(8), dimension(n(1)*dims(1),n(2)*dims(2)/dims(1),n(3)/dims(2)) :: px
-    real(8), dimension(n(1)*dims(1)/dims(1),n(2)*dims(2),n(3)/dims(2)) :: py
-    real(8), dimension(n(1)        ,n(2)                ,n(3)        ) :: pz
-    !real(8), allocatable, dimension(:,:,:) :: px,py
-    integer, dimension(3) :: ng
+    real(rp), intent(inout), dimension(0:,0:,0:) :: p
+    real(rp), dimension(n(1)*dims(1),n(2)*dims(2)/dims(1),n(3)/dims(2)) :: px
+    real(rp), dimension(n(1)*dims(1)/dims(1),n(2)*dims(2),n(3)/dims(2)) :: py
+    real(rp), dimension(n(1)        ,n(2)                ,n(3)        ) :: pz
+    !real(rp), allocatable, dimension(:,:,:) :: px,py
+    integer , dimension(3) :: ng
     integer :: q
     ng(:) = n(:)
     ng(1:2) = ng(1:2)*dims(1:2)
@@ -67,11 +68,11 @@ module mod_solver
   !
   subroutine gaussel(nx,ny,n,a,b,c,lambdaxy,p)
     implicit none
-    integer, intent(in) :: nx,ny,n
-    real(8), intent(in), dimension(:) :: a,b,c
-    real(8), intent(in), dimension(nx,ny) :: lambdaxy
-    real(8), intent(inout), dimension(:,:,:) :: p
-    real(8), dimension(n) :: bb
+    integer , intent(in) :: nx,ny,n
+    real(rp), intent(in), dimension(:) :: a,b,c
+    real(rp), intent(in), dimension(nx,ny) :: lambdaxy
+    real(rp), intent(inout), dimension(:,:,:) :: p
+    real(rp), dimension(n) :: bb
     integer :: i,j
     !
     !solve tridiagonal system
@@ -93,11 +94,11 @@ module mod_solver
   !
   subroutine gaussel_periodic(nx,ny,n,a,b,c,lambdaxy,p)
     implicit none
-    integer, intent(in) :: nx,ny,n
-    real(8), intent(in), dimension(:) :: a,b,c
-    real(8), intent(in), dimension(nx,ny) :: lambdaxy
-    real(8), intent(inout), dimension(:,:,:) :: p
-    real(8), dimension(n) :: bb,p1,p2
+    integer , intent(in) :: nx,ny,n
+    real(rp), intent(in), dimension(:) :: a,b,c
+    real(rp), intent(in), dimension(nx,ny) :: lambdaxy
+    real(rp), intent(inout), dimension(:,:,:) :: p
+    real(rp), dimension(n) :: bb,p1,p2
     integer :: i,j,info
     !
     !solve tridiagonal system
@@ -111,7 +112,7 @@ module mod_solver
         bb(:)  = b(:) + lambdaxy(i,j)
         p1(1:n-1) = p(i,j,1:n-1)
         call dgtsv_homebrewed(n-1,a(1:n-1),bb(1:n-1),c(1:n-1),p1(1:n-1))
-        p2(:) = 0.d0
+        p2(:) = 0.
         p2(1  ) = -a(1  )
         p2(n-1) = -c(n-1)
         call dgtsv_homebrewed(n-1,a(1:n-1),bb(1:n-1),c(1:n-1),p2(1:n-1))
@@ -126,28 +127,28 @@ module mod_solver
   end subroutine gaussel_periodic
   subroutine dgtsv_homebrewed(n,a,b,c,p)
     implicit none
-    integer, intent(in) :: n
-    real(8), intent(in   ), dimension(:) :: a,b,c
-    real(8), intent(inout), dimension(:) :: p
-    real(8), dimension(n) :: d
-    real(8) :: z
+    integer , intent(in) :: n
+    real(rp), intent(in   ), dimension(:) :: a,b,c
+    real(rp), intent(inout), dimension(:) :: p
+    real(rp), dimension(n) :: d
+    real(rp) :: z
     integer :: l
     !
     ! Gauss elimination
     !
-    z = 1.d0/b(1)
+    z = 1./b(1)
     d(1) = c(1)*z
     p(1) = p(1)*z
     do l=2,n-1
-      z    = 1.d0/(b(l)-a(l)*d(l-1))
+      z    = 1./(b(l)-a(l)*d(l-1))
       d(l) = c(l)*z
       p(l) = (p(l)-a(l)*p(l-1))*z
     enddo
     z = b(n)-a(n)*d(n-1)
-    if(z.ne.0.d0) then
+    if(z.ne.0.) then
       p(n) = (p(n)-a(n)*p(n-1))/z
     else
-      p(n) = 0.d0
+      p(n) = 0.
     endif
     !
     ! backward substitution

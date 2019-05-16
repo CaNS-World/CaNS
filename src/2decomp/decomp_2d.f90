@@ -24,7 +24,7 @@ module decomp_2d
 
   private        ! Make everything private unless declared public
 
-#ifdef DOUBLE_PREC
+#ifndef SINGLE
   integer, parameter, public :: mytype = KIND(0.0D0)
   integer, parameter, public :: real_type = MPI_DOUBLE_PRECISION
   integer, parameter, public :: complex_type = MPI_DOUBLE_COMPLEX

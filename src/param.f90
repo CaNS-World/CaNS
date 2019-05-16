@@ -1,28 +1,29 @@
 module mod_param
+use mod_types
 implicit none
 public
 !
 ! parameters
 !
-real(8), parameter :: pi = acos(-1.d0)
-real(8), parameter :: small = 1.d-9
-logical, parameter, dimension(2,3) :: no_outflow = & 
+real(rp), parameter :: pi = acos(-1._rp)
+real(rp), parameter :: small = 1.e-9
+logical , parameter, dimension(2,3) :: no_outflow = & 
     reshape((/.false.,.false.,   & ! no outflow in x lower,upper bound
               .false.,.false.,   & ! no outflow in y lower,upper bound
               .false.,.false./), & ! no outflow in z lower,upper bound
               shape(no_outflow))
 character(len=100), parameter :: datadir = 'data/'
-real(8), parameter, dimension(2,3) :: rkcoeff = reshape((/ 32.d0/60.d0,  0.d0       , &
-                                                   25.d0/60.d0, -17.d0/60.d0, &
-                                                   45.d0/60.d0, -25.d0/60.d0/), shape(rkcoeff))
-real(8), parameter, dimension(3)   :: rkcoeff12 = rkcoeff(1,:)+rkcoeff(2,:)
+real(rp), parameter, dimension(2,3) :: rkcoeff = reshape((/ 32._rp/60._rp,  0._rp       , &
+                                                            25._rp/60._rp, -17._rp/60._rp, &
+                                                            45._rp/60._rp, -25._rp/60._rp/), shape(rkcoeff))
+real(rp), parameter, dimension(3)   :: rkcoeff12 = rkcoeff(1,:)+rkcoeff(2,:)
 !
 ! variables to be determined from the input file 'dns.in'
 !
 integer :: itot,jtot,ktot,imax,jmax
-real(8) :: lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,gr
-real(8) :: cfl
-real(8) :: uref,lref,rey,visc
+real(rp) :: lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,gr
+real(rp) :: cfl
+real(rp) :: uref,lref,rey,visc
 !
 character(len=100) :: inivel ! DON'T FORGET TO ADD A TRIM IN THE SWITCH COMMAND!
 logical :: is_wallturb
@@ -35,19 +36,19 @@ integer, dimension(2) :: dims = (/2,2/)
 integer :: nthreadsmax = 4
 !
 character(len=1), dimension(0:1,3,3) ::  cbcvel
-real(8)         , dimension(0:1,3,3) :: bcvel
+real(rp)         , dimension(0:1,3,3) :: bcvel
 character(len=1), dimension(0:1,3)   ::  cbcpre
-real(8)         , dimension(0:1,3)   ::   bcpre
+real(rp)         , dimension(0:1,3)   ::   bcpre
 !
-logical, dimension(3) :: is_forced
-real(8), dimension(3) :: velf
-logical, dimension(0:1,3) :: is_outflow
+logical , dimension(3) :: is_forced
+real(rp), dimension(3) :: velf
+logical , dimension(0:1,3) :: is_outflow
 !
-integer, dimension(3) :: ng
-integer, dimension(3) :: n
-real(8), dimension(3) :: l
-real(8), dimension(3) :: dl
-real(8), dimension(3) :: dli
+integer , dimension(3) :: ng
+integer , dimension(3) :: n
+real(rp), dimension(3) :: l
+real(rp), dimension(3) :: dl
+real(rp), dimension(3) :: dli
 !
 contains 
   subroutine read_input(myid)
@@ -87,9 +88,9 @@ contains
         call exit
     endif
     close(iunit)
-    dx = lx/(1.d0*itot)
-    dy = ly/(1.d0*jtot)
-    dz = lz/(1.d0*ktot)
+    dx = lx/(1.*itot)
+    dy = ly/(1.*jtot)
+    dz = lz/(1.*ktot)
     dxi = dx**(-1)
     dyi = dy**(-1)
     dzi = dz**(-1)

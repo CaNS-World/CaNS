@@ -3,6 +3,7 @@ module mod_initflow
   use decomp_2d
   use mod_common_mpi, only: ierr,coord,myid
   use mod_param     , only: dims,pi,dx,dy,dz,lx,ly,lz,uref,lref,is_wallturb
+  use mod_types
   implicit none
   private
   public initflow,add_noise
@@ -13,22 +14,22 @@ module mod_initflow
     !
     implicit none
     character(len=3), intent(in) :: inivel
-    integer, intent(in), dimension(3) :: n
-    real(8), intent(in), dimension(0:) :: zclzi,dzclzi,dzflzi
-    real(8), intent(in) :: visc
-    real(8), dimension(0:,0:,0:), intent(out) :: u,v,w,p
-    real(8), allocatable, dimension(:) :: u1d
-    !real(8), allocatable, dimension(:,:) :: u2d
+    integer , intent(in), dimension(3) :: n
+    real(rp), intent(in), dimension(0:) :: zclzi,dzclzi,dzflzi
+    real(rp), intent(in) :: visc
+    real(rp), dimension(0:,0:,0:), intent(out) :: u,v,w,p
+    real(rp), allocatable, dimension(:) :: u1d
+    !real(rp), allocatable, dimension(:,:) :: u2d
     integer :: i,j,k
-    real(8) :: q
+    real(rp) :: q
     logical :: is_noise,is_mean,is_pair
-    real(8) :: xc,yc,zc,xf,yf,zf
+    real(rp) :: xc,yc,zc,xf,yf,zf
     !
     allocate(u1d(n(3)))
     is_noise = .false.
     is_mean  = .false.
     is_pair  = .false.
-    q = .5d0
+    q = .5
     select case(trim(inivel))
     case('cou')
       call couette(   q,n(3),zclzi,uref,u1d)
@@ -54,17 +55,17 @@ module mod_initflow
       is_mean = .true.
     case('tgv')
       do k=1,n(3)
-        zc = zclzi(k)*2.d0*pi
+        zc = zclzi(k)*2.*pi
         do j=1,n(2)
-          yc = (j+coord(2)*n(2)-.5d0)*dy/ly*2.d0*pi
-          yf = (j+coord(2)*n(2)-.0d0)*dy/ly*2.d0*pi
+          yc = (j+coord(2)*n(2)-.5)*dy/ly*2.*pi
+          yf = (j+coord(2)*n(2)-.0)*dy/ly*2.*pi
           do i=1,n(1)
-            xc = (i+coord(1)*n(1)-.5d0)*dx/lx*2.d0*pi
-            xf = (i+coord(1)*n(1)-.0d0)*dx/lx*2.d0*pi
+            xc = (i+coord(1)*n(1)-.5)*dx/lx*2.*pi
+            xf = (i+coord(1)*n(1)-.0)*dx/lx*2.*pi
             u(i,j,k) =  sin(xf)*cos(yc)*cos(zc)
             v(i,j,k) = -cos(xc)*sin(yf)*cos(zc)
-            w(i,j,k) = 0.d0
-            p(i,j,k) = 0.d0!(cos(2.d0*xc)+cos(2.d0*yc))*(cos(2.d0*zc)+2.d0)/16.d0
+            w(i,j,k) = 0.
+            p(i,j,k) = 0.!(cos(2.*xc)+cos(2.*yc))*(cos(2.*zc)+2.)/16.
           enddo
         enddo
       enddo
@@ -82,17 +83,17 @@ module mod_initflow
         do j=1,n(2)
           do i=1,n(1)
             u(i,j,k) = u1d(k)
-            v(i,j,k) = 0.d0
-            w(i,j,k) = 0.d0
-            p(i,j,k) = 0.d0
+            v(i,j,k) = 0.
+            w(i,j,k) = 0.
+            p(i,j,k) = 0.
           enddo
         enddo
       enddo
     endif
     if(is_noise) then
-      call add_noise(n,123,.50d0,u(1:n(1),1:n(2),1:n(3)))
-      call add_noise(n,456,.50d0,v(1:n(1),1:n(2),1:n(3)))
-      call add_noise(n,789,.50d0,w(1:n(1),1:n(2),1:n(3)))
+      call add_noise(n,123,.5_rp,u(1:n(1),1:n(2),1:n(3)))
+      call add_noise(n,456,.5_rp,v(1:n(1),1:n(2),1:n(3)))
+      call add_noise(n,789,.5_rp,w(1:n(1),1:n(2),1:n(3)))
     endif
     if(is_mean) then
       call set_mean(n,uref,dzflzi,u(1:n(1),1:n(2),1:n(3)))
@@ -110,18 +111,18 @@ module mod_initflow
       ! see Henningson and Kim, JFM 1991
       !
       do k=1,n(3)
-        zc = 2.d0*zclzi(k) - 1.d0 ! z rescaled to be between -1 and +1
-        zf = 2.d0*(zclzi(k) + .5d0*dzflzi(k)) - 1.d0
+        zc = 2.*zclzi(k) - 1. ! z rescaled to be between -1 and +1
+        zf = 2.*(zclzi(k) + .5*dzflzi(k)) - 1.
         do j=1,n(2)
-          yc = ((coord(2)*n(2)+j-0.5)*dy-.5d0*ly)*2.d0/lz
-          yf = ((coord(2)*n(2)+j-0.0)*dy-.5d0*ly)*2.d0/lz
+          yc = ((coord(2)*n(2)+j-0.5)*dy-.5*ly)*2./lz
+          yf = ((coord(2)*n(2)+j-0.0)*dy-.5*ly)*2./lz
           do i=1,n(1)
-            xc = ((coord(1)*n(1)+i-0.5)*dx-.5d0*lx)*2.d0/lz
-            xf = ((coord(1)*n(1)+i-0.0)*dx-.5d0*lx)*2.d0/lz
+            xc = ((coord(1)*n(1)+i-0.5)*dx-.5*lx)*2./lz
+            xf = ((coord(1)*n(1)+i-0.0)*dx-.5*lx)*2./lz
             u(i,j,k) = u1d(k)
-            v(i,j,k) = -1.d0 * gxy(yf,xc)*dfz(zc)
-            w(i,j,k) =  1.d0 * fz(zf)*dgxy(yc,xc)
-            p(i,j,k) = 0.d0
+            v(i,j,k) = -1. * gxy(yf,xc)*dfz(zc)
+            w(i,j,k) =  1. * fz(zf)*dgxy(yc,xc)
+            p(i,j,k) = 0.
           enddo
         enddo
       enddo
@@ -132,12 +133,12 @@ module mod_initflow
   !
   subroutine add_noise(n,iseed,norm,p)
     implicit none
-    integer, intent(in), dimension(3) :: n
-    integer, intent(in) :: iseed
-    real(8), intent(in) :: norm 
-    real(8), intent(inout), dimension(n(1),n(2),n(3)) :: p
+    integer , intent(in), dimension(3) :: n
+    integer , intent(in) :: iseed
+    real(rp), intent(in) :: norm 
+    real(rp), intent(inout), dimension(n(1),n(2),n(3)) :: p
     integer(4), allocatable, dimension(:) :: seed
-    real(8) :: rn
+    real(rp) :: rn
     integer, dimension(3) :: ng
     integer :: i,j,k,ii,jj
     allocate(seed(64))
@@ -153,7 +154,7 @@ module mod_initflow
           call random_number(rn)
           if(ii.ge.1.and.ii.le.n(1) .and. &
              jj.ge.1.and.jj.le.n(2) ) then
-             p(ii,jj,k) = p(ii,jj,k) + 2.d0*(rn-.5d0)*norm
+             p(ii,jj,k) = p(ii,jj,k) + 2.*(rn-.5)*norm
           endif
         enddo
       enddo
@@ -163,13 +164,13 @@ module mod_initflow
   !
   subroutine set_mean(n,mean,dzlzi,p)
   implicit none
-  integer, intent(in), dimension(3) :: n
-  real(8), intent(in), dimension(0:) :: dzlzi 
-  real(8), intent(in) :: mean
-  real(8), intent(inout), dimension(n(1),n(2),n(3)) :: p
-  real(8) :: meanold
+  integer , intent(in), dimension(3) :: n
+  real(rp), intent(in), dimension(0:) :: dzlzi 
+  real(rp), intent(in) :: mean
+  real(rp), intent(inout), dimension(n(1),n(2),n(3)) :: p
+  real(rp) :: meanold
   integer :: i,j,k
-    meanold = 0.d0
+    meanold = 0.
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(n,p,dzlzi) &
     !$OMP PRIVATE(i,j,k) &
@@ -182,10 +183,10 @@ module mod_initflow
       enddo
     enddo
     !$OMP END PARALLEL DO
-    call mpi_allreduce(MPI_IN_PLACE,meanold,1,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
-    meanold = meanold/(1.d0*n(1)*dims(1)*n(2)*dims(2))
+    call mpi_allreduce(MPI_IN_PLACE,meanold,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+    meanold = meanold/(1.*n(1)*dims(1)*n(2)*dims(2))
     !
-    if(meanold.ne.0.d0) then
+    if(meanold.ne.0.) then
       !$OMP WORKSHARE
       p(:,:,:) = p(:,:,:)/meanold*mean
       !$OMP END WORKSHARE
@@ -198,54 +199,54 @@ module mod_initflow
     ! plane couette profile normalized by the wall velocity difference
     !
     implicit none
-    real(8), intent(in)   :: q
-    integer, intent(in)   :: n
-    real(8), intent(in), dimension(0:) :: zc
-    real(8), intent(in)   :: norm
-    real(8), intent(out), dimension(n) :: p
+    real(rp), intent(in)   :: q
+    integer , intent(in)   :: n
+    real(rp), intent(in), dimension(0:) :: zc
+    real(rp), intent(in)   :: norm
+    real(rp), intent(out), dimension(n) :: p
     integer :: k
-    real(8) :: z
+    real(rp) :: z
     do k=1,n
-      z    = zc(k)!1.d0*((k-1)+q)/(1.d0*n)
-      p(k) = .5d0*(1.d0-2.d0*z)*norm
+      z    = zc(k)!1.*((k-1)+q)/(1.*n)
+      p(k) = .5*(1.-2.*z)*norm
     enddo
     return
   end subroutine couette
   !
   subroutine poiseuille(q,n,zc,norm,p)
     implicit none
-    real(8), intent(in)   :: q
-    integer, intent(in)   :: n
-    real(8), intent(in), dimension(0:) :: zc
-    real(8), intent(in)   :: norm
-    real(8), intent(out), dimension(n) :: p
+    real(rp), intent(in)   :: q
+    integer , intent(in)   :: n
+    real(rp), intent(in), dimension(0:) :: zc
+    real(rp), intent(in)   :: norm
+    real(rp), intent(out), dimension(n) :: p
     integer :: k
-    real(8) :: z
+    real(rp) :: z
     !
     ! plane poiseuille profile normalized by the bulk velocity
     !
     do k=1,n
-      z    = zc(k)!1.d0*((k-1)+q)/(1.d0*n)
-      p(k) = 6.d0*z*(1.d0-z)*norm
+      z    = zc(k)!1.*((k-1)+q)/(1.*n)
+      p(k) = 6.*z*(1.-z)*norm
     enddo
     return
   end subroutine poiseuille
   !
   subroutine log_profile(q,n,zc,visc,p)
     implicit none
-    real(8), intent(in)   :: q
-    integer, intent(in)   :: n
-    real(8), intent(in), dimension(0:) :: zc
-    real(8), intent(in)   :: visc
-    real(8), intent(out), dimension(n) :: p
+    real(rp), intent(in)   :: q
+    integer , intent(in)   :: n
+    real(rp), intent(in), dimension(0:) :: zc
+    real(rp), intent(in)   :: visc
+    real(rp), intent(out), dimension(n) :: p
     integer :: k
-    real(8) :: z,reb,retau ! z/lz and bulk Reynolds number
+    real(rp) :: z,reb,retau ! z/lz and bulk Reynolds number
     reb = lref*uref/visc
     retau = 0.09*reb**(0.88) ! from Pope's book
     do k=1,n/2
-      z    = zc(k)*2.*retau!1.d0*((k-1)+q)/(1.d0*n)*2.*retau
-      p(k) = 2.5d0*log(z) + 5.5d0
-      if (z.le.11.6d0) p(k)=z
+      z    = zc(k)*2.*retau!1.*((k-1)+q)/(1.*n)*2.*retau
+      p(k) = 2.5*log(z) + 5.5
+      if (z.le.11.6) p(k)=z
       p(n+1-k) = p(k)
     enddo
     return
@@ -255,26 +256,26 @@ module mod_initflow
   ! (explained above)
   !
   function fz(zc)
-  real(8), intent(in) :: zc
-  real(8) :: fz
-    fz = ((1.d0-zc**2)**2)
+  real(rp), intent(in) :: zc
+  real(rp) :: fz
+    fz = ((1.-zc**2)**2)
   end function
   !
   function dfz(zc)
-  real(8), intent(in) :: zc
-  real(8) :: dfz
-    dfz = -4.d0*zc*(1.d0-zc**2)
+  real(rp), intent(in) :: zc
+  real(rp) :: dfz
+    dfz = -4.*zc*(1.-zc**2)
   end function
   !
   function gxy(xc,yc)
-  real(8), intent(in) :: xc,yc
-  real(8) :: gxy
-    gxy = yc*exp(-4.d0*(4.d0*xc**2+yc**2))
+  real(rp), intent(in) :: xc,yc
+  real(rp) :: gxy
+    gxy = yc*exp(-4.*(4.*xc**2+yc**2))
   end function
   !
   function dgxy(xc,yc)
-  real(8), intent(in) :: xc,yc
-  real(8) :: dgxy
-    dgxy = exp(-4.d0*(4.d0*xc**2+yc**2))*(1.d0-8.d0*yc**2)
+  real(rp), intent(in) :: xc,yc
+  real(rp) :: dgxy
+    dgxy = exp(-4.*(4.*xc**2+yc**2))*(1.-8.*yc**2)
   end function
 end module mod_initflow

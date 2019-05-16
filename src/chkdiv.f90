@@ -1,6 +1,7 @@
 module mod_chkdiv
   use mpi
   use mod_common_mpi, only: myid,coord,ierr
+  use mod_types
   implicit none
   private
   public chkdiv
@@ -10,20 +11,20 @@ module mod_chkdiv
     ! checks the divergence of the velocity field
     !
     implicit none
-    integer, intent(in), dimension(3) :: n
-    real(8), intent(in), dimension(3) :: dli
-    real(8), intent(in), dimension(0:) :: dzfi
-    real(8), intent(in), dimension(0:,0:,0:) :: u,v,w
-    real(8), intent(out) :: divtot,divmax
-    real(8) :: dxi,dyi,div!,dzi,div
+    integer , intent(in), dimension(3) :: n
+    real(rp), intent(in), dimension(3) :: dli
+    real(rp), intent(in), dimension(0:) :: dzfi
+    real(rp), intent(in), dimension(0:,0:,0:) :: u,v,w
+    real(rp), intent(out) :: divtot,divmax
+    real(rp) :: dxi,dyi,div!,dzi,div
     integer :: i,j,k,im,jm,km
     !integer :: ii,jj
     !
     dxi = dli(1)
     dyi = dli(2)
     !dzi = dli(3)
-    divtot = 0.d0
-    divmax = 0.d0
+    divtot = 0.
+    divmax = 0.
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP  SHARED(n,u,v,w,dxi,dyi,dzfi) &
     !$OMP  PRIVATE(i,j,k,im,jm,km,div) &
@@ -47,8 +48,8 @@ module mod_chkdiv
        enddo
     enddo
     !$OMP END PARALLEL DO
-    call mpi_allreduce(MPI_IN_PLACE,divtot,1,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
-    call mpi_allreduce(MPI_IN_PLACE,divmax,1,MPI_REAL8,MPI_MAX,MPI_COMM_WORLD,ierr)
+    call mpi_allreduce(MPI_IN_PLACE,divtot,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+    call mpi_allreduce(MPI_IN_PLACE,divmax,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
     if(myid.eq.0) print*, 'Total divergence = ', divtot, '| Maximum divergence = ', divmax
     return
   end subroutine chkdiv

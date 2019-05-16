@@ -2,6 +2,7 @@ module mod_debug
   use mpi
   use mod_common_mpi, only: myid,ierr,coord
   use mod_param     , only: dims
+  use mod_types
   implicit none
   private
   public chkmean,chk_helmholtz
@@ -11,12 +12,12 @@ module mod_debug
     ! compute the mean value of an observable over the entire domain
     !
     implicit none
-    integer, intent(in), dimension(3) :: n
-    real(8), intent(in), dimension(0:) :: dzlzi
-    real(8), intent(in), dimension(0:,0:,0:) :: p
-    real(8), intent(out) :: mean
+    integer , intent(in), dimension(3) :: n
+    real(rp), intent(in), dimension(0:) :: dzlzi
+    real(rp), intent(in), dimension(0:,0:,0:) :: p
+    real(rp), intent(out) :: mean
     integer :: i,j,k
-    mean = 0.d0
+    mean = 0.
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(n,p,dzlzi) &
     !$OMP PRIVATE(i,j,k) &
@@ -29,8 +30,8 @@ module mod_debug
       enddo
     enddo
     !$OMP END PARALLEL DO
-    call mpi_allreduce(MPI_IN_PLACE,mean,1,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
-    mean = mean/(1.d0*n(1)*dims(1)*n(2)*dims(2))
+    call mpi_allreduce(MPI_IN_PLACE,mean,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+    mean = mean/(1.*n(1)*dims(1)*n(2)*dims(2))
     return
   end subroutine chkmean
   !
@@ -40,15 +41,15 @@ module mod_debug
     ! correct
     !
     implicit none
-    integer, intent(in), dimension(3) :: n
-    real(8), intent(in), dimension(2) :: dli
-    real(8), intent(in) :: alpha
-    real(8), intent(in), dimension(0:) :: dzfi,dzci
-    real(8), intent(in), dimension(0:,0:,0:) :: fp,fpp
+    integer , intent(in), dimension(3) :: n
+    real(rp), intent(in), dimension(2) :: dli
+    real(rp), intent(in) :: alpha
+    real(rp), intent(in), dimension(0:) :: dzfi,dzci
+    real(rp), intent(in), dimension(0:,0:,0:) :: fp,fpp
     character(len=1), intent(in), dimension(0:1,3) :: bc
     character(len=1), intent(in), dimension(3) :: c_or_f
-    real(8), intent(out) :: diffmax
-    real(8) :: val
+    real(rp), intent(out) :: diffmax
+    real(rp) :: val
     integer :: i,j,k,im,ip,jm,jp,km,kp
     integer :: idir
     integer, dimension(3) :: q
@@ -62,7 +63,7 @@ module mod_debug
     ! need to compute the maximum difference!
     !
     case('c')
-      diffmax = 0.d0
+      diffmax = 0.
       do k=1,n(3)-q(3)
         kp = k + 1
         km = k - 1
@@ -73,8 +74,8 @@ module mod_debug
             ip = i + 1
             im = i - 1
             val =  fpp(i,j,k)+(1./alpha)*( &
-                  (fpp(ip,j,k)-2.d0*fpp(i,j,k)+fpp(im,j,k))*(dli(1)**2) + &
-                  (fpp(i,jp,k)-2.d0*fpp(i,j,k)+fpp(i,jm,k))*(dli(2)**2) + &
+                  (fpp(ip,j,k)-2.*fpp(i,j,k)+fpp(im,j,k))*(dli(1)**2) + &
+                  (fpp(i,jp,k)-2.*fpp(i,j,k)+fpp(i,jm,k))*(dli(2)**2) + &
                  ((fpp(i,j,kp)-fpp(i,j,k ))*dzci(k ) - &
                   (fpp(i,j,k )-fpp(i,j,km))*dzci(km))*dzfi(k) )
             val = val*alpha
@@ -86,7 +87,7 @@ module mod_debug
         enddo
       enddo
     case('f')
-      diffmax = 0.d0
+      diffmax = 0.
       do k=1,n(3)-q(3)
         kp = k + 1
         km = k - 1
@@ -97,8 +98,8 @@ module mod_debug
             ip = i + 1
             im = i - 1
             val =  fpp(i,j,k)+(1./alpha)*( &
-                  (fpp(ip,j,k)-2.d0*fpp(i,j,k)+fpp(im,j,k))*(dli(1)**2) + &
-                  (fpp(i,jp,k)-2.d0*fpp(i,j,k)+fpp(i,jm,k))*(dli(2)**2) + &
+                  (fpp(ip,j,k)-2.*fpp(i,j,k)+fpp(im,j,k))*(dli(1)**2) + &
+                  (fpp(i,jp,k)-2.*fpp(i,j,k)+fpp(i,jm,k))*(dli(2)**2) + &
                  ((fpp(i,j,kp)-fpp(i,j,k ))*dzfi(kp) - &
                   (fpp(i,j,k )-fpp(i,j,km))*dzfi(k ))*dzci(k) )
             val = val*alpha
@@ -110,7 +111,7 @@ module mod_debug
         enddo
       enddo
     end select
-    call mpi_allreduce(MPI_IN_PLACE,diffmax,1,MPI_REAL8,MPI_MAX,MPI_COMM_WORLD,ierr)
+    call mpi_allreduce(MPI_IN_PLACE,diffmax,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
     return
   end subroutine chk_helmholtz
 end module mod_debug

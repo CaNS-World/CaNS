@@ -3,6 +3,7 @@ module mod_fft
   use mod_common_mpi, only: ierr
   use mod_fftw_param
   use mod_param     , only:dims
+  use mod_types
   !$ use omp_lib
   private
   public fftini,fftend,fft
@@ -13,15 +14,15 @@ module mod_fft
     character(len=1), intent(in), dimension(0:1,2) :: bcxy
     character(len=1), intent(in), dimension(2) :: c_or_f
     type(C_PTR), intent(out), dimension(2,2) :: arrplan
-    real(8), intent(out) :: normfft
-    real(8), dimension(nx,ny/dims(1),nz/dims(2))  :: arrx
-    real(8), dimension(nx/dims(1),ny,nz/dims(2))  :: arry
+    real(rp), intent(out) :: normfft
+    real(rp), dimension(nx,ny/dims(1),nz/dims(2))  :: arrx
+    real(rp), dimension(nx/dims(1),ny,nz/dims(2))  :: arry
     type(C_PTR) :: plan_fwd_x,plan_bwd_x, &
                    plan_fwd_y,plan_bwd_y
     type(fftw_iodim), dimension(1) :: iodim
     type(fftw_iodim), dimension(2) :: iodim_howmany
     integer :: kind_fwd,kind_bwd
-    real(8), dimension(2) :: norm
+    real(rp), dimension(2) :: norm
     integer(C_INT) :: nx_x,ny_x,nz_x, &
                       nx_y,ny_y,nz_y
     integer :: ix,iy
@@ -39,7 +40,7 @@ module mod_fft
     ny_y = ny
     nz_y = nz/dims(2)
     !
-    normfft = 1.d0
+    normfft = 1.
     ix = 0 
     ! size of transform reduced by 1 point with Dirichlet BC in face
     if(bcxy(0,1)//bcxy(1,1).eq.'DD'.and.c_or_f(1).eq.'f') ix = 1
@@ -89,19 +90,31 @@ module mod_fft
   subroutine fftend(arrplan)
     implicit none
     type(C_PTR), intent(in), dimension(2,2) :: arrplan
+#ifdef SINGLE
+    call sfftw_destroy_plan(arrplan(1,1))
+    call sfftw_destroy_plan(arrplan(1,2))
+    call sfftw_destroy_plan(arrplan(2,1))
+    call sfftw_destroy_plan(arrplan(2,2))
+    !$call sfftw_cleanup_threads(ierr)
+#else
     call dfftw_destroy_plan(arrplan(1,1))
     call dfftw_destroy_plan(arrplan(1,2))
     call dfftw_destroy_plan(arrplan(2,1))
     call dfftw_destroy_plan(arrplan(2,2))
     !$call dfftw_cleanup_threads(ierr)
+#endif
     return
   end subroutine fftend
   !
   subroutine fft(plan,arr)
     implicit none
     type(C_PTR), intent(in) :: plan 
-    real(8), intent(inout), dimension(:,:,:) :: arr
+    real(rp), intent(inout), dimension(:,:,:) :: arr
+#ifdef SINGLE
+    call sfftw_execute_r2r(plan,arr,arr)
+#else
     call dfftw_execute_r2r(plan,arr,arr)
+#endif
     return
   end subroutine fft
   !
@@ -109,53 +122,53 @@ module mod_fft
   implicit none
   character(len=1), intent(in), dimension(0:1) :: bc
   character(len=1), intent(in) :: c_or_f
-  integer, intent(out) :: kind_fwd,kind_bwd
-  real(8), intent(out), dimension(2) :: norm
+  integer , intent(out) :: kind_fwd,kind_bwd
+  real(rp), intent(out), dimension(2) :: norm
   if(c_or_f.eq.'c') then
     select case(bc(0)//bc(1))
     case('PP')
       kind_fwd = FFTW_R2HC
       kind_bwd = FFTW_HC2R
-      norm = (/1.d0,0.d0/)
+      norm = (/1.,0./)
     case('NN')
       kind_fwd = FFTW_REDFT10
       kind_bwd = FFTW_REDFT01
-      norm = (/2.d0,0.d0/)
+      norm = (/2.,0./)
     case('DD')
       kind_fwd = FFTW_RODFT10
       kind_bwd = FFTW_RODFT01
-      norm = (/2.d0,0.d0/)
+      norm = (/2.,0./)
     case('ND')
       kind_fwd = FFTW_REDFT11
       kind_bwd = FFTW_REDFT11
-      norm = (/2.d0,0.d0/)
+      norm = (/2.,0./)
     case('DN')
       kind_fwd = FFTW_RODFT11
       kind_bwd = FFTW_RODFT11
-      norm = (/2.d0,0.d0/)
+      norm = (/2.,0./)
     end select
   elseif(c_or_f.eq.'f') then
     select case(bc(0)//bc(1))
     case('PP')
       kind_fwd = FFTW_R2HC
       kind_bwd = FFTW_HC2R
-      norm = (/1.d0,0.d0/)
+      norm = (/1.,0./)
     case('NN')
       kind_fwd = FFTW_REDFT00
       kind_bwd = FFTW_REDFT00
-      norm = (/2.d0,-1.d0/)
+      norm = (/2.,-1./)
     case('DD')
       kind_fwd = FFTW_RODFT00
       kind_bwd = FFTW_RODFT00
-      norm = (/2.d0,1.d0/)
+      norm = (/2.,1./)
     case('ND')
       kind_fwd = FFTW_REDFT10
       kind_bwd = FFTW_REDFT01
-      norm = (/2.d0,0.d0/)
+      norm = (/2.,0./)
     case('DN')
       kind_fwd = FFTW_RODFT01
       kind_bwd = FFTW_RODFT10
-      norm = (/2.d0,0.d0/)
+      norm = (/2.,0./)
     end select
   endif
   return

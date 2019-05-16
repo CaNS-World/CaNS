@@ -2,21 +2,22 @@ module mod_mom
   use mpi
   use mod_param     , only: dims
   use mod_common_mpi, only: ierr
+  use mod_types
   implicit none
   private
   public momxad,momyad,momzad,momxp,momyp,momzp
   contains
   subroutine momxad(nx,ny,nz,dxi,dyi,dzi,dzci,dzfi,dzflzi,visc,u,v,w,dudt,taux)
     implicit none
-    integer, intent(in) :: nx,ny,nz
-    real(8), intent(in) :: dxi,dyi,dzi,visc
-    real(8), intent(in), dimension(0:) :: dzci,dzfi,dzflzi
-    real(8), dimension(0:,0:,0:), intent(in) :: u,v,w
-    real(8), dimension(:,:,:), intent(out) :: dudt
-    real(8), dimension(3)  , intent(out) :: taux
+    integer , intent(in) :: nx,ny,nz
+    real(rp), intent(in) :: dxi,dyi,dzi,visc
+    real(rp), intent(in), dimension(0:) :: dzci,dzfi,dzflzi
+    real(rp), dimension(0:,0:,0:), intent(in) :: u,v,w
+    real(rp), dimension(:,:,:), intent(out) :: dudt
+    real(rp), dimension(3)  , intent(out) :: taux
     integer :: im,ip,jm,jp,km,kp,i,j,k
-    real(8) :: uuip,uuim,uvjp,uvjm,uwkp,uwkm
-    real(8) :: dudxp,dudxm,dudyp,dudym,dudzp,dudzm
+    real(rp) :: uuip,uuim,uvjp,uvjm,uwkp,uwkm
+    real(rp) :: dudxp,dudxm,dudyp,dudym,dudzp,dudzm
     integer :: nxg,nyg,nzg
     !
     !$OMP PARALLEL DO DEFAULT(none) &
@@ -33,12 +34,12 @@ module mod_mom
         do i=1,nx
           ip = i + 1
           im = i - 1
-          uuip  = 0.25d0*( u(ip,j,k)+u(i,j,k) )*( u(ip,j ,k )+u(i,j ,k ) )
-          uuim  = 0.25d0*( u(im,j,k)+u(i,j,k) )*( u(im,j ,k )+u(i,j ,k ) )
-          uvjp  = 0.25d0*( u(i,jp,k)+u(i,j,k) )*( v(ip,j ,k )+v(i,j ,k ) )
-          uvjm  = 0.25d0*( u(i,jm,k)+u(i,j,k) )*( v(ip,jm,k )+v(i,jm,k ) )
-          uwkp  = 0.25d0*( u(i,j,kp)+u(i,j,k) )*( w(ip,j ,k )+w(i,j ,k ) )
-          uwkm  = 0.25d0*( u(i,j,km)+u(i,j,k) )*( w(ip,j ,km)+w(i,j ,km) )
+          uuip  = 0.25*( u(ip,j,k)+u(i,j,k) )*( u(ip,j ,k )+u(i,j ,k ) )
+          uuim  = 0.25*( u(im,j,k)+u(i,j,k) )*( u(im,j ,k )+u(i,j ,k ) )
+          uvjp  = 0.25*( u(i,jp,k)+u(i,j,k) )*( v(ip,j ,k )+v(i,j ,k ) )
+          uvjm  = 0.25*( u(i,jm,k)+u(i,j,k) )*( v(ip,jm,k )+v(i,jm,k ) )
+          uwkp  = 0.25*( u(i,j,kp)+u(i,j,k) )*( w(ip,j ,k )+w(i,j ,k ) )
+          uwkm  = 0.25*( u(i,j,km)+u(i,j,k) )*( w(ip,j ,km)+w(i,j ,km) )
           dudxp = (u(ip,j,k)-u(i,j,k))*dxi
           dudxm = (u(i,j,k)-u(im,j,k))*dxi
           dudyp = (u(i,jp,k)-u(i,j,k))*dyi
@@ -70,27 +71,27 @@ module mod_mom
         taux(3) = taux(3) + (dudzp+dudzm)
       enddo
     enddo
-    call mpi_allreduce(MPI_IN_PLACE,taux(1),3,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+    call mpi_allreduce(MPI_IN_PLACE,taux(1),3,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
     nxg = nx*dims(1)
     nyg = ny*dims(2)
     nzg = nz
-    taux(1) = taux(1)/(1.d0*nyg)
-    taux(2) = taux(2)/(1.d0*nxg)
-    taux(3) = taux(3)/(1.d0*nxg*nyg)
+    taux(1) = taux(1)/(1.*nyg)
+    taux(2) = taux(2)/(1.*nxg)
+    taux(3) = taux(3)/(1.*nxg*nyg)
     return
   end subroutine momxad
   !
   subroutine momyad(nx,ny,nz,dxi,dyi,dzi,dzci,dzfi,dzflzi,visc,u,v,w,dvdt,tauy)
     implicit none
-    integer, intent(in) :: nx,ny,nz
-    real(8), intent(in) :: dxi,dyi,dzi,visc
-    real(8), intent(in), dimension(0:) :: dzci,dzfi,dzflzi
-    real(8), dimension(0:,0:,0:), intent(in) :: u,v,w
-    real(8), dimension(:,:,:), intent(out) :: dvdt
-    real(8), dimension(3), intent(out) :: tauy
+    integer , intent(in) :: nx,ny,nz
+    real(rp), intent(in) :: dxi,dyi,dzi,visc
+    real(rp), intent(in), dimension(0:) :: dzci,dzfi,dzflzi
+    real(rp), dimension(0:,0:,0:), intent(in) :: u,v,w
+    real(rp), dimension(:,:,:), intent(out) :: dvdt
+    real(rp), dimension(3), intent(out) :: tauy
     integer :: im,ip,jm,jp,km,kp,i,j,k
-    real(8) :: uvip,uvim,vvjp,vvjm,wvkp,wvkm
-    real(8) :: dvdxp,dvdxm,dvdyp,dvdym,dvdzp,dvdzm
+    real(rp) :: uvip,uvim,vvjp,vvjm,wvkp,wvkm
+    real(rp) :: dvdxp,dvdxm,dvdyp,dvdym,dvdzp,dvdzm
     integer :: nxg,nyg,nzg
     !
     !$OMP PARALLEL DO DEFAULT(none) &
@@ -107,12 +108,12 @@ module mod_mom
         do i=1,nx
           ip = i + 1
           im = i - 1
-          uvip  = 0.25d0*( u(i ,j,k)+u(i ,jp,k) )*( v(i,j,k )+v(ip,j ,k) )
-          uvim  = 0.25d0*( u(im,j,k)+u(im,jp,k) )*( v(i,j,k )+v(im,j ,k) )
-          vvjp  = 0.25d0*( v(i,j,k )+v(i,jp,k)  )*( v(i,j,k )+v(i ,jp,k) )
-          vvjm  = 0.25d0*( v(i,j,k )+v(i,jm,k)  )*( v(i,j,k )+v(i ,jm,k) )
-          wvkp  = 0.25d0*( w(i,j,k )+w(i,jp,k)  )*( v(i,j,kp)+v(i ,j ,k) )
-          wvkm  = 0.25d0*( w(i,j,km)+w(i,jp,km) )*( v(i,j,km)+v(i ,j ,k) )
+          uvip  = 0.25*( u(i ,j,k)+u(i ,jp,k) )*( v(i,j,k )+v(ip,j ,k) )
+          uvim  = 0.25*( u(im,j,k)+u(im,jp,k) )*( v(i,j,k )+v(im,j ,k) )
+          vvjp  = 0.25*( v(i,j,k )+v(i,jp,k)  )*( v(i,j,k )+v(i ,jp,k) )
+          vvjm  = 0.25*( v(i,j,k )+v(i,jm,k)  )*( v(i,j,k )+v(i ,jm,k) )
+          wvkp  = 0.25*( w(i,j,k )+w(i,jp,k)  )*( v(i,j,kp)+v(i ,j ,k) )
+          wvkm  = 0.25*( w(i,j,km)+w(i,jp,km) )*( v(i,j,km)+v(i ,j ,k) )
           dvdxp = (v(ip,j,k)-v(i,j,k))*dxi
           dvdxm = (v(i,j,k)-v(im,j,k))*dxi
           dvdyp = (v(i,jp,k)-v(i,j,k))*dyi
@@ -144,27 +145,27 @@ module mod_mom
         tauy(3) = tauy(3) + (dvdzp+dvdzm)
       enddo
     enddo
-    call mpi_allreduce(MPI_IN_PLACE,tauy(1),3,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+    call mpi_allreduce(MPI_IN_PLACE,tauy(1),3,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
     nxg = nx*dims(1)
     nyg = ny*dims(2)
     nzg = nz
-    tauy(1) = tauy(1)/(1.d0*nyg)
-    tauy(2) = tauy(2)/(1.d0*nxg)
-    tauy(3) = tauy(3)/(1.d0*nxg*nyg)
+    tauy(1) = tauy(1)/(1.*nyg)
+    tauy(2) = tauy(2)/(1.*nxg)
+    tauy(3) = tauy(3)/(1.*nxg*nyg)
     return
   end subroutine momyad
   !
   subroutine momzad(nx,ny,nz,dxi,dyi,dzi,dzci,dzfi,dzflzi,visc,u,v,w,dwdt,tauz)
     implicit none
-    integer, intent(in) :: nx,ny,nz
-    real(8), intent(in) :: dxi,dyi,dzi,visc
-    real(8), intent(in), dimension(0:) :: dzci,dzfi,dzflzi
-    real(8), dimension(0:,0:,0:), intent(in) :: u,v,w
-    real(8), dimension(:,:,:), intent(out) :: dwdt
-    real(8), dimension(3), intent(out) :: tauz
+    integer , intent(in) :: nx,ny,nz
+    real(rp), intent(in) :: dxi,dyi,dzi,visc
+    real(rp), intent(in), dimension(0:) :: dzci,dzfi,dzflzi
+    real(rp), dimension(0:,0:,0:), intent(in) :: u,v,w
+    real(rp), dimension(:,:,:), intent(out) :: dwdt
+    real(rp), dimension(3), intent(out) :: tauz
     integer :: im,ip,jm,jp,km,kp,i,j,k
-    real(8) :: uwip,uwim,vwjp,vwjm,wwkp,wwkm
-    real(8) :: dwdxp,dwdxm,dwdyp,dwdym,dwdzp,dwdzm
+    real(rp) :: uwip,uwim,vwjp,vwjm,wwkp,wwkm
+    real(rp) :: dwdxp,dwdxm,dwdyp,dwdym,dwdzp,dwdzm
     integer :: nxg,nyg,nzg
     !
     !$OMP PARALLEL DO DEFAULT(none) &
@@ -181,12 +182,12 @@ module mod_mom
         do i=1,nx
           ip = i + 1
           im = i - 1
-          uwip  = 0.25d0*( w(i,j,k)+w(ip,j,k) )*( u(i ,j ,k)+u(i ,j ,kp) )
-          uwim  = 0.25d0*( w(i,j,k)+w(im,j,k) )*( u(im,j ,k)+u(im,j ,kp) )
-          vwjp  = 0.25d0*( w(i,j,k)+w(i,jp,k) )*( v(i ,j ,k)+v(i ,j ,kp) )
-          vwjm  = 0.25d0*( w(i,j,k)+w(i,jm,k) )*( v(i ,jm,k)+v(i ,jm,kp) )
-          wwkp  = 0.25d0*( w(i,j,k)+w(i,j,kp) )*( w(i ,j ,k)+w(i ,j ,kp) )
-          wwkm  = 0.25d0*( w(i,j,k)+w(i,j,km) )*( w(i ,j ,k)+w(i ,j ,km) )
+          uwip  = 0.25*( w(i,j,k)+w(ip,j,k) )*( u(i ,j ,k)+u(i ,j ,kp) )
+          uwim  = 0.25*( w(i,j,k)+w(im,j,k) )*( u(im,j ,k)+u(im,j ,kp) )
+          vwjp  = 0.25*( w(i,j,k)+w(i,jp,k) )*( v(i ,j ,k)+v(i ,j ,kp) )
+          vwjm  = 0.25*( w(i,j,k)+w(i,jm,k) )*( v(i ,jm,k)+v(i ,jm,kp) )
+          wwkp  = 0.25*( w(i,j,k)+w(i,j,kp) )*( w(i ,j ,k)+w(i ,j ,kp) )
+          wwkm  = 0.25*( w(i,j,k)+w(i,j,km) )*( w(i ,j ,k)+w(i ,j ,km) )
           dwdxp = (w(ip,j,k)-w(i,j,k))*dxi
           dwdxm = (w(i,j,k)-w(im,j,k))*dxi
           dwdyp = (w(i,jp,k)-w(i,j,k))*dyi
@@ -218,22 +219,22 @@ module mod_mom
         tauz(2) = tauz(2) + (dwdyp+dwdym)
       enddo
     enddo
-    call mpi_allreduce(MPI_IN_PLACE,tauz(1),3,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+    call mpi_allreduce(MPI_IN_PLACE,tauz(1),3,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
     nxg = nx*dims(1)
     nyg = ny*dims(2)
     nzg = nz
-    tauz(1) = tauz(1)/(1.d0*nyg)
-    tauz(2) = tauz(2)/(1.d0*nxg)
-    tauz(3) = tauz(3)/(1.d0*nxg*nyg)
+    tauz(1) = tauz(1)/(1.*nyg)
+    tauz(2) = tauz(2)/(1.*nxg)
+    tauz(3) = tauz(3)/(1.*nxg*nyg)
     return
   end subroutine momzad
   !
   subroutine momxp(nx,ny,nz,dxi,p,dudt)
     implicit none
-    integer, intent(in) :: nx,ny,nz
-    real(8), intent(in) :: dxi 
-    real(8), dimension(0:,0:,0:), intent(in) :: p
-    real(8), dimension(:,:,:), intent(out) :: dudt
+    integer , intent(in) :: nx,ny,nz
+    real(rp), intent(in) :: dxi 
+    real(rp), dimension(0:,0:,0:), intent(in) :: p
+    real(rp), dimension(:,:,:), intent(out) :: dudt
     integer :: i,j,k
     integer :: ip
     !
@@ -254,10 +255,10 @@ module mod_mom
   !
   subroutine momyp(nx,ny,nz,dyi,p,dvdt)
     implicit none
-    integer, intent(in) :: nx,ny,nz
-    real(8), intent(in) :: dyi 
-    real(8), dimension(0:,0:,0:), intent(in) :: p
-    real(8), dimension(:,:,:), intent(out) :: dvdt
+    integer , intent(in) :: nx,ny,nz
+    real(rp), intent(in) :: dyi 
+    real(rp), dimension(0:,0:,0:), intent(in) :: p
+    real(rp), dimension(:,:,:), intent(out) :: dvdt
     integer :: i,j,k
     integer :: jp
     !
@@ -278,10 +279,10 @@ module mod_mom
   !
   subroutine momzp(nx,ny,nz,dzci,p,dwdt)
     implicit none
-    integer, intent(in) :: nx,ny,nz
-    real(8), intent(in), dimension(0:) :: dzci
-    real(8), dimension(0:,0:,0:), intent(in) :: p
-    real(8), dimension(:,:,:), intent(out) :: dwdt
+    integer , intent(in) :: nx,ny,nz
+    real(rp), intent(in), dimension(0:) :: dzci
+    real(rp), dimension(0:,0:,0:), intent(in) :: p
+    real(rp), dimension(:,:,:), intent(out) :: dwdt
     integer :: kp
     integer :: i,j,k
     !

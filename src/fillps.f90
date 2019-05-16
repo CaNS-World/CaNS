@@ -1,4 +1,5 @@
 module mod_fillps
+  use mod_types
   implicit none
   private
   public fillps
@@ -14,14 +15,14 @@ module mod_fillps
     !          dz                    dy                    dx
     !
     implicit none
-    integer, intent(in), dimension(3) :: n
-    real(8), intent(in), dimension(3) :: dli
-    real(8), intent(in), dimension(0:) :: dzfi
-    real(8), intent(in) :: dti
-    real(8), intent(in ), dimension(0:,0:,0:) :: up,vp,wp
-    real(8), intent(out), dimension(0:,0:,0:) :: p
-    real(8) :: dtidxi,dtidyi!,dtidzi
-    real(8), dimension(0:n(3)+1) :: dtidzfi
+    integer , intent(in), dimension(3) :: n
+    real(rp), intent(in), dimension(3) :: dli
+    real(rp), intent(in), dimension(0:) :: dzfi
+    real(rp), intent(in) :: dti
+    real(rp), intent(in ), dimension(0:,0:,0:) :: up,vp,wp
+    real(rp), intent(out), dimension(0:,0:,0:) :: p
+    real(rp) :: dtidxi,dtidyi!,dtidzi
+    real(rp), dimension(0:n(3)+1) :: dtidzfi
     integer :: i,j,k,im,jm,km
     !
     dtidxi = dti*dli(1)

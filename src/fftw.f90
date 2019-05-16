@@ -14,7 +14,11 @@ module mod_fftw_param
        type(fftw_iodim), dimension(*), intent(in) :: dims
        integer(C_INT), value :: howmany_rank
        type(fftw_iodim), dimension(*), intent(in) :: howmany_dims
+#ifdef SINGLE
+       real(C_FLOAT ), dimension(*), intent(out) :: in,out
+#else
        real(C_DOUBLE), dimension(*), intent(out) :: in,out
+#endif
        integer(C_INT) :: kind
        integer(C_INT), value :: flags
      end function fftw_plan_guru_r2r
