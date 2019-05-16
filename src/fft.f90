@@ -5,7 +5,7 @@ module mod_fft
   use mod_param     , only:dims
   !$ use omp_lib
   private
-  public fftini,fftend,fftd,ffti
+  public fftini,fftend,fft
   contains
   subroutine fftini(nx,ny,nz,bcxy,c_or_f,arrplan,normfft)
     implicit none
@@ -97,21 +97,13 @@ module mod_fft
     return
   end subroutine fftend
   !
-  subroutine fftd(plan,arr)
+  subroutine fft(plan,arr)
     implicit none
     type(C_PTR), intent(in) :: plan 
     real(8), intent(inout), dimension(:,:,:) :: arr
     call dfftw_execute_r2r(plan,arr,arr)
     return
-  end subroutine fftd
-  !
-  subroutine ffti(plan,arr)
-    implicit none
-    type(C_PTR), intent(in) :: plan 
-    real(8), intent(inout), dimension(:,:,:) :: arr
-    call dfftw_execute_r2r(plan,arr,arr)
-    return
-  end subroutine ffti
+  end subroutine fft
   !
   subroutine find_fft(bc,c_or_f,kind_fwd,kind_bwd,norm)
   implicit none

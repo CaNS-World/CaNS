@@ -1,7 +1,7 @@
 module mod_solver
   use iso_c_binding, only: C_PTR
   use decomp_2d
-  use mod_fft   , only: fftd,ffti
+  use mod_fft   , only: fft
   use mod_param , only: dims
   implicit none
   private
@@ -34,10 +34,10 @@ module mod_solver
     call transpose_z_to_x(pz,px)
     !call transpose_z_to_y(pz,py)
     !call transpose_y_to_x(py,px)
-    call fftd(arrplan(1,1),px) ! fwd transform in x
+    call fft(arrplan(1,1),px) ! fwd transform in x
     !
     call transpose_x_to_y(px,py)
-    call fftd(arrplan(1,2),py) ! fwd transform in y
+    call fft(arrplan(1,2),py) ! fwd transform in y
     !
     call transpose_y_to_z(py,pz)
     q = 0
@@ -49,10 +49,10 @@ module mod_solver
     endif
     !
     call transpose_z_to_y(pz,py)
-    call ffti(arrplan(2,2),py) ! bwd transform in y
+    call fft(arrplan(2,2),py) ! bwd transform in y
     !
     call transpose_y_to_x(py,px)
-    call ffti(arrplan(2,1),px) ! bwd transform in x
+    call fft(arrplan(2,1),px) ! bwd transform in x
     !
     call transpose_x_to_z(px,pz)
     !call transpose_x_to_y(px,py)
