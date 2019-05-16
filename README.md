@@ -21,6 +21,8 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 08/02/2019 -- Input files corresponding to the simulations presented in the manuscript above have been added to `examples/`.
 
+16/05/2019 -- Now a single input file, `dns.in`, can be used to run the executable without re-compiling the source. The `examples/` folder has been updated accordingly. The code with the old input files (not maintained) can be found in branch `old_input_files`.
+
 ## Features
 
 Some features are:
@@ -48,17 +50,15 @@ The fluid flow is solved with a second-order finite-volume pressure correction s
 
 ## Usage
 
-### Input files
+### Input file
 
-The input (header) files inside the `src/` folder, `setup.h90` and `bc.h90` setup a case. `setup.h90` sets most of the physical and computational parameters, and `bc.h90` the boundary conditions for the Pressure and velocity fields, together with some options for forcing the flow and inflow/outflow conditions. The comments in these files make them self-explanatory.
+The input file `dns.in` sets up a case, i.e. the physical and computational parameters, boundary conditions, etc. See `src/INFO_INPUT.md` for a detailed description of the input file.
 
-In the `examples/` folder are examples of these files for several canonical flows.
+In the `examples/` folder are examples input files for several canonical flows.
 
-The files `out1d.h90`, `out2d.h90` and `out3d.h90` in `src/` set which data are written in 1-, 2- and 3-dimensional output files, respectively. The corresponding output frequency is also set in `setup.h90`.
+Also, files `out1d.h90`, `out2d.h90` and `out3d.h90` in `src/` set which data are written in 1-, 2- and 3-dimensional output files, respectively. *The code should be recompiled after editing these three files*.
 
 ### Compilation
-
-After modifying files `setup.h90`, `bc.h90` and `out?d.h90`, the code should be compiled. 
 
 The prerequisites are the following:
 
@@ -73,9 +73,15 @@ The Makefile should be modified in agreement to the installation paths of each l
  * `-DTIMING`  : wall-clock time per timestep is computed
  * `-DIMPDIFF` : diffusion term of the N-S equations is integrated in time with an implicit discretization (thereby improving the stability of the numerical algorithm for viscous-dominated flows)
 
+Typing `make run` will compile the code and copy the executable `cans` and input file `dns.in` to a `run/` folder.
+
 ### Running the code
 
-Run the executable with `mpirun` with a number of tasks and shared threads complying to what has been set in the input file `setup.h90`. Data will be written by default in a folder named `data/`, which must be located where the executable is run.
+Run the executable with `mpirun` with a number of tasks and shared threads complying to what has been set in the input file `dns.bin`. Data will be written by default in a folder named `data/`, which must be located where the executable is run.
+
+### Visualizing data
+
+See `src/INFO_VISU.md`.
 
 ## Notes
 
