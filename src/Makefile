@@ -1,16 +1,6 @@
-#
-# src, run and data directories
-#
-SRCDIR := $(pwd)
-RUNDIR := $(SRCDIR)'../run'
-DATDIR := $(RUNDIR)'/data'
-#
 # fortran compiler
-#
 FC   = mpif90
-#
 # flags
-#
 BIG := # -mcmodel=medium
 DBG := #-g -fbacktrace -Wall -O0 -Wextra -pedantic -fcheck=all
 OMP := #-fopenmp
@@ -28,6 +18,10 @@ all: $(TARGET)
 #
 $(TARGET): $(OBJ)
 	$(FC) $(FFLAGS) $(OBJ) $(LIBS) -o $(TARGET)
+# src, run and data directories
+SRCDIR := $(pwd)
+RUNDIR := $(SRCDIR)'../run'
+DATDIR := $(RUNDIR)'/data'
 #
 run: $(TARGET)
 	@mkdir -p $(RUNDIR) $(DATDIR)
