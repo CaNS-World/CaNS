@@ -1,11 +1,16 @@
-# src directory
+#
+# src, run and data directories
+#
 SRCDIR := $(pwd)
 RUNDIR := $(SRCDIR)'../run'
 DATDIR := $(RUNDIR)'/data'
 #
 # fortran compiler
+#
 FC   = mpif90
+#
 # flags
+#
 BIG := # -mcmodel=medium
 DBG := # -g -fbacktrace -Wall -O0 -Wextra -pedantic -fcheck=all
 OMP := # -fopenmp
@@ -20,9 +25,9 @@ OBJ = bound.o chkdiv.o chkdt.o common_mpi.o correc.o debug.o fft.o fftw.o fillps
 LIBS = -L /usr/local/Cellar/fftw/3.3.8_1/lib  -lfftw3 -lfftw3_threads
 #
 all: $(TARGET)
-	@ mkdir -p $(RUNDIR) $(DATDIR)
-	@ cp {$(TARGET),dns.in,INFO_INPUT.md} $(RUNDIR)
-	@ echo "\nExecutable file $(TARGET) and input file dns.in copyed to run folder $(RUNDIR)"
+	@mkdir -p $(RUNDIR) $(DATDIR)
+	@cp {$(TARGET),dns.in,INFO_INPUT.md} $(RUNDIR)
+	@echo "\nExecutable file $(TARGET) and input file dns.in copyed to run folder $(RUNDIR)"
 #
 $(TARGET): $(OBJ)
 	$(FC) $(FFLAGS) $(OBJ) $(LIBS) -o $(TARGET)

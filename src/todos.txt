@@ -1,3 +1,4 @@
 1 -> add universal type declaration
-3 -> remove fftd and ffti, replace with just fft, since the routines are exactly the same
-6 -> add information about visualization
+2 -> remove fftd and ffti, replace with just fft, since the routines are exactly the same
+3 -> add information about visualization
+4 -> update README.md
