@@ -1563,7 +1563,7 @@ contains
           call MPI_Comm_free(DECOMP_2D_COMM_ROW,ierror)
           call MPI_Comm_free(DECOMP_2D_COMM_CART_X, ierror)
 
-          call MPI_ALLREDUCE(t2,t1,1,MPI_DOUBLE_PRECISION,MPI_SUM, &
+          call MPI_ALLREDUCE(t2,t1,1,real_type,MPI_SUM, &
                    MPI_COMM_WORLD,ierror)
           t1 = t1 / dble(nproc)
 

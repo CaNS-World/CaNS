@@ -26,8 +26,13 @@ module mod_fft
     integer(C_INT) :: nx_x,ny_x,nz_x, &
                       nx_y,ny_y,nz_y
     integer :: ix,iy
+#ifdef SINGLE
+    !$ call sfftw_init_threads(ierr)
+    !$ call sfftw_plan_with_nthreads(omp_get_max_threads())
+#else
     !$ call dfftw_init_threads(ierr)
     !$ call dfftw_plan_with_nthreads(omp_get_max_threads())
+#endif
     !
     ! fft in x
     !
