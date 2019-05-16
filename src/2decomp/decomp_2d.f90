@@ -24,7 +24,7 @@ module decomp_2d
 
   private        ! Make everything private unless declared public
 
-#ifdef DOUBLE_PREC
+#ifndef SINGLE
   integer, parameter, public :: mytype = KIND(0.0D0)
   integer, parameter, public :: real_type = MPI_DOUBLE_PRECISION
   integer, parameter, public :: complex_type = MPI_DOUBLE_COMPLEX
@@ -1563,7 +1563,7 @@ contains
           call MPI_Comm_free(DECOMP_2D_COMM_ROW,ierror)
           call MPI_Comm_free(DECOMP_2D_COMM_CART_X, ierror)
 
-          call MPI_ALLREDUCE(t2,t1,1,MPI_DOUBLE_PRECISION,MPI_SUM, &
+          call MPI_ALLREDUCE(t2,t1,1,real_type,MPI_SUM, &
                    MPI_COMM_WORLD,ierror)
           t1 = t1 / dble(nproc)
 

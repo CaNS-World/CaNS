@@ -3,6 +3,7 @@ module mod_output
   use decomp_2d_io
   use mod_param     , only: dims,dx,dy,dz
   use mod_common_mpi, only:ierr,myid,coord
+  use mod_types
   implicit none
   private
   public out0d,out1d,out1d_2,out2d,out3d
@@ -17,8 +18,8 @@ module mod_output
     !
     implicit none
     character(len=*), intent(in) :: fname
-    integer, intent(in) :: n
-    real(8), intent(in), dimension(:) :: var
+    integer , intent(in) :: n
+    real(rp), intent(in), dimension(:) :: var
     integer :: iunit
     character(len=30) :: cfmt
     integer :: i
@@ -47,11 +48,11 @@ module mod_output
     !
     implicit none
     character(len=*), intent(in) :: fname
-    integer, intent(in), dimension(3) :: n
-    integer, intent(in) :: idir
-    real(8), intent(in), dimension(0:) :: z,dzlzi
-    real(8), intent(in), dimension(0:,0:,0:) :: p
-    real(8), allocatable, dimension(:) :: p1d
+    integer , intent(in), dimension(3) :: n
+    integer , intent(in) :: idir
+    real(rp), intent(in), dimension(0:) :: z,dzlzi
+    real(rp), intent(in), dimension(0:,0:,0:) :: p
+    real(rp), allocatable, dimension(:) :: p1d
     integer :: i,j,k,ii,jj
     integer :: iunit
     integer, dimension(3) :: ng
@@ -70,7 +71,7 @@ module mod_output
           enddo
         enddo
       enddo
-      call mpi_allreduce(MPI_IN_PLACE,p1d(1),ng(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,p1d(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       p1d(:) = p1d(:)/(1.*ng(1)*ng(2))
       if(myid.eq.0) then
         open(unit=iunit,file=fname)
@@ -91,12 +92,12 @@ module mod_output
           enddo
         enddo
       enddo
-      call mpi_allreduce(MPI_IN_PLACE,p1d(1),ng(2),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,p1d(1),ng(2),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       p1d(:) = p1d(:)/(1.*ng(1))
       if(myid.eq.0) then
         open(unit=iunit,file=fname)
         do j=1,ng(2)
-          write(iunit,'(2E15.7)') (1.d0*j-.5d0)/(1.d0*ng(2)),p1d(j)
+          write(iunit,'(2E15.7)') (1.*j-.5)/(1.*ng(2)),p1d(j)
         enddo
         close(iunit)
       endif
@@ -112,12 +113,12 @@ module mod_output
           enddo
         enddo
       enddo
-      call mpi_allreduce(MPI_IN_PLACE,p1d(1),ng(1),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,p1d(1),ng(1),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       p1d(:) = p1d(:)/(1.*ng(2))
       if(myid.eq.0) then
         open(unit=iunit,file=fname)
         do i=1,ng(1)
-          write(iunit,'(2E15.7)') (1.d0*i-.5d0)/(1.d0*n(1)),p1d(j)
+          write(iunit,'(2E15.7)') (1.*i-.5)/(1.*n(1)),p1d(j)
         enddo
         close(iunit)
       endif
@@ -139,8 +140,8 @@ module mod_output
     !
     implicit none
     character(len=*), intent(in) :: fname
-    integer, intent(in) :: inorm,islice
-    real(8),intent(in), dimension(:,:,:) :: p
+    integer , intent(in) :: inorm,islice
+    real(rp),intent(in), dimension(:,:,:) :: p
     !
     select case(inorm)
     case(1) !normal to x --> yz plane
@@ -165,8 +166,8 @@ module mod_output
     !
     implicit none
     character(len=*), intent(in) :: fname
-    integer, intent(in), dimension(3) :: nskip
-    real(8),intent(in), dimension(:,:,:) :: p
+    integer , intent(in), dimension(3) :: nskip
+    real(rp),intent(in), dimension(:,:,:) :: p
     integer :: fh
     integer(kind=MPI_OFFSET_KIND) :: filesize,disp
     !
@@ -183,11 +184,11 @@ module mod_output
   subroutine out1d_2(fname,n,idir,z,u,v,w) ! e.g. for a channel with streamwise dir in x
     implicit none
     character(len=*), intent(in) :: fname
-    integer, intent(in), dimension(3) :: n
-    integer, intent(in) :: idir
-    real(8), intent(in), dimension(0:) :: z
-    real(8), intent(in), dimension(0:,0:,0:) :: u,v,w
-    real(8), allocatable, dimension(:) :: um,vm,wm,u2,v2,w2,uw
+    integer , intent(in), dimension(3) :: n
+    integer , intent(in) :: idir
+    real(rp), intent(in), dimension(0:) :: z
+    real(rp), intent(in), dimension(0:,0:,0:) :: u,v,w
+    real(rp), allocatable, dimension(:) :: um,vm,wm,u2,v2,w2,uw
     integer :: i,j,k
     integer :: iunit
     integer, dimension(3) :: ng
@@ -212,22 +213,22 @@ module mod_output
           do i=1,n(1)
             um(k) = um(k) + u(i,j,k)
             vm(k) = vm(k) + v(i,j,k)
-            wm(k) = wm(k) + 0.50d0*(w(i,j,k-1) + w(i,j,k))
+            wm(k) = wm(k) + 0.50*(w(i,j,k-1) + w(i,j,k))
             u2(k) = u2(k) + u(i,j,k)**2
             v2(k) = v2(k) + v(i,j,k)**2
-            w2(k) = w2(k) + 0.50d0*(w(i,j,k)**2+w(i,j,k-1)**2)
-            uw(k) = uw(k) + 0.25d0*(u(i-1,j,k) + u(i,j,k))* &
+            w2(k) = w2(k) + 0.50*(w(i,j,k)**2+w(i,j,k-1)**2)
+            uw(k) = uw(k) + 0.25*(u(i-1,j,k) + u(i,j,k))* &
                                    (w(i,j,k-1) + w(i,j,k))
           enddo
         enddo
       enddo
-      call mpi_allreduce(MPI_IN_PLACE,um(1),n(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,vm(1),n(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,wm(1),n(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,u2(1),n(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,v2(1),n(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,w2(1),n(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,uw(1),n(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,um(1),n(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,vm(1),n(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,wm(1),n(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,u2(1),n(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,v2(1),n(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,w2(1),n(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,uw(1),n(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       um(:) = um(:)/(1.*ng(1)*ng(2))
       vm(:) = vm(:)/(1.*ng(1)*ng(2))
       wm(:) = wm(:)/(1.*ng(1)*ng(2))
@@ -253,16 +254,16 @@ module mod_output
   subroutine out2d_2(fname,n,idir,z,u,v,w) ! e.g. for a duct with streamwise dir in x
     implicit none
     character(len=*), intent(in) :: fname
-    integer, intent(in), dimension(3) :: n
-    integer, intent(in) :: idir
-    real(8), intent(in), dimension(0:) :: z
-    real(8), intent(in), dimension(0:,0:,0:) :: u,v,w
-    real(8), allocatable, dimension(:,:) :: um,vm,wm,u2,v2,w2,uv,vw
+    integer , intent(in), dimension(3) :: n
+    integer , intent(in) :: idir
+    real(rp), intent(in), dimension(0:) :: z
+    real(rp), intent(in), dimension(0:,0:,0:) :: u,v,w
+    real(rp), allocatable, dimension(:,:) :: um,vm,wm,u2,v2,w2,uv,vw
     integer :: i,j,k,ii,jj,kk
     integer :: iunit
     integer, dimension(3) :: ng
     integer :: p,q
-    real(8) :: y
+    real(rp) :: y
     !
     ng(:) = n(:)
     ng(1:2) = n(1:2)*dims(1:2)
@@ -273,49 +274,49 @@ module mod_output
       q = ng(3)
       allocate(um(p,q),vm(p,q),wm(p,q),u2(p,q),v2(p,q),w2(p,q),uv(p,q),vw(p,q))
       !
-      um(:,:) = 0.d0
-      vm(:,:) = 0.d0
-      wm(:,:) = 0.d0
-      u2(:,:) = 0.d0
-      v2(:,:) = 0.d0
-      w2(:,:) = 0.d0
-      uv(:,:) = 0.d0
-      vw(:,:) = 0.d0
+      um(:,:) = 0.
+      vm(:,:) = 0.
+      wm(:,:) = 0.
+      u2(:,:) = 0.
+      v2(:,:) = 0.
+      w2(:,:) = 0.
+      uv(:,:) = 0.
+      vw(:,:) = 0.
       do k=1,n(3)
         kk = k
         do i=1,n(1)
           ii = i+coord(1)*n(1)
-          um(ii,kk) = 0.d0
-          vm(ii,kk) = 0.d0
-          wm(ii,kk) = 0.d0
-          u2(ii,kk) = 0.d0
-          v2(ii,kk) = 0.d0
-          w2(ii,kk) = 0.d0
-          vw(ii,kk) = 0.d0
-          uv(ii,kk) = 0.d0
+          um(ii,kk) = 0.
+          vm(ii,kk) = 0.
+          wm(ii,kk) = 0.
+          u2(ii,kk) = 0.
+          v2(ii,kk) = 0.
+          w2(ii,kk) = 0.
+          vw(ii,kk) = 0.
+          uv(ii,kk) = 0.
           do j=1,n(2)
             jj = j+coord(2)*n(2)
-            um(ii,kk) = um(ii,kk) + 0.5d0*(u(i-1,j,k)+u(i,j,k))
+            um(ii,kk) = um(ii,kk) + 0.5*(u(i-1,j,k)+u(i,j,k))
             vm(ii,kk) = vm(ii,kk) + v(i,j,k)
-            wm(ii,kk) = wm(ii,kk) + 0.5d0*(w(i,j,k-1)+w(i,j,k))
-            u2(ii,kk) = u2(ii,kk) + 0.5d0*(u(i-1,j,k)**2+u(i,j,k)**2)
+            wm(ii,kk) = wm(ii,kk) + 0.5*(w(i,j,k-1)+w(i,j,k))
+            u2(ii,kk) = u2(ii,kk) + 0.5*(u(i-1,j,k)**2+u(i,j,k)**2)
             v2(ii,kk) = v2(ii,kk) + v(i,j,k)**2
-            w2(ii,kk) = w2(ii,kk) + 0.5d0*(w(i,j,k-1)**2+w(i,j,k)**2)
-            vw(ii,kk) = vw(ii,kk) + 0.25d0*(v(i,j-1,k) + v(i,j,k))* &
+            w2(ii,kk) = w2(ii,kk) + 0.5*(w(i,j,k-1)**2+w(i,j,k)**2)
+            vw(ii,kk) = vw(ii,kk) + 0.25*(v(i,j-1,k) + v(i,j,k))* &
                                            (w(i,j,k-1) + w(i,j,k))
-            uv(ii,kk) = uv(ii,kk) + 0.25d0*(u(i-1,j,k) + u(i,j,k))* &
+            uv(ii,kk) = uv(ii,kk) + 0.25*(u(i-1,j,k) + u(i,j,k))* &
                                            (v(i,j-1,k) + v(i,j,k))
           enddo
         enddo
       enddo
-      call mpi_allreduce(MPI_IN_PLACE,um(1,1),ng(1)*ng(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,vm(1,1),ng(1)*ng(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,wm(1,1),ng(1)*ng(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,u2(1,1),ng(1)*ng(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,v2(1,1),ng(1)*ng(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,w2(1,1),ng(1)*ng(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,vw(1,1),ng(1)*ng(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,uv(1,1),ng(1)*ng(3),MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,um(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,vm(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,wm(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,u2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,v2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,w2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,vw(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,uv(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       um(:,:) =      um(:,:)/(1.*ng(2))
       vm(:,:) =      vm(:,:)/(1.*ng(2))
       wm(:,:) =      wm(:,:)/(1.*ng(2))
@@ -328,7 +329,7 @@ module mod_output
         open(unit=iunit,file=fname)
         do k=1,ng(3)
           do i=1,ng(1)
-            y = (i-.5d0)*dx
+            y = (i-.5)*dx
             write(iunit,'(10E15.7)') y,z(k),um(i,k),vm(i,k),wm(i,k), &
                                             u2(i,k),v2(i,k),w2(i,k), &
                                             vw(i,k),uv(i,k)

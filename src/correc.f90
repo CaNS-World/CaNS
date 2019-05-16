@@ -1,4 +1,5 @@
 module mod_correc
+  use mod_types
   implicit none
   private
   public correc
@@ -8,14 +9,14 @@ module mod_correc
     ! corrects the velocity so that it is divergence free
     !
     implicit none
-    integer, intent(in), dimension(3) :: n
-    real(8), intent(in), dimension(3) :: dli
-    real(8), intent(in), dimension(0:) :: dzci
-    real(8), intent(in) :: dt
-    real(8), intent(in) , dimension(0:,0:,0:) :: p,up,vp,wp
-    real(8), intent(out), dimension(0:,0:,0:) :: u,v,w
-    real(8) :: factori,factorj
-    real(8), dimension(0:n(3)+1) :: factork
+    integer , intent(in), dimension(3) :: n
+    real(rp), intent(in), dimension(3) :: dli
+    real(rp), intent(in), dimension(0:) :: dzci
+    real(rp), intent(in) :: dt
+    real(rp), intent(in) , dimension(0:,0:,0:) :: p,up,vp,wp
+    real(rp), intent(out), dimension(0:,0:,0:) :: u,v,w
+    real(rp) :: factori,factorj
+    real(rp), dimension(0:n(3)+1) :: factork
     integer :: i,j,k,ip,jp,kp
     !
     !factor = rkcoeffab(rkiter)*dt

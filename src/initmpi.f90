@@ -3,6 +3,7 @@ module mod_initmpi
   use decomp_2d
   use mod_param     , only: dims
   use mod_common_mpi, only: myid,coord,comm_cart,left,right,front,back,xhalo,yhalo,ierr
+  use mod_types
   implicit none
   private
   public initmpi
@@ -14,7 +15,6 @@ module mod_initmpi
     integer :: ntx,nty,ntz
     logical, dimension(3) :: periods
     !
-    call MPI_INIT(ierr)
     periods(:) = .false.
     if( bc(0,1)//bc(1,1).eq.'PP' ) periods(1) = .true.
     if( bc(0,2)//bc(1,2).eq.'PP' ) periods(2) = .true.
@@ -40,8 +40,8 @@ module mod_initmpi
     !         * for fixed j, (k1+1) blocks of (i1+1) elements,
     !           with (i1+1)*(j1+1) elements between start and end
     !
-    call MPI_TYPE_VECTOR(nty*ntz,1  ,ntx    ,MPI_REAL8,xhalo,ierr)
-    call MPI_TYPE_VECTOR(ntz    ,ntx,ntx*nty,MPI_REAL8,yhalo,ierr)
+    call MPI_TYPE_VECTOR(nty*ntz,1  ,ntx    ,MPI_REAL_RP,xhalo,ierr)
+    call MPI_TYPE_VECTOR(ntz    ,ntx,ntx*nty,MPI_REAL_RP,yhalo,ierr)
     call MPI_TYPE_COMMIT(xhalo,ierr)
     call MPI_TYPE_COMMIT(yhalo,ierr)
     return

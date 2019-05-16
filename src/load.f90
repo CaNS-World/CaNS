@@ -3,6 +3,7 @@ module mod_load
   use mod_common_mpi, only: ierr,dims,myid
   use decomp_2d
   use decomp_2d_io
+  use mod_types
   implicit none
   private
   public load
@@ -14,10 +15,10 @@ module mod_load
     implicit none
     character(len=1)  , intent(in) :: io
     character(len=*), intent(in) :: filename
-    integer, intent(in), dimension(3) :: n
-    real(8), intent(inout), dimension(n(1),n(2),n(3)) :: u,v,w,p
-    real(8), intent(inout) :: time,istep
-    real(8), dimension(2) :: fldinfo
+    integer , intent(in), dimension(3) :: n
+    real(rp), intent(inout), dimension(n(1),n(2),n(3)) :: u,v,w,p
+    real(rp), intent(inout) :: time,istep
+    real(rp), dimension(2) :: fldinfo
     integer :: fh
     integer(kind=MPI_OFFSET_KIND) :: filesize,disp,good
     integer(8), dimension(3) :: ng

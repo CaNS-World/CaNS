@@ -14,6 +14,7 @@ module mod_sanity
   use mod_initsolver, only: initsolver
   use mod_param     , only: small
   use mod_solver    , only: solver
+  use mod_types
   implicit none
   private
   public test_sanity
@@ -24,16 +25,16 @@ module mod_sanity
     ! performs some a priori checks of the input files before the calculation starts
     !
     implicit none
-    integer, intent(in), dimension(3) :: ng,n
-    integer, intent(in), dimension(2) :: dims
+    integer , intent(in), dimension(3) :: ng,n
+    integer , intent(in), dimension(2) :: dims
     character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
     character(len=1), intent(in), dimension(0:1,3)   :: cbcpre
-    real(8), intent(in), dimension(0:1,3,3)          :: bcvel
-    real(8), intent(in), dimension(0:1,3)            :: bcpre
-    logical, intent(in), dimension(0:1,3)            :: is_outflow
-    logical, intent(in), dimension(3)                :: is_forced
-    real(8), intent(in), dimension(3)        :: dli
-    real(8), intent(in), dimension(0:n(3)+1) :: dzci,dzfi
+    real(rp), intent(in), dimension(0:1,3,3)          :: bcvel
+    real(rp), intent(in), dimension(0:1,3)            :: bcpre
+    logical , intent(in), dimension(0:1,3)            :: is_outflow
+    logical , intent(in), dimension(3)                :: is_forced
+    real(rp), intent(in), dimension(3)        :: dli
+    real(rp), intent(in), dimension(0:n(3)+1) :: dzci,dzfi
     logical :: passed
     !
     call chk_dims(ng,dims,passed);                 if(.not.passed) call abortit
@@ -72,8 +73,8 @@ module mod_sanity
   implicit none
   character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
   character(len=1), intent(in), dimension(0:1,3  ) :: cbcpre
-  real(8)         , intent(in), dimension(0:1,3,3) :: bcvel
-  real(8)         , intent(in), dimension(0:1,3  ) :: bcpre
+  real(rp)        , intent(in), dimension(0:1,3,3) :: bcvel
+  real(rp)        , intent(in), dimension(0:1,3  ) :: bcpre
   logical         , intent(out) :: passed
   character(len=2) :: bc01v,bc01p
   integer :: ivel,idir
@@ -124,10 +125,10 @@ module mod_sanity
   !
   passed_loc = .true.
   do idir=1,2
-    passed_loc = passed_loc.and.((bcpre(0,idir).eq.0.d0).and.(bcpre(1,idir).eq.0.d0))
+    passed_loc = passed_loc.and.((bcpre(0,idir).eq.0.).and.(bcpre(1,idir).eq.0.))
   enddo
   if(myid.eq.0.and.(.not.passed_loc)) &
-    print*, 'ERROR: pressure BCs in directions x and y must be homogeneous (value = 0.d0).'
+    print*, 'ERROR: pressure BCs in directions x and y must be homogeneous (value = 0.).'
   passed = passed.and.passed_loc
 #ifdef IMPDIFF
   passed_loc = .true.
@@ -144,11 +145,11 @@ module mod_sanity
   passed_loc = .true.
   do ivel = 1,3
     do idir=1,2
-      passed_loc = passed_loc.and.((bcvel(0,idir,ivel).eq.0.d0).and.(bcvel(1,idir,ivel).eq.0.d0))
+      passed_loc = passed_loc.and.((bcvel(0,idir,ivel).eq.0.).and.(bcvel(1,idir,ivel).eq.0.))
     enddo
   enddo
   if(myid.eq.0.and.(.not.passed_loc)) &
-    print*, 'ERROR: velocity BCs with implicit diffusion in directions x and y must be homogeneous (value = 0.d0).'
+    print*, 'ERROR: velocity BCs with implicit diffusion in directions x and y must be homogeneous (value = 0.).'
   passed = passed.and.passed_loc
 #endif
   return 
@@ -198,39 +199,39 @@ module mod_sanity
   !
   subroutine chk_solvers(n,dli,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,is_outflow,passed)
   implicit none
-  integer, intent(in), dimension(3) :: n
-  real(8), intent(in), dimension(3) :: dli
-  real(8), intent(in), dimension(0:n(3)+1) :: dzci,dzfi
+  integer , intent(in), dimension(3) :: n
+  real(rp), intent(in), dimension(3) :: dli
+  real(rp), intent(in), dimension(0:n(3)+1) :: dzci,dzfi
   character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
   character(len=1), intent(in), dimension(0:1,3)   :: cbcpre
-  real(8), intent(in), dimension(0:1,3,3)          :: bcvel
-  real(8), intent(in), dimension(0:1,3)            :: bcpre
-  logical, intent(in), dimension(0:1,3)            :: is_outflow
-  logical, intent(out) :: passed
-  real(8), dimension(0:n(1)+1,0:n(2)+1,0:n(3)+1) :: u,v,w,p,up,vp,wp
+  real(rp), intent(in), dimension(0:1,3,3)          :: bcvel
+  real(rp), intent(in), dimension(0:1,3)            :: bcpre
+  logical , intent(in), dimension(0:1,3)            :: is_outflow
+  logical , intent(out) :: passed
+  real(rp), dimension(0:n(1)+1,0:n(2)+1,0:n(3)+1) :: u,v,w,p,up,vp,wp
   type(C_PTR), dimension(2,2) :: arrplan
-  real(8), dimension(n(1),n(2)) :: lambdaxy
-  real(8) :: normfft
-  real(8), dimension(n(3)) :: a,b,c,bb
-  real(8), dimension(n(2),n(3),0:1) :: rhsbx
-  real(8), dimension(n(1),n(3),0:1) :: rhsby
-  real(8), dimension(n(1),n(2),0:1) :: rhsbz
-  logical, dimension(0:1,3)            :: no_outflow
-  real(8), dimension(3) :: dl
-  real(8), dimension(0:n(3)+1) :: dzc,dzf
-  real(8) :: dt,dti,alpha
-  real(8) :: divtot,divmax,resmax
+  real(rp), dimension(n(1),n(2)) :: lambdaxy
+  real(rp) :: normfft
+  real(rp), dimension(n(3)) :: a,b,c,bb
+  real(rp), dimension(n(2),n(3),0:1) :: rhsbx
+  real(rp), dimension(n(1),n(3),0:1) :: rhsby
+  real(rp), dimension(n(1),n(2),0:1) :: rhsbz
+  logical , dimension(0:1,3)            :: no_outflow
+  real(rp), dimension(3) :: dl
+  real(rp), dimension(0:n(3)+1) :: dzc,dzf
+  real(rp) :: dt,dti,alpha
+  real(rp) :: divtot,divmax,resmax
   logical :: passed_loc
   passed = .true.
   !
   ! initialize velocity below with some random noise
   !
-  up(:,:,:) = 0.d0
-  vp(:,:,:) = 0.d0
-  wp(:,:,:) = 0.d0
-  call add_noise(n,123,.50d0,up(1:n(1),1:n(2),1:n(3)))
-  call add_noise(n,456,.50d0,vp(1:n(1),1:n(2),1:n(3)))
-  call add_noise(n,789,.50d0,wp(1:n(1),1:n(2),1:n(3)))
+  up(:,:,:) = 0.
+  vp(:,:,:) = 0.
+  wp(:,:,:) = 0.
+  call add_noise(n,123,.5_rp,up(1:n(1),1:n(2),1:n(3)))
+  call add_noise(n,456,.5_rp,vp(1:n(1),1:n(2),1:n(3)))
+  call add_noise(n,789,.5_rp,wp(1:n(1),1:n(2),1:n(3)))
   !
   ! test pressure correction
   !
@@ -238,7 +239,7 @@ module mod_sanity
   dl  = dli**(-1)
   dzc = dzci**(-1)
   dzf = dzfi**(-1)
-  dt  = acos(-1.d0) ! value is irrelevant
+  dt  = acos(-1.) ! value is irrelevant
   dti = dt**(-1)
   no_outflow(:,:) = .false.
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp)
@@ -255,13 +256,13 @@ module mod_sanity
   passed = passed.and.passed_loc
   call fftend(arrplan)
 #ifdef IMPDIFF
-  alpha = acos(-1.d0) ! irrelevant
-  up(:,:,:) = 0.d0
-  vp(:,:,:) = 0.d0
-  wp(:,:,:) = 0.d0
-  call add_noise(n,123,.50d0,up(1:n(1),1:n(2),1:n(3)))
-  call add_noise(n,456,.50d0,vp(1:n(1),1:n(2),1:n(3)))
-  call add_noise(n,789,.50d0,wp(1:n(1),1:n(2),1:n(3)))
+  alpha = acos(-1.) ! irrelevant
+  up(:,:,:) = 0.
+  vp(:,:,:) = 0.
+  wp(:,:,:) = 0.
+  call add_noise(n,123,.50,up(1:n(1),1:n(2),1:n(3)))
+  call add_noise(n,456,.50,vp(1:n(1),1:n(2),1:n(3)))
+  call add_noise(n,789,.50,wp(1:n(1),1:n(2),1:n(3)))
   call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,1),bcvel(:,:,1),lambdaxy,(/'f','c','c'/),a,b,c,arrplan,normfft, &
                   rhsbx,rhsby,rhsbz)
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp)

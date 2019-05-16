@@ -38,7 +38,7 @@ program cans
   use mod_load       , only: load
   use mod_rk         , only: rk,rk_id
   use mod_output     , only: out0d,out1d,out1d_2,out2d,out3d
-  use mod_param      , only: itot,jtot,ktot,lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,visc,small, &
+  use mod_param      , only: itot,jtot,ktot,lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,uref,lref,rey,visc,small, &
                              cbcvel,bcvel,cbcpre,bcpre, &
                              icheck,iout0d,iout1d,iout2d,iout3d,isave, &
                              nstep,restart, &
@@ -46,60 +46,108 @@ program cans
                              datadir, &
                              cfl,     &
                              inivel,  &
-                             uref,lref, &
                              imax,jmax,dims, &
                              nthreadsmax, &
                              gr, &
-                             is_outflow,no_outflow,is_forced
+                             is_outflow,no_outflow,is_forced, &
+                             n,ng,l,dl,dli, &
+                             read_input
   use mod_sanity     , only: test_sanity
   use mod_solver     , only: solver
+  use mod_types
   !$ use omp_lib
   implicit none
-  integer, parameter, dimension(3) :: ng = (/itot,jtot,ktot/)
-  integer, parameter, dimension(3) :: n  = (/imax,jmax,ktot/)
-  real(8), parameter, dimension(3) :: l   = (/lx,ly,lz/)
-  real(8), parameter, dimension(3) :: dl  = (/dx,dy,dz/)
-  real(8), parameter, dimension(3) :: dli = (/dxi,dyi,dzi/)
-  real(8), dimension(0:imax+1,0:jmax+1,0:ktot+1) :: u,v,w,p,up,vp,wp,pp
-  real(8), dimension(imax,jmax,ktot)    :: dudtrko,dvdtrko,dwdtrko
-  real(8), dimension(3) :: tauxo,tauyo,tauzo
-  real(8), dimension(3) :: f
+  real(rp), allocatable, dimension(:,:,:) :: u,v,w,p,up,vp,wp,pp
+  real(rp), allocatable, dimension(:,:,:)    :: dudtrko,dvdtrko,dwdtrko
+  real(rp), dimension(3) :: tauxo,tauyo,tauzo
+  real(rp), dimension(3) :: f
   type(C_PTR), dimension(2,2) :: arrplanp
-  real(8), dimension(imax,jmax) :: lambdaxyp
-  real(8), dimension(ktot) :: ap,bp,cp
-  real(8) :: normfftp
+  real(rp), allocatable, dimension(:,:) :: lambdaxyp
+  real(rp), allocatable, dimension(:) :: ap,bp,cp
+  real(rp) :: normfftp
   type rhs_bound
-    real(8), dimension(n(2),n(3),0:1) :: x
-    real(8), dimension(n(1),n(3),0:1) :: y
-    real(8), dimension(n(1),n(2),0:1) :: z
+    real(rp), allocatable, dimension(:,:,:) :: x
+    real(rp), allocatable, dimension(:,:,:) :: y
+    real(rp), allocatable, dimension(:,:,:) :: z
   end type rhs_bound 
 #ifdef IMPDIFF
   type(C_PTR), dimension(2,2) :: arrplanu,arrplanv,arrplanw
-  real(8), dimension(imax,jmax) :: lambdaxyu,lambdaxyv,lambdaxyw
-  real(8), dimension(ktot) :: au,av,aw,bu,bv,bw,bb,cu,cv,cw
-  real(8) :: normfftu,normfftv,normfftw
-  real(8) :: alpha,alphai
+  real(rp), allocatable dimension(:,:) :: lambdaxyu,lambdaxyv,lambdaxyw
+  real(rp), allocatable dimension(:) :: au,av,aw,bu,bv,bw,bb,cu,cv,cw
+  real(rp) :: normfftu,normfftv,normfftw
+  real(rp) :: alpha,alphai
   integer :: i,j,k,im,ip,jm,jp,km,kp
   type(rhs_bound) :: rhsbu,rhsbv,rhsbw
 #endif
   type(rhs_bound) :: rhsbp
-  real(8) :: ristep
-  real(8) :: dt,dti,dtmax,time,dtrk,dtrki,divtot,divmax
+  real(rp) :: ristep
+  real(rp) :: dt,dti,dtmax,time,dtrk,dtrki,divtot,divmax
   integer :: irk,istep
-  real(8), dimension(0:ktot+1) :: dzc,dzf,zc,zf,dzci,dzfi
-  real(8) :: meanvel
-  real(8), dimension(3) :: dpdl
-  !real(8), allocatable, dimension(:) :: var
-  real(8), dimension(10) :: var
+  real(rp), allocatable, dimension(:) :: dzc,dzf,zc,zf,dzci,dzfi
+  real(rp) :: meanvel
+  real(rp), dimension(3) :: dpdl
+  !real(rp), allocatable, dimension(:) :: var
+  real(rp), dimension(10) :: var
 #ifdef TIMING
-  real(8) :: dt12,dt12av,dt12min,dt12max
+  real(rp) :: dt12,dt12av,dt12min,dt12max
 #endif
   character(len=7) :: fldnum
   integer :: lenr,kk
   logical :: kill
   !
+  call MPI_INIT(ierr)
+  call MPI_COMM_RANK(MPI_COMM_WORLD, myid, ierr)
+  !
+  ! read parameter file
+  !
+  call read_input(myid)
+  !
+  ! initialize MPI/OpenMP
+  !
   !$call omp_set_num_threads(nthreadsmax)
   call initmpi(ng,cbcpre)
+  !
+  ! allocate variables
+  !
+  allocate(u( 0:n(1)+1,0:n(2)+1,0:n(3)+1) , &
+           v( 0:n(1)+1,0:n(2)+1,0:n(3)+1) , &
+           w( 0:n(1)+1,0:n(2)+1,0:n(3)+1) , &
+           p( 0:n(1)+1,0:n(2)+1,0:n(3)+1) , &
+           up(0:n(1)+1,0:n(2)+1,0:n(3)+1), &
+           vp(0:n(1)+1,0:n(2)+1,0:n(3)+1), &
+           wp(0:n(1)+1,0:n(2)+1,0:n(3)+1), &
+           pp(0:n(1)+1,0:n(2)+1,0:n(3)+1))
+  allocate(dudtrko(n(1),n(2),n(3)), &
+           dvdtrko(n(1),n(2),n(3)), &
+           dwdtrko(n(1),n(2),n(3)))
+  allocate(lambdaxyp(n(1),n(2)))
+  allocate(ap(n(3)),bp(n(3)),cp(n(3)))
+  allocate(dzc( 0:n(3)+1), &
+           dzf( 0:n(3)+1), &
+           zc(  0:n(3)+1), &
+           zf(  0:n(3)+1), &
+           dzci(0:n(3)+1), &
+           dzfi(0:n(3)+1))
+  allocate(rhsbp%x(n(2),n(3),0:1), &
+           rhsbp%y(n(1),n(3),0:1), &
+           rhsbp%z(n(1),n(2),0:1))
+#ifdef IMPDIFF
+  allocate(lambdaxyu(n(1),n(2)), &
+           lambdaxyv(n(1),n(2)), &
+           lambdaxyw(n(1),n(2)))
+  allocate(au(n(3)),bu(n(3)),cu(n(3)), &
+           av(n(3)),bv(n(3)),cv(n(3)), &
+           aw(n(3)),bw(n(3)),cw(n(3)))
+  allocate(rhsbu%x(n(2),n(3),0:1), &
+           rhsbu%y(n(1),n(3),0:1), &
+           rhsbu%z(n(1),n(2),0:1), &
+           rhsbv%x(n(2),n(3),0:1), &
+           rhsbv%y(n(1),n(3),0:1), &
+           rhsbv%z(n(1),n(2),0:1), &
+           rhsbw%x(n(2),n(3),0:1), &
+           rhsbw%y(n(1),n(3),0:1), &
+           rhsbw%z(n(1),n(2),0:1))
+#endif
   if(myid.eq.0) print*, '*******************************'
   if(myid.eq.0) print*, '*** Beginning of simulation ***'
   if(myid.eq.0) print*, '*******************************'
@@ -112,7 +160,7 @@ program cans
     close(99)
     open(99,file=trim(datadir)//'grid.out')
     do kk=0,ktot+1
-      write(99,'(5E15.7)') 0.d0,zf(kk),zc(kk),dzf(kk),dzc(kk)
+      write(99,'(5E15.7)') 0.,zf(kk),zc(kk),dzf(kk),dzc(kk)
     enddo
     close(99)
   endif
@@ -126,8 +174,8 @@ program cans
   dzfi = dzf**(-1)
   if(.not.restart) then
     istep = 0
-    time = 0.d0
-    call initflow(inivel,n,zc/lz,dzc/lz,dzf/lz,visc,uref,u,v,w,p)
+    time = 0.
+    call initflow(inivel,n,zc/lz,dzc/lz,dzf/lz,visc,u,v,w,p)
     if(myid.eq.0) print*, '*** Initial condition succesfully set ***'
   else
     call load('r',trim(datadir)//'fld.bin',n,u(1:n(1),1:n(2),1:n(3)), &
@@ -148,13 +196,13 @@ program cans
   include 'out2d.h90'
   include 'out3d.h90'
   !
-  dudtrko(:,:,:) = 0.d0
-  dvdtrko(:,:,:) = 0.d0
-  dwdtrko(:,:,:) = 0.d0
+  dudtrko(:,:,:) = 0.
+  dvdtrko(:,:,:) = 0.
+  dwdtrko(:,:,:) = 0.
   call chkdt(n,dl,dzci,dzfi,visc,u,v,w,dtmax)
   dt = cfl*dtmax
   if(myid.eq.0) print*, 'dtmax = ', dtmax, 'dt = ',dt
-  dti = 1.d0/dt
+  dti = 1./dt
   kill = .false.
   !
   ! initialize Poisson solver
@@ -179,10 +227,10 @@ program cans
     istep = istep + 1
     time = time + dt
     if(myid.eq.0) print*, 'Timestep #', istep, 'Time = ', time
-    dpdl(:)  = 0.d0
-    tauxo(:) = 0.d0
-    tauyo(:) = 0.d0
-    tauzo(:) = 0.d0
+    dpdl(:)  = 0.
+    tauxo(:) = 0.
+    tauyo(:) = 0.
+    tauzo(:) = 0.
     do irk=1,3
       dtrk = sum(rkcoeff(:,irk))*dt
       dtrki = dtrk**(-1)
@@ -197,7 +245,7 @@ program cans
       if(is_forced(2)) vp(1:n(1),1:n(2),1:n(3)) = vp(1:n(1),1:n(2),1:n(3)) + f(2)
       if(is_forced(3)) wp(1:n(1),1:n(2),1:n(3)) = wp(1:n(1),1:n(2),1:n(3)) + f(3)
 #ifdef IMPDIFF
-      alpha = -1.d0/(.5d0*visc*dtrk)
+      alpha = -1./(.5*visc*dtrk)
       !$OMP WORKSHARE
       up(1:n(1),1:n(2),1:n(3)) = up(1:n(1),1:n(2),1:n(3))*alpha
       !$OMP END WORKSHARE
@@ -254,8 +302,8 @@ program cans
             ip = i + 1
             im = i - 1
             p(i,j,k) = p(i,j,k) + pp(i,j,k) + alphai*( &
-                        (pp(ip,j,k)-2.d0*pp(i,j,k)+pp(im,j,k))*(dxi**2) + &
-                        (pp(i,jp,k)-2.d0*pp(i,j,k)+pp(i,jm,k))*(dyi**2) + &
+                        (pp(ip,j,k)-2.*pp(i,j,k)+pp(im,j,k))*(dxi**2) + &
+                        (pp(i,jp,k)-2.*pp(i,j,k)+pp(i,jm,k))*(dyi**2) + &
                         ((pp(i,j,kp)-pp(i,j,k ))*dzci(k ) - &
                          (pp(i,j,k )-pp(i,j,km))*dzci(km))*dzfi(k) )
           enddo
@@ -277,15 +325,15 @@ program cans
       if(myid.eq.0) print*, 'dtmax = ', dtmax, 'dt = ',dt
       if(dtmax.lt.small) then
         if(myid.eq.0) print*, 'ERROR: timestep is too small.'
-        if(myid.eq.0) print*, 'Aborting ...'
+        if(myid.eq.0) print*, 'Aborting...'
         istep = nstep + 1 ! i.e. exit main loop
         kill = .true.
       endif
-      dti = 1.d0/dt
+      dti = 1./dt
       call chkdiv(n,dli,dzfi,u,v,w,divtot,divmax)
       if(divmax.gt.small.or.divtot.ne.divtot) then
         if(myid.eq.0) print*, 'ERROR: maximum divergence is too large.'
-        if(myid.eq.0) print*, 'Aborting ...'
+        if(myid.eq.0) print*, 'Aborting...'
         istep = nstep + 1 ! i.e. exit main loop
         kill = .true.
       endif
@@ -295,7 +343,7 @@ program cans
     !
     if(mod(istep,iout0d).eq.0) then
       !allocate(var(4))
-      var(1) = 1.d0*istep
+      var(1) = 1.*istep
       var(2) = dt
       var(3) = time
       call out0d(trim(datadir)//'time.out',3,var)
@@ -317,7 +365,7 @@ program cans
       include 'out3d.h90'
     endif
     if(mod(istep,isave ).eq.0) then
-      ristep = 1.d0*istep
+      ristep = 1.*istep
       call load('w',trim(datadir)//'fld.bin',n,u(1:n(1),1:n(2),1:n(3)), &
                                                v(1:n(1),1:n(2),1:n(3)), &
                                                w(1:n(1),1:n(2),1:n(3)), &
@@ -327,11 +375,11 @@ program cans
     endif
 #ifdef TIMING
       dt12 = MPI_WTIME()-dt12
-      call MPI_ALLREDUCE(dt12,dt12av ,1,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call MPI_ALLREDUCE(dt12,dt12min,1,MPI_REAL8,MPI_MIN,MPI_COMM_WORLD,ierr)
-      call MPI_ALLREDUCE(dt12,dt12max,1,MPI_REAL8,MPI_MAX,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(dt12,dt12av ,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(dt12,dt12min,1,MPI_REAL_RP,MPI_MIN,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(dt12,dt12max,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
       if(myid.eq.0) print*, 'Avrg, min & max elapsed time: '
-      if(myid.eq.0) print*, dt12av/(1.d0*product(dims)),dt12min,dt12max
+      if(myid.eq.0) print*, dt12av/(1.*product(dims)),dt12min,dt12max
 #endif
   enddo
   !

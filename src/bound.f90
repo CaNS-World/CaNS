@@ -1,6 +1,7 @@
 module mod_bound
   use mpi
   use mod_common_mpi, only: ierr,status,comm_cart,left,right,front,back,xhalo,yhalo
+  use mod_types
   implicit none
   private
   public boundp,bounduvw,updt_rhs_b
@@ -11,12 +12,12 @@ module mod_bound
     !
     implicit none
     character(len=1), intent(in), dimension(0:1,3,3) :: cbc
-    integer, intent(in), dimension(3) :: n 
-    real(8)         , intent(in), dimension(0:1,3,3) :: bc
-    logical, intent(in), dimension(0:1,3) :: isoutflow
-    real(8), intent(in), dimension(3) :: dl
-    real(8), intent(in), dimension(0:) :: dzc,dzf
-    real(8), intent(inout), dimension(0:,0:,0:) :: u,v,w
+    integer , intent(in), dimension(3) :: n 
+    real(rp), intent(in), dimension(0:1,3,3) :: bc
+    logical , intent(in), dimension(0:1,3) :: isoutflow
+    real(rp), intent(in), dimension(3) :: dl
+    real(rp), intent(in), dimension(0:) :: dzc,dzf
+    real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
     integer :: q,idir,sgn,ioutflowdir
     !
     call updthalo((/n(1),n(2)/),1,u)
@@ -72,11 +73,11 @@ module mod_bound
     !
     implicit none
     character(len=1), intent(in), dimension(0:1,3) :: cbc
-    integer, intent(in), dimension(3) :: n 
-    real(8)         , intent(in), dimension(0:1,3) :: bc
-    real(8), intent(in), dimension(3) :: dl
-    real(8), intent(in), dimension(0:) :: dzc,dzf
-    real(8), intent(inout), dimension(0:,0:,0:) :: p
+    integer , intent(in), dimension(3) :: n 
+    real(rp)         , intent(in), dimension(0:1,3) :: bc
+    real(rp), intent(in), dimension(3) :: dl
+    real(rp), intent(in), dimension(0:) :: dzc,dzf
+    real(rp), intent(inout), dimension(0:,0:,0:) :: p
     !
     call updthalo((/n(1),n(2)/),1,p)
     call updthalo((/n(1),n(2)/),2,p)
@@ -101,16 +102,16 @@ module mod_bound
   subroutine set_bc(ctype,ibound,n,idir,stag,rvalue,dr,p)
     implicit none
     character(len=1), intent(in) :: ctype
-    integer, intent(in) :: ibound,n,idir
-    logical, intent(in) :: stag
-    real(8), intent(in) :: rvalue,dr
-    real(8), intent(inout), dimension(0:,0:,0:) :: p
-    real(8) :: factor,sgn
+    integer , intent(in) :: ibound,n,idir
+    logical , intent(in) :: stag
+    real(rp), intent(in) :: rvalue,dr
+    real(rp), intent(inout), dimension(0:,0:,0:) :: p
+    real(rp) :: factor,sgn
     !
     factor = rvalue
     if(ctype.eq.'D'.and.stag) then
-      factor = 2.d0*factor
-      sgn    = -1.d0
+      factor = 2.*factor
+      sgn    = -1.
     endif
     if(ctype.eq.'N'.and.stag) then
       if(    ibound.eq.0) then
@@ -118,7 +119,7 @@ module mod_bound
       elseif(ibound.eq.1) then
         factor =  dr*factor
       endif
-      sgn    = 1.d0
+      sgn    = 1.
     endif
     !
     select case(ctype)
@@ -211,31 +212,31 @@ module mod_bound
         case(1)
           if    (ibound.eq.0) then
             !$OMP WORKSHARE
-            p(0,  :,:) = 1.d0*factor + p(1  ,:,:)
+            p(0,  :,:) = 1.*factor + p(1  ,:,:)
             !$OMP END WORKSHARE
           elseif(ibound.eq.1) then
             !$OMP WORKSHARE
-            p(n+1,:,:) = 2.d0*factor + p(n-1,:,:)
+            p(n+1,:,:) = 2.*factor + p(n-1,:,:)
             !$OMP END WORKSHARE
           endif
         case(2)
           if    (ibound.eq.0) then
             !$OMP WORKSHARE
-            p(:,0  ,:) = 1.d0*factor + p(:,1  ,:) 
+            p(:,0  ,:) = 1.*factor + p(:,1  ,:) 
             !$OMP END WORKSHARE
           elseif(ibound.eq.1) then
             !$OMP WORKSHARE
-            p(:,n+1,:) = 2.d0*factor + p(:,n-1,:)
+            p(:,n+1,:) = 2.*factor + p(:,n-1,:)
             !$OMP END WORKSHARE
           endif
         case(3)
           if    (ibound.eq.0) then
             !$OMP WORKSHARE
-            p(:,:,0  ) = 1.d0*factor + p(:,:,1  )
+            p(:,:,0  ) = 1.*factor + p(:,:,1  )
             !$OMP END WORKSHARE
           elseif(ibound.eq.1) then
             !$OMP WORKSHARE
-            p(:,:,n+1) = 2.d0*factor + p(:,:,n-1)
+            p(:,:,n+1) = 2.*factor + p(:,:,n-1)
             !$OMP END WORKSHARE
           endif
         end select
@@ -248,11 +249,11 @@ module mod_bound
     implicit none
     integer, intent(in), dimension(3) :: n
     integer, intent(in) :: idir
-    real(8), intent(in), dimension(3) :: dl
-    real(8), intent(in), dimension(0:) :: dzf
-    real(8), dimension(0:,0:,0:), intent(inout) :: u,v,w
-    real(8) :: dx,dy,dxi,dyi
-    real(8), dimension(0:n(3)+1) :: dzfi
+    real(rp), intent(in), dimension(3) :: dl
+    real(rp), intent(in), dimension(0:) :: dzf
+    real(rp), dimension(0:,0:,0:), intent(inout) :: u,v,w
+    real(rp) :: dx,dy,dxi,dyi
+    real(rp), dimension(0:n(3)+1) :: dzfi
     integer :: i,j,k
     !
     dx   = dl(1)     
@@ -346,12 +347,12 @@ module mod_bound
     implicit none
     integer, intent(in), dimension(3) :: n
     integer, intent(in) :: idir
-    real(8), intent(in), dimension(3) :: dl
-    real(8), intent(in), dimension(0:) :: dzf
-    real(8), dimension(0:,0:), intent(in) :: vel2d
-    real(8), dimension(0:,0:,0:), intent(inout) :: u,v,w
-    real(8) :: dx,dy,dxi,dyi
-    real(8), dimension(0:n(3)+1) :: dzfi
+    real(rp), intent(in), dimension(3) :: dl
+    real(rp), intent(in), dimension(0:) :: dzf
+    real(rp), dimension(0:,0:), intent(in) :: vel2d
+    real(rp), dimension(0:,0:,0:), intent(inout) :: u,v,w
+    real(rp) :: dx,dy,dxi,dyi
+    real(rp), dimension(0:n(3)+1) :: dzfi
     integer :: i,j,k
     !
     dx   = dl(1)
@@ -393,10 +394,10 @@ module mod_bound
     implicit none
     character, intent(in), dimension(3) :: c_or_f
     character(len=1), intent(in), dimension(0:1,3) :: cbc
-    integer, intent(in), dimension(3) :: n
-    real(8), intent(in), dimension(:,:,0:) :: rhsbx,rhsby,rhsbz
-    real(8), intent(inout), dimension(0:,0:,0:) :: p
-    integer, dimension(3) :: q
+    integer , intent(in), dimension(3) :: n
+    real(rp), intent(in), dimension(:,:,0:) :: rhsbx,rhsby,rhsbz
+    real(rp), intent(inout), dimension(0:,0:,0:) :: p
+    integer , dimension(3) :: q
     integer :: idir
     q(:) = 0
     do idir = 1,3
@@ -431,9 +432,9 @@ module mod_bound
   !
   subroutine updthalo(n,idir,p)
     implicit none
-    integer, dimension(2), intent(in) :: n
-    integer, intent(in) :: idir
-    real(8), dimension(0:,0:,0:), intent(inout) :: p
+    integer , dimension(2), intent(in) :: n
+    integer , intent(in) :: idir
+    real(rp), dimension(0:,0:,0:), intent(inout) :: p
     !integer :: requests(4), statuses(MPI_STATUS_SIZE,4)
     !
     !  this subroutine updates the halos that store info
