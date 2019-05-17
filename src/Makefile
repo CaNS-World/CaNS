@@ -20,12 +20,13 @@ $(TARGET): $(OBJ)
 	$(FC) $(FFLAGS) $(OBJ) $(LIBS) -o $(TARGET)
 # src, run and data directories
 SRCDIR := $(pwd)
-RUNDIR := $(SRCDIR)'../run'
-DATDIR := $(RUNDIR)'/data'
+RUNDIR := $(SRCDIR)../run
+DATDIR := $(RUNDIR)/data
 #
 run: $(TARGET)
 	@mkdir -p $(RUNDIR) $(DATDIR)
-	@cp {$(TARGET),dns.in} $(RUNDIR)
+	@cp $(TARGET) $(RUNDIR)
+	@cp dns.in $(RUNDIR)
 	@echo "\nExecutable file $(TARGET) and input file dns.in copyed to run folder $(RUNDIR)"
 #
 .PHONY: clean
