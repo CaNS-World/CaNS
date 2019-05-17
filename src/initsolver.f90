@@ -118,7 +118,7 @@ module mod_initsolver
   !
   subroutine tridmatrix(bc,n,dzi,dzci,dzfi,c_or_f,a,b,c)
     implicit none
-    real(rp), parameter :: eps = 1.e-10
+    real(rp), parameter :: eps = epsilon(1._rp)*10.
     character(len=1), intent(in), dimension(0:1) :: bc
     integer , intent(in) :: n
     real(rp), intent(in) :: dzi

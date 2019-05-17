@@ -26,7 +26,7 @@ module mod_fft
     integer(C_INT) :: nx_x,ny_x,nz_x, &
                       nx_y,ny_y,nz_y
     integer :: ix,iy
-#ifdef SINGLE
+#ifdef SINGLE_PRECISION
     !$ call sfftw_init_threads(ierr)
     !$ call sfftw_plan_with_nthreads(omp_get_max_threads())
 #else
@@ -95,7 +95,7 @@ module mod_fft
   subroutine fftend(arrplan)
     implicit none
     type(C_PTR), intent(in), dimension(2,2) :: arrplan
-#ifdef SINGLE
+#ifdef SINGLE_PRECISION
     call sfftw_destroy_plan(arrplan(1,1))
     call sfftw_destroy_plan(arrplan(1,2))
     call sfftw_destroy_plan(arrplan(2,1))
@@ -115,7 +115,7 @@ module mod_fft
     implicit none
     type(C_PTR), intent(in) :: plan 
     real(rp), intent(inout), dimension(:,:,:) :: arr
-#ifdef SINGLE
+#ifdef SINGLE_PRECISION
     call sfftw_execute_r2r(plan,arr,arr)
 #else
     call dfftw_execute_r2r(plan,arr,arr)

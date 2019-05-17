@@ -26,7 +26,6 @@ DATDIR := $(RUNDIR)'/data'
 run: $(TARGET)
 	@mkdir -p $(RUNDIR) $(DATDIR)
 	@cp {$(TARGET),dns.in} $(RUNDIR)
-	@cd $(RUNDIR)
 	@echo "\nExecutable file $(TARGET) and input file dns.in copyed to run folder $(RUNDIR)"
 #
 .PHONY: clean

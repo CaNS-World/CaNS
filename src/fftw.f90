@@ -8,13 +8,17 @@ module mod_fftw_param
   interface
      type(C_PTR) function fftw_plan_guru_r2r(rank,dims, &
        howmany_rank,howmany_dims,in,out,kind,flags)  &
+#ifdef SINGLE_PRECISION
+       bind(C, name='fftwf_plan_guru_r2r')
+#else
        bind(C, name='fftw_plan_guru_r2r')
+#endif
        import
        integer(C_INT), value :: rank
        type(fftw_iodim), dimension(*), intent(in) :: dims
        integer(C_INT), value :: howmany_rank
        type(fftw_iodim), dimension(*), intent(in) :: howmany_dims
-#ifdef SINGLE
+#ifdef SINGLE_PRECISION
        real(C_FLOAT ), dimension(*), intent(out) :: in,out
 #else
        real(C_DOUBLE), dimension(*), intent(out) :: in,out
