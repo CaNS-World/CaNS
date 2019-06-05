@@ -9,7 +9,6 @@ program gen_xdmf
 ! (3) visualize the flow with the outputfile viewfld.xdmf
 !     e.g. with paraview: paraview viewfld.xdmf
 ! it assumes: 
-!        - double precision, and uniform grid spacing.
 !        - visualization files have the format:
 !          'XXX_fld_YYYYYYY.bin'
 !          where XXX is the name of the field set in param.h90 and 
@@ -47,9 +46,9 @@ indent = indent + 4
   write(buffer,fmt='(A)') repeat(' ',indent)//'<Geometry name="GEO" GeometryType="VXVYVZ">'
   write(unit=ixdmf,fmt='(A)')trim(buffer)
   indent = indent + 4
-write(buffer,fmt='(A,1I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' // &
-                                                                 ' DataType="Float" Precision="8" Endian="Native"' // &
-                                                                 ' Dimensions="',nx,'">'
+write(buffer,fmt='(A,I1,A,1I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' // &
+                                                       ' DataType="Float" Precision="',iprec,'" Endian="Native"' // &
+                                                       ' Dimensions="',nx,'">'
     write(unit=ixdmf,fmt='(A)')trim(buffer)
               indent = indent + 4
                 write(buffer,fmt='(A,i7.7,A)') repeat(' ',indent)//'x.bin'
@@ -57,9 +56,9 @@ write(buffer,fmt='(A,1I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' //
                 indent = indent - 4
     write(buffer,fmt='(A)') repeat(' ',indent)//'</DataItem>'
     write(unit=ixdmf,fmt='(A)')trim(buffer)
-write(buffer,fmt='(A,1I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' // &
-                                                                 ' DataType="Float" Precision="8" Endian="Native"' // &
-                                                                 ' Dimensions="',ny,'">'
+write(buffer,fmt='(A,I1,A,1I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' // &
+                                                       ' DataType="Float" Precision="',iprec,'" Endian="Native"' // &
+                                                       ' Dimensions="',ny,'">'
     write(unit=ixdmf,fmt='(A)')trim(buffer)
               indent = indent + 4
                 write(buffer,fmt='(A,i7.7,A)') repeat(' ',indent)//'y.bin'
@@ -67,9 +66,9 @@ write(buffer,fmt='(A,1I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' //
                 indent = indent - 4
     write(buffer,fmt='(A)') repeat(' ',indent)//'</DataItem>'
     write(unit=ixdmf,fmt='(A)')trim(buffer)
-write(buffer,fmt='(A,1I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' // &
-                                                                 ' DataType="Float" Precision="8" Endian="Native"' // &
-                                                                 ' Dimensions="',nz,'">'
+write(buffer,fmt='(A,I1,A,1I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' // &
+                                                       ' DataType="Float" Precision="',iprec,'" Endian="Native"' // &
+                                                       ' Dimensions="',nz,'">'
     write(unit=ixdmf,fmt='(A)')trim(buffer)
               indent = indent + 4
                 write(buffer,fmt='(A,i7.7,A)') repeat(' ',indent)//'z.bin'
@@ -111,9 +110,9 @@ write(buffer,fmt='(A,1I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' //
           write(buffer,fmt='(A)') repeat(' ',indent)//'<Attribute Name="'//scalname(ii)//'" Center="Node">'
           write(unit=ixdmf,fmt='(A)')trim(buffer)
           indent = indent + 4
-            write(buffer,fmt='(A,3I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' // &
-                                                                 ' DataType="Float" Precision="8" Endian="Native"' // &
-                                                                 ' Dimensions="',nz,ny,nx,'">'
+            write(buffer,fmt='(A,I1,A,3I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' // &
+                                                                   ' DataType="Float" Precision="',iprec,'" Endian="Native"' // &
+                                                                   ' Dimensions="',nz,ny,nx,'">'
             write(unit=ixdmf,fmt='(A)')trim(buffer)
             indent = indent + 4
               write(buffer,fmt='(A,i7.7,A)') repeat(' ',indent)//scalname(ii)//'_fld_',i,'.bin'
@@ -130,9 +129,9 @@ write(buffer,fmt='(A,1I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' //
             write(buffer,fmt='(A)') repeat(' ',indent)//'<Attribute Name="'//scalname(ii)//'_CMP" Center="Node">'
             write(unit=ixdmf,fmt='(A)')trim(buffer)
             indent = indent + 4
-              write(buffer,fmt='(A,3I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' // &
-                                                                   ' DataType="Float" Precision="8" Endian="Native"' // &
-                                                                   ' Dimensions="',nz,ny,nx,'">'
+              write(buffer,fmt='(A,I1,A,3I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' // &
+                                                                     ' DataType="Float" Precision="',iprec,'" Endian="Native"' // &
+                                                                     ' Dimensions="',nz,ny,nx,'">'
               write(unit=ixdmf,fmt='(A)')trim(buffer)
               indent = indent + 4
                 write(buffer,fmt='(A,i7.7,A)') repeat(' ',indent)//scalname(ii)//'_fld_',fldcmp,'.bin'

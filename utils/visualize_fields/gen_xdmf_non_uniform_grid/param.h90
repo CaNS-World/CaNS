@@ -49,3 +49,7 @@ integer, parameter :: fldstart = 100 , &
 !
 logical, parameter :: is_fldcmp  = .false.
 integer, parameter :: fldcmp     = 100
+!
+! precision of input file (8 -- double; 4 -- single)
+!
+integer, parameter :: iprec = 8
