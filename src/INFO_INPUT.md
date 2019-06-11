@@ -29,6 +29,7 @@ F F  F F  F F            ! is_outflow(0:1,1:3)
 ~~~
 
 ---
+---
 
 ~~~
 512 256 144              ! itot, jtot, ktot
@@ -42,7 +43,7 @@ These lines set the computational grid.
 
 `gr` is a **grid stretching parameter** that tweaks the non-uniform grid in the third direction; zero `gr` implies no stretching. See `initgrid.f90` for more details.
 
--
+---
 
 ~~~
 .95                      ! cfl
@@ -52,7 +53,7 @@ This line controls the simulation time step.
 
 The time step is set to be equal to `cfl` **times the maximum allowable time step**.
 
--
+---
 
 ~~~
 1. 1. 5640.              ! uref, lref, rey
@@ -62,7 +63,7 @@ This line defines the flow governing parameters.
 
 `uref`, `lref` and `rey` are a reference **velocity scale**, **length scale**, and **Reynolds number** defining the problem. The fluid kinematic viscosity is computed form these quantities.
 
--
+---
 
 ~~~
 poi                      ! inivel
@@ -85,7 +86,7 @@ These lines set the initial velocity field.
 
 See `initflow.f90` for more details.
 
--
+---
 
 ~~~
 P P  P P  D D          ! cbcvel(0:1,1:3,1) [u BC type]
@@ -116,7 +117,8 @@ The following options are available:
 
 The **last four rows** follow the same logic, but now for the BC **values** (dummy for a periodic direction).
 
--
+---
+
 ~~~
 T F F                    ! is_forced(1:3)
 1. 0. 0.                 ! velf(1:3)
@@ -130,7 +132,7 @@ These lines set the flow forcing and outflow regions.
 
 `is_outflow`, if true, **prescribes an outflow condition** for the boundary-normal velocity, determined from the condition of zero divergence. The six boolean values denote the upper and lower boundaries of the domain, for each direction.
 
--
+---
 
 ~~~
 10000                    ! nstep
@@ -142,7 +144,7 @@ These lines set total number of time steps and wether the simulation should be r
 
 `restart`, if true, **restarts the simulation** from a previously saved checkpoint file, named `fld.bin`.
 
--
+---
 
 ~~~
 10 10 20 5000 10000 2000 ! icheck, iout0d, iout1d, iout2d, iout3d, isave
@@ -159,7 +161,7 @@ These lines set the frequency of time step checking and output:
 
 1d, 2d and 3d outputs can be tweaked modifying files `out?d.h90`, and re-compiling the source. See also `output.f90` for more details.
 
--
+---
 
 ~~~
 2 2                      ! dims(1:2)
