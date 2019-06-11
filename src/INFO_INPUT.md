@@ -13,14 +13,14 @@ T                        ! is_wallturb
 100000                   ! nstep
 F                        ! restart
 10 10 100 500 10000 5000 ! icheck, iout0d, iout1d, iout2d, iout3d, isave
-P P  P P  D D            ! cbcvel(0:1,1:3,1); u BC type
-P P  P P  D D            ! cbcvel(0:1,1:3,2); v BC type
-P P  P P  D D            ! cbcvel(0:1,1:3,3); w BC type
-P P  P P  N N            ! cbcpre(0:1,1:3  ); p BC type
-0. 0.  0. 0.  0. 0.      !  bcvel(0:1,1:3,1); u BC type
-0. 0.  0. 0.  0. 0.      !  bcvel(0:1,1:3,2); v BC type
-0. 0.  0. 0.  0. 0.      !  bcvel(0:1,1:3,3); w BC type
-0. 0.  0. 0.  0. 0.      !  bcpre(0:1,1:3  ); p BC type
+P P  P P  D D            ! cbcvel(0:1,1:3,1) [u BC type]
+P P  P P  D D            ! cbcvel(0:1,1:3,2) [v BC type]
+P P  P P  D D            ! cbcvel(0:1,1:3,3) [w BC type]
+P P  P P  N N            ! cbcpre(0:1,1:3  ) [p BC type]
+0. 0.  0. 0.  0. 0.      !  bcvel(0:1,1:3,1) [u BC value]
+0. 0.  0. 0.  0. 0.      !  bcvel(0:1,1:3,2) [v BC value]
+0. 0.  0. 0.  0. 0.      !  bcvel(0:1,1:3,3) [w BC value]
+0. 0.  0. 0.  0. 0.      !  bcpre(0:1,1:3  ) [p BC value]
 T F F                    ! is_forced(1:3)
 1. 0. 0.                 ! velf(1:3)
 F F  F F  F F            ! is_outflow(0:1,1:3)
@@ -28,7 +28,6 @@ F F  F F  F F            ! is_outflow(0:1,1:3)
 4                        ! numthreadsmax
 ~~~
 
----
 ---
 
 ~~~
@@ -89,14 +88,14 @@ See `initflow.f90` for more details.
 -
 
 ~~~
-P P  P P  D D          ! cbcvel(0:1,1:3,1); u BC type
-P P  P P  D D          ! cbcvel(0:1,1:3,2); v BC type
-P P  P P  D D          ! cbcvel(0:1,1:3,3); w BC type
-P P  P P  N N          ! cbcpre(0:1,1:3  ); p BC type
-0. 0.  0. 0.  0. 0.    !  bcvel(0:1,1:3,1); u BC value
-0. 0.  0. 0.  0. 0.    !  bcvel(0:1,1:3,2); v BC value
-0. 0.  0. 0.  0. 0.    !  bcvel(0:1,1:3,3); w BC value
-0. 0.  0. 0.  0. 0.    !  bcpre(0:1,1:3  ); p BC value
+P P  P P  D D          ! cbcvel(0:1,1:3,1) [u BC type]
+P P  P P  D D          ! cbcvel(0:1,1:3,2) [v BC type]
+P P  P P  D D          ! cbcvel(0:1,1:3,3) [w BC type]
+P P  P P  N N          ! cbcpre(0:1,1:3  ) [p BC type]
+0. 0.  0. 0.  0. 0.    !  bcvel(0:1,1:3,1) [u BC value]
+0. 0.  0. 0.  0. 0.    !  bcvel(0:1,1:3,2) [v BC value]
+0. 0.  0. 0.  0. 0.    !  bcvel(0:1,1:3,3) [w BC value]
+0. 0.  0. 0.  0. 0.    !  bcpre(0:1,1:3  ) [p BC value]
 ~~~
 
 These lines set the boundary conditions (BC). 
