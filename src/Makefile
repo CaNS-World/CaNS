@@ -27,7 +27,7 @@ run: $(TARGET)
 	@mkdir -p $(RUNDIR) $(DATDIR)
 	@cp $(TARGET) $(RUNDIR)
 	@cp dns.in $(RUNDIR)
-	@echo "\nExecutable file $(TARGET) and input file dns.in copyed to run folder $(RUNDIR)"
+	@printf "\nExecutable file $(TARGET) and input file dns.in copied to run folder $(RUNDIR)\n"
 #
 .PHONY: clean
 clean:
