@@ -260,9 +260,9 @@ module mod_sanity
   up(:,:,:) = 0.
   vp(:,:,:) = 0.
   wp(:,:,:) = 0.
-  call add_noise(n,123,.50,up(1:n(1),1:n(2),1:n(3)))
-  call add_noise(n,456,.50,vp(1:n(1),1:n(2),1:n(3)))
-  call add_noise(n,789,.50,wp(1:n(1),1:n(2),1:n(3)))
+  call add_noise(n,123,.5_rp,up(1:n(1),1:n(2),1:n(3)))
+  call add_noise(n,456,.5_rp,vp(1:n(1),1:n(2),1:n(3)))
+  call add_noise(n,789,.5_rp,wp(1:n(1),1:n(2),1:n(3)))
   call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,1),bcvel(:,:,1),lambdaxy,(/'f','c','c'/),a,b,c,arrplan,normfft, &
                   rhsbx,rhsby,rhsbz)
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp)

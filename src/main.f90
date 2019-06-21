@@ -70,16 +70,16 @@ program cans
     real(rp), allocatable, dimension(:,:,:) :: y
     real(rp), allocatable, dimension(:,:,:) :: z
   end type rhs_bound 
+  type(rhs_bound) :: rhsbp
 #ifdef IMPDIFF
   type(C_PTR), dimension(2,2) :: arrplanu,arrplanv,arrplanw
-  real(rp), allocatable dimension(:,:) :: lambdaxyu,lambdaxyv,lambdaxyw
-  real(rp), allocatable dimension(:) :: au,av,aw,bu,bv,bw,bb,cu,cv,cw
+  real(rp), allocatable, dimension(:,:) :: lambdaxyu,lambdaxyv,lambdaxyw
+  real(rp), allocatable, dimension(:) :: au,av,aw,bu,bv,bw,bb,cu,cv,cw
   real(rp) :: normfftu,normfftv,normfftw
   real(rp) :: alpha,alphai
   integer :: i,j,k,im,ip,jm,jp,km,kp
   type(rhs_bound) :: rhsbu,rhsbv,rhsbw
 #endif
-  type(rhs_bound) :: rhsbp
   real(rp) :: ristep
   real(rp) :: dt,dti,dtmax,time,dtrk,dtrki,divtot,divmax
   integer :: irk,istep
@@ -137,7 +137,8 @@ program cans
            lambdaxyw(n(1),n(2)))
   allocate(au(n(3)),bu(n(3)),cu(n(3)), &
            av(n(3)),bv(n(3)),cv(n(3)), &
-           aw(n(3)),bw(n(3)),cw(n(3)))
+           aw(n(3)),bw(n(3)),cw(n(3)), &
+           bb(n(3)))
   allocate(rhsbu%x(n(2),n(3),0:1), &
            rhsbu%y(n(1),n(3),0:1), &
            rhsbu%z(n(1),n(2),0:1), &
@@ -291,7 +292,7 @@ program cans
       alphai = alpha**(-1)
       !$OMP PARALLEL DO DEFAULT(none) &
       !$OMP PRIVATE(i,j,k,im,jm,km,ip,jp,kp) &
-      !$OMP SHARED(p,pp,dzfi,dzci,alphai)
+      !$OMP SHARED(n,p,pp,dxi,dyi,dzfi,dzci,alphai)
       do k=1,n(3)
         kp = k + 1
         km = k - 1
@@ -390,6 +391,22 @@ program cans
   call fftend(arrplanu)
   call fftend(arrplanv)
   call fftend(arrplanw)
+#endif
+  !
+  ! deallocate variables
+  !
+  deallocate(u,v,w,p,up,vp,wp,pp)
+  deallocate(dudtrko,dvdtrko,dwdtrko)
+  deallocate(lambdaxyp)
+  deallocate(ap,bp,cp)
+  deallocate(dzc,dzf,zc,zf,dzci,dzfi)
+  deallocate(rhsbp%x,rhsbp%y,rhsbp%z)
+#ifdef IMPDIFF
+  deallocate(lambdaxyu,lambdaxyv,lambdaxyw)
+  deallocate(au,bu,cu,av,bv,cv,aw,bw,cw,bb)
+  deallocate(rhsbu%x,rhsbu%y,rhsbu%z, &
+             rhsbv%x,rhsbv%y,rhsbv%z, &
+             rhsbw%x,rhsbw%y,rhsbw%z)
 #endif
   if(myid.eq.0.and.(.not.kill)) print*, '*** Fim ***'
   call decomp_2d_finalize
