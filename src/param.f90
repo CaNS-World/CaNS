@@ -6,7 +6,7 @@ public
 ! parameters
 !
 real(rp), parameter :: pi = acos(-1._rp)
-real(rp), parameter :: small = epsilon(pi)*1000.
+real(rp), parameter :: small = epsilon(pi)*10**(precision(pi)/2)
 logical , parameter, dimension(2,3) :: no_outflow = & 
     reshape((/.false.,.false.,   & ! no outflow in x lower,upper bound
               .false.,.false.,   & ! no outflow in y lower,upper bound
