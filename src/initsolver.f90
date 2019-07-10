@@ -162,9 +162,9 @@ module mod_initsolver
     ! n.b.: a(1) and c(n) not set to zero here;
     !       the values are not used in the solver unless
     !       the direction is periodic
-    a(:) = a(:) + eps
-    b(:) = b(:) + eps
-    c(:) = c(:) + eps
+    a(:) = a(:)! + eps
+    b(:) = b(:)! + eps
+    c(:) = c(:)! + eps
     return
   end subroutine tridmatrix
   !
