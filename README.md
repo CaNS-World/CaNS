@@ -67,9 +67,10 @@ The code should be compiled in `src/`. The prerequisites are the following:
 
 The Makefile in `src/` should be modified in agreement to the installation paths of each library. Also, the following preprocessor options are available:
 
- * `-DDEBUG`   : performs some basic checks for debugging purposes
- * `-DTIMING`  : wall-clock time per timestep is computed
- * `-DIMPDIFF` : diffusion term of the N-S equations is integrated in time with an implicit discretization (thereby improving the stability of the numerical algorithm for viscous-dominated flows)
+ * `-DDEBUG`            : performs some basic checks for debugging purposes
+ * `-DTIMING`           : wall-clock time per timestep is computed
+ * `-DIMPDIFF`          : diffusion term of the N-S equations is integrated in time with an implicit discretization (thereby improving the stability of the numerical algorithm for viscous-dominated flows)
+ * `-DSINGLE_PRECISION` : calculation will be carried out in single precision (the default precision is double)
 
 Typing `make run` will compile the code and copy the executable `cans` and input file `dns.in` to a `run/` folder.
 
