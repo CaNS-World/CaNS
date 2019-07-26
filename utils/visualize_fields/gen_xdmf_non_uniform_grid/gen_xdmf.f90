@@ -23,7 +23,7 @@ implicit none
 include 'param.h90'
 character(len=1), parameter :: lf = char(10)
 character(len=400) :: buffer
-character(len=6) :: ichar
+character(len=7) :: ichar
 character(len=3) :: fldname
 character(len=4) :: islicechar
 character(len=1) :: inormchar
@@ -98,7 +98,7 @@ write(buffer,fmt='(A,I1,A,1I5,A)') repeat(' ',indent)//'<DataItem Format="Binary
     write(buffer,fmt='(A)') repeat(' ',indent)//'</Time>'
     write(unit=ixdmf,fmt='(A)')trim(buffer)
     do i = fldstart,fldend,nskip
-      write(ichar,fmt='(i6.6)') i
+      write(ichar,fmt='(i7.7)') i
       write(buffer,fmt='(A)') repeat(' ',indent)//'<Grid Name="T'//ichar//'" GridType="Uniform">'
       write(unit=ixdmf,fmt='(A)')trim(buffer)
       indent = indent + 4
