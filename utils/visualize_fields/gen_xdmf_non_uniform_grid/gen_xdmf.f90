@@ -6,8 +6,8 @@ program gen_xdmf
 ! (1) set the parameters in the file 'param.h90'
 ! (2) compile and run sequencially gen_grid.f90 and gen_xdmf.f90 
 !     (see genview.sh)
-! (3) visualize the flow with the outputfile viewfld.xdmf
-!     e.g. with paraview: paraview viewfld.xdmf
+! (3) visualize the flow with the outputfile viewfld.xmf
+!     e.g. with paraview: paraview viewfld.xmf
 ! it assumes: 
 !        - visualization files have the format:
 !          'XXX_fld_YYYYYYY.bin'
@@ -35,7 +35,7 @@ integer :: i,ii
 ixdmf = 99 
 nflds = (fldend-fldstart)/nskip + 1
 indent = 0
-open(unit =ixdmf, file = 'viewfld.xdmf',form='formatted')
+open(unit =ixdmf, file = 'viewfld.xmf',form='formatted')
 write(unit=ixdmf,fmt='(A)') '<?xml version="1.0" ?>'
 write(unit=ixdmf,fmt='(A)') '<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>'
 write(unit=ixdmf,fmt='(A)') '<Xdmf xmlns:xi="http://www.w3.org/2001/XInclude" Version="2.0">'
