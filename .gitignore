@@ -6,5 +6,6 @@
 *.log
 *dSYM
 *.xdmf
+*.xmf
 cans
 run/
