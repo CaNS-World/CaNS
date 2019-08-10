@@ -2,7 +2,7 @@
 ! parameter file for gen_xdmf.f90
 ! Pedro Costa (p.simoes.costa@gmail.com)
 !
-character (len=3), parameter :: casename = 'C01'
+character (len=10), parameter :: casename = 'DNS'
 !
 ! number and names of scalar fields;
 ! the number of entries in array scalname *must*

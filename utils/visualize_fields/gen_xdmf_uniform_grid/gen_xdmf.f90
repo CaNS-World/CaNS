@@ -5,8 +5,8 @@ program gen_xdmf
 ! usage:
 ! (1) set the parameters in the file 'param.h90'
 ! (2) compile and run the program (see genview.sh)
-! (3) visualize the flow with the outputfile viewfld.xmf
-!     e.g. with paraview: paraview viewfld.xmf
+! (3) visualize the flow with the outputfile viewfld_*.xmf
+!     e.g. with paraview: paraview viewfld_DNS.xmf
 ! it assumes: 
 !        - uniform grid spacing.
 !        - visualization files have the format:
@@ -33,7 +33,7 @@ integer :: i,ii
 ixdmf = 99 
 nflds = (fldend-fldstart)/nskip + 1
 indent = 0
-open(unit =ixdmf, file = 'viewfld.xmf',form='formatted')
+open(unit =ixdmf, file = 'viewfld_'//trim(casename)//'.xmf',form='formatted')
 write(unit=ixdmf,fmt='(A)') '<?xml version="1.0" ?>'
 write(unit=ixdmf,fmt='(A)') '<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>'
 write(unit=ixdmf,fmt='(A)') '<Xdmf xmlns:xi="http://www.w3.org/2001/XInclude" Version="2.0">'
