@@ -82,7 +82,7 @@ These lines set the initial velocity field.
 * `hcl`: half channel with logarithmic profile and mean velocity `uref`             ; streamwise direction in `x`
 * `tgv`: Taylor-Green vortex
 
-`is_wallturb`, if true, **superiposes a high amplitude disturbance on the initial velocity field** that effectively triggers transition to turbulence in a wall-bounded shear flow.
+`is_wallturb`, if true, **superimposes a high amplitude disturbance on the initial velocity field** that effectively triggers transition to turbulence in a wall-bounded shear flow.
 
 See `initflow.f90` for more details.
 
