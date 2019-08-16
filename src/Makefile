@@ -69,7 +69,7 @@ momd.o: momd.f90 common_mpi.o types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
 moms.o: moms.f90 types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
-output.o: output.f90 io.o types.o
+output.o: output.f90 io.o param.o types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
 param.o: param.f90 types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
