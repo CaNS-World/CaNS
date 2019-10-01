@@ -25,7 +25,7 @@ real(rp) :: lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,gr
 real(rp) :: cfl
 real(rp) :: uref,lref,rey,visc
 !
-character(len=100) :: inivel ! DON'T FORGET TO ADD A TRIM IN THE SWITCH COMMAND!
+character(len=100) :: inivel
 logical :: is_wallturb
 !
 integer :: nstep
