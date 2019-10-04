@@ -33,8 +33,8 @@ module mod_sanity
     real(rp), intent(in), dimension(0:1,3)            :: bcpre
     logical , intent(in), dimension(0:1,3)            :: is_outflow
     logical , intent(in), dimension(3)                :: is_forced
-    real(rp), intent(in), dimension(3)        :: dli
-    real(rp), intent(in), dimension(0:n(3)+1) :: dzci,dzfi
+    real(rp), intent(in), dimension(3)                :: dli
+    real(rp), intent(in), dimension(0:)               :: dzci,dzfi
     logical :: passed
     !
     call chk_dims(ng,dims,passed);                 if(.not.passed) call abortit
