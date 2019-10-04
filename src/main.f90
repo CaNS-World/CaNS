@@ -154,6 +154,8 @@ program cans
   if(myid.eq.0) print*, '*******************************'
   if(myid.eq.0) print*, ''
   call initgrid(inivel,n(3),gr,lz,dzc,dzf,zc,zf)
+  dzci(:) = dzc(:)**(-1)
+  dzfi(:) = dzf(:)**(-1)
   if(myid.eq.0) then
     inquire (iolength=lenr) dzc(1)
     open(99,file=trim(datadir)//'grid.bin',access='direct',recl=4*n(3)*lenr)
@@ -171,8 +173,6 @@ program cans
   call test_sanity(ng,n,dims,cbcvel,cbcpre,bcvel,bcpre,is_outflow,is_forced, &
                    dli,dzci,dzfi)
   !
-  dzci = dzc**(-1)
-  dzfi = dzf**(-1)
   if(.not.restart) then
     istep = 0
     time = 0.
