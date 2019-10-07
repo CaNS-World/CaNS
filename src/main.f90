@@ -372,7 +372,7 @@ program cans
                                                w(1:n(1),1:n(2),1:n(3)), &
                                                p(1:n(1),1:n(2),1:n(3)), &
                                                time,ristep)
-    if(myid.eq.0) print*, '*** Checkpoint saved at time = ', time, 'time step = ', istep, '. ***'
+      if(myid.eq.0) print*, '*** Checkpoint saved at time = ', time, 'time step = ', istep, '. ***'
     endif
 #ifdef TIMING
       dt12 = MPI_WTIME()-dt12
