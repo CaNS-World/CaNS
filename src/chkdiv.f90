@@ -26,10 +26,10 @@ module mod_chkdiv
     divtot = 0.
     divmax = 0.
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP  SHARED(n,u,v,w,dxi,dyi,dzfi) &
-    !$OMP  PRIVATE(i,j,k,im,jm,km,div) &
-    !$OMP  REDUCTION(+:divtot) &
-    !$OMP  REDUCTION(max:divmax)
+    !$OMP SHARED(n,u,v,w,dxi,dyi,dzfi) &
+    !$OMP PRIVATE(i,j,k,im,jm,km,div) &
+    !$OMP REDUCTION(+:divtot) &
+    !$OMP REDUCTION(max:divmax)
     do k=1,n(3)
        km = k-1
        do j=1,n(2)
