@@ -322,5 +322,6 @@ module mod_sanity
       call decomp_2d_finalize
       call MPI_FINALIZE(ierr)
       call exit
+      return
   end subroutine abortit
 end module mod_sanity
