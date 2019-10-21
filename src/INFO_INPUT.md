@@ -25,7 +25,7 @@ T F F                    ! is_forced(1:3)
 1. 0. 0.                 ! velf(1:3)
 F F  F F  F F            ! is_outflow(0:1,1:3)
 2 2                      ! dims(1:2)
-4                        ! numthreadsmax
+4                        ! nthreadsmax
 ~~~
 
 ---
@@ -165,11 +165,11 @@ These lines set the frequency of time step checking and output:
 
 ~~~
 2 2                      ! dims(1:2)
-4                        ! numthreadsmax
+4                        ! nthreadsmax
 ~~~
 
 These lines set the grid of computational subdomains and maximum number of threads.
 
 `dims` is the **number of computational** subdomains in `x` and `y`.
 
-`numthreadsmax ` is the **maximum number OpenMP threads**.
+`nthreadsmax ` is the **maximum number OpenMP threads**.
