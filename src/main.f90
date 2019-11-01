@@ -92,7 +92,7 @@ program cans
   real(rp) :: dt12,dt12av,dt12min,dt12max
 #endif
   character(len=7) :: fldnum
-  integer :: lenr,kk
+  integer :: kk
   logical :: kill
   !
   call MPI_INIT(ierr)
@@ -157,8 +157,7 @@ program cans
   dzci(:) = dzc(:)**(-1)
   dzfi(:) = dzf(:)**(-1)
   if(myid.eq.0) then
-    inquire (iolength=lenr) dzc(1)
-    open(99,file=trim(datadir)//'grid.bin',access='direct',recl=4*n(3)*lenr)
+    open(99,file=trim(datadir)//'grid.bin',access='direct',recl=4*n(3)*sizeof(1._rp))
     write(99,rec=1) dzc(1:n(3)),dzf(1:n(3)),zc(1:n(3)),zf(1:n(3))
     close(99)
     open(99,file=trim(datadir)//'grid.out')
