@@ -32,8 +32,8 @@ integer :: nstep
 logical :: restart
 integer :: icheck,iout0d,iout1d,iout2d,iout3d,isave
 !
-integer, dimension(2) :: dims = (/2,2/)
-integer :: nthreadsmax = 4
+integer, dimension(2) :: dims
+integer :: nthreadsmax
 !
 character(len=1), dimension(0:1,3,3) ::  cbcvel
 real(rp)         , dimension(0:1,3,3) :: bcvel
