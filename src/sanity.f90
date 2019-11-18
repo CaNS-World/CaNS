@@ -19,7 +19,7 @@ module mod_sanity
   private
   public test_sanity
   contains
-  subroutine test_sanity(ng,n,dims,cbcvel,cbcpre,bcvel,bcpre,is_outflow,is_forced, &
+  subroutine test_sanity(ng,n,dims,stop_type,cbcvel,cbcpre,bcvel,bcpre,is_outflow,is_forced, &
                          dli,dzci,dzfi)
     !
     ! performs some a priori checks of the input files before the calculation starts
@@ -27,8 +27,9 @@ module mod_sanity
     implicit none
     integer , intent(in), dimension(3) :: ng,n
     integer , intent(in), dimension(2) :: dims
-    character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
-    character(len=1), intent(in), dimension(0:1,3)   :: cbcpre
+    logical , intent(in), dimension(3) :: stop_type
+    character(len=1), intent(in), dimension(0:1,3,3)  :: cbcvel
+    character(len=1), intent(in), dimension(0:1,3)    :: cbcpre
     real(rp), intent(in), dimension(0:1,3,3)          :: bcvel
     real(rp), intent(in), dimension(0:1,3)            :: bcpre
     logical , intent(in), dimension(0:1,3)            :: is_outflow
@@ -38,6 +39,7 @@ module mod_sanity
     logical :: passed
     !
     call chk_dims(ng,dims,passed);                 if(.not.passed) call abortit
+    call chk_stop_type(stop_type,passed);          if(.not.passed) call abortit
     call chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed); if(.not.passed) call abortit
     call chk_outflow(cbcpre,is_outflow,passed);    if(.not.passed) call abortit
     call chk_forcing(cbcpre,is_forced  ,passed);   if(.not.passed) call abortit 
@@ -45,6 +47,18 @@ module mod_sanity
     !if(.not.passed) call abortit
     return
   end subroutine test_sanity
+  !
+  subroutine chk_stop_type(stop_type,passed)
+  implicit none
+  logical, intent(in), dimension(3) :: stop_type
+  logical, intent(out) :: passed
+  passed = .true.
+  if(.not.sum(stop_type(:))) then
+    if(myid.eq.0) print*, 'ERROR: stopping criterion not chosen.'
+    passed = .false.
+  endif
+  return 
+  end subroutine chk_stop_type
   !
   subroutine chk_dims(ng,dims,passed)
     implicit none
@@ -317,8 +331,8 @@ module mod_sanity
   subroutine abortit
       implicit none
       if(myid.eq.0) print*, ''
-      if(myid.eq.0) print*, '*** Simulation aborted due to errors in the case file ***'
-      if(myid.eq.0) print*, '    check bc.h90 and setup.h90'
+      if(myid.eq.0) print*, '*** Simulation aborted due to errors in the input file ***'
+      if(myid.eq.0) print*, '    check dns.in'
       call decomp_2d_finalize
       call MPI_FINALIZE(ierr)
       call exit

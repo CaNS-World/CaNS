@@ -29,6 +29,8 @@ character(len=100) :: inivel
 logical :: is_wallturb
 !
 integer :: nstep
+real(rp) :: time_max,tw_max
+logical, dimension(3) :: stop_type
 logical :: restart
 integer :: icheck,iout0d,iout1d,iout2d,iout3d,isave
 !
@@ -65,7 +67,8 @@ contains
         read(iunit,*) uref,lref,rey
         read(iunit,*) inivel
         read(iunit,*) is_wallturb
-        read(iunit,*) nstep
+        read(iunit,*) nstep, time_max,tw_max
+        read(iunit,*) stop_type(1),stop_type(2),stop_type(3)
         read(iunit,*) restart
         read(iunit,*) icheck,iout0d,iout1d,iout2d,iout3d,isave
         read(iunit,*) cbcvel(0,1,1),cbcvel(1,1,1),cbcvel(0,2,1),cbcvel(1,2,1),cbcvel(0,3,1),cbcvel(1,3,1)

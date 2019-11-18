@@ -10,7 +10,8 @@ Consider the following input file as example (corresponds to a turbulent plane c
 1. 1. 5640.              ! uref, lref, rey
 poi                      ! inivel
 T                        ! is_wallturb
-100000                   ! nstep
+100000 100. 0.1          ! nstep, time_max, tw_max
+T F F                    ! stop_type(1:3)
 F                        ! restart
 10 10 100 500 10000 5000 ! icheck, iout0d, iout1d, iout2d, iout3d, isave
 P P  P P  D D            ! cbcvel(0:1,1:3,1) [u BC type]
@@ -89,6 +90,49 @@ See `initflow.f90` for more details.
 ---
 
 ~~~
+100000 100. 0.1          ! nstep, time_max, tw_max
+T F F                    ! stop_type(1:3)
+F                        ! restart
+~~~
+
+These lines set the simulation termination criteria and wether the simulation should be restarted from a checkpoint file.
+
+`nstep` is the **total number of time steps**.
+
+`time_max` is the **maximum physical time**.
+
+`tw_max` is the **maximum total simulation wall-clock time time**.
+
+`stop_type` sets which criteria for terminating the simulation are to be used (more than one can be selected, and at least one of them must be `T`)
+
+* `stop_type(1)`, if true (`T`), the simulation will terminate after `nstep` time steps have been simulated;
+* `stop_type(2)`, if true (`T`), the simulation will terminate after `time_max` physical time units have been reached;
+* `stop_type(3)`, if true (`T`), the simulation will terminate after `tw_max` simulation wall-clock time has been reached;
+
+a checkoint file `fld.bin` will be saved before the simulation is terminated.
+
+`restart`, if true, **restarts the simulation** from a previously saved checkpoint file, named `fld.bin`.
+
+---
+
+~~~
+10 10 20 5000 10000 2000 ! icheck, iout0d, iout1d, iout2d, iout3d, isave
+~~~
+
+These lines set the frequency of time step checking and output:
+
+* every `icheck` time steps **the new time step size** is computed according to the new stability criterion and cfl (above);
+* every `iout0d` time steps **history files with global scalar variables** are appended; currently the forcing pressure gradient and time step history are reported;
+* every `iout1d` time steps **1d profiles** are written (e.g. velocity and its moments) to a file;
+* every `iout2d` time steps **2d slices of a 3d scalar field** are written to a file;
+* every `iout3d` time steps **3d scalar fields** are written to a file;
+* every `isave`  time steps a **checkpoint file** is written (`fld.bin`) overwritting the last save.
+
+1d, 2d and 3d outputs can be tweaked modifying files `out?d.h90`, and re-compiling the source. See also `output.f90` for more details.
+
+---
+
+~~~
 P P  P P  D D          ! cbcvel(0:1,1:3,1) [u BC type]
 P P  P P  D D          ! cbcvel(0:1,1:3,2) [v BC type]
 P P  P P  D D          ! cbcvel(0:1,1:3,3) [w BC type]
@@ -99,7 +143,7 @@ P P  P P  N N          ! cbcpre(0:1,1:3  ) [p BC type]
 0. 0.  0. 0.  0. 0.    !  bcpre(0:1,1:3  ) [p BC value]
 ~~~
 
-These lines set the boundary conditions (BC). 
+These lines set the boundary conditions (BC).
 
 The **type** (BC) for each field variable are set by a row of six characters, `X0 X1  Y0 Y1  Z0 Z1` where,
 
@@ -124,42 +168,13 @@ T F F                    ! is_forced(1:3)
 1. 0. 0.                 ! velf(1:3)
 F F  F F  F F            ! is_outflow(0:1,1:3)
 ~~~
-These lines set the flow forcing and outflow regions. 
+These lines set the flow forcing and outflow regions.
 
 `is_forced`, if true in the direction in question, **forces the flow** with a pressure gradient that balances the total wall shear (e.g. for a pressure-driven channel). The three boolean values corresponds to three domain directions.
 
 `velf`, is the **target bulk velocity** in the direction in question (where `is_forced` is true). The three values correspond to three domain directions.
 
 `is_outflow`, if true, **prescribes an outflow condition** for the boundary-normal velocity, determined from the condition of zero divergence. The six boolean values denote the upper and lower boundaries of the domain, for each direction.
-
----
-
-~~~
-10000                    ! nstep
-F                        ! restart
-~~~
-These lines set total number of time steps and wether the simulation should be restarted from a checkpoint file.
-
-`nstep` is the **total number of time steps**.
-
-`restart`, if true, **restarts the simulation** from a previously saved checkpoint file, named `fld.bin`.
-
----
-
-~~~
-10 10 20 5000 10000 2000 ! icheck, iout0d, iout1d, iout2d, iout3d, isave
-~~~
-
-These lines set the frequency of time step checking and output:
-
-* every `icheck` time steps **the new time step size** is computed according to the new stability criterion and cfl (above);
-* every `iout0d` time steps **history files with global scalar variables** are appended; currently the forcing pressure gradient and time step history are reported;
-* every `iout1d` time steps **1d profiles** are written (e.g. velocity and its moments) to a file;
-* every `iout2d` time steps **2d slices of a 3d scalar field** are written to a file;
-* every `iout3d` time steps **3d scalar fields** are written to a file;
-* every `isave`  time steps a **checkpoint file** is written (`fld.bin`) overwritting the last save.
-
-1d, 2d and 3d outputs can be tweaked modifying files `out?d.h90`, and re-compiling the source. See also `output.f90` for more details.
 
 ---
 

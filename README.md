@@ -23,6 +23,8 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 16/05/2019 -- Now a single input file, `dns.in`, can be used to run the executable without recompiling the source. The `examples/` folder has been updated accordingly. The implementation with the former input files (not maintained) can be found in branch `old_input_files`.
 
+20/11/2019 -- Different simulation termination criteria have been added as option in the input file `dns.in`, see [`src/INFO_INPUT.md`](src/INFO_INPUT.md) for more details.
+
 ## Features
 
 Some features are:
