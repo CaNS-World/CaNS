@@ -1,6 +1,6 @@
 module mod_mom
   use mpi
-  use mod_param     , only: dims
+  use mod_param     , only: dims, bforce
   use mod_common_mpi, only: ierr
   use mod_types
   implicit none
@@ -24,7 +24,7 @@ module mod_mom
     !$OMP PRIVATE(i,j,k,im,jm,km,ip,jp,kp) &
     !$OMP PRIVATE(uuip,uuim,uvjp,uvjm,uwkp,uwkm) &
     !$OMP PRIVATE(dudxp,dudxm,dudyp,dudym,dudzp,dudzm) &
-    !$OMP SHARED(nx,ny,nz,dxi,dyi,dzi,visc,u,v,w,dudt,dzci,dzfi)
+    !$OMP SHARED(nx,ny,nz,dxi,dyi,dzi,visc,u,v,w,dudt,dzci,dzfi,bforce)
     do k=1,nz
       kp = k + 1
       km = k - 1
@@ -51,7 +51,8 @@ module mod_mom
           !
           dudt(i,j,k) = dxi*(     -uuip + uuim ) + (dudxp-dudxm)*visc*dxi + &
                         dyi*(     -uvjp + uvjm ) + (dudyp-dudym)*visc*dyi + &
-                        dzfi(k)*( -uwkp + uwkm ) + (dudzp-dudzm)*visc*dzfi(k)
+                        dzfi(k)*( -uwkp + uwkm ) + (dudzp-dudzm)*visc*dzfi(k) + &
+                        bforce(1)
         enddo
       enddo
     enddo
@@ -98,7 +99,7 @@ module mod_mom
     !$OMP PRIVATE(i,j,k,im,jm,km,ip,jp,kp) &
     !$OMP PRIVATE(uvip,uvim,vvjp,vvjm,wvkp,wvkm) &
     !$OMP PRIVATE(dvdxp,dvdxm,dvdyp,dvdym,dvdzp,dvdzm) &
-    !$OMP SHARED(nx,ny,nz,dxi,dyi,dzi,visc,u,v,w,dvdt,dzci,dzfi)
+    !$OMP SHARED(nx,ny,nz,dxi,dyi,dzi,visc,u,v,w,dvdt,dzci,dzfi,bforce)
     do k=1,nz
       kp = k + 1
       km = k - 1
@@ -125,7 +126,8 @@ module mod_mom
           !
           dvdt(i,j,k) = dxi*(     -uvip + uvim ) + (dvdxp-dvdxm)*visc*dxi+ &
                         dyi*(     -vvjp + vvjm ) + (dvdyp-dvdym)*visc*dyi+ &
-                        dzfi(k)*( -wvkp + wvkm ) + (dvdzp-dvdzm)*visc*dzfi(k)
+                        dzfi(k)*( -wvkp + wvkm ) + (dvdzp-dvdzm)*visc*dzfi(k)+ &
+                        bforce(2)
         enddo
       enddo
     enddo
@@ -172,7 +174,7 @@ module mod_mom
     !$OMP PRIVATE(i,j,k,im,jm,km,ip,jp,kp) &
     !$OMP PRIVATE(uwip,uwim,vwjp,vwjm,wwkp,wwkm) &
     !$OMP PRIVATE(dwdxp,dwdxm,dwdyp,dwdym,dwdzp,dwdzm) &
-    !$OMP SHARED(nx,ny,nz,dxi,dyi,dzi,visc,u,v,w,dwdt,dzci,dzfi)
+    !$OMP SHARED(nx,ny,nz,dxi,dyi,dzi,visc,u,v,w,dwdt,dzci,dzfi,bforce)
     do k=1,nz
       kp = k + 1
       km = k - 1
@@ -199,7 +201,8 @@ module mod_mom
           !
           dwdt(i,j,k) = dxi*(     -uwip + uwim ) + (dwdxp-dwdxm)*visc*dxi+ &
                         dyi*(     -vwjp + vwjm ) + (dwdyp-dwdym)*visc*dyi+ &
-                        dzci(k)*( -wwkp + wwkm ) + (dwdzp-dwdzm)*visc*dzci(k)
+                        dzci(k)*( -wwkp + wwkm ) + (dwdzp-dwdzm)*visc*dzci(k)+ &
+                        bforce(3)
         enddo
       enddo
     enddo

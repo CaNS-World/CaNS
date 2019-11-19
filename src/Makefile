@@ -3,7 +3,7 @@ FC   = mpif90
 # flags
 BIG := # -mcmodel=medium
 DBG := #-g -fbacktrace -Wall -O0 -Wextra -pedantic -fcheck=all
-OMP := #-fopenmp
+OMP := #-openmp
 OPT := -O3
 OTH := -DDEBUG -DTIMING #-DIMPDIFF
 PROF := #-pg

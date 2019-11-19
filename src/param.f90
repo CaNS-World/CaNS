@@ -42,6 +42,7 @@ real(rp)         , dimension(0:1,3,3) :: bcvel
 character(len=1), dimension(0:1,3)   ::  cbcpre
 real(rp)         , dimension(0:1,3)   ::   bcpre
 !
+real(rp), dimension(3) :: bforce
 logical , dimension(3) :: is_forced
 real(rp), dimension(3) :: velf
 logical , dimension(0:1,3) :: is_outflow
@@ -79,6 +80,7 @@ contains
         read(iunit,*)  bcvel(0,1,2), bcvel(1,1,2), bcvel(0,2,2), bcvel(1,2,2), bcvel(0,3,2), bcvel(1,3,2)
         read(iunit,*)  bcvel(0,1,3), bcvel(1,1,3), bcvel(0,2,3), bcvel(1,2,3), bcvel(0,3,3), bcvel(1,3,3)
         read(iunit,*)  bcpre(0,1  ), bcpre(1,1  ), bcpre(0,2  ), bcpre(1,2  ), bcpre(0,3  ), bcpre(1,3  )
+        read(iunit,*)  bforce(1),bforce(2),bforce(3)
         read(iunit,*)  is_forced(1),is_forced(2),is_forced(3)
         read(iunit,*)  velf(1),velf(2),velf(3)
         read(iunit,*)  is_outflow(0,1),is_outflow(1,1),is_outflow(0,2),is_outflow(1,2),is_outflow(0,3),is_outflow(1,3)

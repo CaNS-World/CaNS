@@ -53,7 +53,7 @@ module mod_sanity
   logical, intent(in), dimension(3) :: stop_type
   logical, intent(out) :: passed
   passed = .true.
-  if(.not.sum(stop_type(:))) then
+  if(.not.any(stop_type(:))) then
     if(myid.eq.0) print*, 'ERROR: stopping criterion not chosen.'
     passed = .false.
   endif

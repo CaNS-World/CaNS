@@ -22,6 +22,7 @@ P P  P P  N N            ! cbcpre(0:1,1:3  ) [p BC type]
 0. 0.  0. 0.  0. 0.      !  bcvel(0:1,1:3,2) [v BC value]
 0. 0.  0. 0.  0. 0.      !  bcvel(0:1,1:3,3) [w BC value]
 0. 0.  0. 0.  0. 0.      !  bcpre(0:1,1:3  ) [p BC value]
+0. 0. 0.                 ! bforce(1:3)
 T F F                    ! is_forced(1:3)
 1. 0. 0.                 ! velf(1:3)
 F F  F F  F F            ! is_outflow(0:1,1:3)
@@ -164,11 +165,14 @@ The **last four rows** follow the same logic, but now for the BC **values** (dum
 ---
 
 ~~~
+0. 0. 0.                 ! bforce(1:3)
 T F F                    ! is_forced(1:3)
 1. 0. 0.                 ! velf(1:3)
 F F  F F  F F            ! is_outflow(0:1,1:3)
 ~~~
 These lines set the flow forcing and outflow regions.
+
+`bforce`, is a constant **body force density term** in the direction in question (e.g. the negative of a constant pressure gradient) that can be added to the right-hand-side of the momentum equation. The three values corresponds to three domain directions. NOTE: in a pressure-driven wall-bounded flow, only one type of flow forcing should be selected (bulk velocity or pressure gradient). If the streamwise bulk velocity is forced (by setting the is_forced parameter below `T`), bforce should be zero, and vice-versa.
 
 `is_forced`, if true in the direction in question, **forces the flow** with a pressure gradient that balances the total wall shear (e.g. for a pressure-driven channel). The three boolean values corresponds to three domain directions.
 
