@@ -108,7 +108,7 @@ These lines set the simulation termination criteria and wether the simulation sh
 
 * `stop_type(1)`, if true (`T`), the simulation will terminate after `nstep` time steps have been simulated;
 * `stop_type(2)`, if true (`T`), the simulation will terminate after `time_max` physical time units have been reached;
-* `stop_type(3)`, if true (`T`), the simulation will terminate after `tw_max` simulation wall-clock time has been reached;
+* `stop_type(3)`, if true (`T`), the simulation will terminate after `tw_max` simulation wall-clock time (in hours) has been reached;
 
 a checkoint file `fld.bin` will be saved before the simulation is terminated.
 
