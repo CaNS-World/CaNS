@@ -102,7 +102,7 @@ These lines set the simulation termination criteria and wether the simulation sh
 
 `time_max` is the **maximum physical time**.
 
-`tw_max` is the **maximum total simulation wall-clock time time**.
+`tw_max` is the **maximum total simulation wall-clock time**.
 
 `stop_type` sets which criteria for terminating the simulation are to be used (more than one can be selected, and at least one of them must be `T`)
 
