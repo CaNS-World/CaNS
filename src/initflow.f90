@@ -2,7 +2,7 @@ module mod_initflow
   use mpi
   use decomp_2d
   use mod_common_mpi, only: ierr,coord,myid
-  use mod_param     , only: dims,pi,dx,dy,dz,lx,ly,lz,uref,lref,is_wallturb
+  use mod_param     , only: dims,pi,dx,dy,dz,lx,ly,lz,uref,lref,is_wallturb,bforce
   use mod_types
   implicit none
   private
@@ -24,6 +24,7 @@ module mod_initflow
     real(rp) :: q
     logical :: is_noise,is_mean,is_pair
     real(rp) :: xc,yc,zc,xf,yf,zf
+    real(rp) :: reb,retau
     !
     allocate(u1d(n(3)))
     is_noise = .false.
@@ -69,6 +70,16 @@ module mod_initflow
           enddo
         enddo
       enddo
+    case('pdc')
+      if(is_wallturb) then ! turbulent flow
+        retau  = (bforce(1)*lref)**.5*uref/visc
+        reb    = (retau/.09)**(1./.88)
+        uref   = (reb/2.)/retau
+      else                 ! laminar flow
+        uref = (bforce(1)*lref**2/(3.*visc))
+      endif
+      call poiseuille(q,n(3),zclzi,uref,u1d)
+      is_mean=.true.
     case default
       if(myid.eq.0) print*, 'ERROR: invalid name for initial velocity field'
       if(myid.eq.0) print*, ''
@@ -119,9 +130,9 @@ module mod_initflow
           do i=1,n(1)
             xc = ((coord(1)*n(1)+i-0.5)*dx-.5*lx)*2./lz
             xf = ((coord(1)*n(1)+i-0.0)*dx-.5*lx)*2./lz
-            u(i,j,k) = u1d(k)
-            v(i,j,k) = -1. * gxy(yf,xc)*dfz(zc)
-            w(i,j,k) =  1. * fz(zf)*dgxy(yc,xc)
+            !u(i,j,k) = u1d(k)
+            v(i,j,k) = -1. * gxy(yf,xc)*dfz(zc) * uref
+            w(i,j,k) =  1. * fz(zf)*dgxy(yc,xc) * uref
             p(i,j,k) = 0.
           enddo
         enddo

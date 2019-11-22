@@ -1,6 +1,6 @@
 module mod_momd
   use mpi
-  use mod_param     , only: dims
+  use mod_param     , only: dims, bforce
   use mod_common_mpi, only: ierr
   use mod_types
   implicit none
@@ -20,7 +20,7 @@ module mod_momd
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP PRIVATE(i,j,k,im,jm,km,ip,jp,kp) &
     !$OMP PRIVATE(uuip,uuim,uvjp,uvjm,uwkp,uwkm) &
-    !$OMP SHARED(nx,ny,nz,dxi,dyi,u,v,w,dudt,dzci,dzfi)
+    !$OMP SHARED(nx,ny,nz,dxi,dyi,u,v,w,dudt,dzci,dzfi,bforce)
     do k=1,nz
       kp = k + 1
       km = k - 1
@@ -41,7 +41,8 @@ module mod_momd
           !
           dudt(i,j,k) = dxi*(     -uuip + uuim ) + &
                         dyi*(     -uvjp + uvjm ) + &
-                        dzfi(k)*( -uwkp + uwkm )
+                        dzfi(k)*( -uwkp + uwkm ) + &
+                        bforce(1)
         enddo
       enddo
     enddo
@@ -62,7 +63,7 @@ module mod_momd
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP PRIVATE(i,j,k,im,jm,km,ip,jp,kp) &
     !$OMP PRIVATE(uvip,uvim,vvjp,vvjm,wvkp,wvkm) &
-    !$OMP SHARED(nx,ny,nz,dxi,dyi,dzci,dzfi,u,v,w,dvdt)
+    !$OMP SHARED(nx,ny,nz,dxi,dyi,dzci,dzfi,u,v,w,dvdt,bforce)
     do k=1,nz
       kp = k + 1
       km = k - 1
@@ -83,7 +84,8 @@ module mod_momd
           !
           dvdt(i,j,k) = dxi*(     -uvip + uvim ) + &
                         dyi*(     -vvjp + vvjm ) + &
-                        dzfi(k)*( -wvkp + wvkm )
+                        dzfi(k)*( -wvkp + wvkm ) + &
+                        bforce(2)
         enddo
       enddo
     enddo
@@ -104,7 +106,7 @@ module mod_momd
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP PRIVATE(i,j,k,im,jm,km,ip,jp,kp) &
     !$OMP PRIVATE(uwip,uwim,vwjp,vwjm,wwkp,wwkm) &
-    !$OMP SHARED(nx,ny,nz,dxi,dyi,dzci,dzfi,u,v,w,dwdt)
+    !$OMP SHARED(nx,ny,nz,dxi,dyi,dzci,dzfi,u,v,w,dwdt,bforce)
     do k=1,nz
       kp = k + 1
       km = k - 1
@@ -125,7 +127,8 @@ module mod_momd
           !
           dwdt(i,j,k) = dxi*(     -uwip + uwim ) + &
                         dyi*(     -vwjp + vwjm ) + &
-                        dzci(k)*( -wwkp + wwkm )
+                        dzci(k)*( -wwkp + wwkm ) + &
+                        bforce(3)
         enddo
       enddo
     enddo

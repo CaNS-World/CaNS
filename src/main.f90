@@ -49,7 +49,7 @@ program cans
                              imax,jmax,dims, &
                              nthreadsmax, &
                              gr, &
-                             is_outflow,no_outflow,is_forced, &
+                             is_outflow,no_outflow,is_forced,bforce, &
                              n,ng,l,dl,dli, &
                              read_input
   use mod_sanity     , only: test_sanity
@@ -84,7 +84,7 @@ program cans
   real(rp) :: dt,dti,dtmax,time,dtrk,dtrki,divtot,divmax
   integer :: irk,istep
   real(rp), allocatable, dimension(:) :: dzc,dzf,zc,zf,dzci,dzfi
-  real(rp) :: meanvel
+  real(rp) :: meanvelu,meanvelv,meanvelw
   real(rp), dimension(3) :: dpdl
   !real(rp), allocatable, dimension(:) :: var
   real(rp), dimension(10) :: var
@@ -269,20 +269,6 @@ program cans
       call solver(n,arrplanw,normfftw,lambdaxyw,aw,bb,cw,cbcvel(:,3,3),(/'c','c','f'/),wp)
 #endif
       dpdl(:) = dpdl(:) + f(:)
-#ifdef DEBUG
-      if(is_forced(1)) then
-        call chkmean(n,dzf/lz,up,meanvel)
-        if(myid.eq.0) print*,'Mean u = ', meanvel
-      endif
-      if(is_forced(2)) then
-        call chkmean(n,dzf/lz,vp,meanvel)
-        if(myid.eq.0) print*,'Mean v = ', meanvel
-      endif
-      if(is_forced(3)) then
-        call chkmean(n,dzc/lz,wp,meanvel)
-        if(myid.eq.0) print*,'Mean w = ', meanvel
-      endif
-#endif
       call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! outflow BC only at final velocity
       call fillps(n,dli,dzfi,dtrki,up,vp,wp,pp)
       call updt_rhs_b((/'c','c','c'/),cbcpre,n,rhsbp%x,rhsbp%y,rhsbp%z,pp)
@@ -342,7 +328,7 @@ program cans
       if(dtmax.lt.small) then
         if(myid.eq.0) print*, 'ERROR: timestep is too small.'
         if(myid.eq.0) print*, 'Aborting...'
-        istep = nstep + 1 ! i.e. exit main loop
+        is_done = .true.
         kill = .true.
       endif
       dti = 1./dt
@@ -350,7 +336,7 @@ program cans
       if(divmax.gt.small.or.divtot.ne.divtot) then
         if(myid.eq.0) print*, 'ERROR: maximum divergence is too large.'
         if(myid.eq.0) print*, 'Aborting...'
-        istep = nstep + 1 ! i.e. exit main loop
+        is_done = .true.
         kill = .true.
       endif
     endif
@@ -363,10 +349,25 @@ program cans
       var(2) = dt
       var(3) = time
       call out0d(trim(datadir)//'time.out',3,var)
-      if(any(is_forced(:))) then
+      !
+      if(any(is_forced(:)).or.any(abs(bforce(:)).gt.0.)) then
+        meanvelu = 0.
+        meanvelv = 0.
+        meanvelw = 0.
+        if(is_forced(1).or.abs(bforce(1)).gt.0.) then
+          call chkmean(n,dzf/lz,up,meanvelu)
+        endif
+        if(is_forced(2).or.abs(bforce(2)).gt.0.) then
+          call chkmean(n,dzf/lz,vp,meanvelv)
+        endif
+        if(is_forced(3).or.abs(bforce(3)).gt.0.) then
+          call chkmean(n,dzc/lz,wp,meanvelw)
+        endif
+        if(.not.any(is_forced(:))) dpdl(:) = bforce(:) ! constant pressure gradient
         var(1)   = time
         var(2:4) = dpdl(1:3)
-        call out0d(trim(datadir)//'forcing.out',4,var)
+        var(5:7) = (/meanvelu,meanvelv,meanvelw/)
+        call out0d(trim(datadir)//'forcing.out',7,var)
       endif
       !deallocate(var)
     endif
