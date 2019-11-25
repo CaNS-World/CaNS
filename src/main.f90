@@ -363,7 +363,7 @@ program cans
         if(is_forced(3).or.abs(bforce(3)).gt.0.) then
           call chkmean(n,dzc/lz,wp,meanvelw)
         endif
-        if(.not.any(is_forced(:))) dpdl(:) = bforce(:) ! constant pressure gradient
+        if(.not.any(is_forced(:))) dpdl(:) = -bforce(:) ! constant pressure gradient
         var(1)   = time
         var(2:4) = dpdl(1:3)
         var(5:7) = (/meanvelu,meanvelv,meanvelw/)
