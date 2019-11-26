@@ -19,6 +19,8 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 ## News
 
+The **many-GPU** version of CaNS can be found [**here**](https://github.com/maxcuda/CaNS).
+
 08/02/2019 -- Input files corresponding to the simulations presented in the manuscript above have been added to `examples/`.
 
 16/05/2019 -- Now a single input file, `dns.in`, can be used to run the executable without recompiling the source. The `examples/` folder has been updated accordingly. The implementation with the former input files (not maintained) can be found in branch `old_input_files`.
