@@ -381,7 +381,7 @@ program cans
     if(mod(istep,iout3d).eq.0) then
       include 'out3d.h90'
     endif
-    if(mod(istep,isave ).eq.0.or.is_done) then
+    if(mod(istep,isave ).eq.0.or.(is_done.and..not.kill)) then
       ristep = 1.*istep
       call load('w',trim(datadir)//'fld.bin',n,u(1:n(1),1:n(2),1:n(3)), &
                                                v(1:n(1),1:n(2),1:n(3)), &
