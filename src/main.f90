@@ -322,17 +322,17 @@ program cans
     enddo
     dpdl(:) = -dpdl(:)*dti
     !
-    ! check if simulation stopping criteria
+    ! check simulation stopping criteria
     !
     if(stop_type(1)) then ! maximum number of time steps reached
-      if(istep.gt.nstep   ) is_done = is_done.or..true.
+      if(istep.ge.nstep-1 ) is_done = is_done.or..true.
     endif
     if(stop_type(2)) then ! maximum simulation time reached
-      if(time .gt.time_max) is_done = is_done.or..true.
+      if(time .ge.time_max) is_done = is_done.or..true.
     endif
     if(stop_type(3)) then ! maximum wall-clock time reached
       tw = (MPI_WTIME()-twi)/3600.
-      if(tw   .gt.tw_max  ) is_done = is_done.or..true.
+      if(tw   .ge.tw_max  ) is_done = is_done.or..true.
     endif
     if(mod(istep,icheck).eq.0) then
       if(myid.eq.0) print*, 'Checking stability and divergence...'
