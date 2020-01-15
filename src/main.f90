@@ -325,7 +325,7 @@ program cans
     ! check simulation stopping criteria
     !
     if(stop_type(1)) then ! maximum number of time steps reached
-      if(istep.ge.nstep-1 ) is_done = is_done.or..true.
+      if(istep.ge.nstep   ) is_done = is_done.or..true.
     endif
     if(stop_type(2)) then ! maximum simulation time reached
       if(time .ge.time_max) is_done = is_done.or..true.
