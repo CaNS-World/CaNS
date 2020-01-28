@@ -62,7 +62,8 @@ module mod_initgrid
   end subroutine initgrid
   !
   ! grid stretching functions 
-  ! see e.g., Fluid Flow Phenomena -- A Numerical Toolkit, by P. Orlandi 
+  ! see e.g., Fluid Flow Phenomena -- A Numerical Toolkit, by P. Orlandi
+  !           Pirozzoli et al. JFM 788, 614–639 (commented)
   !
   subroutine gridpoint_cluster_two_end(alpha,z0,z)
     !
@@ -73,6 +74,7 @@ module mod_initgrid
     real(rp), intent(out) :: z
     if(alpha.ne.0.) then
       z = 0.5*(1.+tanh((z0-0.5)*alpha)/tanh(alpha/2.))
+      !z = 0.5*(1.+erf( (z0-0.5)*alpha)/erf( alpha/2.))
     else
       z = z0
     endif
@@ -87,6 +89,7 @@ module mod_initgrid
     real(rp), intent(out) :: z
     if(alpha.ne.0.) then
       z = 1.0*(1.+tanh((z0-1.0)*alpha)/tanh(alpha/1.))
+      !z = 1.0*(1.+erf( (z0-1.0)*alpha)/erf( alpha/1.))
     else
       z = z0
     endif
@@ -102,8 +105,10 @@ module mod_initgrid
     if(alpha.ne.0.) then
       if(    z0.le.0.5) then 
         z = 0.5*(1.-1.+tanh(2.*alpha*(z0-0.))/tanh(alpha))
+        !z = 0.5*(1.-1.+erf( 2.*alpha*(z0-0.))/erf( alpha))
       elseif(z0.gt.0.5) then
         z = 0.5*(1.+1.+tanh(2.*alpha*(z0-1.))/tanh(alpha))
+        !z = 0.5*(1.+1.+erf( 2.*alpha*(z0-1.))/erf( alpha))
       endif
     else
       z = z0
