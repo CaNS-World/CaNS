@@ -22,7 +22,7 @@ real(rp), parameter, dimension(3)   :: rkcoeff12 = rkcoeff(1,:)+rkcoeff(2,:)
 !
 integer :: itot,jtot,ktot,imax,jmax
 real(rp) :: lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,gr
-real(rp) :: cfl
+real(rp) :: cfl,dtmin
 real(rp) :: uref,lref,rey,visc
 !
 character(len=100) :: inivel
@@ -64,7 +64,7 @@ contains
         read(iunit,*) itot,jtot,ktot
         read(iunit,*) lx,ly,lz
         read(iunit,*) gr
-        read(iunit,*) cfl
+        read(iunit,*) cfl,dtmin
         read(iunit,*) uref,lref,rey
         read(iunit,*) inivel
         read(iunit,*) is_wallturb

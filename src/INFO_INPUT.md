@@ -6,7 +6,7 @@ Consider the following input file as example (corresponds to a turbulent plane c
 512 256 144              ! itot, jtot, ktot
 6. 3. 1.                 ! lx, ly, lz
 0.                       ! gr
-.95                      ! cfl
+.95 1.0e5                ! cfl, dtmin
 1. 1. 5640.              ! uref, lref, rey
 poi                      ! inivel
 T                        ! is_wallturb
@@ -48,12 +48,13 @@ These lines set the computational grid.
 ---
 
 ~~~
-.95                      ! cfl
+.95 1.0e5                ! cfl, dtmin
 ~~~
 
 This line controls the simulation time step.
 
-The time step is set to be equal to `cfl` **times the maximum allowable time step**.
+The time step is set to be equal to `min(cfl*dtmax,dtmin)`, i.e. the minimum value between `dtmin` and `cfl` times the maximum allowable time step `dtmax` (computed every `ickeck` time steps; see below).
+`dtmin` is therefore used when a constant timestep, smaller than `cfl*dtmax`, is required. If not, it should be set to a high value so that the timestep is dynamically adjusted to `cfl*dtmax`.
 
 ---
 
