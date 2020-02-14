@@ -187,7 +187,7 @@ module mod_sanity
     enddo
   enddo
   if(myid.eq.0.and.(.not.passed)) &
-    print*, 'ERROR: Dirichlet pressure BC should be an outflow direction; check the BC or is_outflow in bc.h90.'
+    print*, 'ERROR: Dirichlet pressure BC should be an outflow direction; check the BC or is_outflow in dns.in.'
   return 
   end subroutine chk_outflow
   !
@@ -207,7 +207,7 @@ module mod_sanity
     endif
   enddo
   if(myid.eq.0.and.(.not.passed)) &
-  print*, 'ERROR: Flow cannot be forced in a non-periodic direction; check the BCs and is_forced in bc.h90.'
+  print*, 'ERROR: Flow cannot be forced in a non-periodic direction; check the BCs and is_forced in dns.in.'
   return 
   end subroutine chk_forcing
   !
