@@ -212,31 +212,40 @@ module mod_bound
         case(1)
           if    (ibound.eq.0) then
             !$OMP WORKSHARE
-            p(0,  :,:) = 1.*factor + p(1  ,:,:)
+            !p(0,:,:) = 1./3.*(-2.*factor+4.*p(1  ,:,:)-p(2  ,:,:))
+            p(0,:,:) = 1.*factor + p(1  ,:,:)
             !$OMP END WORKSHARE
           elseif(ibound.eq.1) then
             !$OMP WORKSHARE
-            p(n+1,:,:) = 2.*factor + p(n-1,:,:)
+            !p(n,:,:) = 1./3.*(-2.*factor+4.*p(n-1,:,:)-p(n-2,:,:))
+            p(n,:,:) = 1.*factor + p(n-1,:,:)
+            p(n+1,:,:) = p(n,:,:) ! not needed
             !$OMP END WORKSHARE
           endif
         case(2)
           if    (ibound.eq.0) then
             !$OMP WORKSHARE
-            p(:,0  ,:) = 1.*factor + p(:,1  ,:) 
+            !p(:,0  ,:) = 1./3.*(-2.*factor+4.*p(:,1,:)-p(:,2  ,:))
+            p(:,0,:) = 1.*factor + p(:,1  ,:)
             !$OMP END WORKSHARE
           elseif(ibound.eq.1) then
             !$OMP WORKSHARE
-            p(:,n+1,:) = 2.*factor + p(:,n-1,:)
+            !p(:,n,:) = 1./3.*(-2.*factor+4.*p(:,n-1,:)-p(:,n-2,:))
+            p(:,n,:) = 1.*factor + p(:,n-1,:)
+            p(:,n+1,:) = p(:,n,:) ! not needed
             !$OMP END WORKSHARE
           endif
         case(3)
           if    (ibound.eq.0) then
             !$OMP WORKSHARE
-            p(:,:,0  ) = 1.*factor + p(:,:,1  )
+            !p(:,:,0) = 1./3.*(-2.*factor+4.*p(:,:,1  )-p(:,:,2  ))
+            p(:,:,0) = 1.*factor + p(:,:,1  )
             !$OMP END WORKSHARE
           elseif(ibound.eq.1) then
             !$OMP WORKSHARE
-            p(:,:,n+1) = 2.*factor + p(:,:,n-1)
+            !p(:,:,n) = 1./3.*(-2.*factor+4.*p(:,:,n-1)-p(:,:,n-2))
+            p(:,:,n) = 1.*factor + p(:,:,n-1)
+            p(:,:,n+1) = p(:,:,n) ! not needed
             !$OMP END WORKSHARE
           endif
         end select
