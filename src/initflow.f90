@@ -137,6 +137,27 @@ module mod_initflow
           enddo
         enddo
       enddo
+      !
+      ! alternatively, using a Taylor-Green vortex 
+      ! for the cross-stream velocity components
+      ! (commented below)
+      !
+      !do k=1,n(3)
+      !  zc = (zclzi(k)              )*2.*pi
+      !  zf = (zclzi(k)+0.5*dzclzi(k))*2.*pi
+      !  do j=1,n(2)
+      !    yc = (j+coord(2)*n(2)-.5)*dy/ly*2.*pi
+      !    yf = (j+coord(2)*n(2)-.0)*dy/ly*2.*pi
+      !    do i=1,n(1)
+      !      xc = (i+coord(1)*n(1)-.5)*dx/lx*2.*pi
+      !      xf = (i+coord(1)*n(1)-.0)*dx/lx*2.*pi
+      !      !u(i,j,k) = u1d(k)
+      !      v(i,j,k) =  sin(xc)*cos(yf)*cos(zc)
+      !      w(i,j,k) = -cos(xc)*sin(yc)*cos(zf)
+      !      p(i,j,k) = 0.!(cos(2.*xc)+cos(2.*yc))*(cos(2.*zc)+2.)/16.
+      !    enddo
+      !  enddo
+      !enddo
     endif
     deallocate(u1d)
     return
