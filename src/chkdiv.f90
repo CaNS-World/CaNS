@@ -1,6 +1,6 @@
 module mod_chkdiv
   use mpi
-  use mod_common_mpi, only: myid,coord,ierr
+  use mod_common_mpi, only: myid,ierr,ijk_min
   use mod_types
   implicit none
   private
@@ -18,7 +18,7 @@ module mod_chkdiv
     real(rp), intent(out) :: divtot,divmax
     real(rp) :: dxi,dyi,div!,dzi,div
     integer :: i,j,k,im,jm,km
-    !integer :: ii,jj
+    integer :: ii,jj,kk
     !
     dxi = dli(1)
     dyi = dli(2)
@@ -41,9 +41,10 @@ module mod_chkdiv
                    (u(i,j,k)-u(im,j,k))*dxi
              divmax = max(divmax,abs(div))
              divtot = divtot + div
-             !ii = coord(1)*n(1)+i
-             !jj = coord(2)*n(2)+j
-             !if(abs(div).ge.1.e-12) print*,div,'Large divergence at grid cell: ',ii,jj,k,div
+             ii = ijk_min(1)+i
+             jj = ijk_min(2)+j
+             kk = ijk_min(3)+k
+             if(abs(div).ge.1.e-12) print*,div,'Large divergence at grid cell: ',ii,jj,kk,div
           enddo
        enddo
     enddo

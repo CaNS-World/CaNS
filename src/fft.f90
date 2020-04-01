@@ -1,8 +1,7 @@
 module mod_fft
   use iso_c_binding , only: C_INT
-  use mod_common_mpi, only: ierr
+  use mod_common_mpi, only: ierr, dims_xyz
   use mod_fftw_param
-  use mod_param     , only:dims
   use mod_types
   !$ use omp_lib
   private
@@ -15,8 +14,8 @@ module mod_fft
     character(len=1), intent(in), dimension(2) :: c_or_f
     type(C_PTR), intent(out), dimension(2,2) :: arrplan
     real(rp), intent(out) :: normfft
-    real(rp), dimension(nx,ny/dims(1),nz/dims(2))  :: arrx
-    real(rp), dimension(nx/dims(1),ny,nz/dims(2))  :: arry
+    real(rp), dimension(nx/dims_xyz(1,1),ny/dims_xyz(2,1),nz/dims_xyz(3,1))  :: arrx
+    real(rp), dimension(nx/dims_xyz(1,2),ny/dims_xyz(2,2),nz/dims_xyz(3,2))  :: arry
     type(C_PTR) :: plan_fwd_x,plan_bwd_x, &
                    plan_fwd_y,plan_bwd_y
     type(fftw_iodim), dimension(1) :: iodim
@@ -38,12 +37,12 @@ module mod_fft
     !
     ! prepare plans with guru interface
     !
-    nx_x = nx
-    ny_x = ny/dims(1)
-    nz_x = nz/dims(2)
-    nx_y = nx/dims(1)
-    ny_y = ny
-    nz_y = nz/dims(2)
+    nx_x = nx/dims_xyz(1,1)
+    ny_x = ny/dims_xyz(2,1)
+    nz_x = nz/dims_xyz(3,1)
+    nx_y = nx/dims_xyz(1,2)
+    ny_y = ny/dims_xyz(2,2)
+    nz_y = nz/dims_xyz(3,2)
     !
     normfft = 1.
     ix = 0 

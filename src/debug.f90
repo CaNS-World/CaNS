@@ -1,6 +1,6 @@
 module mod_debug
   use mpi
-  use mod_common_mpi, only: myid,ierr,coord
+  use mod_common_mpi, only: myid,ierr!,ijk_min
   use mod_param     , only: dims
   use mod_types
   implicit none
@@ -53,7 +53,7 @@ module mod_debug
     integer :: i,j,k,im,ip,jm,jp,km,kp
     integer :: idir
     integer, dimension(3) :: q
-    !integer :: ii,jj
+    !integer :: ii,jj,kk
     q(:) = 0
     do idir = 1,3
       if(bc(1,idir).ne.'P'.and.c_or_f(idir).eq.'f') q(idir) = 1
@@ -80,9 +80,10 @@ module mod_debug
                   (fpp(i,j,k )-fpp(i,j,km))*dzci(km))*dzfi(k) )
             val = val*alpha
             diffmax = max(diffmax,abs(val-fp(i,j,k)))
-            !ii = coord(1)*n(1)+i
-            !jj = coord(2)*n(2)+j
-            !if(abs(val-fp(i,j,k)).gt.1.e-8) print*, 'Large difference : ', val-fp(i,j,k),ii,jj,k
+            !ii = ijk_min(1)+i
+            !jj = ijk_min(2)+j
+            !kk = ijk_min(3)+k
+            !if(abs(val-fp(i,j,k)).gt.1.e-8) print*, 'Large difference : ', val-fp(i,j,k),ii,jj,kk
           enddo
         enddo
       enddo
@@ -104,8 +105,8 @@ module mod_debug
                   (fpp(i,j,k )-fpp(i,j,km))*dzfi(k ))*dzci(k) )
             val = val*alpha
             diffmax = max(diffmax,abs(val-fp(i,j,k)))
-            !ii = coord(1)*n(1)+i
-            !jj = coord(2)*n(2)+j
+            !ii = ijk_min(1)+i
+            !jj = ijk_min(2)+j
             !if(abs(val-fp(i,j,k)).gt.1.e-8) print*, 'Large difference : ', val,fp(i,j,k),ii,jj,k
           enddo
         enddo

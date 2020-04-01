@@ -26,7 +26,7 @@ program cans
   use mod_bound      , only: boundp,bounduvw,updt_rhs_b
   use mod_chkdiv     , only: chkdiv
   use mod_chkdt      , only: chkdt
-  use mod_common_mpi , only: myid,ierr
+  use mod_common_mpi , only: myid,ierr,ijk_min,dims_xyz
   use mod_correc     , only: correc
   use mod_debug      , only: chkmean
   use mod_fft        , only: fftini,fftend
@@ -46,7 +46,7 @@ program cans
                              datadir,   &
                              cfl,dtmin, &
                              inivel,    &
-                             imax,jmax,dims, &
+                             dims, &
                              nthreadsmax, &
                              gr, &
                              is_outflow,no_outflow,is_forced,bforce, &
@@ -83,7 +83,8 @@ program cans
   real(rp) :: ristep
   real(rp) :: dt,dti,dtmax,time,dtrk,dtrki,divtot,divmax
   integer :: irk,istep
-  real(rp), allocatable, dimension(:) :: dzc,dzf,zc,zf,dzci,dzfi
+  real(rp), allocatable, dimension(:) :: dzc  ,dzf  ,zc  ,zf  ,dzci  ,dzfi, &
+                                         dzc_g,dzf_g,zc_g,zf_g,dzci_g,dzfi_g
   real(rp) :: meanvelu,meanvelv,meanvelw
   real(rp), dimension(3) :: dpdl
   !real(rp), allocatable, dimension(:) :: var
@@ -93,7 +94,7 @@ program cans
 #endif
   real(rp) :: twi,tw
   character(len=7) :: fldnum
-  integer :: kk
+  integer :: k,kk
   logical :: is_done,kill
   !
   call MPI_INIT(ierr)
@@ -122,25 +123,31 @@ program cans
   allocate(dudtrko(n(1),n(2),n(3)), &
            dvdtrko(n(1),n(2),n(3)), &
            dwdtrko(n(1),n(2),n(3)))
-  allocate(lambdaxyp(n(1),n(2)))
-  allocate(ap(n(3)),bp(n(3)),cp(n(3)))
+  allocate(lambdaxyp(ng(1)/dims_xyz(1,3),ng(2)/dims_xyz(2,3)))
+  allocate(ap(ng(3)),bp(ng(3)),cp(ng(3)))
   allocate(dzc( 0:n(3)+1), &
            dzf( 0:n(3)+1), &
            zc(  0:n(3)+1), &
            zf(  0:n(3)+1), &
            dzci(0:n(3)+1), &
            dzfi(0:n(3)+1))
+  allocate(dzc_g( 0:ng(3)+1), &
+           dzf_g( 0:ng(3)+1), &
+           zc_g(  0:ng(3)+1), &
+           zf_g(  0:ng(3)+1), &
+           dzci_g(0:ng(3)+1), &
+           dzfi_g(0:ng(3)+1))
   allocate(rhsbp%x(n(2),n(3),0:1), &
            rhsbp%y(n(1),n(3),0:1), &
            rhsbp%z(n(1),n(2),0:1))
 #ifdef IMPDIFF
-  allocate(lambdaxyu(n(1),n(2)), &
-           lambdaxyv(n(1),n(2)), &
-           lambdaxyw(n(1),n(2)))
-  allocate(au(n(3)),bu(n(3)),cu(n(3)), &
-           av(n(3)),bv(n(3)),cv(n(3)), &
-           aw(n(3)),bw(n(3)),cw(n(3)), &
-           bb(n(3)))
+  allocate(lambdaxyu(ng(1)/dims_xyz(1,3),ng(2)/dims_xyz(2,3)), &
+           lambdaxyv(ng(1)/dims_xyz(1,3),ng(2)/dims_xyz(2,3)), &
+           lambdaxyw(ng(1)/dims_xyz(1,3),ng(2)/dims_xyz(2,3)))
+  allocate(au(ng(3)),bu(ng(3)),cu(ng(3)), &
+           av(ng(3)),bv(ng(3)),cv(ng(3)), &
+           aw(ng(3)),bw(ng(3)),cw(ng(3)), &
+           bb(ng(3)))
   allocate(rhsbu%x(n(2),n(3),0:1), &
            rhsbu%y(n(1),n(3),0:1), &
            rhsbu%z(n(1),n(2),0:1), &
@@ -155,24 +162,33 @@ program cans
   if(myid.eq.0) print*, '*** Beginning of simulation ***'
   if(myid.eq.0) print*, '*******************************'
   if(myid.eq.0) print*, ''
-  call initgrid(inivel,n(3),gr,lz,dzc,dzf,zc,zf)
-  dzci(:) = dzc(:)**(-1)
-  dzfi(:) = dzf(:)**(-1)
+  call initgrid(inivel,ng(3),gr,lz,dzc_g,dzf_g,zc_g,zf_g)
   if(myid.eq.0) then
     open(99,file=trim(datadir)//'grid.bin',access='direct',recl=4*n(3)*sizeof(1._rp))
     write(99,rec=1) dzc(1:n(3)),dzf(1:n(3)),zc(1:n(3)),zf(1:n(3))
     close(99)
     open(99,file=trim(datadir)//'grid.out')
     do kk=0,ktot+1
-      write(99,'(5E15.7)') 0.,zf(kk),zc(kk),dzf(kk),dzc(kk)
+      write(99,'(5E15.7)') 0.,zf_g(kk),zc_g(kk),dzf_g(kk),dzc_g(kk)
     enddo
     close(99)
   endif
+  do k=0,n(3)+1
+    kk = ijk_min(3) + k
+    zc(k)  = zc_g(kk)
+    zf(k)  = zf_g(kk)
+    dzc(k) = dzc_g(kk)
+    dzf(k) = dzf_g(kk)
+  enddo
+  dzci(:) = dzc(:)**(-1)
+  dzfi(:) = dzf(:)**(-1)
+  dzci_g(:) = dzc_g(:)**(-1)
+  dzfi_g(:) = dzf_g(:)**(-1)
   !
   ! test input files before proceeding with the calculation
   !
   call test_sanity(ng,n,dims,stop_type,cbcvel,cbcpre,bcvel,bcpre,is_outflow,is_forced, &
-                   dli,dzci,dzfi)
+                   dli,dzci_g,dzfi_g,dzci,dzfi)
   !
   if(.not.restart) then
     istep = 0
@@ -209,13 +225,14 @@ program cans
   !
   ! initialize Poisson solver
   !
-  call initsolver(n,dli,dzci,dzfi,cbcpre,bcpre(:,:),lambdaxyp,(/'c','c','c'/),ap,bp,cp,arrplanp,normfftp,rhsbp%x,rhsbp%y,rhsbp%z)
+  call initsolver(n,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:),lambdaxyp,(/'c','c','c'/),ap,bp,cp,arrplanp,normfftp, &
+                  rhsbp%x,rhsbp%y,rhsbp%z)
 #ifdef IMPDIFF
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,1),bcvel(:,:,1),lambdaxyu,(/'f','c','c'/),au,bu,cu,arrplanu,normfftu, &
+  call initsolver(n,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1),lambdaxyu,(/'f','c','c'/),au,bu,cu,arrplanu,normfftu, &
                   rhsbu%x,rhsbu%y,rhsbu%z)
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,2),bcvel(:,:,2),lambdaxyv,(/'c','f','c'/),av,bv,cv,arrplanv,normfftv, &
+  call initsolver(n,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2),lambdaxyv,(/'c','f','c'/),av,bv,cv,arrplanv,normfftv, &
                   rhsbv%x,rhsbv%y,rhsbv%z)
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,3),bcvel(:,:,3),lambdaxyw,(/'c','c','f'/),aw,bw,cw,arrplanw,normfftw, &
+  call initsolver(n,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3),lambdaxyw,(/'c','c','f'/),aw,bw,cw,arrplanw,normfftw, &
                   rhsbw%x,rhsbw%y,rhsbw%z)
 #endif
   !
@@ -254,19 +271,19 @@ program cans
       !$OMP END WORKSHARE
       bb(:) = bu(:) + alpha
       call updt_rhs_b((/'f','c','c'/),cbcvel(:,:,1),n,rhsbu%x,rhsbu%y,rhsbu%z,up)
-      call solver(n,arrplanu,normfftu,lambdaxyu,au,bb,cu,cbcvel(:,3,1),(/'f','c','c'/),up)
+      call solver(ng,arrplanu,normfftu,lambdaxyu,au,bb,cu,cbcvel(:,3,1),(/'f','c','c'/),up)
       !$OMP WORKSHARE
       vp(1:n(1),1:n(2),1:n(3)) = vp(1:n(1),1:n(2),1:n(3))*alpha
       !$OMP END WORKSHARE
       bb(:) = bv(:) + alpha
       call updt_rhs_b((/'c','f','c'/),cbcvel(:,:,2),n,rhsbv%x,rhsbv%y,rhsbv%z,vp)
-      call solver(n,arrplanv,normfftv,lambdaxyv,av,bb,cv,cbcvel(:,3,2),(/'c','f','c'/),vp)
+      call solver(ng,arrplanv,normfftv,lambdaxyv,av,bb,cv,cbcvel(:,3,2),(/'c','f','c'/),vp)
       !$OMP WORKSHARE
       wp(1:n(1),1:n(2),1:n(3)) = wp(1:n(1),1:n(2),1:n(3))*alpha
       !$OMP END WORKSHARE
       bb(:) = bw(:) + alpha
       call updt_rhs_b((/'c','c','f'/),cbcvel(:,:,3),n,rhsbw%x,rhsbw%y,rhsbw%z,wp)
-      call solver(n,arrplanw,normfftw,lambdaxyw,aw,bb,cw,cbcvel(:,3,3),(/'c','c','f'/),wp)
+      call solver(ng,arrplanw,normfftw,lambdaxyw,aw,bb,cw,cbcvel(:,3,3),(/'c','c','f'/),wp)
 #endif
       dpdl(:) = dpdl(:) + f(:)
       call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! outflow BC only at final velocity
@@ -286,7 +303,7 @@ program cans
 #endif
       call fillps(n,dli,dzfi,dtrki,up,vp,wp,pp)
       call updt_rhs_b((/'c','c','c'/),cbcpre,n,rhsbp%x,rhsbp%y,rhsbp%z,pp)
-      call solver(n,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre(:,3),(/'c','c','c'/),pp)
+      call solver(ng,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre(:,3),(/'c','c','c'/),pp)
       call boundp(cbcpre,n,bcpre,dl,dzc,dzf,pp)
       call correc(n,dli,dzci,dtrk,pp,up,vp,wp,u,v,w)
       call bounduvw(cbcvel,n,bcvel,is_outflow,dl,dzc,dzf,u,v,w)

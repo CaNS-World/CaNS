@@ -4,7 +4,7 @@ module mod_sanity
   use decomp_2d
   use mod_bound     , only: boundp,bounduvw,updt_rhs_b
   use mod_chkdiv    , only: chkdiv
-  use mod_common_mpi, only: myid,ierr
+  use mod_common_mpi, only: myid,ierr,dims_xyz
   use mod_correc    , only: correc
   use mod_debug     , only: chk_helmholtz
   use mod_fft       , only: fftend
@@ -20,13 +20,13 @@ module mod_sanity
   public test_sanity
   contains
   subroutine test_sanity(ng,n,dims,stop_type,cbcvel,cbcpre,bcvel,bcpre,is_outflow,is_forced, &
-                         dli,dzci,dzfi)
+                         dli,dzci_g,dzfi_g,dzci,dzfi)
     !
     ! performs some a priori checks of the input files before the calculation starts
     !
     implicit none
     integer , intent(in), dimension(3) :: ng,n
-    integer , intent(in), dimension(2) :: dims
+    integer , intent(in), dimension(3) :: dims
     logical , intent(in), dimension(3) :: stop_type
     character(len=1), intent(in), dimension(0:1,3,3)  :: cbcvel
     character(len=1), intent(in), dimension(0:1,3)    :: cbcpre
@@ -35,7 +35,7 @@ module mod_sanity
     logical , intent(in), dimension(0:1,3)            :: is_outflow
     logical , intent(in), dimension(3)                :: is_forced
     real(rp), intent(in), dimension(3)                :: dli
-    real(rp), intent(in), dimension(0:)               :: dzci,dzfi
+    real(rp), intent(in), dimension(0:)               :: dzci_g,dzfi_g,dzci,dzfi
     logical :: passed
     !
     call chk_dims(ng,dims,passed);                 if(.not.passed) call abortit
@@ -43,8 +43,8 @@ module mod_sanity
     call chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed); if(.not.passed) call abortit
     call chk_outflow(cbcpre,is_outflow,passed);    if(.not.passed) call abortit
     call chk_forcing(cbcpre,is_forced  ,passed);   if(.not.passed) call abortit 
-    !call chk_solvers(n,dli,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,is_outflow,passed)
-    !if(.not.passed) call abortit
+    call chk_solvers(ng,n,dli,dzci_g,dzfi_g,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,is_outflow,passed)
+    if(.not.passed) call abortit
     return
   end subroutine test_sanity
   !
@@ -63,7 +63,7 @@ module mod_sanity
   subroutine chk_dims(ng,dims,passed)
     implicit none
     integer, intent(in), dimension(3) :: ng
-    integer, intent(in), dimension(2) :: dims
+    integer, intent(in), dimension(3) :: dims
     logical, intent(out) :: passed
     logical :: passed_loc
     passed = .true.
@@ -211,11 +211,11 @@ module mod_sanity
   return 
   end subroutine chk_forcing
   !
-  subroutine chk_solvers(n,dli,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,is_outflow,passed)
+  subroutine chk_solvers(ng,n,dli,dzci_g,dzfi_g,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,is_outflow,passed)
   implicit none
-  integer , intent(in), dimension(3) :: n
+  integer , intent(in), dimension(3) :: ng,n
   real(rp), intent(in), dimension(3) :: dli
-  real(rp), intent(in), dimension(0:n(3)+1) :: dzci,dzfi
+  real(rp), intent(in), dimension(0:) :: dzci_g,dzfi_g,dzci,dzfi
   character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
   character(len=1), intent(in), dimension(0:1,3)   :: cbcpre
   real(rp), intent(in), dimension(0:1,3,3)          :: bcvel
@@ -224,9 +224,9 @@ module mod_sanity
   logical , intent(out) :: passed
   real(rp), dimension(0:n(1)+1,0:n(2)+1,0:n(3)+1) :: u,v,w,p,up,vp,wp
   type(C_PTR), dimension(2,2) :: arrplan
-  real(rp), dimension(n(1),n(2)) :: lambdaxy
+  real(rp), dimension(ng(1)/dims_xyz(1,3),ng(2)/dims_xyz(2,3)) :: lambdaxy
   real(rp) :: normfft
-  real(rp), dimension(n(3)) :: a,b,c,bb
+  real(rp), dimension(ng(3)/dims_xyz(3,3)) :: a,b,c,bb
   real(rp), dimension(n(2),n(3),0:1) :: rhsbx
   real(rp), dimension(n(1),n(3),0:1) :: rhsby
   real(rp), dimension(n(1),n(2),0:1) :: rhsbz
@@ -249,7 +249,7 @@ module mod_sanity
   !
   ! test pressure correction
   !
-  call initsolver(n,dli,dzci,dzfi,cbcpre,bcpre(:,:),lambdaxy,(/'c','c','c'/),a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
+  call initsolver(n,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:),lambdaxy,(/'c','c','c'/),a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
   dl  = dli**(-1)
   dzc = dzci**(-1)
   dzf = dzfi**(-1)
@@ -258,8 +258,8 @@ module mod_sanity
   no_outflow(:,:) = .false.
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp)
   call fillps(n,dli,dzfi,dti,up,vp,wp,p)
-  call updt_rhs_b((/'c','c','c'/),cbcpre,n,rhsbx,rhsby,rhsbz,p(1:n(1),1:n(2),1:n(3)))
-  call solver(n,arrplan,normfft,lambdaxy,a,b,c,cbcpre(:,3),(/'c','c','c'/),p(1:n(1),1:n(2),1:n(3)))
+  call updt_rhs_b((/'c','c','c'/),cbcpre,n,rhsbx,rhsby,rhsbz,p)
+  call solver(ng,arrplan,normfft,lambdaxy,a,b,c,cbcpre(:,3),(/'c','c','c'/),p)
   call boundp(cbcpre,n,bcpre,dl,dzc,dzf,p)
   call correc(n,dli,dzci,dt,p,up,vp,wp,u,v,w)
   call bounduvw(cbcvel,n,bcvel,is_outflow,dl,dzc,dzf,u,v,w)
@@ -277,14 +277,14 @@ module mod_sanity
   call add_noise(n,123,.5_rp,up(1:n(1),1:n(2),1:n(3)))
   call add_noise(n,456,.5_rp,vp(1:n(1),1:n(2),1:n(3)))
   call add_noise(n,789,.5_rp,wp(1:n(1),1:n(2),1:n(3)))
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,1),bcvel(:,:,1),lambdaxy,(/'f','c','c'/),a,b,c,arrplan,normfft, &
+  call initsolver(n,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1),lambdaxy,(/'f','c','c'/),a,b,c,arrplan,normfft, &
                   rhsbx,rhsby,rhsbz)
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp)
   up(:,:,:) = up(:,:,:)*alpha
   u( :,:,:) = up(:,:,:)
   bb(:) = b(:) + alpha
-  call updt_rhs_b((/'f','c','c'/),cbcvel(:,:,1),n,rhsbx,rhsby,rhsbz,up(1:n(1),1:n(2),1:n(3)))
-  call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,1),(/'f','c','c'/),up(1:n(1),1:n(2),1:n(3)))
+  call updt_rhs_b((/'f','c','c'/),cbcvel(:,:,1),n,rhsbx,rhsby,rhsbz,up)
+  call solver(ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,1),(/'f','c','c'/),up)
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
   call chk_helmholtz(n,dli,dzci,dzfi,alpha,u,up,cbcvel(:,:,1),(/'f','c','c'/),resmax)
@@ -293,14 +293,14 @@ module mod_sanity
   print*, 'ERROR: wrong solution of Helmholtz equation in x direction.'
   passed = passed.and.passed_loc
   !
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,2),bcvel(:,:,2),lambdaxy,(/'c','f','c'/),a,b,c,arrplan,normfft, &
+  call initsolver(n,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2),lambdaxy,(/'c','f','c'/),a,b,c,arrplan,normfft, &
                   rhsbx,rhsby,rhsbz)
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp)
   vp(:,:,:) = vp(:,:,:)*alpha
   v( :,:,:) = vp(:,:,:)
   bb(:) = b(:) + alpha
-  call updt_rhs_b((/'c','f','c'/),cbcvel(:,:,2),n,rhsbx,rhsby,rhsbz,vp(1:n(1),1:n(2),1:n(3)))
-  call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,2),(/'c','f','c'/),vp(1:n(1),1:n(2),1:n(3)))
+  call updt_rhs_b((/'c','f','c'/),cbcvel(:,:,2),n,rhsbx,rhsby,rhsbz,vp)
+  call solver(ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,2),(/'c','f','c'/),vp)
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
   call chk_helmholtz(n,dli,dzci,dzfi,alpha,v,vp,cbcvel(:,:,2),(/'c','f','c'/),resmax)
@@ -309,14 +309,14 @@ module mod_sanity
   print*, 'ERROR: wrong solution of Helmholtz equation in y direction.'
   passed = passed.and.passed_loc
   !
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,3),bcvel(:,:,3),lambdaxy,(/'c','c','f'/),a,b,c,arrplan,normfft, &
+  call initsolver(n,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3),lambdaxy,(/'c','c','f'/),a,b,c,arrplan,normfft, &
                   rhsbx,rhsby,rhsbz)
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp)
   wp(:,:,:) = wp(:,:,:)*alpha
   w( :,:,:) = wp(:,:,:)
   bb(:) = b(:) + alpha
-  call updt_rhs_b((/'c','c','f'/),cbcvel(:,:,3),n,rhsbx,rhsby,rhsbz,wp(1:n(1),1:n(2),1:n(3)))
-  call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,3),(/'c','c','f'/),wp(1:n(1),1:n(2),1:n(3)))
+  call updt_rhs_b((/'c','c','f'/),cbcvel(:,:,3),n,rhsbx,rhsby,rhsbz,wp)
+  call solver(ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,3),(/'c','c','f'/),wp)
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
   call chk_helmholtz(n,dli,dzci,dzfi,alpha,w,wp,cbcvel(:,:,3),(/'c','c','f'/),resmax)

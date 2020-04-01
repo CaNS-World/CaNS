@@ -12,13 +12,13 @@
   !
   ! modify the calls below as desired
   !
-  call out1d(trim(datadir)//'umean_z_fld_'   //fldnum//'.out',n,3,zc,dzf/lz,u)
-  call out1d(trim(datadir)//'vmean_z_fld_'   //fldnum//'.out',n,3,zc,dzf/lz,v)
-  call out1d(trim(datadir)//'wmean_z_fld_'   //fldnum//'.out',n,3,zf,dzc/lz,w)
-  !call out1d(trim(datadir)//'umean_y_fld_'   //fldnum//'.out',n,2,zc,dzf/lz,u)
-  !call out1d(trim(datadir)//'vmean_y_fld_'   //fldnum//'.out',n,2,zc,dzf/lz,v)
-  !call out1d(trim(datadir)//'wmean_y_fld_'   //fldnum//'.out',n,2,zc,dzf/lz,w)
-  !call out1d(trim(datadir)//'umean_x_fld_'   //fldnum//'.out',n,1,zc,dzf/lz,u)
-  !call out1d(trim(datadir)//'vmean_x_fld_'   //fldnum//'.out',n,1,zc,dzf/lz,v)
-  !call out1d(trim(datadir)//'wmean_x_fld_'   //fldnum//'.out',n,1,zc,dzf/lz,w)
-  !call out1d_2(trim(datadir)//'velstats_fld_'//fldnum//'.out',n,3,zc,u,v,w)
+  call out1d(trim(datadir)//'umean_z_fld_'   //fldnum//'.out',n,3,zc_g,dzf_g/lz,u)
+  call out1d(trim(datadir)//'vmean_z_fld_'   //fldnum//'.out',n,3,zc_g,dzf_g/lz,v)
+  call out1d(trim(datadir)//'wmean_z_fld_'   //fldnum//'.out',n,3,zf_g,dzc_g/lz,w)
+  !call out1d(trim(datadir)//'umean_y_fld_'   //fldnum//'.out',n,2,zc_g,dzf_g/lz,u)
+  !call out1d(trim(datadir)//'vmean_y_fld_'   //fldnum//'.out',n,2,zc_g,dzf_g/lz,v)
+  !call out1d(trim(datadir)//'wmean_y_fld_'   //fldnum//'.out',n,2,zc_g,dzf_g/lz,w)
+  !call out1d(trim(datadir)//'umean_x_fld_'   //fldnum//'.out',n,1,zc_g,dzf_g/lz,u)
+  !call out1d(trim(datadir)//'vmean_x_fld_'   //fldnum//'.out',n,1,zc_g,dzf_g/lz,v)
+  !call out1d(trim(datadir)//'wmean_x_fld_'   //fldnum//'.out',n,1,zc_g,dzf_g/lz,w)
+  !call out1d_2(trim(datadir)//'velstats_fld_'//fldnum//'.out',n,3,zc_g,u,v,w)

@@ -1,6 +1,6 @@
 module mod_load
   use mpi
-  use mod_common_mpi, only: ierr,dims,myid
+  use mod_common_mpi, only: ierr,ipencil,dims,myid
   use decomp_2d
   use decomp_2d_io
   use mod_types
@@ -32,8 +32,7 @@ module mod_load
       ! check file size first
       !
       call MPI_FILE_GET_SIZE(fh,filesize,ierr)
-      ng(:)   = n(:)
-      ng(1:2) = ng(1:2)*dims(:)
+      ng(1:3) = n(1:3)*dims(1:3)
       lenr = sizeof(time)
       good = (product(ng)*4+2)*lenr
       if(filesize.ne.good) then
@@ -48,10 +47,10 @@ module mod_load
       ! read
       !
       disp = 0_MPI_OFFSET_KIND
-      call decomp_2d_read_var(fh,disp,3,u)
-      call decomp_2d_read_var(fh,disp,3,v)
-      call decomp_2d_read_var(fh,disp,3,w)
-      call decomp_2d_read_var(fh,disp,3,p)
+      call decomp_2d_read_var(fh,disp,ipencil,u)
+      call decomp_2d_read_var(fh,disp,ipencil,v)
+      call decomp_2d_read_var(fh,disp,ipencil,w)
+      call decomp_2d_read_var(fh,disp,ipencil,p)
       call decomp_2d_read_scalar(fh,disp,2,fldinfo)
       time  = fldinfo(1)
       istep = fldinfo(2)
@@ -65,10 +64,10 @@ module mod_load
       filesize = 0_MPI_OFFSET_KIND
       call MPI_FILE_SET_SIZE(fh,filesize,ierr)  ! guarantee overwriting
       disp = 0_MPI_OFFSET_KIND
-      call decomp_2d_write_var(fh,disp,3,u)
-      call decomp_2d_write_var(fh,disp,3,v)
-      call decomp_2d_write_var(fh,disp,3,w)
-      call decomp_2d_write_var(fh,disp,3,p)
+      call decomp_2d_write_var(fh,disp,ipencil,u)
+      call decomp_2d_write_var(fh,disp,ipencil,v)
+      call decomp_2d_write_var(fh,disp,ipencil,w)
+      call decomp_2d_write_var(fh,disp,ipencil,p)
       fldinfo = (/time,istep/)
       call decomp_2d_write_scalar(fh,disp,2,fldinfo)
       call MPI_FILE_CLOSE(fh,ierr)
