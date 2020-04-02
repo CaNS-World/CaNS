@@ -2,29 +2,27 @@ module mod_solver
   use iso_c_binding, only: C_PTR
   use decomp_2d
   use mod_fft        , only: fft
-  use mod_common_mpi , only: dims,dims_xyz
+  use mod_common_mpi , only: n_x,n_y,n_z
   use mod_types
   implicit none
   private
   public solver
   contains
-  subroutine solver(ng,arrplan,normfft,lambdaxy,a,b,c,bcz,c_or_f,p)
+  subroutine solver(n,arrplan,normfft,lambdaxy,a,b,c,bcz,c_or_f,p)
     implicit none
-    integer , intent(in), dimension(3) :: ng
+    integer , intent(in), dimension(3) :: n
     type(C_PTR), intent(in), dimension(2,2) :: arrplan
     real(rp), intent(in) :: normfft
-    real(rp), intent(in), dimension(ng(1)/dims_xyz(1,3),ng(2)/dims_xyz(2,3)) :: lambdaxy
-    real(rp), intent(in), dimension(ng(3)/dims_xyz(3,3)) :: a,b,c
+    real(rp), intent(in), dimension(n_z(1),n_z(2)) :: lambdaxy
+    real(rp), intent(in), dimension(n_z(3)) :: a,b,c
     character(len=1), dimension(0:1), intent(in) :: bcz
     character(len=1), intent(in), dimension(3) :: c_or_f
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
-    real(rp), dimension(ng(1)/dims_xyz(1,1),ng(2)/dims_xyz(2,1),ng(3)/dims_xyz(3,1)) :: px
-    real(rp), dimension(ng(1)/dims_xyz(1,2),ng(2)/dims_xyz(2,2),ng(3)/dims_xyz(3,2)) :: py
-    real(rp), dimension(ng(1)/dims_xyz(1,3),ng(2)/dims_xyz(2,3),ng(3)/dims_xyz(3,3)) :: pz
-    integer , dimension(3) :: n
+    real(rp), dimension(n_x(1),n_x(2),n_x(3)) :: px
+    real(rp), dimension(n_y(1),n_y(2),n_y(3)) :: py
+    real(rp), dimension(n_z(1),n_z(2),n_z(3)) :: pz
     integer :: q
     !
-    n(1:3) = ng(1:3)/dims(1:3)
 #ifdef DECOMP_X
     !$OMP WORKSHARE
     px(:,:,:) = p(1:n(1),1:n(2),1:n(3))
@@ -52,9 +50,9 @@ module mod_solver
     q = 0
     if(c_or_f(3).eq.'f'.and.bcz(1).eq.'D') q = 1
     if(bcz(0)//bcz(1).eq.'PP') then
-      call gaussel_periodic(ng(1)/dims_xyz(1,3),ng(2)/dims_xyz(2,3),ng(3)/dims_xyz(3,3)-q,a,b,c,lambdaxy,pz)
+      call gaussel_periodic(n_z(1),n_z(2),n_z(3)-q,a,b,c,lambdaxy,pz)
     else
-      call gaussel(         ng(1)/dims_xyz(1,3),ng(2)/dims_xyz(2,3),ng(3)/dims_xyz(3,3)-q,a,b,c,lambdaxy,pz)
+      call gaussel(         n_z(1),n_z(2),n_z(3)-q,a,b,c,lambdaxy,pz)
     endif
     !
     call transpose_z_to_y(pz,py)

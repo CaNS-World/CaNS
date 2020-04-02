@@ -2,15 +2,16 @@ module mod_initmpi
   use mpi
   use decomp_2d
   use mod_param     , only: dims
-  use mod_common_mpi, only: myid,ijk_min,dims_xyz,ipencil,comm_cart,is_bound,halo,nb,ierr
+  use mod_common_mpi, only: myid,ijk_start,dims_xyz,ipencil,comm_cart,is_bound,halo,nb,ierr, &
+                            ijk_start_x,ijk_start_y,ijk_start_z,n_x,n_y,n_z
   use mod_types
   implicit none
   private
   public initmpi
   contains
-  subroutine initmpi(n,bc)
+  subroutine initmpi(ng,bc)
     implicit none
-    integer, intent(in), dimension(3) :: n
+    integer, intent(in), dimension(3) :: ng
     character(len=1), intent(in), dimension(0:1,3) :: bc
     integer :: ntx,nty,ntz
     logical, dimension(3) :: periods
@@ -20,7 +21,7 @@ module mod_initmpi
     if( bc(0,1)//bc(1,1).eq.'PP' ) periods(1) = .true.
     if( bc(0,2)//bc(1,2).eq.'PP' ) periods(2) = .true.
     if( bc(0,3)//bc(1,3).eq.'PP' ) periods(3) = .true.
-    call decomp_2d_init(n(1),n(2),n(3),dims(1),dims(2),periods)
+    call decomp_2d_init(ng(1),ng(2),ng(3),dims(1),dims(2),periods)
     myid = nrank
     !
     dims_xyz(1,1) = 1
@@ -32,23 +33,27 @@ module mod_initmpi
     dims_xyz(1,3) = dims(1)
     dims_xyz(2,3) = dims(2)
     dims_xyz(3,3) = 1
+    !
+    n_x(:) = ng(:)/dims_xyz(:,1)
+    n_y(:) = ng(:)/dims_xyz(:,2)
+    n_z(:) = ng(:)/dims_xyz(:,3)
+    ijk_start_x(:) = xstart(:) - 1
+    ijk_start_y(:) = ystart(:) - 1
+    ijk_start_z(:) = zstart(:) - 1
+    !
 #ifdef DECOMP_X
-    dims(1:3) = dims_xyz(1:3,1)
+    dims(:) = dims_xyz(:,1)
+    ijk_start(:) = xstart(:) - 1
     comm_cart = DECOMP_2D_COMM_CART_X
-    coord(1) = (xstart(1)-1)*dims(1)/n(1)
-    coord(2) = (xstart(2)-1)*dims(2)/n(2)
-    coord(3) = (xstart(3)-1)*dims(3)/n(3)
     nb(0,1) = MPI_PROC_NULL
     nb(1,1) = MPI_PROC_NULL
     call MPI_CART_SHIFT(comm_cart,0,1,nb(0,2),nb(1,2),ierr)
     call MPI_CART_SHIFT(comm_cart,1,1,nb(0,3),nb(1,3),ierr)
     ipencil = 1
 #elif DECOMP_Y
-    dims(1:3) = dims_xyz(1:3,2)
+    dims(:) = dims_xyz(:,2)
+    ijk_start(:) = ystart(:) - 1
     comm_cart = DECOMP_2D_COMM_CART_Y
-    coord(1) = (ystart(1)-1)*dims(1)/n(1)
-    coord(2) = (ystart(2)-1)*dims(2)/n(2)
-    coord(3) = (ystart(3)-1)*dims(3)/n(3)
     call MPI_CART_SHIFT(comm_cart,0,1,nb(0,1),nb(1,1),ierr)
     nb(0,2) = MPI_PROC_NULL
     nb(1,2) = MPI_PROC_NULL
@@ -56,24 +61,16 @@ module mod_initmpi
     ipencil = 2
 #else
 !#elif DECOMP_Z
-    dims(1:3) = dims_xyz(1:3,3)
+    dims(:) = dims_xyz(:,3)
+    ijk_start(:) = zstart(:) - 1
     comm_cart = DECOMP_2D_COMM_CART_Z
-    coord(1) = (zstart(1)-1)*dims(1)/n(1)
-    coord(2) = (zstart(2)-1)*dims(2)/n(2)
-    coord(3) = (zstart(3)-1)*dims(3)/n(3)
     call MPI_CART_SHIFT(comm_cart,0,1,nb(0,1),nb(1,1),ierr)
     call MPI_CART_SHIFT(comm_cart,1,1,nb(0,2),nb(1,2),ierr)
     nb(0,3) = MPI_PROC_NULL
     nb(1,3) = MPI_PROC_NULL
     ipencil = 3
 #endif
-    ijk_min(:) = coord(:)*n(:)/dims(:)
     is_bound(:,:) = .false.
-    !
-    ! TODO: Define ng, n_x, n_y, n_z, n, ijk_start_x, ijk_start_y, ijk_start_z, ijk_start
-    !
-    !
-    ! best make a loop below instead
     !
     if(nb(0,1).eq. MPI_PROC_NULL) is_bound(0,1) = .true.
     if(nb(1,1).eq. MPI_PROC_NULL) is_bound(1,1) = .true.
@@ -82,9 +79,9 @@ module mod_initmpi
     if(nb(0,3).eq. MPI_PROC_NULL) is_bound(0,3) = .true. 
     if(nb(1,3).eq. MPI_PROC_NULL) is_bound(1,3) = .true.
     !
-    ntx = n(1)/dims(1)+2
-    nty = n(2)/dims(2)+2
-    ntz = n(3)/dims(3)+2
+    ntx = ng(1)/dims(1)+2
+    nty = ng(2)/dims(2)+2
+    ntz = ng(3)/dims(3)+2
     !
     ! definitions of datatypes for velocity and pressure b.c.'s
     ! note: array(i,j,k) is basically a 1-dim array;

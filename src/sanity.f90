@@ -4,7 +4,7 @@ module mod_sanity
   use decomp_2d
   use mod_bound     , only: boundp,bounduvw,updt_rhs_b
   use mod_chkdiv    , only: chkdiv
-  use mod_common_mpi, only: myid,ierr,dims_xyz
+  use mod_common_mpi, only: myid,ierr,n_z
   use mod_correc    , only: correc
   use mod_debug     , only: chk_helmholtz
   use mod_fft       , only: fftend
@@ -71,14 +71,19 @@ module mod_sanity
     if(myid.eq.0.and.(.not.passed_loc)) &
       print*, 'ERROR: itot, jtot and ktot should be even.'
     passed = passed.and.passed_loc
-    passed_loc = all(mod(ng(1:2),dims(1:2)).eq.0)
+    passed_loc = all(mod(ng(1:3),dims(1:3)).eq.0)
     if(myid.eq.0.and.(.not.passed_loc)) &
-      print*, 'ERROR: itot and jtot should be divisable by dims(1) and dims(2), respectively.'
+      print*, 'ERROR: itot, jtot and ktot should be divisable by dims(1), dims(2) and dims(3), respectively.'
     passed = passed.and.passed_loc
+#ifdef DECOMP_X
+#elif  DECOMP_Y
+!#elif DECOMP_Z
+#else
     passed_loc = (mod(ng(2),dims(1)).eq.0).and.(mod(ng(3),dims(2)).eq.0)
     if(myid.eq.0.and.(.not.passed_loc)) &
       print*, 'ERROR: jtot should be divisable by both dims(1) and dims(2), and &
                      &ktot should be divisable by dims(2)'
+#endif
     passed = passed.and.passed_loc
     return
   end subroutine chk_dims
@@ -224,9 +229,9 @@ module mod_sanity
   logical , intent(out) :: passed
   real(rp), dimension(0:n(1)+1,0:n(2)+1,0:n(3)+1) :: u,v,w,p,up,vp,wp
   type(C_PTR), dimension(2,2) :: arrplan
-  real(rp), dimension(ng(1)/dims_xyz(1,3),ng(2)/dims_xyz(2,3)) :: lambdaxy
+  real(rp), dimension(n_z(1),n_z(2)) :: lambdaxy
   real(rp) :: normfft
-  real(rp), dimension(ng(3)/dims_xyz(3,3)) :: a,b,c,bb
+  real(rp), dimension(n_z(3)) :: a,b,c,bb
   real(rp), dimension(n(2),n(3),0:1) :: rhsbx
   real(rp), dimension(n(1),n(3),0:1) :: rhsby
   real(rp), dimension(n(1),n(2),0:1) :: rhsbz
@@ -259,7 +264,7 @@ module mod_sanity
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp)
   call fillps(n,dli,dzfi,dti,up,vp,wp,p)
   call updt_rhs_b((/'c','c','c'/),cbcpre,n,rhsbx,rhsby,rhsbz,p)
-  call solver(ng,arrplan,normfft,lambdaxy,a,b,c,cbcpre(:,3),(/'c','c','c'/),p)
+  call solver(n,arrplan,normfft,lambdaxy,a,b,c,cbcpre(:,3),(/'c','c','c'/),p)
   call boundp(cbcpre,n,bcpre,dl,dzc,dzf,p)
   call correc(n,dli,dzci,dt,p,up,vp,wp,u,v,w)
   call bounduvw(cbcvel,n,bcvel,is_outflow,dl,dzc,dzf,u,v,w)
@@ -284,7 +289,7 @@ module mod_sanity
   u( :,:,:) = up(:,:,:)
   bb(:) = b(:) + alpha
   call updt_rhs_b((/'f','c','c'/),cbcvel(:,:,1),n,rhsbx,rhsby,rhsbz,up)
-  call solver(ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,1),(/'f','c','c'/),up)
+  call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,1),(/'f','c','c'/),up)
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
   call chk_helmholtz(n,dli,dzci,dzfi,alpha,u,up,cbcvel(:,:,1),(/'f','c','c'/),resmax)
@@ -300,7 +305,7 @@ module mod_sanity
   v( :,:,:) = vp(:,:,:)
   bb(:) = b(:) + alpha
   call updt_rhs_b((/'c','f','c'/),cbcvel(:,:,2),n,rhsbx,rhsby,rhsbz,vp)
-  call solver(ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,2),(/'c','f','c'/),vp)
+  call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,2),(/'c','f','c'/),vp)
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
   call chk_helmholtz(n,dli,dzci,dzfi,alpha,v,vp,cbcvel(:,:,2),(/'c','f','c'/),resmax)
@@ -316,7 +321,7 @@ module mod_sanity
   w( :,:,:) = wp(:,:,:)
   bb(:) = b(:) + alpha
   call updt_rhs_b((/'c','c','f'/),cbcvel(:,:,3),n,rhsbx,rhsby,rhsbz,wp)
-  call solver(ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,3),(/'c','c','f'/),wp)
+  call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,3),(/'c','c','f'/),wp)
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
   call chk_helmholtz(n,dli,dzci,dzfi,alpha,w,wp,cbcvel(:,:,3),(/'c','c','f'/),resmax)

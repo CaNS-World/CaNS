@@ -2,7 +2,7 @@ module mod_output
   use mpi
   use decomp_2d_io
   use mod_param     , only: dims,dx,dy,dz
-  use mod_common_mpi, only:ierr,myid,ipencil,ijk_min
+  use mod_common_mpi, only:ierr,myid,ipencil,ijk_start
   use mod_types
   implicit none
   private
@@ -64,7 +64,7 @@ module mod_output
       allocate(p1d(ng(3)))
       p1d(:) = 0.
       do k=1,n(3)
-        kk = ijk_min(3) + k
+        kk = ijk_start(3) + k
         p1d(kk) = 0.
         do j=1,n(2)
           do i=1,n(1)
@@ -85,7 +85,7 @@ module mod_output
       allocate(p1d(ng(2)))
       p1d(:) = 0.
       do j=1,n(2)
-        jj = ijk_min(2)+j
+        jj = ijk_start(2)+j
         p1d(jj) = 0.
         do k=1,n(3)
           do i=1,n(1)
@@ -106,7 +106,7 @@ module mod_output
       allocate(p1d(ng(1)))
       p1d(:) = 0.
       do i=1,n(1)
-        ii = ijk_min(1)+i
+        ii = ijk_start(1)+i
         p1d(ii) = 0.
         do k=1,n(3)
           do j=1,n(2)
@@ -209,7 +209,7 @@ module mod_output
       w2(:) = 0.
       uw(:) = 0.
       do k=1,n(3)
-        kk = k+ijk_min(3)
+        kk = k+ijk_start(3)
         um(kk) = 0.
         vm(kk) = 0.
         wm(kk) = 0.
@@ -293,9 +293,9 @@ module mod_output
       uv(:,:) = 0.
       vw(:,:) = 0.
       do k=1,n(3)
-        kk = ijk_min(3) + k
+        kk = ijk_start(3) + k
         do i=1,n(1)
-          ii = ijk_min(1) + i
+          ii = ijk_start(1) + i
           um(ii,kk) = 0.
           vm(ii,kk) = 0.
           wm(ii,kk) = 0.
@@ -305,7 +305,7 @@ module mod_output
           vw(ii,kk) = 0.
           uv(ii,kk) = 0.
           do j=1,n(2)
-            jj = ijk_min(2) + j
+            jj = ijk_start(2) + j
             um(ii,kk) = um(ii,kk) + 0.5*(u(i-1,j,k)+u(i,j,k))
             vm(ii,kk) = vm(ii,kk) + v(i,j,k)
             wm(ii,kk) = wm(ii,kk) + 0.5*(w(i,j,k-1)+w(i,j,k))

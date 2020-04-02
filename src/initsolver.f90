@@ -1,7 +1,7 @@
 module mod_initsolver
   use decomp_2d
   use iso_c_binding, only: C_PTR
-  use mod_common_mpi, only: dims,ijk_min,dims_xyz
+  use mod_common_mpi, only: dims,n_x,n_y,n_z,ijk_start_z
   use mod_fft       , only: fftini
   use mod_param     , only: pi
   use mod_types
@@ -21,7 +21,7 @@ module mod_initsolver
     real(rp)         , intent(in), dimension(0:1,3) :: bc
     real(rp), intent(out), dimension(:,:) :: lambdaxy
     character(len=1), intent(in), dimension(3) :: c_or_f
-    real(rp), intent(out), dimension(n(3)*dims(3)) :: a,b,c
+    real(rp), intent(out), dimension(n_z(3)) :: a,b,c
     type(C_PTR), intent(out), dimension(2,2) :: arrplan
     real(rp), intent(out), dimension(n(2),n(3),0:1) :: rhsbx
     real(rp), intent(out), dimension(n(1),n(3),0:1) :: rhsby
@@ -45,10 +45,10 @@ module mod_initsolver
     !
     ! add eigenvalues
     !
-    do j=1,ng(2)/dims_xyz(2,3)
-      jj = zstart(2) - 1 + j
-      do i=1,ng(1)/dims_xyz(1,3)
-        ii = zstart(1) - 1 + i
+    do j=1,n_z(2)
+      jj = ijk_start_z(2) + j
+      do i=1,n_z(1)
+        ii = ijk_start_z(1) + i
         lambdaxy(i,j) = lambdax(ii)+lambday(jj)
       enddo
     enddo
@@ -72,7 +72,7 @@ module mod_initsolver
     !
     ! prepare ffts
     !
-    call fftini(ng(1),ng(2),ng(3),cbc(:,1:2),c_or_f(1:2),arrplan,normfft)
+    call fftini(n_x,n_y,cbc(:,1:2),c_or_f(1:2),arrplan,normfft)
     return
   end subroutine initsolver
   !
