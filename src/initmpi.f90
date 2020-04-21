@@ -24,6 +24,9 @@ module mod_initmpi
     call decomp_2d_init(ng(1),ng(2),ng(3),dims(1),dims(2),periods)
     myid = nrank
     !
+    ! define decomposition grid for the three
+    ! pencil configurations
+    !
     dims_xyz(1,1) = 1
     dims_xyz(2,1) = dims(1)
     dims_xyz(3,1) = dims(2)
@@ -34,9 +37,16 @@ module mod_initmpi
     dims_xyz(2,3) = dims(2)
     dims_xyz(3,3) = 1
     !
+    ! define sizes of computational subdomains
+    ! for the three pencil configurations
+    !
     n_x(:) = ng(:)/dims_xyz(:,1)
     n_y(:) = ng(:)/dims_xyz(:,2)
     n_z(:) = ng(:)/dims_xyz(:,3)
+    !
+    ! define initial global index 
+    ! for the three pencil configurations
+    !
     ijk_start_x(:) = xstart(:) - 1
     ijk_start_y(:) = ystart(:) - 1
     ijk_start_z(:) = zstart(:) - 1
@@ -72,12 +82,9 @@ module mod_initmpi
 #endif
     is_bound(:,:) = .false.
     !
-    if(nb(0,1).eq. MPI_PROC_NULL) is_bound(0,1) = .true.
-    if(nb(1,1).eq. MPI_PROC_NULL) is_bound(1,1) = .true.
-    if(nb(0,2).eq. MPI_PROC_NULL) is_bound(0,2) = .true. 
-    if(nb(1,2).eq. MPI_PROC_NULL) is_bound(1,2) = .true.
-    if(nb(0,3).eq. MPI_PROC_NULL) is_bound(0,3) = .true. 
-    if(nb(1,3).eq. MPI_PROC_NULL) is_bound(1,3) = .true.
+    where( nb(:,:).eq.MPI_PROC_NULL ) is_bound(:,:) = .true.
+    !
+    ! define x, y and z halo regions
     !
     ntx = ng(1)/dims(1)+2
     nty = ng(2)/dims(2)+2

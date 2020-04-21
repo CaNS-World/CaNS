@@ -138,28 +138,20 @@ module mod_bound
     case('P')
       select case(idir)
       case(1)
-#ifdef DECOMP_X
         !$OMP WORKSHARE
         p(0  ,:,:) = p(n,:,:)
         p(n+1,:,:) = p(1,:,:)
         !$OMP END WORKSHARE
-#endif
       case(2)
-#ifdef DECOMP_Y
         !$OMP WORKSHARE
         p(:,0  ,:) = p(:,n,:)
         p(:,n+1,:) = p(:,1,:)
         !$OMP END WORKSHARE
-#endif
       case(3)
-#ifndef DECOMP_X
-#ifndef DECOMP_Y
         !$OMP WORKSHARE
         p(:,:,0  ) = p(:,:,n)
         p(:,:,n+1) = p(:,:,1)
         !$OMP END WORKSHARE
-#endif
-#endif
       end select
     case('D','N')
       if(stag) then

@@ -10,6 +10,6 @@ module mod_common_mpi
   integer, dimension(3) :: halo
   integer :: status(MPI_STATUS_SIZE)
   integer, dimension(3,3) :: dims_xyz
-  integer, dimension(3) :: ijk_start
-  integer, dimension(3) :: ijk_start_x,ijk_start_y,ijk_start_z,n_x,n_y,n_z
+  integer, dimension(3) :: ijk_start,ijk_start_x,ijk_start_y,ijk_start_z, &
+                           n_x,n_y,n_z
 end module mod_common_mpi

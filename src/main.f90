@@ -26,7 +26,7 @@ program cans
   use mod_bound      , only: boundp,bounduvw,updt_rhs_b
   use mod_chkdiv     , only: chkdiv
   use mod_chkdt      , only: chkdt
-  use mod_common_mpi , only: myid,ierr,ijk_start,n_z
+  use mod_common_mpi , only: myid,ierr,dims_xyz,ijk_start,n_z
   use mod_correc     , only: correc
   use mod_debug      , only: chkmean
   use mod_fft        , only: fftini,fftend
@@ -164,11 +164,11 @@ program cans
   if(myid.eq.0) print*, ''
   call initgrid(inivel,ng(3),gr,lz,dzc_g,dzf_g,zc_g,zf_g)
   if(myid.eq.0) then
-    open(99,file=trim(datadir)//'grid.bin',access='direct',recl=4*n(3)*sizeof(1._rp))
+    open(99,file=trim(datadir)//'grid.bin',access='direct',recl=4*ng(3)*sizeof(1._rp))
     write(99,rec=1) dzc_g(1:ng(3)),dzf_g(1:ng(3)),zc_g(1:ng(3)),zf_g(1:ng(3))
     close(99)
     open(99,file=trim(datadir)//'grid.out')
-    do kk=0,ktot+1
+    do kk=0,ng(3)+1
       write(99,'(5E15.7)') 0.,zf_g(kk),zc_g(kk),dzf_g(kk),dzc_g(kk)
     enddo
     close(99)
@@ -187,7 +187,7 @@ program cans
   !
   ! test input files before proceeding with the calculation
   !
-  call test_sanity(ng,n,dims,stop_type,cbcvel,cbcpre,bcvel,bcpre,is_outflow,is_forced, &
+  call test_sanity(ng,n,dims_xyz(:,3),stop_type,cbcvel,cbcpre,bcvel,bcpre,is_outflow,is_forced, &
                    dli,dzci_g,dzfi_g,dzci,dzfi)
   !
   if(.not.restart) then

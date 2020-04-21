@@ -85,7 +85,7 @@ module mod_output
       allocate(p1d(ng(2)))
       p1d(:) = 0.
       do j=1,n(2)
-        jj = ijk_start(2)+j
+        jj = ijk_start(2) + j
         p1d(jj) = 0.
         do k=1,n(3)
           do i=1,n(1)
@@ -106,7 +106,7 @@ module mod_output
       allocate(p1d(ng(1)))
       p1d(:) = 0.
       do i=1,n(1)
-        ii = ijk_start(1)+i
+        ii = ijk_start(1) + i
         p1d(ii) = 0.
         do k=1,n(3)
           do j=1,n(2)
@@ -209,7 +209,7 @@ module mod_output
       w2(:) = 0.
       uw(:) = 0.
       do k=1,n(3)
-        kk = k+ijk_start(3)
+        kk = ijk_start(3) + k
         um(kk) = 0.
         vm(kk) = 0.
         wm(kk) = 0.
@@ -261,7 +261,7 @@ module mod_output
   !
   subroutine out2d_2(fname,n,idir,z,u,v,w) ! e.g. for a duct
     !
-    ! UPDATE CASE WITH STREAMWISE X
+    ! N.B. assumes streamwise direction in y; update with case for streamwise dir in x
     !
     implicit none
     character(len=*), intent(in) :: fname

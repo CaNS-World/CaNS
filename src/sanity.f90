@@ -43,7 +43,7 @@ module mod_sanity
     call chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed); if(.not.passed) call abortit
     call chk_outflow(cbcpre,is_outflow,passed);    if(.not.passed) call abortit
     call chk_forcing(cbcpre,is_forced  ,passed);   if(.not.passed) call abortit 
-    call chk_solvers(ng,n,dli,dzci_g,dzfi_g,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,is_outflow,passed)
+    !call chk_solvers(ng,n,dli,dzci_g,dzfi_g,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,is_outflow,passed)
     if(.not.passed) call abortit
     return
   end subroutine test_sanity
@@ -75,15 +75,10 @@ module mod_sanity
     if(myid.eq.0.and.(.not.passed_loc)) &
       print*, 'ERROR: itot, jtot and ktot should be divisable by dims(1), dims(2) and dims(3), respectively.'
     passed = passed.and.passed_loc
-#ifdef DECOMP_X
-#elif  DECOMP_Y
-!#elif DECOMP_Z
-#else
     passed_loc = (mod(ng(2),dims(1)).eq.0).and.(mod(ng(3),dims(2)).eq.0)
     if(myid.eq.0.and.(.not.passed_loc)) &
       print*, 'ERROR: jtot should be divisable by both dims(1) and dims(2), and &
                      &ktot should be divisable by dims(2)'
-#endif
     passed = passed.and.passed_loc
     return
   end subroutine chk_dims
