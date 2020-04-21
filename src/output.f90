@@ -261,25 +261,24 @@ module mod_output
   !
   subroutine out2d_2(fname,n,idir,z,u,v,w) ! e.g. for a duct
     !
-    ! N.B. assumes streamwise direction in y; update with case for streamwise dir in x
-    !
     implicit none
     character(len=*), intent(in) :: fname
     integer , intent(in), dimension(3) :: n
     integer , intent(in) :: idir
     real(rp), intent(in), dimension(0:) :: z
     real(rp), intent(in), dimension(0:,0:,0:) :: u,v,w
-    real(rp), allocatable, dimension(:,:) :: um,vm,wm,u2,v2,w2,uv,vw
+    real(rp), allocatable, dimension(:,:) :: um,vm,wm,u2,v2,w2,uv,uw,vw
     integer :: i,j,k,ii,jj,kk
     integer :: iunit
     integer, dimension(3) :: ng
     integer :: p,q
-    real(rp) :: x
+    real(rp) :: x,y
     !
     ng(:) = n(:)*dims(:)
     iunit = 10
-    select case(idir)
+    select case(idir) ! streamwise direction
     case(3)
+    case(2)
       p = ng(1)
       q = ng(3)
       allocate(um(p,q),vm(p,q),wm(p,q),u2(p,q),v2(p,q),w2(p,q),uv(p,q),vw(p,q))
@@ -348,8 +347,75 @@ module mod_output
         close(iunit)
       endif
       deallocate(um,vm,wm,u2,v2,w2,vw,uv)
-    case(2)
     case(1)
+      p = ng(2)
+      q = ng(3)
+      allocate(um(p,q),vm(p,q),wm(p,q),u2(p,q),v2(p,q),w2(p,q),uv(p,q),uw(p,q))
+      !
+      um(:,:) = 0.
+      vm(:,:) = 0.
+      wm(:,:) = 0.
+      u2(:,:) = 0.
+      v2(:,:) = 0.
+      w2(:,:) = 0.
+      uv(:,:) = 0.
+      uw(:,:) = 0.
+      do k=1,n(3)
+        kk = ijk_start(3) + k
+        do j=1,n(2)
+          jj = ijk_start(2) + j
+          um(jj,kk) = 0.
+          vm(jj,kk) = 0.
+          wm(jj,kk) = 0.
+          u2(jj,kk) = 0.
+          v2(jj,kk) = 0.
+          w2(jj,kk) = 0.
+          uv(jj,kk) = 0.
+          uw(jj,kk) = 0.
+          do i=1,n(1)
+            ii = ijk_start(1) + i
+            um(jj,kk) = um(jj,kk) + u(i,j,k)
+            vm(jj,kk) = vm(jj,kk) + 0.5*(v(i,j-1,k)+v(i,j,k))
+            wm(jj,kk) = wm(jj,kk) + 0.5*(w(i,j,k-1)+w(i,j,k))
+            u2(jj,kk) = u2(jj,kk) + u(i,j,k)**2
+            v2(jj,kk) = v2(jj,kk) + 0.5*(v(i,j-1,k)**2+v(i,j,k)**2)
+            w2(jj,kk) = w2(jj,kk) + 0.5*(w(i,j,k-1)**2+w(i,j,k)**2)
+            uv(jj,kk) = uv(jj,kk) + 0.25*(u(i-1,j,k) + u(i,j,k))* &
+                                         (v(i,j-1,k) + v(i,j,k))
+            uw(jj,kk) = uw(jj,kk) + 0.25*(u(i-1,j,k) + u(i,j,k))* &
+                                         (w(i,j,k-1) + w(i,j,k))
+          enddo
+        enddo
+      enddo
+      call mpi_allreduce(MPI_IN_PLACE,um(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,vm(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,wm(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,u2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,v2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,w2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,uv(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,uw(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      um(:,:) =      um(:,:)/(1.*ng(2))
+      vm(:,:) =      vm(:,:)/(1.*ng(2))
+      wm(:,:) =      wm(:,:)/(1.*ng(2))
+      u2(:,:) = sqrt(u2(:,:)/(1.*ng(2)) - um(:,:)**2)
+      v2(:,:) = sqrt(v2(:,:)/(1.*ng(2)) - vm(:,:)**2)
+      w2(:,:) = sqrt(w2(:,:)/(1.*ng(2)) - wm(:,:)**2)
+      uv(:,:) =      uv(:,:)/(1.*ng(2)) - um(:,:)*vm(:,:)
+      uw(:,:) =      uw(:,:)/(1.*ng(2)) - um(:,:)*wm(:,:)
+      if(myid.eq.0) then
+        open(unit=iunit,file=fname)
+        do kk=1,ng(3)
+          do jj=1,ng(2)
+            y = (jj-.5)*dy
+            write(iunit,'(10E15.7)') y,z(kk),um(jj,kk),vm(jj,kk),wm(jj,kk), &
+                                             u2(jj,kk),v2(jj,kk),w2(jj,kk), &
+                                             uv(jj,kk),uw(jj,kk)
+          enddo
+        enddo
+        close(iunit)
+      endif
+      deallocate(um,vm,wm,u2,v2,w2,vw,uv)
     end select
   end subroutine out2d_2
 end module mod_output
