@@ -69,7 +69,7 @@ program cans
     real(rp), allocatable, dimension(:,:,:) :: x
     real(rp), allocatable, dimension(:,:,:) :: y
     real(rp), allocatable, dimension(:,:,:) :: z
-  end type rhs_bound 
+  end type rhs_bound
   type(rhs_bound) :: rhsbp
 #ifdef IMPDIFF
   type(C_PTR), dimension(2,2) :: arrplanu,arrplanv,arrplanw
@@ -77,7 +77,7 @@ program cans
   real(rp), allocatable, dimension(:) :: au,av,aw,bu,bv,bw,bb,cu,cv,cw
   real(rp) :: normfftu,normfftv,normfftw
   real(rp) :: alpha,alphai
-  integer :: i,j,k,im,ip,jm,jp,km,kp
+  integer :: i,j,im,ip,jm,jp,km,kp
   type(rhs_bound) :: rhsbu,rhsbv,rhsbw
 #endif
   real(rp) :: ristep
