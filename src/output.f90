@@ -189,10 +189,10 @@ module mod_output
     character(len=100) :: cfmt
     integer :: iunit
     iunit = 10
-    write(cfmt,'(A,A,6I5.5,E15.7,I7.7)') 
+    write(cfmt, '(A)') '(A,A,A,9i5,E15.7,i7)'
     if (myid .eq. 0) then
       open(iunit,file=fname,position='append')
-      write(iunit,trim(cfmt)) trim(fname_fld),trim(varname),nmin,nmax,nskip,time,istep
+      write(iunit,trim(cfmt)) trim(fname_fld),' ',trim(varname),nmin,nmax,nskip,time,istep
       close(iunit)
     endif
   end subroutine write_log_output

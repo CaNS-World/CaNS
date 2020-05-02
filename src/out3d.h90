@@ -14,15 +14,28 @@
   call out3d(trim(datadir)//'vey_fld_'//fldnum//'.bin',(/1,1,1/),v(1:n(1),1:n(2),1:n(3)))
   call out3d(trim(datadir)//'vez_fld_'//fldnum//'.bin',(/1,1,1/),w(1:n(1),1:n(2),1:n(3)))
   call out3d(trim(datadir)//'pre_fld_'//fldnum//'.bin',(/1,1,1/),p(1:n(1),1:n(2),1:n(3)))
+  ! write_log_output(bla,bla,bla)
+  !
+  ! saves a planar slice of a scalar field into a binary file (see output.f90)
+  !
+  ! fname  -> name of the output file
+  ! inorm  -> plane is perpendicular to direction
+  !           inorm (1,2,3)
+  ! islice -> plane is of constant index islice 
+  !           in direction inorm
+  ! p      -> 3D input scalar field
+  !
+  ! modify the calls below as desired
+  !
   call write_log_output(trim(datadir)//'log_visu_3d.out', &
-                        trim(datadir)//'vex_fld_'//fldnum//'.bin', &
-                        'vex',(/1,1,1/),ng,(/1,1,1/),time,istep)
+                        'vex_fld_'//fldnum//'.bin', &
+                        'vex',(/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep)
   call write_log_output(trim(datadir)//'log_visu_3d.out', &
-                        trim(datadir)//'vey_fld_'//fldnum//'.bin', &
-                        'vey',(/1,1,1/),ng,(/1,1,1/),time,istep)
+                        'vey_fld_'//fldnum//'.bin', &
+                        'vey',(/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep)
   call write_log_output(trim(datadir)//'log_visu_3d.out',          &
-                        trim(datadir)//'vey_fld_'//fldnum//'.bin', &
-                        'vez',(/1,1,1/),ng,(/1,1,1/),time,istep)
+                        'vey_fld_'//fldnum//'.bin', &
+                        'vez',(/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep)
   call write_log_output(trim(datadir)//'log_visu_3d.out',          &
-                        trim(datadir)//'vey_fld_'//fldnum//'.bin', &
-                        'pre',(/1,1,1/),ng,(/1,1,1/),time,istep)
+                        'vey_fld_'//fldnum//'.bin', &
+                        'pre',(/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep)
