@@ -14,4 +14,15 @@
   call out3d(trim(datadir)//'vey_fld_'//fldnum//'.bin',(/1,1,1/),v(1:n(1),1:n(2),1:n(3)))
   call out3d(trim(datadir)//'vez_fld_'//fldnum//'.bin',(/1,1,1/),w(1:n(1),1:n(2),1:n(3)))
   call out3d(trim(datadir)//'pre_fld_'//fldnum//'.bin',(/1,1,1/),p(1:n(1),1:n(2),1:n(3)))
-  !call out3d(trim(datadir)//'fld_u.bin',(/1,1,1/),u(1:n(1),1:n(2),1:n(3)))
+  call write_log_output(trim(datadir)//'log_visu_3d.out', &
+                        trim(datadir)//'vex_fld_'//fldnum//'.bin', &
+                        'vex',(/1,1,1/),ng,(/1,1,1/),time,istep)
+  call write_log_output(trim(datadir)//'log_visu_3d.out', &
+                        trim(datadir)//'vey_fld_'//fldnum//'.bin', &
+                        'vey',(/1,1,1/),ng,(/1,1,1/),time,istep)
+  call write_log_output(trim(datadir)//'log_visu_3d.out',          &
+                        trim(datadir)//'vey_fld_'//fldnum//'.bin', &
+                        'vez',(/1,1,1/),ng,(/1,1,1/),time,istep)
+  call write_log_output(trim(datadir)//'log_visu_3d.out',          &
+                        trim(datadir)//'vey_fld_'//fldnum//'.bin', &
+                        'pre',(/1,1,1/),ng,(/1,1,1/),time,istep)

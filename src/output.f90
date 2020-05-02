@@ -6,7 +6,7 @@ module mod_output
   use mod_types
   implicit none
   private
-  public out0d,out1d,out1d_2,out2d,out3d
+  public out0d,out1d,out1d_2,out2d,out3d,write_log_output
   contains
   subroutine out0d(fname,n,var)
     !
@@ -181,6 +181,21 @@ module mod_output
     call MPI_FILE_CLOSE(fh,ierr)
     return
   end subroutine out3d
+  subroutine write_log_output(fname,fname_fld,varname,nmin,nmax,nskip,time,istep)
+    character(len=*), intent(in) :: fname,fname_fld,varname
+    integer , intent(in), dimension(3) :: nmin,nmax,nskip
+    real(rp), intent(in)              :: time
+    integer , intent(in)               :: istep
+    character(len=100) :: cfmt
+    integer :: iunit
+    iunit = 10
+    write(cfmt,'(A,A,6I5.5,E15.7,I7.7)') 
+    if (myid .eq. 0) then
+      open(iunit,file=fname,position='append')
+      write(iunit,trim(cfmt)) trim(fname_fld),trim(varname),nmin,nmax,nskip,time,istep
+      close(iunit)
+    endif
+  end subroutine write_log_output
   !
   subroutine out1d_2(fname,n,idir,z,u,v,w) ! e.g. for a channel with streamwise dir in x
     implicit none
