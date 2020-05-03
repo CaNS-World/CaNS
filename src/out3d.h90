@@ -34,8 +34,8 @@
                         'vey_fld_'//fldnum//'.bin', &
                         'vey',(/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep)
   call write_log_output(trim(datadir)//'log_visu_3d.out',          &
-                        'vey_fld_'//fldnum//'.bin', &
+                        'vez_fld_'//fldnum//'.bin', &
                         'vez',(/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep)
   call write_log_output(trim(datadir)//'log_visu_3d.out',          &
-                        'vey_fld_'//fldnum//'.bin', &
+                        'pre_fld_'//fldnum//'.bin', &
                         'pre',(/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep)
