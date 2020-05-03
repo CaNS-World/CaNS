@@ -6,7 +6,7 @@ module mod_output
   use mod_types
   implicit none
   private
-  public out0d,out1d,out1d_2,out2d,out3d,write_log_output
+  public out0d,out1d,out1d_2,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
   contains
   subroutine out0d(fname,n,var)
     !
@@ -181,10 +181,25 @@ module mod_output
     call MPI_FILE_CLOSE(fh,ierr)
     return
   end subroutine out3d
+  !
   subroutine write_log_output(fname,fname_fld,varname,nmin,nmax,nskip,time,istep)
+    !
+    ! appends information about a saved binary file to a log file
+    ! this file is used to generate a xdmf file for visualization of field data
+    !
+    ! fname     -> name of the output log file
+    ! fname_fld -> name of the saved binary file (excluding the directory)
+    ! varname   -> name of the variable that is saved
+    ! nmin      -> first element of the field that is saved in each direction, e.g. (/1,1,1/)
+    ! nmax      -> last  element of the field that is saved in each direction, e.g. (/ng(1),ng(2),ng(3)/)
+    ! nskip     -> step size between nmin and nmax, e.g. (/1,1,1/) if the whole array is saved
+    ! time      -> physical time
+    ! istep     -> time step number
+    !
+    implicit none
     character(len=*), intent(in) :: fname,fname_fld,varname
     integer , intent(in), dimension(3) :: nmin,nmax,nskip
-    real(rp), intent(in)              :: time
+    real(rp), intent(in)               :: time
     integer , intent(in)               :: istep
     character(len=100) :: cfmt
     integer :: iunit
@@ -196,6 +211,49 @@ module mod_output
       close(iunit)
     endif
   end subroutine write_log_output
+  !
+  subroutine write_visu_3d(datadir,fname_bin,fname_log,varname,nmin,nmax,nskip,time,istep,p)
+    !
+    ! wraps the calls of out3d and write-log_output into the same subroutine
+    !
+    implicit none
+    character(len=*), intent(in)          :: datadir,fname_bin,fname_log,varname
+    integer , intent(in), dimension(3)    :: nmin,nmax,nskip
+    real(rp), intent(in)                  :: time
+    integer , intent(in)                  :: istep
+    real(rp),intent(in), dimension(:,:,:) :: p
+    call out3d(trim(datadir)//trim(fname_bin),nskip,p)
+    call write_log_output(trim(datadir)//trim(fname_log),trim(fname_bin),trim(varname),nmin,nmax,nskip,time,istep)
+    return
+  end subroutine write_visu_3d
+  !
+  subroutine write_visu_2d(datadir,fname_bin,fname_log,varname,inorm,nslice,ng,time,istep,p)
+    !
+    ! wraps the calls of out2d and write-log_output into the same subroutine
+    !
+    implicit none
+    character(len=*), intent(in)          :: datadir,fname_bin,fname_log,varname
+    integer , intent(in)                  :: inorm,nslice
+    integer , intent(in), dimension(3)    :: ng
+    real(rp), intent(in)                  :: time
+    integer , intent(in)                  :: istep
+    real(rp),intent(in), dimension(:,:,:) :: p
+    integer, dimension(3) :: nmin_2d,nmax_2d
+    call out2d(trim(datadir)//trim(fname_bin),inorm,nslice,p)
+    select case(inorm)
+    case(1)
+      nmin_2d(:) = (/nslice,1    ,1    /)
+      nmax_2d(:) = (/nslice,ng(2),ng(3)/)
+    case(2)
+      nmin_2d(:) = (/1    ,nslice,1    /)
+      nmax_2d(:) = (/ng(1),nslice,ng(3)/)
+    case(3)
+      nmin_2d(:) = (/1    ,1    ,nslice/)
+      nmax_2d(:) = (/ng(1),ng(2),nslice/)
+    end select
+    call write_log_output(trim(datadir)//trim(fname_log),trim(fname_bin),trim(varname),nmin_2d,nmax_2d,(/1,1,1/),time,istep)
+    return
+  end subroutine write_visu_2d
   !
   subroutine out1d_2(fname,n,idir,z,u,v,w) ! e.g. for a channel with streamwise dir in x
     implicit none

@@ -1,47 +1,31 @@
-  ! out3d(fname,nskip,p)
   !
-  ! saves a 3D scalar field into a binary file (see output.f90)
+  ! write_visu_3d(datadir,fname_bin,fname_log,varname,nmin,nmax,nskip,time,istep,p)
   !
-  ! fname  -> name of the output file
-  ! nskip  -> array with the step size for which the
-  !           field is written; i.e.: (/1,1,1/) 
-  !           writes the full field 
-  ! p      -> 3D input scalar field
+  ! saves field data into a binary file and appends information about the data to a file
+  ! the log file can be used to generate a xdmf file for visualization of field data
   !
-  ! modify the calls below as desired
-  !
-  call out3d(trim(datadir)//'vex_fld_'//fldnum//'.bin',(/1,1,1/),u(1:n(1),1:n(2),1:n(3)))
-  call out3d(trim(datadir)//'vey_fld_'//fldnum//'.bin',(/1,1,1/),v(1:n(1),1:n(2),1:n(3)))
-  call out3d(trim(datadir)//'vez_fld_'//fldnum//'.bin',(/1,1,1/),w(1:n(1),1:n(2),1:n(3)))
-  call out3d(trim(datadir)//'pre_fld_'//fldnum//'.bin',(/1,1,1/),p(1:n(1),1:n(2),1:n(3)))
-  !
-  ! write_log_output(fname,fname_fld,varname,nmin,nmax,nskip,time,istep)
-  !
-  ! appends information about a saved binary file to a log file (see output.f90)
-  ! this file will then be used for generating a file that paraview/visit understands
-  ! and should match the calls of out3d above;
-  ! in future saving the field and writing the log file will be lumped into a single subroutine
-  !
-  ! fname     -> name of the output log file
-  ! fname_fld -> name of the saved binary file (excluding the directory)
+  ! datadir   -> name of the directory where the data is saved
+  ! fname_bin -> name of the output binary file
+  ! fname_log -> name of the log file (can be the same for a time series of data with the same grid)
   ! varname   -> name of the variable that is saved
   ! nmin      -> first element of the field that is saved in each direction, e.g. (/1,1,1/)
   ! nmax      -> last  element of the field that is saved in each direction, e.g. (/ng(1),ng(2),ng(3)/)
-  ! nskip     -> step size between nmin and nmax, e.g. (/1,1,1/) if the whole array is saved
+  ! nskip     -> step size with which the grid points are saved, e.g. (/1,1,1/) if the whole array is saved
   ! time      -> physical time
   ! istep     -> time step number
+  ! p         -> 3D input scalar field
   !
   ! modify the calls below as desired
   !
-  call write_log_output(trim(datadir)//'log_visu_3d.out', &
-                        'vex_fld_'//fldnum//'.bin', &
-                        'vex',(/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep)
-  call write_log_output(trim(datadir)//'log_visu_3d.out', &
-                        'vey_fld_'//fldnum//'.bin', &
-                        'vey',(/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep)
-  call write_log_output(trim(datadir)//'log_visu_3d.out',          &
-                        'vez_fld_'//fldnum//'.bin', &
-                        'vez',(/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep)
-  call write_log_output(trim(datadir)//'log_visu_3d.out',          &
-                        'pre_fld_'//fldnum//'.bin', &
-                        'pre',(/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep)
+  call write_visu_3d(datadir,'vex_fld_'//fldnum//'.bin','log_visu_3d.out','VEX', &
+                     (/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep, &
+                     u(1:n(1),1:n(2),1:n(3)))
+  call write_visu_3d(datadir,'vey_fld_'//fldnum//'.bin','log_visu_3d.out','VEY', &
+                     (/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep, &
+                     v(1:n(1),1:n(2),1:n(3)))
+  call write_visu_3d(datadir,'vez_fld_'//fldnum//'.bin','log_visu_3d.out','VEZ', &
+                     (/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep, &
+                     w(1:n(1),1:n(2),1:n(3)))
+  call write_visu_3d(datadir,'pre_fld_'//fldnum//'.bin','log_visu_3d.out','PRE', &
+                     (/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep, &
+                     p(1:n(1),1:n(2),1:n(3)))

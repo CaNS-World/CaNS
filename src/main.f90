@@ -37,7 +37,7 @@ program cans
   use mod_initsolver , only: initsolver
   use mod_load       , only: load
   use mod_rk         , only: rk,rk_id
-  use mod_output     , only: out0d,out1d,out1d_2,out2d,out3d,write_log_output
+  use mod_output     , only: out0d,out1d,out1d_2,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
   use mod_param      , only: itot,jtot,ktot,lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,uref,lref,rey,visc,small, &
                              cbcvel,bcvel,cbcpre,bcpre, &
                              icheck,iout0d,iout1d,iout2d,iout3d,isave, &
