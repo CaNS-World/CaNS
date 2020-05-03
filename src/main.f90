@@ -172,6 +172,10 @@ program cans
       write(99,'(5E15.7)') 0.,zf_g(kk),zc_g(kk),dzf_g(kk),dzc_g(kk)
     enddo
     close(99)
+    open(99,file=trim(datadir)//'geometry.out')
+      write(99,*) ng(1),ng(2),ng(3) 
+      write(99,*) l(1),l(2),l(3) 
+    close(99)
   endif
   do k=0,n(3)+1
     kk = ijk_start(3) + k

@@ -9,3 +9,5 @@
 *.xmf
 cans
 run/
+src/data/*.*
+run/data/*.*
