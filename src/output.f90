@@ -142,7 +142,7 @@ module mod_output
     implicit none
     character(len=*), intent(in) :: fname
     integer , intent(in) :: inorm,islice
-    real(rp),intent(in), dimension(:,:,:) :: p
+    real(rp), intent(in), dimension(:,:,:) :: p
     !
     select case(inorm)
     case(1) !normal to x --> yz plane
@@ -168,7 +168,7 @@ module mod_output
     implicit none
     character(len=*), intent(in) :: fname
     integer , intent(in), dimension(3) :: nskip
-    real(rp),intent(in), dimension(:,:,:) :: p
+    real(rp), intent(in), dimension(:,:,:) :: p
     integer :: fh
     integer(kind=MPI_OFFSET_KIND) :: filesize,disp
     !
@@ -203,6 +203,7 @@ module mod_output
     integer , intent(in)               :: istep
     character(len=100) :: cfmt
     integer :: iunit
+    !
     iunit = 10
     write(cfmt, '(A)') '(A,A,A,9i5,E15.7,i7)'
     if (myid .eq. 0) then
@@ -221,7 +222,8 @@ module mod_output
     integer , intent(in), dimension(3)    :: nmin,nmax,nskip
     real(rp), intent(in)                  :: time
     integer , intent(in)                  :: istep
-    real(rp),intent(in), dimension(:,:,:) :: p
+    real(rp), intent(in), dimension(:,:,:) :: p
+    !
     call out3d(trim(datadir)//trim(fname_bin),nskip,p)
     call write_log_output(trim(datadir)//trim(fname_log),trim(fname_bin),trim(varname),nmin,nmax,nskip,time,istep)
     return
@@ -237,8 +239,9 @@ module mod_output
     integer , intent(in), dimension(3)    :: ng
     real(rp), intent(in)                  :: time
     integer , intent(in)                  :: istep
-    real(rp),intent(in), dimension(:,:,:) :: p
-    integer, dimension(3) :: nmin_2d,nmax_2d
+    real(rp), intent(in), dimension(:,:,:) :: p
+    integer , dimension(3) :: nmin_2d,nmax_2d
+    !
     call out2d(trim(datadir)//trim(fname_bin),inorm,nslice,p)
     select case(inorm)
     case(1)
