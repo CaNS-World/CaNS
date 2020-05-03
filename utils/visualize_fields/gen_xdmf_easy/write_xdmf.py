@@ -17,7 +17,7 @@ dtype_saves = np.dtype([                                                        
                         ('istep', np.int), ('jstep', np.int), ('kstep', np.int), \
                         ('time', np.float), ('isave', np.int)                    \
                        ])
-dnsfile  = input("Name of the input file used for the DNS run: [../dns.in]: ") or "../dns.in"
+geofile  = "geometry.out"
 logfile  = input("Name of the log file written by CaNS [log_visu_3d.out]: ") or "log_visu_3d.out"
 gridname = input("Name to be appended to the grid files to prevent overwriting []: ") or ""
 xgridfile = "x"+gridname+'.bin'
@@ -47,7 +47,7 @@ n = ((nmax-nmin+1)/nstep).astype(int)
 #
 # harvest information from dns.in
 #
-data = np.loadtxt(dnsfile, comments = "!", max_rows = 2)
+data = np.loadtxt(geofile, comments = "!", max_rows = 2)
 ng = data[0,:].astype('int')
 l  = data[1,:]
 dl = l/(1.*ng)
