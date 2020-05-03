@@ -15,16 +15,22 @@
   call out2d(trim(datadir)//'v_slice_fld_'//fldnum//'.bin',2,ng(2)/2,v(1:n(1),1:n(2),1:n(3)))
   call out2d(trim(datadir)//'w_slice_fld_'//fldnum//'.bin',2,ng(2)/2,w(1:n(1),1:n(2),1:n(3)))
   call out2d(trim(datadir)//'p_slice_fld_'//fldnum//'.bin',2,ng(2)/2,p(1:n(1),1:n(2),1:n(3)))
-  ! write_log_output(bla,bla,bla)
   !
-  ! saves a planar slice of a scalar field into a binary file (see output.f90)
+  ! write_log_output(fname,fname_fld,varname,nmin,nmax,nskip,time,istep)
   !
-  ! fname  -> name of the output file
-  ! inorm  -> plane is perpendicular to direction
-  !           inorm (1,2,3)
-  ! islice -> plane is of constant index islice 
-  !           in direction inorm
-  ! p      -> 3D input scalar field
+  ! appends information about a saved binary file to a log file (see output.f90)
+  ! this file will then be used for generating a file that paraview/visit understands
+  ! and should match the calls of out3d above;
+  ! in future saving the field and writing the log file will be lumped into a single subroutine
+  !
+  ! fname     -> name of the output log file
+  ! fname_fld -> name of the saved binary file (excluding the directory)
+  ! varname   -> name of the variable that is saved
+  ! nmin      -> first element of the field that is saved in each direction, e.g. (/1,1,1/)
+  ! nmax      -> last  element of the field that is saved in each direction, e.g. (/ng(1),ng(2),ng(3)/)
+  ! nskip     -> step size between nmin and nmax, e.g. (/1,1,1/) if the whole array is saved
+  ! time      -> physical time
+  ! istep     -> time step number
   !
   ! modify the calls below as desired
   !
