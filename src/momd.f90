@@ -1,7 +1,7 @@
 module mod_momd
   use mpi
-  use mod_param     , only: bforce
-  use mod_common_mpi, only: ierr,dims,is_bound
+  use mod_param     , only: dims, bforce
+  use mod_common_mpi, only: ierr
   use mod_types
   implicit none
   private
@@ -176,42 +176,24 @@ module mod_momd
     enddo
     !$OMP END PARALLEL DO
     taux(:) = 0.
-    if( is_bound(0,2) ) then
-      do k=1,nz
-        do i=1,nx
-          dudyp = (u(i,1 ,k)-u(i,0   ,k))*dyi*visc*dzflzi(k)
-          taux(2) = taux(2) + dudyp
-        enddo
+    do k=1,nz
+      do i=1,nx
+        dudyp = (u(i,1 ,k)-u(i,0   ,k))*dyi*visc*dzflzi(k)
+        dudym = (u(i,ny,k)-u(i,ny+1,k))*dyi*visc*dzflzi(k)
+        taux(2) = taux(2) + (dudyp+dudym)
       enddo
-    endif
-    if( is_bound(1,2) ) then
-      do k=1,nz
-        do i=1,nx
-          dudym = (u(i,ny,k)-u(i,ny+1,k))*dyi*visc*dzflzi(k)
-          taux(2) = taux(2) + dudyp
-        enddo
+    enddo
+    do j=1,ny
+      do i=1,nx
+        dudzp = (u(i,j,1 )-u(i,j,0   ))*dzci(0)*visc
+        dudzm = (u(i,j,nz)-u(i,j,nz+1))*dzci(nz)*visc
+        taux(3) = taux(3) + (dudzp+dudzm)
       enddo
-    endif
-    if( is_bound(0,3) ) then
-      do j=1,ny
-        do i=1,nx
-          dudzp = (u(i,j,1 )-u(i,j,0   ))*dzci(0)*visc
-          taux(3) = taux(3) + dudzp
-        enddo
-      enddo
-    endif
-    if( is_bound(1,3) ) then
-      do j=1,ny
-        do i=1,nx
-          dudzm = (u(i,j,nz)-u(i,j,nz+1))*dzci(nz)*visc
-          taux(3) = taux(3) + dudzm
-        enddo
-      enddo
-    endif
+    enddo
     call mpi_allreduce(MPI_IN_PLACE,taux(1),3,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
     nxg = nx*dims(1)
     nyg = ny*dims(2)
-    nzg = nz*dims(3)
+    nzg = nz
     taux(1) = taux(1)/(1.*nyg)
     taux(2) = taux(2)/(1.*nxg)
     taux(3) = taux(3)/(1.*nxg*nyg)
@@ -258,42 +240,24 @@ module mod_momd
     enddo
     !$OMP END PARALLEL DO
     tauy(:) = 0.
-    if( is_bound(0,1) ) then
-      do k=1,nz
-        do j=1,ny
-          dvdxp = (v(1 ,j,k)-v(0   ,j,k))*dxi*visc*dzflzi(k)
-          tauy(1) = tauy(1) + dvdxp
-        enddo
-      enddo
-    endif
-    if( is_bound(1,1) ) then
-      do k=1,nz
-        do j=1,ny
-          dvdxm = (v(nx,j,k)-v(nx+1,j,k))*dxi*visc*dzflzi(k)
-          tauy(1) = tauy(1) + dvdxm
-        enddo
-      enddo
-    endif
-    if(is_bound(0,3) ) then
+    do k=1,nz
       do j=1,ny
-        do i=1,nx
-          dvdzp = (v(i,j,1 )-v(i,j,0   ))*dzci(0)*visc
-          tauy(3) = tauy(3) + dvdzp
-        enddo
+        dvdxp = (v(1 ,j,k)-v(0   ,j,k))*dxi*visc*dzflzi(k)
+        dvdxm = (v(nx,j,k)-v(nx+1,j,k))*dxi*visc*dzflzi(k)
+        tauy(1) = tauy(1) + (dvdxp+dvdxm)
       enddo
-    endif
-    if(is_bound(1,3) ) then
-      do j=1,ny
-        do i=1,nx
-          dvdzm = (v(i,j,nz)-v(i,j,nz+1))*dzci(nz)*visc
-          tauy(3) = tauy(3) + dvdzm
-        enddo
+    enddo
+    do j=1,ny
+      do i=1,nx
+        dvdzp = (v(i,j,1 )-v(i,j,0   ))*dzci(0)*visc
+        dvdzm = (v(i,j,nz)-v(i,j,nz+1))*dzci(nz)*visc
+        tauy(3) = tauy(3) + (dvdzp+dvdzm)
       enddo
-    endif
+    enddo
     call mpi_allreduce(MPI_IN_PLACE,tauy(1),3,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
     nxg = nx*dims(1)
     nyg = ny*dims(2)
-    nzg = nz*dims(3)
+    nzg = nz
     tauy(1) = tauy(1)/(1.*nyg)
     tauy(2) = tauy(2)/(1.*nxg)
     tauy(3) = tauy(3)/(1.*nxg*nyg)
@@ -340,42 +304,24 @@ module mod_momd
     enddo
     !$OMP END PARALLEL DO
     tauz(:) = 0.
-    if(is_bound(0,1) ) then
-      do k=1,nz
-        do j=1,ny
-          dwdxp = (w(1 ,j,k)-w(0   ,j,k))*dxi*visc*dzflzi(k)
-          tauz(1) = tauz(1) + dwdxp
-        enddo
+    do k=1,nz
+      do j=1,ny
+        dwdxp = (w(1 ,j,k)-w(0   ,j,k))*dxi*visc*dzflzi(k)
+        dwdxm = (w(nx,j,k)-w(nx+1,j,k))*dxi*visc*dzflzi(k)
+        tauz(1) = tauz(1) + (dwdxp+dwdxm)
       enddo
-    endif
-    if(is_bound(1,1) ) then
-      do k=1,nz
-        do j=1,ny
-          dwdxm = (w(nx,j,k)-w(nx+1,j,k))*dxi*visc*dzflzi(k)
-          tauz(1) = tauz(1) + dwdxm
-        enddo
+    enddo
+    do k=1,nz
+      do i=1,nx
+        dwdyp = (w(i,1,k )-w(i,0   ,k))*dyi*visc*dzflzi(k)
+        dwdym = (w(i,ny,k)-w(i,ny+1,k))*dyi*visc*dzflzi(k)
+        tauz(2) = tauz(2) + (dwdyp+dwdym)
       enddo
-    endif
-    if(is_bound(0,2) ) then
-      do k=1,nz
-        do i=1,nx
-          dwdyp = (w(i,1,k )-w(i,0   ,k))*dyi*visc*dzflzi(k)
-          tauz(2) = tauz(2) + dwdyp
-        enddo
-      enddo
-    endif
-    if(is_bound(1,2) ) then
-      do k=1,nz
-        do i=1,nx
-          dwdym = (w(i,ny,k)-w(i,ny+1,k))*dyi*visc*dzflzi(k)
-          tauz(2) = tauz(2) + dwdym
-        enddo
-      enddo
-    endif
+    enddo
     call mpi_allreduce(MPI_IN_PLACE,tauz(1),3,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
     nxg = nx*dims(1)
     nyg = ny*dims(2)
-    nzg = nz*dims(3)
+    nzg = nz
     tauz(1) = tauz(1)/(1.*nyg)
     tauz(2) = tauz(2)/(1.*nxg)
     tauz(3) = tauz(3)/(1.*nxg*nyg)

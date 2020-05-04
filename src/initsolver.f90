@@ -1,9 +1,8 @@
 module mod_initsolver
-  use decomp_2d
   use iso_c_binding, only: C_PTR
-  use mod_common_mpi, only: dims,n_x,n_y,n_z,ijk_start_z
+  use mod_common_mpi, only: coord
   use mod_fft       , only: fftini
-  use mod_param     , only: pi
+  use mod_param     , only: pi,dims
   use mod_types
   implicit none
   private
@@ -19,16 +18,16 @@ module mod_initsolver
     real(rp), intent(in), dimension(0:) :: dzci,dzfi
     character(len=1), intent(in), dimension(0:1,3) :: cbc
     real(rp)         , intent(in), dimension(0:1,3) :: bc
-    real(rp), intent(out), dimension(:,:) :: lambdaxy
+    real(rp), intent(out), dimension(n(1),n(2)) :: lambdaxy
     character(len=1), intent(in), dimension(3) :: c_or_f
-    real(rp), intent(out), dimension(n_z(3)) :: a,b,c
+    real(rp), intent(out), dimension(n(3)) :: a,b,c
     type(C_PTR), intent(out), dimension(2,2) :: arrplan
     real(rp), intent(out), dimension(n(2),n(3),0:1) :: rhsbx
     real(rp), intent(out), dimension(n(1),n(3),0:1) :: rhsby
     real(rp), intent(out), dimension(n(1),n(2),0:1) :: rhsbz
     real(rp), intent(out) :: normfft
     real(rp), dimension(3)        :: dl
-    real(rp), dimension(0:n(3)*dims(3)+1) :: dzc,dzf
+    real(rp), dimension(0:n(3)+1) :: dzc,dzf
     integer :: i,j
     real(rp), dimension(n(1)*dims(1))      :: lambdax
     real(rp), dimension(n(2)*dims(2))      :: lambday
@@ -37,7 +36,8 @@ module mod_initsolver
     !
     ! generating eigenvalues consistent with the BCs
     !
-    ng(:) = n(:)*dims(:)
+    ng(:) = n(:)
+    ng(1:2) = ng(1:2)*dims(1:2)
     call eigenvalues(ng(1),cbc(:,1),c_or_f(1),lambdax)
     lambdax(:) = lambdax(:)*dli(1)**2
     call eigenvalues(ng(2),cbc(:,2),c_or_f(2),lambday)
@@ -45,17 +45,17 @@ module mod_initsolver
     !
     ! add eigenvalues
     !
-    do j=1,n_z(2)
-      jj = ijk_start_z(2) + j
-      do i=1,n_z(1)
-        ii = ijk_start_z(1) + i
+    do j=1,n(2)
+      jj = coord(2)*n(2)+j
+      do i=1,n(1)
+        ii = coord(1)*n(1)+i
         lambdaxy(i,j) = lambdax(ii)+lambday(jj)
       enddo
     enddo
     !
     ! compute coefficients for tridiagonal solver
     !
-    call tridmatrix(cbc(:,3),ng(3),dli(3),dzci,dzfi,c_or_f(3),a,b,c)
+    call tridmatrix(cbc(:,3),n(3),dli(3),dzci,dzfi,c_or_f(3),a,b,c)
     !
     ! compute values to be added to the right hand side
     !
@@ -65,14 +65,14 @@ module mod_initsolver
     call bc_rhs(cbc(:,1),n(1),bc(:,1),(/dl(1) ,dl(1)    /),(/dl(1) ,dl(1)    /),c_or_f(1),rhsbx)
     call bc_rhs(cbc(:,2),n(2),bc(:,2),(/dl(2) ,dl(2)    /),(/dl(2) ,dl(2)    /),c_or_f(2),rhsby)
     if(    c_or_f(3).eq.'c') then
-      call bc_rhs(cbc(:,3),n(3),bc(:,3),(/dzc(0),dzc(ng(3)  )/),(/dzf(1),dzf(ng(3))/),c_or_f(3),rhsbz)
+      call bc_rhs(cbc(:,3),n(3),bc(:,3),(/dzc(0),dzc(n(3)  )/),(/dzf(1),dzf(n(3))/),c_or_f(3),rhsbz)
     elseif(c_or_f(3).eq.'f') then
-      call bc_rhs(cbc(:,3),n(3),bc(:,3),(/dzc(1),dzc(ng(3)-1)/),(/dzf(1),dzf(ng(3))/),c_or_f(3),rhsbz)
+      call bc_rhs(cbc(:,3),n(3),bc(:,3),(/dzc(1),dzc(n(3)-1)/),(/dzf(1),dzf(n(3))/),c_or_f(3),rhsbz)
     endif
     !
     ! prepare ffts
     !
-    call fftini(n_x,n_y,cbc(:,1:2),c_or_f(1:2),arrplan,normfft)
+    call fftini(ng(1),ng(2),ng(3),cbc(:,1:2),c_or_f(1:2),arrplan,normfft)
     return
   end subroutine initsolver
   !

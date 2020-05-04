@@ -26,7 +26,7 @@ program cans
   use mod_bound      , only: boundp,bounduvw,updt_rhs_b
   use mod_chkdiv     , only: chkdiv
   use mod_chkdt      , only: chkdt
-  use mod_common_mpi , only: myid,ierr,dims_xyz,ijk_start,n_z
+  use mod_common_mpi , only: myid,ierr
   use mod_correc     , only: correc
   use mod_debug      , only: chkmean
   use mod_fft        , only: fftini,fftend
@@ -46,7 +46,7 @@ program cans
                              datadir,   &
                              cfl,dtmin, &
                              inivel,    &
-                             dims, &
+                             imax,jmax,dims, &
                              nthreadsmax, &
                              gr, &
                              is_outflow,no_outflow,is_forced,bforce, &
@@ -69,7 +69,7 @@ program cans
     real(rp), allocatable, dimension(:,:,:) :: x
     real(rp), allocatable, dimension(:,:,:) :: y
     real(rp), allocatable, dimension(:,:,:) :: z
-  end type rhs_bound
+  end type rhs_bound 
   type(rhs_bound) :: rhsbp
 #ifdef IMPDIFF
   type(C_PTR), dimension(2,2) :: arrplanu,arrplanv,arrplanw
@@ -77,14 +77,13 @@ program cans
   real(rp), allocatable, dimension(:) :: au,av,aw,bu,bv,bw,bb,cu,cv,cw
   real(rp) :: normfftu,normfftv,normfftw
   real(rp) :: alpha,alphai
-  integer :: i,j,im,ip,jm,jp,km,kp
+  integer :: i,j,k,im,ip,jm,jp,km,kp
   type(rhs_bound) :: rhsbu,rhsbv,rhsbw
 #endif
   real(rp) :: ristep
   real(rp) :: dt,dti,dtmax,time,dtrk,dtrki,divtot,divmax
   integer :: irk,istep
-  real(rp), allocatable, dimension(:) :: dzc  ,dzf  ,zc  ,zf  ,dzci  ,dzfi, &
-                                         dzc_g,dzf_g,zc_g,zf_g,dzci_g,dzfi_g
+  real(rp), allocatable, dimension(:) :: dzc,dzf,zc,zf,dzci,dzfi
   real(rp) :: meanvelu,meanvelv,meanvelw
   real(rp), dimension(3) :: dpdl
   !real(rp), allocatable, dimension(:) :: var
@@ -94,7 +93,7 @@ program cans
 #endif
   real(rp) :: twi,tw
   character(len=7) :: fldnum
-  integer :: k,kk
+  integer :: kk
   logical :: is_done,kill
   !
   call MPI_INIT(ierr)
@@ -123,31 +122,25 @@ program cans
   allocate(dudtrko(n(1),n(2),n(3)), &
            dvdtrko(n(1),n(2),n(3)), &
            dwdtrko(n(1),n(2),n(3)))
-  allocate(lambdaxyp(n_z(1),n_z(2)))
-  allocate(ap(n_z(3)),bp(n_z(3)),cp(n_z(3)))
+  allocate(lambdaxyp(n(1),n(2)))
+  allocate(ap(n(3)),bp(n(3)),cp(n(3)))
   allocate(dzc( 0:n(3)+1), &
            dzf( 0:n(3)+1), &
            zc(  0:n(3)+1), &
            zf(  0:n(3)+1), &
            dzci(0:n(3)+1), &
            dzfi(0:n(3)+1))
-  allocate(dzc_g( 0:ng(3)+1), &
-           dzf_g( 0:ng(3)+1), &
-           zc_g(  0:ng(3)+1), &
-           zf_g(  0:ng(3)+1), &
-           dzci_g(0:ng(3)+1), &
-           dzfi_g(0:ng(3)+1))
   allocate(rhsbp%x(n(2),n(3),0:1), &
            rhsbp%y(n(1),n(3),0:1), &
            rhsbp%z(n(1),n(2),0:1))
 #ifdef IMPDIFF
-  allocate(lambdaxyu(n_z(1),n_z(2)), &
-           lambdaxyv(n_z(1),n_z(2)), &
-           lambdaxyw(n_z(1),n_z(2)))
-  allocate(au(n_z(3)),bu(n_z(3)),cu(n_z(3)), &
-           av(n_z(3)),bv(n_z(3)),cv(n_z(3)), &
-           aw(n_z(3)),bw(n_z(3)),cw(n_z(3)), &
-           bb(n_z(3)))
+  allocate(lambdaxyu(n(1),n(2)), &
+           lambdaxyv(n(1),n(2)), &
+           lambdaxyw(n(1),n(2)))
+  allocate(au(n(3)),bu(n(3)),cu(n(3)), &
+           av(n(3)),bv(n(3)),cv(n(3)), &
+           aw(n(3)),bw(n(3)),cw(n(3)), &
+           bb(n(3)))
   allocate(rhsbu%x(n(2),n(3),0:1), &
            rhsbu%y(n(1),n(3),0:1), &
            rhsbu%z(n(1),n(2),0:1), &
@@ -162,14 +155,16 @@ program cans
   if(myid.eq.0) print*, '*** Beginning of simulation ***'
   if(myid.eq.0) print*, '*******************************'
   if(myid.eq.0) print*, ''
-  call initgrid(inivel,ng(3),gr,lz,dzc_g,dzf_g,zc_g,zf_g)
+  call initgrid(inivel,n(3),gr,lz,dzc,dzf,zc,zf)
+  dzci(:) = dzc(:)**(-1)
+  dzfi(:) = dzf(:)**(-1)
   if(myid.eq.0) then
-    open(99,file=trim(datadir)//'grid.bin',access='direct',recl=4*ng(3)*sizeof(1._rp))
-    write(99,rec=1) dzc_g(1:ng(3)),dzf_g(1:ng(3)),zc_g(1:ng(3)),zf_g(1:ng(3))
+    open(99,file=trim(datadir)//'grid.bin',access='direct',recl=4*n(3)*sizeof(1._rp))
+    write(99,rec=1) dzc(1:n(3)),dzf(1:n(3)),zc(1:n(3)),zf(1:n(3))
     close(99)
     open(99,file=trim(datadir)//'grid.out')
-    do kk=0,ng(3)+1
-      write(99,'(5E15.7)') 0.,zf_g(kk),zc_g(kk),dzf_g(kk),dzc_g(kk)
+    do kk=0,ktot+1
+      write(99,'(5E15.7)') 0.,zf(kk),zc(kk),dzf(kk),dzc(kk)
     enddo
     close(99)
     open(99,file=trim(datadir)//'geometry.out')
@@ -177,22 +172,11 @@ program cans
       write(99,*) l(1),l(2),l(3) 
     close(99)
   endif
-  do k=0,n(3)+1
-    kk = ijk_start(3) + k
-    zc(k)  = zc_g(kk)
-    zf(k)  = zf_g(kk)
-    dzc(k) = dzc_g(kk)
-    dzf(k) = dzf_g(kk)
-  enddo
-  dzci(:) = dzc(:)**(-1)
-  dzfi(:) = dzf(:)**(-1)
-  dzci_g(:) = dzc_g(:)**(-1)
-  dzfi_g(:) = dzf_g(:)**(-1)
   !
   ! test input files before proceeding with the calculation
   !
-  call test_sanity(ng,n,dims_xyz(:,3),stop_type,cbcvel,cbcpre,bcvel,bcpre,is_outflow,is_forced, &
-                   dli,dzci_g,dzfi_g,dzci,dzfi)
+  call test_sanity(ng,n,dims,stop_type,cbcvel,cbcpre,bcvel,bcpre,is_outflow,is_forced, &
+                   dli,dzci,dzfi)
   !
   if(.not.restart) then
     istep = 0
@@ -229,14 +213,13 @@ program cans
   !
   ! initialize Poisson solver
   !
-  call initsolver(n,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:),lambdaxyp,(/'c','c','c'/),ap,bp,cp,arrplanp,normfftp, &
-                  rhsbp%x,rhsbp%y,rhsbp%z)
+  call initsolver(n,dli,dzci,dzfi,cbcpre,bcpre(:,:),lambdaxyp,(/'c','c','c'/),ap,bp,cp,arrplanp,normfftp,rhsbp%x,rhsbp%y,rhsbp%z)
 #ifdef IMPDIFF
-  call initsolver(n,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1),lambdaxyu,(/'f','c','c'/),au,bu,cu,arrplanu,normfftu, &
+  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,1),bcvel(:,:,1),lambdaxyu,(/'f','c','c'/),au,bu,cu,arrplanu,normfftu, &
                   rhsbu%x,rhsbu%y,rhsbu%z)
-  call initsolver(n,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2),lambdaxyv,(/'c','f','c'/),av,bv,cv,arrplanv,normfftv, &
+  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,2),bcvel(:,:,2),lambdaxyv,(/'c','f','c'/),av,bv,cv,arrplanv,normfftv, &
                   rhsbv%x,rhsbv%y,rhsbv%z)
-  call initsolver(n,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3),lambdaxyw,(/'c','c','f'/),aw,bw,cw,arrplanw,normfftw, &
+  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,3),bcvel(:,:,3),lambdaxyw,(/'c','c','f'/),aw,bw,cw,arrplanw,normfftw, &
                   rhsbw%x,rhsbw%y,rhsbw%z)
 #endif
   !

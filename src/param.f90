@@ -20,7 +20,7 @@ real(rp), parameter, dimension(3)   :: rkcoeff12 = rkcoeff(1,:)+rkcoeff(2,:)
 !
 ! variables to be determined from the input file 'dns.in'
 !
-integer :: itot,jtot,ktot,imax,jmax,kmax
+integer :: itot,jtot,ktot,imax,jmax
 real(rp) :: lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,gr
 real(rp) :: cfl,dtmin
 real(rp) :: uref,lref,rey,visc
@@ -34,7 +34,7 @@ logical, dimension(3) :: stop_type
 logical :: restart
 integer :: icheck,iout0d,iout1d,iout2d,iout3d,isave
 !
-integer, dimension(3) :: dims
+integer, dimension(2) :: dims
 integer :: nthreadsmax
 !
 character(len=1), dimension(0:1,3,3) ::  cbcvel
@@ -52,8 +52,6 @@ integer , dimension(3) :: n
 real(rp), dimension(3) :: l
 real(rp), dimension(3) :: dl
 real(rp), dimension(3) :: dli
-!
-integer, dimension(3) :: dims_aux
 !
 contains 
   subroutine read_input(myid)
@@ -101,29 +99,12 @@ contains
     dxi = dx**(-1)
     dyi = dy**(-1)
     dzi = dz**(-1)
-    dims_aux(1:2) = dims(1:2)
-    dims_aux(3)   = 0
-#ifdef DECOMP_X
-    dims_aux(1) = 1
-    dims_aux(2) = dims(1)
-    dims_aux(3) = dims(2)
-#elif DECOMP_Y
-    dims_aux(1) = dims(1)
-    dims_aux(2) = 1
-    dims_aux(3) = dims(2)
-#else
-!#elif DECOMP_Z
-    dims_aux(1) = dims(1)
-    dims_aux(2) = dims(2)
-    dims_aux(3) = 1
-#endif
-    imax = itot/dims_aux(1)
-    jmax = jtot/dims_aux(2)
-    kmax = ktot/dims_aux(3)
+    imax = itot/dims(1)
+    jmax = jtot/dims(2)
     !
     visc = uref*lref/rey
     ng  = (/itot,jtot,ktot/)
-    n   = (/imax,jmax,kmax/)
+    n   = (/imax,jmax,ktot/)
     l   = (/lx,ly,lz/)
     dl  = (/dx,dy,dz/)
     dli = (/dxi,dyi,dzi/)

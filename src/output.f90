@@ -2,7 +2,7 @@ module mod_output
   use mpi
   use decomp_2d_io
   use mod_param     , only: dims,dx,dy,dz
-  use mod_common_mpi, only:ierr,myid,ipencil,ijk_start
+  use mod_common_mpi, only:ierr,myid,coord
   use mod_types
   implicit none
   private
@@ -53,22 +53,21 @@ module mod_output
     real(rp), intent(in), dimension(0:) :: z,dzlzi
     real(rp), intent(in), dimension(0:,0:,0:) :: p
     real(rp), allocatable, dimension(:) :: p1d
-    integer :: i,j,k,ii,jj,kk
+    integer :: i,j,k,ii,jj
     integer :: iunit
     integer, dimension(3) :: ng
     !
-    ng(:) = n(:)*dims(:)
+    ng(:) = n(:)
+    ng(1:2) = n(1:2)*dims(1:2)
     iunit = 10
     select case(idir)
     case(3)
-      allocate(p1d(ng(3)))
-      p1d(:) = 0.
-      do k=1,n(3)
-        kk = ijk_start(3) + k
-        p1d(kk) = 0.
+      allocate(p1d(n(3)))
+      do k=1,ng(3)
+        p1d(k) = 0.
         do j=1,n(2)
           do i=1,n(1)
-            p1d(kk) = p1d(kk) + p(i,j,k)
+            p1d(k) = p1d(k) + p(i,j,k)
           enddo
         enddo
       enddo
@@ -76,8 +75,8 @@ module mod_output
       p1d(:) = p1d(:)/(1.*ng(1)*ng(2))
       if(myid.eq.0) then
         open(unit=iunit,file=fname)
-        do kk=1,ng(3)
-          write(iunit,'(2E15.7)') z(kk),p1d(kk)
+        do k=1,n(3)
+          write(iunit,'(2E15.7)') z(k),p1d(k)
         enddo
         close(iunit)
       endif
@@ -85,7 +84,7 @@ module mod_output
       allocate(p1d(ng(2)))
       p1d(:) = 0.
       do j=1,n(2)
-        jj = ijk_start(2) + j
+        jj = coord(2)*n(2)+j
         p1d(jj) = 0.
         do k=1,n(3)
           do i=1,n(1)
@@ -97,8 +96,8 @@ module mod_output
       p1d(:) = p1d(:)/(1.*ng(1))
       if(myid.eq.0) then
         open(unit=iunit,file=fname)
-        do jj=1,ng(2)
-          write(iunit,'(2E15.7)') (1.*jj-.5)/(1.*ng(2)),p1d(jj)
+        do j=1,ng(2)
+          write(iunit,'(2E15.7)') (1.*j-.5)/(1.*ng(2)),p1d(j)
         enddo
         close(iunit)
       endif
@@ -106,8 +105,8 @@ module mod_output
       allocate(p1d(ng(1)))
       p1d(:) = 0.
       do i=1,n(1)
-        ii = ijk_start(1) + i
-        p1d(ii) = 0.
+        ii = coord(1)*n(1)+i
+        p1d(i) = 0.
         do k=1,n(3)
           do j=1,n(2)
             p1d(ii) = p1d(ii) + p(i,j,k)*dzlzi(k)
@@ -146,11 +145,11 @@ module mod_output
     !
     select case(inorm)
     case(1) !normal to x --> yz plane
-       call decomp_2d_write_plane(ipencil,p,inorm,islice,fname)
+       call decomp_2d_write_plane(3,p,inorm,islice,fname)
     case(2) !normal to y --> zx plane
-       call decomp_2d_write_plane(ipencil,p,inorm,islice,fname)
+       call decomp_2d_write_plane(3,p,inorm,islice,fname)
     case(3) !normal to z --> xy plane
-       call decomp_2d_write_plane(ipencil,p,inorm,islice,fname)
+       call decomp_2d_write_plane(3,p,inorm,islice,fname)
     end select
     return
   end subroutine out2d
@@ -177,7 +176,7 @@ module mod_output
     filesize = 0_MPI_OFFSET_KIND
     call MPI_FILE_SET_SIZE(fh,filesize,ierr)
     disp = 0_MPI_OFFSET_KIND
-    call decomp_2d_write_every(ipencil,p,nskip(1),nskip(2),nskip(3),fname,.true.)
+    call decomp_2d_write_every(3,p,nskip(1),nskip(2),nskip(3),fname,.true.)
     call MPI_FILE_CLOSE(fh,ierr)
     return
   end subroutine out3d
@@ -266,53 +265,46 @@ module mod_output
     real(rp), intent(in), dimension(0:) :: z
     real(rp), intent(in), dimension(0:,0:,0:) :: u,v,w
     real(rp), allocatable, dimension(:) :: um,vm,wm,u2,v2,w2,uw
-    integer :: i,j,k,kk
+    integer :: i,j,k
     integer :: iunit
     integer, dimension(3) :: ng
     integer :: q
     !
-    ng(:) = n(:)*dims(:)
+    ng(:) = n(:)
+    ng(1:2) = n(1:2)*dims(1:2)
     iunit = 10
     select case(idir)
     case(3)
-      q = ng(3)
+      q = n(3)
       allocate(um(0:q+1),vm(0:q+1),wm(0:q+1),u2(0:q+1),v2(0:q+1),w2(0:q+1),uw(0:q+1))
-      um(:) = 0.
-      vm(:) = 0.
-      wm(:) = 0.
-      u2(:) = 0.
-      v2(:) = 0.
-      w2(:) = 0.
-      uw(:) = 0.
       do k=1,n(3)
-        kk = ijk_start(3) + k
-        um(kk) = 0.
-        vm(kk) = 0.
-        wm(kk) = 0.
-        u2(kk) = 0.
-        v2(kk) = 0.
-        w2(kk) = 0.
-        uw(kk) = 0.
+        um(k) = 0.
+        vm(k) = 0.
+        wm(k) = 0.
+        u2(k) = 0.
+        v2(k) = 0.
+        w2(k) = 0.
+        uw(k) = 0.
         do j=1,n(2)
           do i=1,n(1)
-            um(kk) = um(kk) + u(i,j,k)
-            vm(kk) = vm(kk) + v(i,j,k)
-            wm(kk) = wm(kk) + 0.50*(w(i,j,k-1) + w(i,j,k))
-            u2(kk) = u2(kk) + u(i,j,k)**2
-            v2(kk) = v2(kk) + v(i,j,k)**2
-            w2(kk) = w2(kk) + 0.50*(w(i,j,k)**2+w(i,j,k-1)**2)
-            uw(kk) = uw(kk) + 0.25*(u(i-1,j,k) + u(i,j,k))* &
+            um(k) = um(k) + u(i,j,k)
+            vm(k) = vm(k) + v(i,j,k)
+            wm(k) = wm(k) + 0.50*(w(i,j,k-1) + w(i,j,k))
+            u2(k) = u2(k) + u(i,j,k)**2
+            v2(k) = v2(k) + v(i,j,k)**2
+            w2(k) = w2(k) + 0.50*(w(i,j,k)**2+w(i,j,k-1)**2)
+            uw(k) = uw(k) + 0.25*(u(i-1,j,k) + u(i,j,k))* &
                                    (w(i,j,k-1) + w(i,j,k))
           enddo
         enddo
       enddo
-      call mpi_allreduce(MPI_IN_PLACE,um(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,vm(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,wm(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,u2(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,v2(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,w2(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,uw(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,um(1),n(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,vm(1),n(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,wm(1),n(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,u2(1),n(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,v2(1),n(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,w2(1),n(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call mpi_allreduce(MPI_IN_PLACE,uw(1),n(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       um(:) = um(:)/(1.*ng(1)*ng(2))
       vm(:) = vm(:)/(1.*ng(1)*ng(2))
       wm(:) = wm(:)/(1.*ng(1)*ng(2))
@@ -322,10 +314,10 @@ module mod_output
       uw(:) = uw(:)/(1.*ng(1)*ng(2)) - um(:)*wm(:)
       if(myid.eq.0) then
         open(unit=iunit,file=fname)
-        do kk=1,ng(3)
-          write(iunit,'(8E15.7)') z(kk),um(kk),vm(kk),wm(kk), &
-                                        u2(kk),v2(kk),w2(kk), &
-                                        uw(kk)
+        do k=1,n(3)
+          write(iunit,'(8E15.7)') z(k),um(k),vm(k),wm(k), &
+                                       u2(k),v2(k),w2(k), &
+                                       uw(k)
         enddo
         close(iunit)
       endif
@@ -335,26 +327,25 @@ module mod_output
     end select
   end subroutine out1d_2
   !
-  subroutine out2d_2(fname,n,idir,z,u,v,w) ! e.g. for a duct
-    !
+  subroutine out2d_2(fname,n,idir,z,u,v,w) ! e.g. for a duct with streamwise dir in x
     implicit none
     character(len=*), intent(in) :: fname
     integer , intent(in), dimension(3) :: n
     integer , intent(in) :: idir
     real(rp), intent(in), dimension(0:) :: z
     real(rp), intent(in), dimension(0:,0:,0:) :: u,v,w
-    real(rp), allocatable, dimension(:,:) :: um,vm,wm,u2,v2,w2,uv,uw,vw
+    real(rp), allocatable, dimension(:,:) :: um,vm,wm,u2,v2,w2,uv,vw
     integer :: i,j,k,ii,jj,kk
     integer :: iunit
     integer, dimension(3) :: ng
     integer :: p,q
-    real(rp) :: x,y
+    real(rp) :: y
     !
-    ng(:) = n(:)*dims(:)
+    ng(:) = n(:)
+    ng(1:2) = n(1:2)*dims(1:2)
     iunit = 10
-    select case(idir) ! streamwise direction
+    select case(idir)
     case(3)
-    case(2)
       p = ng(1)
       q = ng(3)
       allocate(um(p,q),vm(p,q),wm(p,q),u2(p,q),v2(p,q),w2(p,q),uv(p,q),vw(p,q))
@@ -368,9 +359,9 @@ module mod_output
       uv(:,:) = 0.
       vw(:,:) = 0.
       do k=1,n(3)
-        kk = ijk_start(3) + k
+        kk = k
         do i=1,n(1)
-          ii = ijk_start(1) + i
+          ii = i+coord(1)*n(1)
           um(ii,kk) = 0.
           vm(ii,kk) = 0.
           wm(ii,kk) = 0.
@@ -380,7 +371,7 @@ module mod_output
           vw(ii,kk) = 0.
           uv(ii,kk) = 0.
           do j=1,n(2)
-            jj = ijk_start(2) + j
+            jj = j+coord(2)*n(2)
             um(ii,kk) = um(ii,kk) + 0.5*(u(i-1,j,k)+u(i,j,k))
             vm(ii,kk) = vm(ii,kk) + v(i,j,k)
             wm(ii,kk) = wm(ii,kk) + 0.5*(w(i,j,k-1)+w(i,j,k))
@@ -388,9 +379,9 @@ module mod_output
             v2(ii,kk) = v2(ii,kk) + v(i,j,k)**2
             w2(ii,kk) = w2(ii,kk) + 0.5*(w(i,j,k-1)**2+w(i,j,k)**2)
             vw(ii,kk) = vw(ii,kk) + 0.25*(v(i,j-1,k) + v(i,j,k))* &
-                                         (w(i,j,k-1) + w(i,j,k))
+                                           (w(i,j,k-1) + w(i,j,k))
             uv(ii,kk) = uv(ii,kk) + 0.25*(u(i-1,j,k) + u(i,j,k))* &
-                                         (v(i,j-1,k) + v(i,j,k))
+                                           (v(i,j-1,k) + v(i,j,k))
           enddo
         enddo
       enddo
@@ -412,86 +403,19 @@ module mod_output
       uv(:,:) =      uv(:,:)/(1.*ng(2)) - um(:,:)*vm(:,:)
       if(myid.eq.0) then
         open(unit=iunit,file=fname)
-        do kk=1,ng(3)
-          do ii=1,ng(1)
-            x = (ii-.5)*dx
-            write(iunit,'(10E15.7)') x,z(kk),um(ii,kk),vm(ii,kk),wm(ii,kk), &
-                                             u2(ii,kk),v2(ii,kk),w2(ii,kk), &
-                                             vw(ii,kk),uv(ii,kk)
+        do k=1,ng(3)
+          do i=1,ng(1)
+            y = (i-.5)*dx
+            write(iunit,'(10E15.7)') y,z(k),um(i,k),vm(i,k),wm(i,k), &
+                                            u2(i,k),v2(i,k),w2(i,k), &
+                                            vw(i,k),uv(i,k)
           enddo
         enddo
         close(iunit)
       endif
       deallocate(um,vm,wm,u2,v2,w2,vw,uv)
+    case(2)
     case(1)
-      p = ng(2)
-      q = ng(3)
-      allocate(um(p,q),vm(p,q),wm(p,q),u2(p,q),v2(p,q),w2(p,q),uv(p,q),uw(p,q))
-      !
-      um(:,:) = 0.
-      vm(:,:) = 0.
-      wm(:,:) = 0.
-      u2(:,:) = 0.
-      v2(:,:) = 0.
-      w2(:,:) = 0.
-      uv(:,:) = 0.
-      uw(:,:) = 0.
-      do k=1,n(3)
-        kk = ijk_start(3) + k
-        do j=1,n(2)
-          jj = ijk_start(2) + j
-          um(jj,kk) = 0.
-          vm(jj,kk) = 0.
-          wm(jj,kk) = 0.
-          u2(jj,kk) = 0.
-          v2(jj,kk) = 0.
-          w2(jj,kk) = 0.
-          uv(jj,kk) = 0.
-          uw(jj,kk) = 0.
-          do i=1,n(1)
-            ii = ijk_start(1) + i
-            um(jj,kk) = um(jj,kk) + u(i,j,k)
-            vm(jj,kk) = vm(jj,kk) + 0.5*(v(i,j-1,k)+v(i,j,k))
-            wm(jj,kk) = wm(jj,kk) + 0.5*(w(i,j,k-1)+w(i,j,k))
-            u2(jj,kk) = u2(jj,kk) + u(i,j,k)**2
-            v2(jj,kk) = v2(jj,kk) + 0.5*(v(i,j-1,k)**2+v(i,j,k)**2)
-            w2(jj,kk) = w2(jj,kk) + 0.5*(w(i,j,k-1)**2+w(i,j,k)**2)
-            uv(jj,kk) = uv(jj,kk) + 0.25*(u(i-1,j,k) + u(i,j,k))* &
-                                         (v(i,j-1,k) + v(i,j,k))
-            uw(jj,kk) = uw(jj,kk) + 0.25*(u(i-1,j,k) + u(i,j,k))* &
-                                         (w(i,j,k-1) + w(i,j,k))
-          enddo
-        enddo
-      enddo
-      call mpi_allreduce(MPI_IN_PLACE,um(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,vm(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,wm(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,u2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,v2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,w2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,uv(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,uw(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      um(:,:) =      um(:,:)/(1.*ng(2))
-      vm(:,:) =      vm(:,:)/(1.*ng(2))
-      wm(:,:) =      wm(:,:)/(1.*ng(2))
-      u2(:,:) = sqrt(u2(:,:)/(1.*ng(2)) - um(:,:)**2)
-      v2(:,:) = sqrt(v2(:,:)/(1.*ng(2)) - vm(:,:)**2)
-      w2(:,:) = sqrt(w2(:,:)/(1.*ng(2)) - wm(:,:)**2)
-      uv(:,:) =      uv(:,:)/(1.*ng(2)) - um(:,:)*vm(:,:)
-      uw(:,:) =      uw(:,:)/(1.*ng(2)) - um(:,:)*wm(:,:)
-      if(myid.eq.0) then
-        open(unit=iunit,file=fname)
-        do kk=1,ng(3)
-          do jj=1,ng(2)
-            y = (jj-.5)*dy
-            write(iunit,'(10E15.7)') y,z(kk),um(jj,kk),vm(jj,kk),wm(jj,kk), &
-                                             u2(jj,kk),v2(jj,kk),w2(jj,kk), &
-                                             uv(jj,kk),uw(jj,kk)
-          enddo
-        enddo
-        close(iunit)
-      endif
-      deallocate(um,vm,wm,u2,v2,w2,vw,uv)
     end select
   end subroutine out2d_2
 end module mod_output
