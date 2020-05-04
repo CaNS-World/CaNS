@@ -124,6 +124,7 @@ module mod_output
       endif
     end select
     deallocate(p1d)
+    return
   end subroutine out1d
   !
   !
@@ -210,6 +211,7 @@ module mod_output
       write(iunit,trim(cfmt)) trim(fname_fld),' ',trim(varname),nmin,nmax,nskip,time,istep
       close(iunit)
     endif
+    return
   end subroutine write_log_output
   !
   subroutine write_visu_3d(datadir,fname_bin,fname_log,varname,nmin,nmax,nskip,time,istep,p)
@@ -325,6 +327,7 @@ module mod_output
     case(2)
     case(1)
     end select
+    return
   end subroutine out1d_2
   !
   subroutine out2d_2(fname,n,idir,z,u,v,w) ! e.g. for a duct with streamwise dir in x
@@ -417,5 +420,6 @@ module mod_output
     case(2)
     case(1)
     end select
+    return
   end subroutine out2d_2
 end module mod_output
