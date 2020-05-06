@@ -3,6 +3,7 @@ import os
 #
 # define some custom parameters, not defined in the DNS code
 #
+iseek      = 0            # number of bytes to skip relative to the origin of the binary file (0 for CaNS)
 iprecision = 8            # data precision
 r0 = np.array([0.,0.,0.]) # domain origin
 non_uniform_grid = True
@@ -101,7 +102,7 @@ for ii in range(nsaves):
     for jj in range(nflds):
         index = ii*nflds+jj
         attribute = SubElement(grid_fld, "Attribute", attrib = {"Name": "{}".format(saves['variable'][index]), "Center": "Node"})
-        dataitem = SubElement(attribute, "DataItem", attrib = {"Format": "Binary", "DataType": "Float", "Precision": "{}".format(iprecision), "Endian": "Native", "Dimensions": "{} {} {}".format(n[2], n[1], n[0])})
+        dataitem = SubElement(attribute, "DataItem", attrib = {"Format": "Binary", "DataType": "Float", "Precision": "{}".format(iprecision), "Endian": "Native", "Seek": "{}".format(iseek), "Dimensions": "{} {} {}".format(n[2], n[1], n[0])})
         dataitem.text = saves['file'][index]
 output = ElementTree.tostring(Xdmf, 'utf-8')
 output = minidom.parseString(output)
