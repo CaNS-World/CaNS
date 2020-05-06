@@ -27,7 +27,7 @@ when running the script `write_xdmf.py` we get the following prompts:
 * the second is a name to append to the grid files that are generated, which should change for different log files to prevent conflicts;
 * the third is the name of the visualization file.
 
-by pressing `enter` three times, the default values in the square brackets are assumed by the script; these correspond to the default steps required for visualizing 3D field data.
+by pressing <kbd>enter</kbd> three times, the default values in the square brackets are assumed by the script; these correspond to the default steps required for visualizing 3D field data.
 
 ### 2D fields
 
