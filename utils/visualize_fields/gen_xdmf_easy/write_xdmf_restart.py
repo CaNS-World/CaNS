@@ -14,7 +14,7 @@ non_uniform_grid = True
 #
 # retrieve input information
 #
-filenames = input("Name of the pattern of the restart files to be visualzied [fld*.bin]: ") or "fld*.bin"
+filenames = input("Name of the pattern of the restart files to be visualzied [fld?*.bin]: ") or "fld?*.bin"
 files     = glob.glob(filenames)
 nsaves    = np.size(files)
 variables = input("Names of stored variables [VEX VEY VEZ PRE]: ") or "VEX VEY VEZ PRE"

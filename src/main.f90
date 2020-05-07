@@ -401,11 +401,15 @@ program cans
     endif
     if(mod(istep,isave ).eq.0.or.(is_done.and..not.kill)) then
       ristep = 1.*istep
-      call load('w',trim(datadir)//'fld.bin',n,u(1:n(1),1:n(2),1:n(3)), &
+      call load('w',trim(datadir)//'fld_'//fldnum//'.bin',n,u(1:n(1),1:n(2),1:n(3)), &
                                                v(1:n(1),1:n(2),1:n(3)), &
                                                w(1:n(1),1:n(2),1:n(3)), &
                                                p(1:n(1),1:n(2),1:n(3)), &
                                                time,ristep)
+      !
+      ! fld.bin -> last checkpoint file (symbolic link)
+      !
+      if(myid.eq.0) call system('ln -sf '//'fld_'//fldnum//'.bin '//trim(datadir)//'fld.bin')
       if(myid.eq.0) print*, '*** Checkpoint saved at time = ', time, 'time step = ', istep, '. ***'
     endif
 #ifdef TIMING
