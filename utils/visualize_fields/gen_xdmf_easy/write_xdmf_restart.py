@@ -1,5 +1,9 @@
+#
+# this python script can be used to visualize directly field from the checkpoint files of CaNS
+#
 import numpy as np
 import os
+import glob
 import struct
 #
 # define some custom parameters, not defined in the DNS code
@@ -8,36 +12,52 @@ iprecision = 8            # precision of the real-valued data
 r0 = np.array([0.,0.,0.]) # domain origin
 non_uniform_grid = True
 #
-# retrieve computational parameters
+# retrieve input information
 #
-geofile   = "geometry.out"
-filename  = input("Name of the restart file to be visualzied [fld.bin]: ") or "fld.bin"
+filenames = input("Name of the pattern of the restart files to be visualzied [fld*.bin]: ") or "fld*.bin"
+files     = glob.glob(filenames)
+nsaves    = np.size(files)
 variables = input("Names of stored variables [VEX VEY VEZ PRE]: ") or "VEX VEY VEZ PRE"
 variables = variables.split(" ")
+nflds     = np.size(variables)
 gridname  = input("Name to be appended to the grid files to prevent overwriting [_fld]: ") or "_fld"
-#
 xgridfile = "x"+gridname+'.bin'
 ygridfile = "y"+gridname+'.bin'
 zgridfile = "z"+gridname+'.bin'
 #
-# harvest some information from the log file
+# retrieve other computational parameters
 #
-nsaves    = 1
-nflds     = np.size(variables)
-nelements = nsaves*nflds
-#
+geofile   = "geometry.out"
 data = np.loadtxt(geofile, comments = "!", max_rows = 2)
 ng = data[0,:].astype('int')
 l  = data[1,:]
 dl = l/(1.*ng)
 n  = ng
+rtimes = np.zeros(nsaves)
+isteps = np.zeros(nsaves,dtype=int)
 iseek   = n[0]*n[1]*n[2]*iprecision*nflds # file offset in bytes with respect to the origin
-                                          # (after the field data, to retrieve the simulation time)
-with open(filename, 'rb') as f:
-    raw = f.read()[iseek:iseek+iprecision*2]
-rtime = struct.unpack('2d',raw)[0]
-istep = int(struct.unpack('2d',raw)[1])
-f.close()
+                                          # (to retrieve the simulation time and time step number)
+for i in range(nsaves):
+    with open(files[i], 'rb') as f:
+        raw   = f.read()[iseek:iseek+iprecision*2]
+    rtimes[i] =     struct.unpack('2d',raw)[0]
+    isteps[i] = int(struct.unpack('2d',raw)[1])
+    f.close()
+#
+# remove duplicates
+#
+isteps, indeces = np.unique(isteps,return_index=True)
+rtimes  = np.take(rtimes, indeces)
+files   = np.take(files,  indeces)
+nsaves  = np.size(files)
+nelements = nsaves*nflds
+#
+# sort by increasing istep
+#
+indeces = np.argsort(isteps)
+isteps  = np.take(isteps, indeces)
+rtimes  = np.take(rtimes, indeces)
+files   = np.take(files,  indeces)
 #
 # create grid files
 #
@@ -80,17 +100,16 @@ time = SubElement(grid, "Time", attrib = {"TimeType":"List"})
 dataitem = SubElement(time, "DataItem", attrib = {"Format": "XML", "NumberType": "Float", "Dimensions": "{}".format(nelements)})
 dataitem.text = ""
 for ii in range(nsaves):
-    dataitem.text += "{:15.6E}".format(rtime) + " "
+    dataitem.text += "{:15.6E}".format(rtimes[ii]) + " "
 for ii in range(nsaves):
-    grid_fld = SubElement(grid,"Grid", attrib = {"Name": "T{:7}".format(str(istep).zfill(7)), "GridType": "Uniform"})
+    grid_fld = SubElement(grid,"Grid", attrib = {"Name": "T{:7}".format(str(isteps[ii]).zfill(7)), "GridType": "Uniform"})
     topology = SubElement(grid_fld, "Topology", attrib = {"Reference": "/Xdmf/Domain/Topology[1]"})
     geometry = SubElement(grid_fld, "Geometry", attrib = {"Reference": "/Xdmf/Domain/Geometry[1]"})
     for jj in range(nflds):
-        index = ii*nflds+jj
         iseek = jj*iprecision*n[2]*n[1]*n[0]
-        attribute = SubElement(grid_fld, "Attribute", attrib = {"Name": "{}".format(variables[index]), "Center": "Node"})
+        attribute = SubElement(grid_fld, "Attribute", attrib = {"Name": "{}".format(variables[jj]), "Center": "Node"})
         dataitem = SubElement(attribute, "DataItem", attrib = {"Format": "Binary", "DataType": "Float", "Precision": "{}".format(iprecision), "Endian": "Native", "Seek": "{}".format(iseek), "Dimensions": "{} {} {}".format(n[2], n[1], n[0])})
-        dataitem.text = filename
+        dataitem.text = files[ii]
 output = ElementTree.tostring(Xdmf, 'utf-8')
 output = minidom.parseString(output)
 output = output.toprettyxml(indent="    ",newl='\n')
