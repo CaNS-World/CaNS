@@ -23,7 +23,7 @@ when running the script `write_xdmf.py` we get the following prompts:
  Name of the output file [viewfld_DNS.xmf]:
 ~~~
 
-* the value is the name of the file that logged the saved data;
+* the first value is the name of the file that logged the saved data;
 * the second is a name to append to the grid files that are generated, which should change for different log files to prevent conflicts;
 * the third is the name of the visualization file.
 
