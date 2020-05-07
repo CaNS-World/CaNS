@@ -7,7 +7,7 @@ hcl                      ! inivel
 F                        ! is_wallturb
 20000 100. 0.1           ! nstep,time_max,tw_max
 T F F                    ! stop_type(1:3)
-F                        ! restart
+F T                      ! restart,is_overwrite_save
 10 10 20 500 1000 2000   ! icheck, iout0d, iout1d, iout2d, iout3d, isave
 P P  P P  D N            ! cbcvel(0:1,1:3,1) [u BC type]
 P P  P P  D N            ! cbcvel(0:1,1:3,2) [v BC type]

@@ -41,7 +41,7 @@ program cans
   use mod_param      , only: itot,jtot,ktot,lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,uref,lref,rey,visc,small, &
                              cbcvel,bcvel,cbcpre,bcpre, &
                              icheck,iout0d,iout1d,iout2d,iout3d,isave, &
-                             nstep,time_max,tw_max,stop_type,restart, &
+                             nstep,time_max,tw_max,stop_type,restart,is_overwrite_save, &
                              rkcoeff,   &
                              datadir,   &
                              cfl,dtmin, &
@@ -92,7 +92,8 @@ program cans
   real(rp) :: dt12,dt12av,dt12min,dt12max
 #endif
   real(rp) :: twi,tw
-  character(len=7) :: fldnum
+  character(len=7  ) :: fldnum
+  character(len=100) :: filename
   integer :: kk
   logical :: is_done,kill
   !
@@ -401,15 +402,22 @@ program cans
     endif
     if(mod(istep,isave ).eq.0.or.(is_done.and..not.kill)) then
       ristep = 1.*istep
-      call load('w',trim(datadir)//'fld_'//fldnum//'.bin',n,u(1:n(1),1:n(2),1:n(3)), &
-                                               v(1:n(1),1:n(2),1:n(3)), &
-                                               w(1:n(1),1:n(2),1:n(3)), &
-                                               p(1:n(1),1:n(2),1:n(3)), &
-                                               time,ristep)
-      !
-      ! fld.bin -> last checkpoint file (symbolic link)
-      !
-      if(myid.eq.0) call system('ln -sf '//'fld_'//fldnum//'.bin '//trim(datadir)//'fld.bin')
+      if(is_overwrite_save) then
+        filename = 'fld.bin'
+      else
+        filename = 'fld_'//fldnum//'.bin'
+      endif
+      call load('w',trim(datadir)//trim(filename),n,u(1:n(1),1:n(2),1:n(3)), &
+                                                    v(1:n(1),1:n(2),1:n(3)), &
+                                                    w(1:n(1),1:n(2),1:n(3)), &
+                                                    p(1:n(1),1:n(2),1:n(3)), &
+                                                    time,ristep)
+      if(.not.is_overwrite_save) then
+        !
+        ! fld.bin -> last checkpoint file (symbolic link)
+        !
+        if(myid.eq.0) call system('ln -sf '//trim(filename)//' '//trim(datadir)//'fld.bin')
+      endif
       if(myid.eq.0) print*, '*** Checkpoint saved at time = ', time, 'time step = ', istep, '. ***'
     endif
 #ifdef TIMING

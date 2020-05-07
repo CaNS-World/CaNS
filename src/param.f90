@@ -31,7 +31,7 @@ logical :: is_wallturb
 integer :: nstep
 real(rp) :: time_max,tw_max
 logical, dimension(3) :: stop_type
-logical :: restart
+logical :: restart,is_overwrite_save
 integer :: icheck,iout0d,iout1d,iout2d,iout3d,isave
 !
 integer, dimension(2) :: dims
@@ -70,7 +70,7 @@ contains
         read(iunit,*) is_wallturb
         read(iunit,*) nstep, time_max,tw_max
         read(iunit,*) stop_type(1),stop_type(2),stop_type(3)
-        read(iunit,*) restart
+        read(iunit,*) restart,is_overwrite_save
         read(iunit,*) icheck,iout0d,iout1d,iout2d,iout3d,isave
         read(iunit,*) cbcvel(0,1,1),cbcvel(1,1,1),cbcvel(0,2,1),cbcvel(1,2,1),cbcvel(0,3,1),cbcvel(1,3,1)
         read(iunit,*) cbcvel(0,1,2),cbcvel(1,1,2),cbcvel(0,2,2),cbcvel(1,2,2),cbcvel(0,3,2),cbcvel(1,3,2)
