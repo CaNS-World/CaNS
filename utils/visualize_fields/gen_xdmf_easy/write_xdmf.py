@@ -4,7 +4,7 @@ import os
 # define some custom parameters, not defined in the DNS code
 #
 iseek      = 0            # number of bytes to skip relative to the origin of the binary file (0 for CaNS)
-iprecision = 8            # data precision
+iprecision = 8            # precision of real-valued data
 r0 = np.array([0.,0.,0.]) # domain origin
 non_uniform_grid = True
 #
@@ -46,14 +46,14 @@ nmax  = np.array([saves['imax' ][0], saves['jmax' ][0], saves['kmax' ][0]])
 nstep = np.array([saves['istep'][0], saves['jstep'][0], saves['kstep'][0]])
 n = ((nmax-nmin+1)/nstep).astype(int)
 #
-# harvest information from dns.in
+# retrieve some computational parameters
 #
 data = np.loadtxt(geofile, comments = "!", max_rows = 2)
 ng = data[0,:].astype('int')
 l  = data[1,:]
 dl = l/(1.*ng)
 #
-# create grid files
+# generate grid files
 #
 x = np.arange(r0[0]+dl[0]/2.,r0[0]+l[0],dl[0])
 y = np.arange(r0[1]+dl[1]/2.,r0[1]+l[1],dl[1])

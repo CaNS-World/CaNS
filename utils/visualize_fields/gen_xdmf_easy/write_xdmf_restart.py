@@ -1,14 +1,14 @@
 import numpy as np
 import os
+import struct
 #
 # define some custom parameters, not defined in the DNS code
 #
-iprecision = 8            # data precision
+iprecision = 8            # precision of the real-valued data
 r0 = np.array([0.,0.,0.]) # domain origin
 non_uniform_grid = True
 #
-# define data type and
-# read saved data log
+# retrieve computational parameters
 #
 geofile   = "geometry.out"
 filename  = input("Name of the restart file to be visualzied [fld.bin]: ") or "fld.bin"
@@ -26,13 +26,18 @@ nsaves    = 1
 nflds     = np.size(variables)
 nelements = nsaves*nflds
 #
-# harvest information from dns.in
-#
 data = np.loadtxt(geofile, comments = "!", max_rows = 2)
 ng = data[0,:].astype('int')
 l  = data[1,:]
 dl = l/(1.*ng)
 n  = ng
+iseek   = n[0]*n[1]*n[2]*iprecision*nflds # file offset in bytes with respect to the origin
+                                          # (after the field data, to retrieve the simulation time)
+with open(filename, 'rb') as f:
+    raw = f.read()[iseek:iseek+iprecision*2]
+rtime = struct.unpack('2d',raw)[0]
+istep = int(struct.unpack('2d',raw)[1])
+f.close()
 #
 # create grid files
 #
@@ -75,9 +80,9 @@ time = SubElement(grid, "Time", attrib = {"TimeType":"List"})
 dataitem = SubElement(time, "DataItem", attrib = {"Format": "XML", "NumberType": "Float", "Dimensions": "{}".format(nelements)})
 dataitem.text = ""
 for ii in range(nsaves):
-    dataitem.text += "{:15.6E}".format(0.) + " "
+    dataitem.text += "{:15.6E}".format(rtime) + " "
 for ii in range(nsaves):
-    grid_fld = SubElement(grid,"Grid", attrib = {"Name": "T{:7}".format(str(0).zfill(7)), "GridType": "Uniform"})
+    grid_fld = SubElement(grid,"Grid", attrib = {"Name": "T{:7}".format(str(istep).zfill(7)), "GridType": "Uniform"})
     topology = SubElement(grid_fld, "Topology", attrib = {"Reference": "/Xdmf/Domain/Topology[1]"})
     geometry = SubElement(grid_fld, "Geometry", attrib = {"Reference": "/Xdmf/Domain/Geometry[1]"})
     for jj in range(nflds):
