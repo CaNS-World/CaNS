@@ -9,6 +9,8 @@
   ! fname_log -> name of the log file (each different plane that is saved should
   !                                     correspond to a different log file)
   ! varname   -> name of the variable that is saved
+  !              to create a vector, append _X _Y and _Z to the variable name, denoting the
+  !              three components of the vector field
   ! inorm     -> plane is perpendicular to direction inorm (1, 2, or 3)
   ! islice    -> plane is of constant index islice in direction inorm 
   ! ng        -> array with the global number of points in each direction
@@ -18,15 +20,15 @@
   !
   ! modify the calls below as desired
   !
-  call write_visu_2d(datadir,'u_slice_fld_'//fldnum//'.bin','log_visu_2d_slice_1.out','VEX', &
+  call write_visu_2d(datadir,'u_slice_fld_'//fldnum//'.bin','log_visu_2d_slice_1.out','Velocity_X', &
                      2,ng(2)/2,ng,time,istep, &
                      u(1:n(1),1:n(2),1:n(3)))
-  call write_visu_2d(datadir,'v_slice_fld_'//fldnum//'.bin','log_visu_2d_slice_1.out','VEY', &
+  call write_visu_2d(datadir,'v_slice_fld_'//fldnum//'.bin','log_visu_2d_slice_1.out','Velocity_Y', &
                      2,ng(2)/2,ng,time,istep, &
                      v(1:n(1),1:n(2),1:n(3)))
-  call write_visu_2d(datadir,'w_slice_fld_'//fldnum//'.bin','log_visu_2d_slice_1.out','VEZ', &
+  call write_visu_2d(datadir,'w_slice_fld_'//fldnum//'.bin','log_visu_2d_slice_1.out','Velocity_Z', &
                      2,ng(2)/2,ng,time,istep, &
                      w(1:n(1),1:n(2),1:n(3)))
-  call write_visu_2d(datadir,'p_slice_fld_'//fldnum//'.bin','log_visu_2d_slice_1.out','PRE', &
+  call write_visu_2d(datadir,'p_slice_fld_'//fldnum//'.bin','log_visu_2d_slice_1.out','Pressure_P', &
                      2,ng(2)/2,ng,time,istep, &
                      p(1:n(1),1:n(2),1:n(3)))

@@ -8,6 +8,8 @@
   ! fname_bin -> name of the output binary file
   ! fname_log -> name of the log file (can be the same for a time series of data with the same grid)
   ! varname   -> name of the variable that is saved
+  !              to create a vector, append _X _Y and _Z to the variable name, denoting the
+  !              three components of the vector field
   ! nmin      -> first element of the field that is saved in each direction, e.g. (/1,1,1/)
   ! nmax      -> last  element of the field that is saved in each direction, e.g. (/ng(1),ng(2),ng(3)/)
   ! nskip     -> step size with which the grid points are saved, e.g. (/1,1,1/) if the whole array is saved
@@ -17,15 +19,15 @@
   !
   ! modify the calls below as desired
   !
-  call write_visu_3d(datadir,'vex_fld_'//fldnum//'.bin','log_visu_3d.out','VEX', &
+  call write_visu_3d(datadir,'vex_fld_'//fldnum//'.bin','log_visu_3d.out','Velocity_X', &
                      (/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep, &
                      u(1:n(1),1:n(2),1:n(3)))
-  call write_visu_3d(datadir,'vey_fld_'//fldnum//'.bin','log_visu_3d.out','VEY', &
+  call write_visu_3d(datadir,'vey_fld_'//fldnum//'.bin','log_visu_3d.out','Velocity_Y', &
                      (/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep, &
                      v(1:n(1),1:n(2),1:n(3)))
-  call write_visu_3d(datadir,'vez_fld_'//fldnum//'.bin','log_visu_3d.out','VEZ', &
+  call write_visu_3d(datadir,'vez_fld_'//fldnum//'.bin','log_visu_3d.out','Velocity_Z', &
                      (/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep, &
                      w(1:n(1),1:n(2),1:n(3)))
-  call write_visu_3d(datadir,'pre_fld_'//fldnum//'.bin','log_visu_3d.out','PRE', &
+  call write_visu_3d(datadir,'pre_fld_'//fldnum//'.bin','log_visu_3d.out','Pressure_P', &
                      (/1,1,1/),(/ng(1),ng(2),ng(3)/),(/1,1,1/),time,istep, &
                      p(1:n(1),1:n(2),1:n(3)))

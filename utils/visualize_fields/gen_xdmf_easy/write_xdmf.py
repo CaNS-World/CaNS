@@ -40,6 +40,7 @@ nelements = saves.size
 nflds     = 0
 isave = saves['isave'][0]
 while(isave == saves['isave'][nflds] and nflds < nelements-1): nflds += 1
+if(nflds == nelements-1): nflds += 1
 nsaves = int(nelements/nflds)
 nmin  = np.array([saves['imin' ][0], saves['jmin' ][0], saves['kmin' ][0]])
 nmax  = np.array([saves['imax' ][0], saves['jmax' ][0], saves['kmax' ][0]])
@@ -91,7 +92,7 @@ dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "Binary", "DataT
 dataitem.text = zgridfile
 grid = SubElement(domain, "Grid", attrib = {"Name": "TimeSeries", "GridType": "Collection",  "CollectionType": "Temporal"})
 time = SubElement(grid, "Time", attrib = {"TimeType":"List"})
-dataitem = SubElement(time, "DataItem", attrib = {"Format": "XML", "NumberType": "Float", "Dimensions": "{}".format(nelements)})
+dataitem = SubElement(time, "DataItem", attrib = {"Format": "XML", "NumberType": "Float", "Dimensions": "{}".format(nsaves)})
 dataitem.text = ""
 for ii in range(nsaves):
     dataitem.text += "{:15.6E}".format(saves["time"][ii*nflds]) + " "
@@ -101,9 +102,31 @@ for ii in range(nsaves):
     geometry = SubElement(grid_fld, "Geometry", attrib = {"Reference": "/Xdmf/Domain/Geometry[1]"})
     for jj in range(nflds):
         index = ii*nflds+jj
-        attribute = SubElement(grid_fld, "Attribute", attrib = {"Name": "{}".format(saves['variable'][index]), "Center": "Node"})
-        dataitem = SubElement(attribute, "DataItem", attrib = {"Format": "Binary", "DataType": "Float", "Precision": "{}".format(iprecision), "Endian": "Native", "Seek": "{}".format(iseek), "Dimensions": "{} {} {}".format(n[2], n[1], n[0])})
-        dataitem.text = saves['file'][index]
+        #
+        # if vector, skip second and third components form the loop, and write the three files at once
+        #
+        if( (saves['variable'][index-1+0].endswith('_X') and saves['variable'][index-1+1].endswith('_Y') and saves['variable'][index-1+2].endswith('_Z') and \
+             saves['variable'][index-1+0][0:-2] ==           saves['variable'][index-1+1][0:-2] ==           saves['variable'][index-1+2][0:-2]) or \
+            (saves['variable'][index-2+0].endswith('_X') and saves['variable'][index-2+1].endswith('_Y') and saves['variable'][index-2+2].endswith('_Z') and \
+             saves['variable'][index-2+0][0:-2] ==           saves['variable'][index-2+1][0:-2] ==           saves['variable'][index-2+2][0:-2]) \
+          ): continue
+        #
+        # vector
+        #
+        if(saves['variable'][index+0].endswith('_X') and saves['variable'][index+1].endswith('_Y') and saves['variable'][index+2].endswith('_Z') and \
+           saves['variable'][index+0][0:-2] ==           saves['variable'][index+1][0:-2] ==           saves['variable'][index+2][0:-2]):
+           attribute = SubElement(grid_fld, "Attribute", attrib = {"AttributeType": "Vector", "Name": "{}".format(saves['variable'][index][:-2]), "Center": "Node"})
+           attribute = SubElement(attribute, "DataItem", attrib = {"Function": "JOIN($0, $1, $2)", "ItemType": "Function", "Dimensions": "{} {} {} {}".format(n[2], n[1], n[0], 3)})
+           for q in range(3):
+              dataitem = SubElement(attribute, "DataItem", attrib = {"Format": "Binary", "DataType": "Float", "Precision": "{}".format(iprecision), "Endian": "Native", "Seek": "{}".format(iseek), "Dimensions": "{} {} {}".format(n[2], n[1], n[0])})
+              dataitem.text = saves['file'][index+q]
+        #
+        # scalar
+        #
+        else:
+           attribute = SubElement(grid_fld, "Attribute", attrib = {"AttributeType": "Scalar", "Name": "{}".format(saves['variable'][index]), "Center": "Node"})
+           dataitem = SubElement(attribute, "DataItem", attrib = {"Format": "Binary", "DataType": "Float", "Precision": "{}".format(iprecision), "Endian": "Native", "Seek": "{}".format(iseek), "Dimensions": "{} {} {}".format(n[2], n[1], n[0])})
+           dataitem.text = saves['file'][index]
 output = ElementTree.tostring(Xdmf, 'utf-8')
 output = minidom.parseString(output)
 output = output.toprettyxml(indent="    ",newl='\n')
@@ -125,4 +148,3 @@ xdmf_file = open(outfile, "w")
 contents = "".join(contents)
 xdmf_file.write(contents)
 xdmf_file.close()
-
