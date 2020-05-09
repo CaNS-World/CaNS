@@ -50,7 +50,6 @@ isteps, indeces = np.unique(isteps,return_index=True)
 rtimes  = np.take(rtimes, indeces)
 files   = np.take(files,  indeces)
 nsaves  = np.size(files)
-nelements = nsaves*nflds
 #
 # sort by increasing istep
 #
@@ -97,7 +96,7 @@ dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "Binary", "DataT
 dataitem.text = zgridfile
 grid = SubElement(domain, "Grid", attrib = {"Name": "TimeSeries", "GridType": "Collection",  "CollectionType": "Temporal"})
 time = SubElement(grid, "Time", attrib = {"TimeType":"List"})
-dataitem = SubElement(time, "DataItem", attrib = {"Format": "XML", "NumberType": "Float", "Dimensions": "{}".format(nelements)})
+dataitem = SubElement(time, "DataItem", attrib = {"Format": "XML", "NumberType": "Float", "Dimensions": "{}".format(nsaves)})
 dataitem.text = ""
 for ii in range(nsaves):
     dataitem.text += "{:15.6E}".format(rtimes[ii]) + " "
