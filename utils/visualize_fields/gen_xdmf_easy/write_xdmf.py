@@ -103,7 +103,7 @@ for ii in range(nsaves):
     for jj in range(nflds):
         index = ii*nflds+jj
         #
-        # if vector, skip second and third components form the loop, and write the three files at once
+        # if vector, skip second and third components from the loop, and write the three files at once
         #
         if( (saves['variable'][index-1+0].endswith('_X') and saves['variable'][index-1+1].endswith('_Y') and saves['variable'][index-1+2].endswith('_Z') and \
              saves['variable'][index-1+0][0:-2] ==           saves['variable'][index-1+1][0:-2] ==           saves['variable'][index-1+2][0:-2]) or \
