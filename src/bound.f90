@@ -282,7 +282,8 @@ module mod_bound
         !$OMP SHARED(n,i,u,v,w,dx,dyi,dzfi)
         do k=1,n(3)
           do j=1,n(2)
-            u(i,j,k) = u(i-1,j,k) - dx*((v(i,j,k)-v(i,j-1,k))*dyi+(w(i,j,k)-w(i,j,k-1))*dzfi(k))
+            u(i  ,j,k) = u(i-1,j,k) - dx*((v(i,j,k)-v(i,j-1,k))*dyi+(w(i,j,k)-w(i,j,k-1))*dzfi(k))
+            u(i+1,j,k) = u(i  ,j,k) ! not needed
           enddo
         enddo
         !$OMP END PARALLEL DO
@@ -295,7 +296,8 @@ module mod_bound
         !$OMP SHARED(n,j,u,v,w,dy,dxi,dzfi)
         do k=1,n(3)
           do i=1,n(1)
-            v(i,j,k) = v(i,j-1,k) - dy*((u(i,j,k)-u(i-1,j,k))*dxi+(w(i,j,k)-w(i,j,k-1))*dzfi(k))
+            v(i,j  ,k) = v(i,j-1,k) - dy*((u(i,j,k)-u(i-1,j,k))*dxi+(w(i,j,k)-w(i,j,k-1))*dzfi(k))
+            v(i,j+1,k) = v(i,j  ,k) ! not needed
           enddo
         enddo 
         !$OMP END PARALLEL DO
@@ -307,7 +309,8 @@ module mod_bound
       !$OMP SHARED(n,k,u,v,w,dzf,dxi,dyi)
       do j=1,n(2)
         do i=1,n(1)
-          w(i,j,k) = w(i,j,k-1) - dzf(k)*((u(i,j,k)-u(i-1,j,k))*dxi+(v(i,j,k)-v(i,j-1,k))*dyi)
+          w(i,j,  k) = w(i,j,k-1) - dzf(k)*((u(i,j,k)-u(i-1,j,k))*dxi+(v(i,j,k)-v(i,j-1,k))*dyi)
+          w(i,j,k+1) = w(i,j,k  ) ! not needed
         enddo
       enddo 
       !$OMP END PARALLEL DO
