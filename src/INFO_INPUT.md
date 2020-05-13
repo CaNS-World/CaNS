@@ -54,7 +54,7 @@ These lines set the computational grid.
 This line controls the simulation time step.
 
 The time step is set to be equal to `min(cfl*dtmax,dtmin)`, i.e. the minimum value between `dtmin` and `cfl` times the maximum allowable time step `dtmax` (computed every `ickeck` time steps; see below).
-`dtmin` is therefore used when a constant timestep, smaller than `cfl*dtmax`, is required. If not, it should be set to a high value so that the timestep is dynamically adjusted to `cfl*dtmax`.
+`dtmin` is therefore used when a constant time step, smaller than `cfl*dtmax`, is required. If not, it should be set to a high value so that the time step is dynamically adjusted to `cfl*dtmax`.
 
 ---
 
@@ -81,7 +81,7 @@ These lines set the initial velocity field.
 * `cou`: plane Couette flow profile with symmetric wall velocities equal to `uref/2`; streamwise direction in `x`
 * `poi`: plane Poiseuille flow profile with mean velocity `uref`                    ; streamwise direction in `x`
 * `log`: logarithmic profile with mean velocity `uref`                              ; streamwise direction in `x`
-* `hcp`: half channel with plane poiseuille profile and mean velocity `uref`        ; streamwise direction in `x`
+* `hcp`: half channel with plane Poiseuille profile and mean velocity `uref`        ; streamwise direction in `x`
 * `hcl`: half channel with logarithmic profile and mean velocity `uref`             ; streamwise direction in `x`
 * `tgv`: Taylor-Green vortex
 
@@ -97,7 +97,7 @@ T F F                    ! stop_type(1:3)
 F T                      ! restart,is_overwrite_input
 ~~~
 
-These lines set the simulation termination criteria and wether the simulation should be restarted from a checkpoint file.
+These lines set the simulation termination criteria and whether the simulation should be restarted from a checkpoint file.
 
 `nstep` is the **total number of time steps**.
 
@@ -111,7 +111,7 @@ These lines set the simulation termination criteria and wether the simulation sh
 * `stop_type(2)`, if true (`T`), the simulation will terminate after `time_max` physical time units have been reached;
 * `stop_type(3)`, if true (`T`), the simulation will terminate after `tw_max` simulation wall-clock time (in hours) has been reached;
 
-a checkoint file `fld.bin` will be saved before the simulation is terminated.
+a checkpoint file `fld.bin` will be saved before the simulation is terminated.
 
 `restart`, if true, **restarts the simulation** from a previously saved checkpoint file, named `fld.bin`. 
 

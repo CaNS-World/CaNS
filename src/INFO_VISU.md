@@ -42,11 +42,11 @@ the procedure for visualizing 2D field data that is saved by *CaNS* in `out2d.h9
 
 ### checkpoint files
 
-A similar script also located in `utils/visualize_fields/gen_xdmf_easy/`, named `write_xdmf_restart.py`, can be used to generate medatada that allows to visualize the field data contained in all saved checkpoint files:
+A similar script also located in `utils/visualize_fields/gen_xdmf_easy/`, named `write_xdmf_restart.py`, can be used to generate metadata that allows to visualize the field data contained in all saved checkpoint files:
 
 ~~~
  $ python write_xdmf_restart.py
- Name of the pattern of the restart files to be visualzied [fld?*.bin]:
+ Name of the pattern of the restart files to be visualized [fld?*.bin]:
  Names of stored variables [VEX VEY VEZ PRE]:
  Name to be appended to the grid files to prevent overwriting [_fld]:
  Name of the output file [viewfld_DNS_fld.xmf]:
