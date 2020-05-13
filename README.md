@@ -29,6 +29,8 @@ The recent **many-GPU** version of CaNS can be found [**here**](https://github.c
 
 04/05/2020 -- Visualization of binary field data has been made easier, see [`src/INFO_VISU.md`](src/INFO_VISU.md) for more details.
 
+13/05/2020 -- An implementation that allows for an arbritary default orientation of the pencil decomposition (i.e. x-, y- or z-aligned pencils) has been developed and kept for now in branch `x_pencil`. Using x-aligned pencils by default increases slightly the performance of CaNS by avoiding two *all-to-all* operations in the Poisson solver. To test this new feature, the code in branch `x_pencil` should be compiled with `-DDECOMP_X` (best performing) or `-DDECOMP_Y`.
+
 ## Features
 
 Some features are:
