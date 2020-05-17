@@ -44,5 +44,4 @@ iskip       = np.array([iskipx,iskipy,iskipz]).astype(int)
 n           = (ng[:]/iskip[:]).astype(int)
 data        = np.zeros([n[0],n[1],n[2]]) # u[:,:,:],v[:,:,:],w[:,:,:],p[:,:,:]
 fld         = np.fromfile(filenamei,dtype='float64')
-f.close
 data[:,:,:] = np.reshape(fld,(ng[0],ng[1],ng[2]),order='F')
