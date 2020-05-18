@@ -41,7 +41,7 @@ iskipy      = input("Data saved every (ix, iy, iz) points. Value of iy? [1]: ") 
 iskipz      = input("Data saved every (ix, iy, iz) points. Value of iz? [1]: ") or "1"
 iskip       = np.array([iskipx,iskipy,iskipz]).astype(int)
 n           = (ng[:]/iskip[:]).astype(int)
-data        = np.zeros([n[0],n[1],n[2]]) # u[:,:,:],v[:,:,:],w[:,:,:],p[:,:,:]
+data        = np.zeros([n[0],n[1],n[2]])
 fld         = np.fromfile(filenamei,dtype=precision)
 data[:,:,:] = np.reshape(fld,(n[0],n[1],n[2]),order='F')
 #
