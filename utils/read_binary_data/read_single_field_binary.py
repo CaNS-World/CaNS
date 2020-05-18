@@ -3,7 +3,7 @@ import numpy as np
 #
 # setting up some parameters
 #
-iprecision = 8                # precision of the real-valued data
+iprecision = 8            # precision of the real-valued data
 r0 = np.array([0.,0.,0.]) # domain origin
 non_uniform_grid = True
 #
@@ -44,4 +44,13 @@ iskip       = np.array([iskipx,iskipy,iskipz]).astype(int)
 n           = (ng[:]/iskip[:]).astype(int)
 data        = np.zeros([n[0],n[1],n[2]]) # u[:,:,:],v[:,:,:],w[:,:,:],p[:,:,:]
 fld         = np.fromfile(filenamei,dtype='float64')
-data[:,:,:] = np.reshape(fld,(ng[0],ng[1],ng[2]),order='F')
+data[:,:,:] = np.reshape(fld,(n[0],n[1],n[2]),order='F')
+#
+# reshape grid
+#
+xp = xp[0:ng[0]:iskip[0]]
+yp = yp[0:ng[1]:iskip[1]]
+zp = zp[0:ng[2]:iskip[2]]
+xu = xu[0:ng[0]:iskip[0]]
+yv = yv[0:ng[1]:iskip[1]]
+zw = zw[0:ng[2]:iskip[2]]
