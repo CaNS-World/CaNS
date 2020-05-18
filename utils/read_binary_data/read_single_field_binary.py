@@ -6,6 +6,8 @@ import numpy as np
 iprecision = 8            # precision of the real-valued data
 r0 = np.array([0.,0.,0.]) # domain origin
 non_uniform_grid = True
+precision  = 'float64'
+if(iprecision == 4): precision = 'float32'
 #
 # read geometry file
 #
@@ -25,10 +27,7 @@ yv = yp + dl[1]/2.                              # staggered y grid
 zw = zp + dl[2]/2.                              # staggered z grid
 if(non_uniform_grid):
     f   = open('grid.bin','rb')
-    if(    iprecision == 4):
-        grid_z = np.fromfile(f,dtype='float32')
-    else:
-        grid_z = np.fromfile(f,dtype='float64')
+    grid_z = np.fromfile(f,dtype=precision)
     f.close()
     grid_z = np.reshape(grid_z,(ng[2],4),order='F')
     zp = r0[2] + np.transpose(grid_z[:,2]) # centered  z grid
@@ -43,7 +42,7 @@ iskipz      = input("Data saved every (ix, iy, iz) points. Value of iz? [1]: ") 
 iskip       = np.array([iskipx,iskipy,iskipz]).astype(int)
 n           = (ng[:]/iskip[:]).astype(int)
 data        = np.zeros([n[0],n[1],n[2]]) # u[:,:,:],v[:,:,:],w[:,:,:],p[:,:,:]
-fld         = np.fromfile(filenamei,dtype='float64')
+fld         = np.fromfile(filenamei,dtype=precision)
 data[:,:,:] = np.reshape(fld,(n[0],n[1],n[2]),order='F')
 #
 # reshape grid
