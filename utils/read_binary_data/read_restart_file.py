@@ -32,7 +32,7 @@ if(non_uniform_grid):
     f.close()
     grid_z = np.reshape(grid_z,(ng[2],4),order='F')
     zp = r0[2] + grid_z[:,2] # centered  z grid
-    zw = r0[2] + grid_z[:,1] # staggered z grid
+    zw = r0[2] + grid_z[:,3] # staggered z grid
 #
 # read checkpoint binary file
 #
