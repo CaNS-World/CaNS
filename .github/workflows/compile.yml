@@ -14,5 +14,5 @@ jobs:
     - name: test compilation
       run: |
         cd src/
-        make && make run
-        make OMP+=-fopenmp OTH+=-DIMPDIFF && make run
+        make && make run && make clean
+        make OMP+=-fopenmp OTH+=-DIMPDIFF && make run && make clean
