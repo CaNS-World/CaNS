@@ -1,0 +1,25 @@
+name: test against benchmark data
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    - name: install software to compile CaNS
+      run: sudo apt-get update; sudo apt-get install gfortran libopenmpi-dev libfftw3-dev
+    - name: install software for performing the tests
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install numpy flake8 pytest
+    - name: run all tests
+      run: |
+        cd tests/
+        for i in *; do cd $i && sh runit.sh && cd -; done
