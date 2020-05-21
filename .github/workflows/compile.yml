@@ -15,3 +15,4 @@ jobs:
       run: |
         cd src/
         make && make run
+        make OMP+=-fopenmp OTH+=-DIMPDIFF && make run
