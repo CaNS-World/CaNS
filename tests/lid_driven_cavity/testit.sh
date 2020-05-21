@@ -15,5 +15,5 @@ mpirun -n 4 ./cans
 cp $TESTDIR/*.* data/ && cp $UTILSDIR/read_binary_data/python/read_single_field_binary.py $RUNDIR/data/ && cd $RUNDIR/data/
 echo "Running test..."
 sleep 2
-pytest -s test.py < read.in
+pytest test.py
 rm -rf ../../run

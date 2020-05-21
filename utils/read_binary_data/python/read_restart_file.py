@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-def read_restart_file():
+def read_restart_file(filenamei):
     import numpy as np
     #
     # setting up some parameters
@@ -36,7 +36,6 @@ def read_restart_file():
     #
     # read checkpoint binary file
     #
-    filenamei = input("Name of the binary restart file written by CaNS [fld.bin]: ") or "fld.bin"
     offset     = 0
     disp       = np.prod(ng)
     data       = np.zeros([ng[0],ng[1],ng[2],4]) # u[:,:,:],v[:,:,:],w[:,:,:],p[:,:,:]
@@ -61,4 +60,5 @@ def read_restart_file():
     istep = int(fldinfo[1])
     return u,v,w,p,time,istep
 if __name__ == "__main__":
-    read_restart_file()
+    filenamei = input("Name of the binary restart file written by CaNS [fld.bin]: ") or "fld.bin"
+    read_restart_file(filenamei)
