@@ -22,4 +22,4 @@ jobs:
     - name: run all tests
       run: |
         cd tests/
-        for i in *; do cd $i && sh testit.sh && cd -; done
+        for i in */; do cd $i && sh testit.sh && cd -; done
