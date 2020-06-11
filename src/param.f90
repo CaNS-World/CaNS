@@ -91,7 +91,7 @@ contains
         if(myid.eq.0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
         call exit
-    endif
+      endif
     close(iunit)
     dx = lx/(1.*itot)
     dy = ly/(1.*jtot)
