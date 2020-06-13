@@ -20,7 +20,7 @@ module mod_rk
     real(rp), intent(in) :: visc,dt
     real(rp), intent(in   ), dimension(3) :: dli,l 
     real(rp), intent(in   ), dimension(0:) :: dzci,dzfi,dzflzi,dzclzi
-    real(rp), intent(in   ), dimension(0:,0:,0:) :: u ,v ,w,p
+    real(rp), intent(in   ), dimension(0:,0:,0:) :: u,v,w,p
     real(rp), intent(inout), dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
     real(rp), intent(inout), dimension(3) :: tauxo,tauyo,tauzo
     real(rp), intent(out), dimension(0:,0:,0:) :: up,vp,wp
@@ -106,7 +106,7 @@ module mod_rk
     real(rp), intent(in) :: visc,dt
     real(rp), intent(in   ), dimension(3) :: dli,l 
     real(rp), intent(in   ), dimension(0:) :: dzci,dzfi,dzflzi,dzclzi
-    real(rp), intent(in   ), dimension(0:,0:,0:) :: u ,v ,w,p
+    real(rp), intent(in   ), dimension(0:,0:,0:) :: u,v,w,p
     real(rp), intent(inout), dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
     real(rp), intent(inout), dimension(3) :: tauxo,tauyo,tauzo
     real(rp), intent(out), dimension(0:,0:,0:) :: up,vp,wp
