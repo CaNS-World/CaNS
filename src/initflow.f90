@@ -83,7 +83,7 @@ module mod_initflow
     case default
       if(myid.eq.0) print*, 'ERROR: invalid name for initial velocity field'
       if(myid.eq.0) print*, ''
-      if(myid.eq.0) print*, '*** Simulation abortited due to errors in the case file ***'
+      if(myid.eq.0) print*, '*** Simulation aborted due to errors in the case file ***'
       if(myid.eq.0) print*, '    check INFO_INPUT.md'
       call decomp_2d_finalize
       call MPI_FINALIZE(ierr)
