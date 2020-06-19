@@ -216,7 +216,7 @@ module mod_output
   !
   subroutine write_visu_3d(datadir,fname_bin,fname_log,varname,nmin,nmax,nskip,time,istep,p)
     !
-    ! wraps the calls of out3d and write-log_output into the same subroutine
+    ! wraps the calls of out3d and write_log_output into the same subroutine
     !
     implicit none
     character(len=*), intent(in)          :: datadir,fname_bin,fname_log,varname
