@@ -96,6 +96,7 @@ program cans
   character(len=100) :: filename
   integer :: kk
   logical :: is_done,kill
+  integer :: rlen
   !
   call MPI_INIT(ierr)
   call MPI_COMM_RANK(MPI_COMM_WORLD, myid, ierr)
@@ -160,7 +161,8 @@ program cans
   dzci(:) = dzc(:)**(-1)
   dzfi(:) = dzf(:)**(-1)
   if(myid.eq.0) then
-    open(99,file=trim(datadir)//'grid.bin',access='direct',recl=4*n(3)*sizeof(1._rp))
+    inquire(iolength=rlen) 1._rp
+    open(99,file=trim(datadir)//'grid.bin',access='direct',recl=4*n(3)*rlen)
     write(99,rec=1) dzc(1:n(3)),dzf(1:n(3)),zc(1:n(3)),zf(1:n(3))
     close(99)
     open(99,file=trim(datadir)//'grid.out')
