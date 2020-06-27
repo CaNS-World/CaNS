@@ -25,7 +25,6 @@ P P  P P  N N            ! cbcpre(0:1,1:3  ) [p BC type]
 0. 0. 0.                 ! bforce(1:3)
 T F F                    ! is_forced(1:3)
 1. 0. 0.                 ! velf(1:3)
-F F  F F  F F            ! is_outflow(0:1,1:3)
 2 2                      ! dims(1:2)
 4                        ! nthreadsmax
 ~~~
@@ -171,9 +170,8 @@ The **last four rows** follow the same logic, but now for the BC **values** (dum
 0. 0. 0.                 ! bforce(1:3)
 T F F                    ! is_forced(1:3)
 1. 0. 0.                 ! velf(1:3)
-F F  F F  F F            ! is_outflow(0:1,1:3)
 ~~~
-These lines set the flow forcing and outflow regions.
+These lines set the flow forcing.
 
 `bforce`, is a constant **body force density term** in the direction in question (e.g. the negative of a constant pressure gradient) that can be added to the right-hand-side of the momentum equation. The three values corresponds to three domain directions. NOTE: in a pressure-driven wall-bounded flow, only one type of flow forcing should be selected (bulk velocity or pressure gradient). If the streamwise bulk velocity is forced (by setting the is_forced parameter below `T`), bforce should be zero, and vice-versa.
 
@@ -181,7 +179,6 @@ These lines set the flow forcing and outflow regions.
 
 `velf`, is the **target bulk velocity** in the direction in question (where `is_forced` is true). The three values correspond to three domain directions.
 
-`is_outflow`, if true, **prescribes an outflow condition** for the boundary-normal velocity, determined from the condition of zero divergence. The six boolean values denote the upper and lower boundaries of the domain, for each direction.
 
 ---
 

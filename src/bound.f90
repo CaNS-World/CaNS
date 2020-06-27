@@ -6,7 +6,7 @@ module mod_bound
   private
   public boundp,bounduvw,updt_rhs_b
   contains
-  subroutine bounduvw(cbc,n,bc,isoutflow,dl,dzc,dzf,u,v,w)
+  subroutine bounduvw(cbc,n,bc,is_correc,dl,dzc,dzf,u,v,w)
     !
     ! imposes velocity boundary conditions
     !
@@ -14,11 +14,11 @@ module mod_bound
     character(len=1), intent(in), dimension(0:1,3,3) :: cbc
     integer , intent(in), dimension(3) :: n 
     real(rp), intent(in), dimension(0:1,3,3) :: bc
-    logical , intent(in), dimension(0:1,3) :: isoutflow
+    logical , intent(in)                   :: is_correc
     real(rp), intent(in), dimension(3) :: dl
     real(rp), intent(in), dimension(0:) :: dzc,dzf
     real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
-    integer :: q,idir,sgn,ioutflowdir
+    integer :: q,idir,sgn
     !
     call updthalo((/n(1),n(2)/),1,u)
     call updthalo((/n(1),n(2)/),2,u)
@@ -28,42 +28,31 @@ module mod_bound
     call updthalo((/n(1),n(2)/),2,w)
     !
     if(left .eq.MPI_PROC_NULL) then
-      call set_bc(cbc(0,1,1),0,n(1),1,.false.,bc(0,1,1),dl(1),u)
-      call set_bc(cbc(0,1,2),0,n(1),1,.true. ,bc(0,1,2),dl(1),v)
-      call set_bc(cbc(0,1,3),0,n(1),1,.true. ,bc(0,1,3),dl(1),w)
+      if(.not.is_correc) call set_bc(cbc(0,1,1),0,n(1),1,.false.,bc(0,1,1),dl(1),u)
+                         call set_bc(cbc(0,1,2),0,n(1),1,.true. ,bc(0,1,2),dl(1),v)
+                         call set_bc(cbc(0,1,3),0,n(1),1,.true. ,bc(0,1,3),dl(1),w)
     endif
     if(right.eq.MPI_PROC_NULL) then
-      call set_bc(cbc(1,1,1),1,n(1),1,.false.,bc(1,1,1),dl(1),u)
-      call set_bc(cbc(1,1,2),1,n(1),1,.true. ,bc(1,1,2),dl(1),v)
-      call set_bc(cbc(1,1,3),1,n(1),1,.true. ,bc(1,1,3),dl(1),w)
+      if(.not.is_correc) call set_bc(cbc(1,1,1),1,n(1),1,.false.,bc(1,1,1),dl(1),u)
+                         call set_bc(cbc(1,1,2),1,n(1),1,.true. ,bc(1,1,2),dl(1),v)
+                         call set_bc(cbc(1,1,3),1,n(1),1,.true. ,bc(1,1,3),dl(1),w)
     endif
     if(front.eq.MPI_PROC_NULL) then
-      call set_bc(cbc(0,2,1),0,n(2),2,.true. ,bc(0,2,1),dl(2),u)
-      call set_bc(cbc(0,2,2),0,n(2),2,.false.,bc(0,2,2),dl(2),v)
-      call set_bc(cbc(0,2,3),0,n(2),2,.true. ,bc(0,2,3),dl(2),w)
+                         call set_bc(cbc(0,2,1),0,n(2),2,.true. ,bc(0,2,1),dl(2),u)
+      if(.not.is_correc) call set_bc(cbc(0,2,2),0,n(2),2,.false.,bc(0,2,2),dl(2),v)
+                         call set_bc(cbc(0,2,3),0,n(2),2,.true. ,bc(0,2,3),dl(2),w)
      endif
     if(back .eq.MPI_PROC_NULL) then
-      call set_bc(cbc(1,2,1),1,n(2),2,.true. ,bc(1,2,1),dl(2),u)
-      call set_bc(cbc(1,2,2),1,n(2),2,.false.,bc(1,2,2),dl(2),v)
-      call set_bc(cbc(1,2,3),1,n(2),2,.true. ,bc(1,2,3),dl(2),w)
+                         call set_bc(cbc(1,2,1),1,n(2),2,.true. ,bc(1,2,1),dl(2),u)
+      if(.not.is_correc) call set_bc(cbc(1,2,2),1,n(2),2,.false.,bc(1,2,2),dl(2),v)
+                         call set_bc(cbc(1,2,3),1,n(2),2,.true. ,bc(1,2,3),dl(2),w)
     endif
-    call set_bc(cbc(0,3,1),0,n(3),3,.true. ,bc(0,3,1),dzc(0)   ,u)
-    call set_bc(cbc(0,3,2),0,n(3),3,.true. ,bc(0,3,2),dzc(0)   ,v)
-    call set_bc(cbc(0,3,3),0,n(3),3,.false.,bc(0,3,3),dzf(0)   ,w)
-    call set_bc(cbc(1,3,1),1,n(3),3,.true. ,bc(1,3,1),dzc(n(3)),u)
-    call set_bc(cbc(1,3,2),1,n(3),3,.true. ,bc(1,3,2),dzc(n(3)),v)
-    call set_bc(cbc(1,3,3),1,n(3),3,.false.,bc(1,3,3),dzf(n(3)),w)
-    !
-    do q = 1,3
-      do idir = 0,1
-        if(isoutflow(idir,q)) then
-          if(idir.eq.0) sgn = -1
-          if(idir.eq.1) sgn = +1
-          ioutflowdir = q*sgn
-          call outflow(n,ioutflowdir,dl,dzf,u,v,w)
-        endif
-      enddo
-    enddo
+                       call set_bc(cbc(0,3,1),0,n(3),3,.true. ,bc(0,3,1),dzc(0)   ,u)
+                       call set_bc(cbc(0,3,2),0,n(3),3,.true. ,bc(0,3,2),dzc(0)   ,v)
+    if(.not.is_correc) call set_bc(cbc(0,3,3),0,n(3),3,.false.,bc(0,3,3),dzf(0)   ,w)
+                       call set_bc(cbc(1,3,1),1,n(3),3,.true. ,bc(1,3,1),dzc(n(3)),u)
+                       call set_bc(cbc(1,3,2),1,n(3),3,.true. ,bc(1,3,2),dzc(n(3)),v)
+    if(.not.is_correc) call set_bc(cbc(1,3,3),1,n(3),3,.false.,bc(1,3,3),dzf(n(3)),w)
     return
   end subroutine bounduvw
   !
@@ -253,107 +242,6 @@ module mod_bound
     end select
     return
   end subroutine set_bc
-  !
-  subroutine outflow(n,idir,dl,dzf,u,v,w)
-    implicit none
-    integer, intent(in), dimension(3) :: n
-    integer, intent(in) :: idir
-    real(rp), intent(in), dimension(3) :: dl
-    real(rp), intent(in), dimension(0:) :: dzf
-    real(rp), dimension(0:,0:,0:), intent(inout) :: u,v,w
-    real(rp) :: dx,dy,dxi,dyi
-    real(rp), dimension(0:n(3)+1) :: dzfi
-    integer :: i,j,k
-    !
-    dx   = dl(1)     
-    dxi  = dl(1)**(-1)
-    dy   = dl(2)     
-    dyi  = dl(2)**(-1)
-    dzfi = dzf**(-1)
-    !
-    ! determine face velocity from zero divergence
-    !
-    select case(idir)
-    case(1) ! x direction, right
-      if(right.eq.MPI_PROC_NULL) then
-        i = n(1) + 0
-        !$OMP PARALLEL DO DEFAULT(none) &
-        !$OMP PRIVATE(j,k) &
-        !$OMP SHARED(n,i,u,v,w,dx,dyi,dzfi)
-        do k=1,n(3)
-          do j=1,n(2)
-            u(i  ,j,k) = u(i-1,j,k) - dx*((v(i,j,k)-v(i,j-1,k))*dyi+(w(i,j,k)-w(i,j,k-1))*dzfi(k))
-            u(i+1,j,k) = u(i  ,j,k) ! not needed
-          enddo
-        enddo
-        !$OMP END PARALLEL DO
-      endif
-    case(2) ! y direction, back
-      if(back.eq.MPI_PROC_NULL) then
-        j = n(2) + 0
-        !$OMP PARALLEL DO DEFAULT(none) &
-        !$OMP PRIVATE(i,k) &
-        !$OMP SHARED(n,j,u,v,w,dy,dxi,dzfi)
-        do k=1,n(3)
-          do i=1,n(1)
-            v(i,j  ,k) = v(i,j-1,k) - dy*((u(i,j,k)-u(i-1,j,k))*dxi+(w(i,j,k)-w(i,j,k-1))*dzfi(k))
-            v(i,j+1,k) = v(i,j  ,k) ! not needed
-          enddo
-        enddo 
-        !$OMP END PARALLEL DO
-      endif
-    case(3) ! z direction, top
-      k = n(3) + 0
-      !$OMP PARALLEL DO DEFAULT(none) &
-      !$OMP PRIVATE(i,j) &
-      !$OMP SHARED(n,k,u,v,w,dzf,dxi,dyi)
-      do j=1,n(2)
-        do i=1,n(1)
-          w(i,j,  k) = w(i,j,k-1) - dzf(k)*((u(i,j,k)-u(i-1,j,k))*dxi+(v(i,j,k)-v(i,j-1,k))*dyi)
-          w(i,j,k+1) = w(i,j,k  ) ! not needed
-        enddo
-      enddo 
-      !$OMP END PARALLEL DO
-    case(-1) ! x direction, left
-      if(left.eq.MPI_PROC_NULL) then
-        i = 0
-        !$OMP PARALLEL DO DEFAULT(none) &
-        !$OMP PRIVATE(j,k) &
-        !$OMP SHARED(n,i,u,v,w,dx,dyi,dzfi)
-        do k=1,n(3)
-          do j=1,n(2)
-            u(i,j,k) = u(i+1,j,k) + dx*((v(i+1,j,k)-v(i+1,j-1,k))*dyi+(w(i+1,j,k)-w(i+1,j,k-1))*dzfi(k))
-          enddo
-        enddo 
-        !$OMP END PARALLEL DO
-      endif
-    case(-2) ! y direction, front
-      if(front.eq.MPI_PROC_NULL) then
-        j = 0
-        !$OMP PARALLEL DO DEFAULT(none) &
-        !$OMP PRIVATE(i,k) &
-        !$OMP SHARED(n,j,u,v,w,dy,dxi,dzfi)
-        do k=1,n(3)
-          do i=1,n(1)
-            v(i,j,k) = v(i,j+1,k) + dy*((u(i,j+1,k)-u(i-1,j+1,k))*dxi+(w(i,j+1,k)-w(i,j+1,k-1))*dzfi(k))
-          enddo
-        enddo 
-        !$OMP END PARALLEL DO
-      endif
-    case(-3) ! z direction, bottom
-      k = 0
-      !$OMP PARALLEL DO DEFAULT(none) &
-      !$OMP PRIVATE(i,j) &
-      !$OMP SHARED(n,k,u,v,w,dzf,dxi,dyi)
-      do j=1,n(2)
-        do i=1,n(1)
-          w(i,j,k) = w(i,j,k+1) + dzf(k)*((u(i,j,k+1)-u(i-1,j,k+1))*dxi+(v(i,j,k+1)-v(i,j-1,k+1))*dyi)
-        enddo
-      enddo 
-      !$OMP END PARALLEL DO
-    end select
-    return
-  end subroutine outflow
   !
   subroutine inflow(n,idir,dl,dzf,vel2d,u,v,w)
     implicit none

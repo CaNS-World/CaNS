@@ -49,7 +49,7 @@ program cans
                              imax,jmax,dims, &
                              nthreadsmax, &
                              gr, &
-                             is_outflow,no_outflow,is_forced,bforce, &
+                             is_forced,bforce, &
                              n,ng,l,dl,dli, &
                              read_input
   use mod_sanity     , only: test_sanity
@@ -178,7 +178,7 @@ program cans
   !
   ! test input files before proceeding with the calculation
   !
-  call test_sanity(ng,n,dims,stop_type,cbcvel,cbcpre,bcvel,bcpre,is_outflow,is_forced, &
+  call test_sanity(ng,n,dims,stop_type,cbcvel,cbcpre,bcvel,bcpre,is_forced, &
                    dli,dzci,dzfi)
   !
   if(.not.restart) then
@@ -195,7 +195,7 @@ program cans
     istep = nint(ristep)
     if(myid.eq.0) print*, '*** Checkpoint loaded at time = ', time, 'time step = ', istep, '. ***'
   endif
-  call bounduvw(cbcvel,n,bcvel,is_outflow,dl,dzc,dzf,u,v,w)
+  call bounduvw(cbcvel,n,bcvel,.false.,dl,dzc,dzf,u,v,w)
   call boundp(cbcpre,n,bcpre,dl,dzc,dzf,p)
   !
   ! post-process and write initial condition
@@ -276,7 +276,7 @@ program cans
       call solver(n,arrplanw,normfftw,lambdaxyw,aw,bb,cw,cbcvel(:,3,3),(/'c','c','f'/),wp)
 #endif
       dpdl(:) = dpdl(:) + f(:)
-      call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! outflow BC only at final velocity
+      call bounduvw(cbcvel,n,bcvel,.false.,dl,dzc,dzf,up,vp,wp)
 #ifndef IMPDIFF
 #ifdef ONE_PRESS_CORR
       dtrk  = dt
@@ -296,7 +296,7 @@ program cans
       call solver(n,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre(:,3),(/'c','c','c'/),pp)
       call boundp(cbcpre,n,bcpre,dl,dzc,dzf,pp)
       call correc(n,dli,dzci,dtrk,pp,up,vp,wp,u,v,w)
-      call bounduvw(cbcvel,n,bcvel,is_outflow,dl,dzc,dzf,u,v,w)
+      call bounduvw(cbcvel,n,bcvel,.true.,dl,dzc,dzf,u,v,w)
 #ifdef IMPDIFF
       alphai = alpha**(-1)
       !$OMP PARALLEL DO DEFAULT(none) &

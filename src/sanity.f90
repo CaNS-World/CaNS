@@ -19,7 +19,7 @@ module mod_sanity
   private
   public test_sanity
   contains
-  subroutine test_sanity(ng,n,dims,stop_type,cbcvel,cbcpre,bcvel,bcpre,is_outflow,is_forced, &
+  subroutine test_sanity(ng,n,dims,stop_type,cbcvel,cbcpre,bcvel,bcpre,is_forced, &
                          dli,dzci,dzfi)
     !
     ! performs some a priori checks of the input files before the calculation starts
@@ -32,7 +32,6 @@ module mod_sanity
     character(len=1), intent(in), dimension(0:1,3)    :: cbcpre
     real(rp), intent(in), dimension(0:1,3,3)          :: bcvel
     real(rp), intent(in), dimension(0:1,3)            :: bcpre
-    logical , intent(in), dimension(0:1,3)            :: is_outflow
     logical , intent(in), dimension(3)                :: is_forced
     real(rp), intent(in), dimension(3)                :: dli
     real(rp), intent(in), dimension(0:)               :: dzci,dzfi
@@ -41,9 +40,8 @@ module mod_sanity
     call chk_dims(ng,dims,passed);                 if(.not.passed) call abortit
     call chk_stop_type(stop_type,passed);          if(.not.passed) call abortit
     call chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed); if(.not.passed) call abortit
-    call chk_outflow(cbcpre,is_outflow,passed);    if(.not.passed) call abortit
     call chk_forcing(cbcpre,is_forced  ,passed);   if(.not.passed) call abortit 
-    !call chk_solvers(n,dli,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,is_outflow,passed)
+    !call chk_solvers(n,dli,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,passed)
     !if(.not.passed) call abortit
     return
   end subroutine test_sanity
@@ -169,28 +167,6 @@ module mod_sanity
   return 
   end subroutine chk_bc
   !
-  subroutine chk_outflow(cbcpre,is_outflow,passed)
-  implicit none
-  logical         , intent(in), dimension(0:1,3  ) :: is_outflow
-  character(len=1), intent(in), dimension(0:1,3  ) :: cbcpre
-  logical         , intent(out) :: passed
-  integer :: idir,ibound
-  passed = .true.
-  !
-  ! 1) check for compatibility between pressure BCs and outflow BC
-  !
-  do idir=1,3
-    do ibound = 0,1
-      passed = passed.and. &
-               (cbcpre(ibound,idir).eq.'D'.and.(is_outflow(ibound,idir))) .or. &
-               (.not.is_outflow(ibound,idir))
-    enddo
-  enddo
-  if(myid.eq.0.and.(.not.passed)) &
-    print*, 'ERROR: Dirichlet pressure BC should be an outflow direction; check the BC or is_outflow in dns.in.'
-  return 
-  end subroutine chk_outflow
-  !
   subroutine chk_forcing(cbcpre,is_forced,passed)
   implicit none
   character(len=1), intent(in), dimension(0:1,3) :: cbcpre
@@ -211,7 +187,7 @@ module mod_sanity
   return 
   end subroutine chk_forcing
   !
-  subroutine chk_solvers(n,dli,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,is_outflow,passed)
+  subroutine chk_solvers(n,dli,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,passed)
   implicit none
   integer , intent(in), dimension(3) :: n
   real(rp), intent(in), dimension(3) :: dli
@@ -220,7 +196,6 @@ module mod_sanity
   character(len=1), intent(in), dimension(0:1,3)   :: cbcpre
   real(rp), intent(in), dimension(0:1,3,3)          :: bcvel
   real(rp), intent(in), dimension(0:1,3)            :: bcpre
-  logical , intent(in), dimension(0:1,3)            :: is_outflow
   logical , intent(out) :: passed
   real(rp), dimension(0:n(1)+1,0:n(2)+1,0:n(3)+1) :: u,v,w,p,up,vp,wp
   type(C_PTR), dimension(2,2) :: arrplan
@@ -230,7 +205,6 @@ module mod_sanity
   real(rp), dimension(n(2),n(3),0:1) :: rhsbx
   real(rp), dimension(n(1),n(3),0:1) :: rhsby
   real(rp), dimension(n(1),n(2),0:1) :: rhsbz
-  logical , dimension(0:1,3)            :: no_outflow
   real(rp), dimension(3) :: dl
   real(rp), dimension(0:n(3)+1) :: dzc,dzf
   real(rp) :: dt,dti,alpha
@@ -255,14 +229,13 @@ module mod_sanity
   dzf = dzfi**(-1)
   dt  = acos(-1.) ! value is irrelevant
   dti = dt**(-1)
-  no_outflow(:,:) = .false.
-  call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp)
+  call bounduvw(cbcvel,n,bcvel,.false.,dl,dzc,dzf,up,vp,wp)
   call fillps(n,dli,dzfi,dti,up,vp,wp,p)
   call updt_rhs_b((/'c','c','c'/),cbcpre,n,rhsbx,rhsby,rhsbz,p(1:n(1),1:n(2),1:n(3)))
   call solver(n,arrplan,normfft,lambdaxy,a,b,c,cbcpre(:,3),(/'c','c','c'/),p(1:n(1),1:n(2),1:n(3)))
   call boundp(cbcpre,n,bcpre,dl,dzc,dzf,p)
   call correc(n,dli,dzci,dt,p,up,vp,wp,u,v,w)
-  call bounduvw(cbcvel,n,bcvel,is_outflow,dl,dzc,dzf,u,v,w)
+  call bounduvw(cbcvel,n,bcvel,.true.,dl,dzc,dzf,u,v,w)
   call chkdiv(n,dli,dzfi,u,v,w,divtot,divmax)
   passed_loc = divmax.lt.small
   if(myid.eq.0.and.(.not.passed_loc)) &
@@ -279,14 +252,14 @@ module mod_sanity
   call add_noise(n,789,.5_rp,wp(1:n(1),1:n(2),1:n(3)))
   call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,1),bcvel(:,:,1),lambdaxy,(/'f','c','c'/),a,b,c,arrplan,normfft, &
                   rhsbx,rhsby,rhsbz)
-  call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp)
+  call bounduvw(cbcvel,n,bcvel,.false.,dl,dzc,dzf,up,vp,wp)
   up(:,:,:) = up(:,:,:)*alpha
   u( :,:,:) = up(:,:,:)
   bb(:) = b(:) + alpha
   call updt_rhs_b((/'f','c','c'/),cbcvel(:,:,1),n,rhsbx,rhsby,rhsbz,up(1:n(1),1:n(2),1:n(3)))
   call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,1),(/'f','c','c'/),up(1:n(1),1:n(2),1:n(3)))
   call fftend(arrplan)
-  call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
+  call bounduvw(cbcvel,n,bcvel,.false.,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
   call chk_helmholtz(n,dli,dzci,dzfi,alpha,u,up,cbcvel(:,:,1),(/'f','c','c'/),resmax)
   passed_loc = resmax.lt.small
   if(myid.eq.0.and.(.not.passed_loc)) &
@@ -295,14 +268,14 @@ module mod_sanity
   !
   call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,2),bcvel(:,:,2),lambdaxy,(/'c','f','c'/),a,b,c,arrplan,normfft, &
                   rhsbx,rhsby,rhsbz)
-  call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp)
+  call bounduvw(cbcvel,n,bcvel,.false.,dl,dzc,dzf,up,vp,wp)
   vp(:,:,:) = vp(:,:,:)*alpha
   v( :,:,:) = vp(:,:,:)
   bb(:) = b(:) + alpha
   call updt_rhs_b((/'c','f','c'/),cbcvel(:,:,2),n,rhsbx,rhsby,rhsbz,vp(1:n(1),1:n(2),1:n(3)))
   call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,2),(/'c','f','c'/),vp(1:n(1),1:n(2),1:n(3)))
   call fftend(arrplan)
-  call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
+  call bounduvw(cbcvel,n,bcvel,.false.,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
   call chk_helmholtz(n,dli,dzci,dzfi,alpha,v,vp,cbcvel(:,:,2),(/'c','f','c'/),resmax)
   passed_loc = resmax.lt.small
   if(myid.eq.0.and.(.not.passed_loc)) &
@@ -311,14 +284,14 @@ module mod_sanity
   !
   call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,3),bcvel(:,:,3),lambdaxy,(/'c','c','f'/),a,b,c,arrplan,normfft, &
                   rhsbx,rhsby,rhsbz)
-  call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp)
+  call bounduvw(cbcvel,n,bcvel,.false.,dl,dzc,dzf,up,vp,wp)
   wp(:,:,:) = wp(:,:,:)*alpha
   w( :,:,:) = wp(:,:,:)
   bb(:) = b(:) + alpha
   call updt_rhs_b((/'c','c','f'/),cbcvel(:,:,3),n,rhsbx,rhsby,rhsbz,wp(1:n(1),1:n(2),1:n(3)))
   call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,3),(/'c','c','f'/),wp(1:n(1),1:n(2),1:n(3)))
   call fftend(arrplan)
-  call bounduvw(cbcvel,n,bcvel,no_outflow,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
+  call bounduvw(cbcvel,n,bcvel,.false.,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
   call chk_helmholtz(n,dli,dzci,dzfi,alpha,w,wp,cbcvel(:,:,3),(/'c','c','f'/),resmax)
   passed_loc = resmax.lt.small
   if(myid.eq.0.and.(.not.passed_loc)) &
