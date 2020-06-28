@@ -18,7 +18,6 @@ module mod_bound
     real(rp), intent(in), dimension(3) :: dl
     real(rp), intent(in), dimension(0:) :: dzc,dzf
     real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
-    integer :: q,idir,sgn
     !
     call updthalo((/n(1),n(2)/),1,u)
     call updthalo((/n(1),n(2)/),2,u)
