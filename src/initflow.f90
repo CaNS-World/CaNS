@@ -133,8 +133,8 @@ module mod_initflow
             xc = ((coord(1)*n(1)+i-0.5)*dx-.5*lx)*2./lz
             xf = ((coord(1)*n(1)+i-0.0)*dx-.5*lx)*2./lz
             !u(i,j,k) = u1d(k)
-            v(i,j,k) = -1. * gxy(yf,xc)*dfz(zc) * uref * 1.5
-            w(i,j,k) =  1. * fz(zf)*dgxy(yc,xc) * uref * 1.5
+            v(i,j,k) = -1. * gxy(yf,xc)*dfz(zc) * ubulk * 1.5
+            w(i,j,k) =  1. * fz(zf)*dgxy(yc,xc) * ubulk * 1.5
             p(i,j,k) = 0.
           enddo
         enddo
@@ -154,8 +154,8 @@ module mod_initflow
       !      xc = (i+coord(1)*n(1)-.5)*dx/lx*2.*pi
       !      xf = (i+coord(1)*n(1)-.0)*dx/lx*2.*pi
       !      !u(i,j,k) = u1d(k)
-      !      v(i,j,k) =  sin(xc)*cos(yf)*cos(zc)*uref
-      !      w(i,j,k) = -cos(xc)*sin(yc)*cos(zf)*uref
+      !      v(i,j,k) =  sin(xc)*cos(yf)*cos(zc)*ubulk
+      !      w(i,j,k) = -cos(xc)*sin(yc)*cos(zf)*ubulk
       !      p(i,j,k) = 0.!(cos(2.*xc)+cos(2.*yc))*(cos(2.*zc)+2.)/16.
       !    enddo
       !  enddo
