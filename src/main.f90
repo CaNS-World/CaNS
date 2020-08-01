@@ -418,7 +418,7 @@ program cans
         !
         ! fld.bin -> last checkpoint file (symbolic link)
         !
-        if(myid.eq.0) call system('ln -sf '//trim(filename)//' '//trim(datadir)//'fld.bin')
+        if(myid.eq.0) call execute_command_line('ln -sf '//trim(filename)//' '//trim(datadir)//'fld.bin')
       endif
       if(myid.eq.0) print*, '*** Checkpoint saved at time = ', time, 'time step = ', istep, '. ***'
     endif
@@ -459,5 +459,5 @@ program cans
   if(myid.eq.0.and.(.not.kill)) print*, '*** Fim ***'
   call decomp_2d_finalize
   call MPI_FINALIZE(ierr)
-  call exit
+  stop
 end program cans

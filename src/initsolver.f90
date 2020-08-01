@@ -208,10 +208,10 @@ module mod_initsolver
         end select
       enddo
     end select
-    forall(ibound=0:1)
+    do concurrent(ibound=0:1)
       rhs(:,:,ibound) = factor(ibound)/dlc(ibound)/dlf(ibound)
       rhs(:,:,ibound) = factor(ibound)/dlc(ibound)/dlf(ibound)
-    end forall
+    enddo
     return
   end subroutine bc_rhs
 end module mod_initsolver

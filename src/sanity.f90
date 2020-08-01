@@ -308,7 +308,7 @@ module mod_sanity
       if(myid.eq.0) print*, '    check dns.in'
       call decomp_2d_finalize
       call MPI_FINALIZE(ierr)
-      call exit
+      error stop
       return
   end subroutine abortit
 end module mod_sanity

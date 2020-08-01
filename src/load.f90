@@ -34,7 +34,7 @@ module mod_load
       call MPI_FILE_GET_SIZE(fh,filesize,ierr)
       ng(:)   = n(:)
       ng(1:2) = ng(1:2)*dims(:)
-      lenr = sizeof(time)
+      lenr = 8*storage_size(time)
       good = (product(ng)*4+2)*lenr
       if(filesize.ne.good) then
         if(myid.eq.0) print*, ''
@@ -42,7 +42,7 @@ module mod_load
         if(myid.eq.0) print*, '    file: ', filename, ' | expected size: ', good, '| actual size: ', filesize
         call decomp_2d_finalize
         call MPI_FINALIZE(ierr)
-        call exit
+        error stop
       endif
       !
       ! read

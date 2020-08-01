@@ -89,7 +89,7 @@ module mod_initflow
       if(myid.eq.0) print*, '    check INFO_INPUT.md'
       call decomp_2d_finalize
       call MPI_FINALIZE(ierr)
-      call exit
+      error stop
     end select
     if(inivel.ne.'tgv') then
       do k=1,n(3)
