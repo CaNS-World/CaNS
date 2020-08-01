@@ -25,34 +25,36 @@ module mod_initflow
     logical :: is_noise,is_mean,is_pair
     real(rp) :: xc,yc,zc,xf,yf,zf
     real(rp) :: reb,retau
+    real(rp) :: ubulk
     !
     allocate(u1d(n(3)))
     is_noise = .false.
     is_mean  = .false.
     is_pair  = .false.
     q = .5
+    ubulk = uref
     select case(trim(inivel))
     case('cou')
-      call couette(   q,n(3),zclzi,uref,u1d)
+      call couette(   q,n(3),zclzi,ubulk,u1d)
     case('poi')
-      call poiseuille(q,n(3),zclzi,uref,u1d)
+      call poiseuille(q,n(3),zclzi,ubulk,u1d)
       is_mean=.true.
     case('zer')
       u1d(:) = 0.
     case('log')
-      call log_profile(q,n(3),zclzi,visc,u1d)
+      call log_profile(q,n(3),zclzi,ubulk*lref/visc,u1d)
       is_noise = .true.
       is_mean = .true.
     case('hcl')
       deallocate(u1d)
       allocate(u1d(2*n(3)))
-      call log_profile(q,2*n(3),zclzi,visc,u1d)
+      call log_profile(q,2*n(3),zclzi,ubulk*lref/visc,u1d)
       is_noise = .true.
       is_mean=.true.
     case('hcp')
       deallocate(u1d)
       allocate(u1d(2*n(3)))
-      call poiseuille(q,2*n(3),zclzi,uref,u1d)
+      call poiseuille(q,2*n(3),zclzi,ubulk,u1d)
       is_mean = .true.
     case('tgv')
       do k=1,n(3)
@@ -63,8 +65,8 @@ module mod_initflow
           do i=1,n(1)
             xc = (i+coord(1)*n(1)-.5)*dx/lx*2.*pi
             xf = (i+coord(1)*n(1)-.0)*dx/lx*2.*pi
-            u(i,j,k) =  sin(xf)*cos(yc)*cos(zc)
-            v(i,j,k) = -cos(xc)*sin(yf)*cos(zc)
+            u(i,j,k) =  sin(xf)*cos(yc)*cos(zc)*uref
+            v(i,j,k) = -cos(xc)*sin(yf)*cos(zc)*uref
             w(i,j,k) = 0.
             p(i,j,k) = 0.!(cos(2.*xc)+cos(2.*yc))*(cos(2.*zc)+2.)/16.
           enddo
@@ -72,13 +74,13 @@ module mod_initflow
       enddo
     case('pdc')
       if(is_wallturb) then ! turbulent flow
-        retau  = (bforce(1)*lref)**.5*uref/visc
-        reb    = (retau/.09)**(1./.88)
-        uref   = (reb/2.)/retau
+        retau = uref*lref/visc
+        reb   = (retau/.09)**(1./.88)
+        ubulk = (reb/2.)/retau*uref
       else                 ! laminar flow
-        uref = (bforce(1)*lref**2/(3.*visc))
+        ubulk = (bforce(1)*lref**2/(3.*visc))
       endif
-      call poiseuille(q,n(3),zclzi,uref,u1d)
+      call poiseuille(q,n(3),zclzi,ubulk,u1d)
       is_mean=.true.
     case default
       if(myid.eq.0) print*, 'ERROR: invalid name for initial velocity field'
@@ -107,7 +109,7 @@ module mod_initflow
       call add_noise(n,789,.5_rp,w(1:n(1),1:n(2),1:n(3)))
     endif
     if(is_mean) then
-      call set_mean(n,uref,dzflzi,u(1:n(1),1:n(2),1:n(3)))
+      call set_mean(n,ubulk,dzflzi,u(1:n(1),1:n(2),1:n(3)))
     endif
     if(is_wallturb) is_pair = .true.
     if(is_pair) then
@@ -131,8 +133,8 @@ module mod_initflow
             xc = ((coord(1)*n(1)+i-0.5)*dx-.5*lx)*2./lz
             xf = ((coord(1)*n(1)+i-0.0)*dx-.5*lx)*2./lz
             !u(i,j,k) = u1d(k)
-            v(i,j,k) = -1. * gxy(yf,xc)*dfz(zc) * uref
-            w(i,j,k) =  1. * fz(zf)*dgxy(yc,xc) * uref
+            v(i,j,k) = -1. * gxy(yf,xc)*dfz(zc) * uref * 1.5
+            w(i,j,k) =  1. * fz(zf)*dgxy(yc,xc) * uref * 1.5
             p(i,j,k) = 0.
           enddo
         enddo
@@ -152,8 +154,8 @@ module mod_initflow
       !      xc = (i+coord(1)*n(1)-.5)*dx/lx*2.*pi
       !      xf = (i+coord(1)*n(1)-.0)*dx/lx*2.*pi
       !      !u(i,j,k) = u1d(k)
-      !      v(i,j,k) =  sin(xc)*cos(yf)*cos(zc)
-      !      w(i,j,k) = -cos(xc)*sin(yc)*cos(zf)
+      !      v(i,j,k) =  sin(xc)*cos(yf)*cos(zc)*uref
+      !      w(i,j,k) = -cos(xc)*sin(yc)*cos(zf)*uref
       !      p(i,j,k) = 0.!(cos(2.*xc)+cos(2.*yc))*(cos(2.*zc)+2.)/16.
       !    enddo
       !  enddo
@@ -264,16 +266,15 @@ module mod_initflow
     return
   end subroutine poiseuille
   !
-  subroutine log_profile(q,n,zc,visc,p)
+  subroutine log_profile(q,n,zc,reb,p)
     implicit none
     real(rp), intent(in)   :: q
     integer , intent(in)   :: n
     real(rp), intent(in), dimension(0:) :: zc
-    real(rp), intent(in)   :: visc
+    real(rp), intent(in)   :: reb
     real(rp), intent(out), dimension(n) :: p
     integer :: k
-    real(rp) :: z,reb,retau ! z/lz and bulk Reynolds number
-    reb = lref*uref/visc
+    real(rp) :: z,retau ! z/lz and bulk Reynolds number
     retau = 0.09*reb**(0.88) ! from Pope's book
     do k=1,n/2
       z    = zc(k)*2.*retau!1.*((k-1)+q)/(1.*n)*2.*retau
