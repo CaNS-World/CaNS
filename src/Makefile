@@ -82,7 +82,7 @@ solver.o: solver.f90 fft.o param.o types.o
 types.o: types.f90
 	$(FC) $(FFLAGS) -cpp -c  $<
 # 2decomp&fft library
-FFLAGS_2DECOMP :=# -DOVERWRITE -DEVEN
+FFLAGS_2DECOMP := -DOVERWRITE -DEVEN
 2decompdir=2decomp/
 decomp_2d.o: $(2decompdir)decomp_2d.f90
 	$(FC) $(FFLAGS) -cpp $(FFLAGS_2DECOMP) -c  $<
