@@ -114,7 +114,7 @@ a checkpoint file `fld.bin` will be saved before the simulation is terminated.
 
 `restart`, if true, **restarts the simulation** from a previously saved checkpoint file, named `fld.bin`.
 
-`is_overwrite_input`, if true, overwrites the checkpoint file `fld.bin` at every save; if false, a symbolic link is created which makes `fld.bin` point to the last checkpoint file with name `fld_???????.bin`. In the latter case case, to restart a run from a different checkpoint one just has to point the file `fld.bin` to the right file, e.g.: ` ln -sf fld_0000100.bin fld.bin`.
+`is_overwrite_input`, if true, overwrites the checkpoint file `fld.bin` at every save; if false, a symbolic link is created which makes `fld.bin` point to the last checkpoint file with name `fld_???????.bin`. In the latter case, to restart a run from a different checkpoint one just has to point the file `fld.bin` to the right file, e.g.: ` ln -sf fld_0000100.bin fld.bin`.
 
 ---
 
@@ -173,9 +173,9 @@ T F F                    ! is_forced(1:3)
 ~~~
 These lines set the flow forcing.
 
-`bforce`, is a constant **body force density term** in the direction in question (e.g. the negative of a constant pressure gradient) that can be added to the right-hand-side of the momentum equation. The three values corresponds to three domain directions. NOTE: in a pressure-driven wall-bounded flow, only one type of flow forcing should be selected (bulk velocity or pressure gradient). If the streamwise bulk velocity is forced (by setting the is_forced parameter below `T`), bforce should be zero, and vice-versa.
+`bforce`, is a constant **body force density term** in the direction in question (e.g. the negative of a constant pressure gradient) that can be added to the right-hand-side of the momentum equation. The three values correspond to three domain directions. NOTE: in a pressure-driven wall-bounded flow, only one type of flow forcing should be selected (bulk velocity or pressure gradient). If the streamwise bulk velocity is forced (by setting the is_forced parameter below `T`), bforce should be zero, and vice-versa.
 
-`is_forced`, if true in the direction in question, **forces the flow** with a pressure gradient that balances the total wall shear (e.g. for a pressure-driven channel). The three boolean values corresponds to three domain directions.
+`is_forced`, if true in the direction in question, **forces the flow** with a pressure gradient that balances the total wall shear (e.g. for a pressure-driven channel). The three boolean values correspond to three domain directions.
 
 `velf`, is the **target bulk velocity** in the direction in question (where `is_forced` is true). The three values correspond to three domain directions.
 
