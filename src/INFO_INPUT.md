@@ -12,7 +12,7 @@ poi                      ! inivel
 T                        ! is_wallturb
 100000 100. 0.1          ! nstep, time_max, tw_max
 T F F                    ! stop_type(1:3)
-F T                      ! restart,is_overwrite_input
+F T                      ! restart,is_overwrite_save
 10 10 100 500 10000 5000 ! icheck, iout0d, iout1d, iout2d, iout3d, isave
 P P  P P  D D            ! cbcvel(0:1,1:3,1) [u BC type]
 P P  P P  D D            ! cbcvel(0:1,1:3,2) [v BC type]
@@ -112,7 +112,7 @@ These lines set the simulation termination criteria and whether the simulation s
 
 a checkpoint file `fld.bin` will be saved before the simulation is terminated.
 
-`restart`, if true, **restarts the simulation** from a previously saved checkpoint file, named `fld.bin`. 
+`restart`, if true, **restarts the simulation** from a previously saved checkpoint file, named `fld.bin`.
 
 `is_overwrite_input`, if true, overwrites the checkpoint file `fld.bin` at every save; if false, a symbolic link is created which makes `fld.bin` point to the last checkpoint file with name `fld_???????.bin`. In the latter case case, to restart a run from a different checkpoint one just has to point the file `fld.bin` to the right file, e.g.: ` ln -sf fld_0000100.bin fld.bin`.
 
