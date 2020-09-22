@@ -4,11 +4,11 @@ module mod_moms
   private
   public momsad
   contains
-  subroutine momsad(nx,ny,nz,dxi,dyi,dzi,dzci,dzfi,dzflzi,visc,u,v,w,s,dsdt)
+  subroutine momsad(nx,ny,nz,dxi,dyi,dzi,dzci,dzfi,visc,u,v,w,s,dsdt)
     implicit none
     integer , intent(in) :: nx,ny,nz
     real(rp), intent(in) :: dxi,dyi,dzi,visc
-    real(rp), intent(in), dimension(0:) :: dzci,dzfi,dzflzi
+    real(rp), intent(in), dimension(0:) :: dzci,dzfi
     real(rp), dimension(0:,0:,0:), intent(in) :: u,v,w,s
     real(rp), dimension(:,:,:), intent(out) :: dsdt
     integer :: im,ip,jm,jp,km,kp,i,j,k
