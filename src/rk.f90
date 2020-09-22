@@ -196,7 +196,7 @@ module mod_rk
     !$OMP END PARALLEL DO
     return
   end subroutine rk_id
-  subroutine rk_scal(rkpar,n,dli,dzci,dzfi,dzflzi,dzclzi,visc,dt,u,v,w,dsdtrko,s)
+  subroutine rk_scal(rkpar,n,dli,dzci,dzfi,visc,dt,u,v,w,dsdtrko,s)
     !
     ! low-storage 3rd-order Runge-Kutta scheme 
     ! for time integration of the scalar field.
@@ -205,7 +205,7 @@ module mod_rk
     real(rp), intent(in   ), dimension(2) :: rkpar
     integer , intent(in   ), dimension(3) :: n
     real(rp), intent(in   ), dimension(3) :: dli
-    real(rp), intent(in   ), dimension(0:) :: dzci,dzfi,dzflzi,dzclzi
+    real(rp), intent(in   ), dimension(0:) :: dzci,dzfi
     real(rp), intent(in   ) :: visc,dt
     real(rp), intent(in   ), dimension(0:,0:,0:) :: u,v,w
     real(rp), intent(inout), dimension(:,:,:) :: dsdtrko
@@ -217,7 +217,7 @@ module mod_rk
     factor1 = rkpar(1)*dt
     factor2 = rkpar(2)*dt
     factor12 = factor1 + factor2
-    call momsad(n(1),n(2),n(3),dli(1),dli(2),dli(3),dzci,dzfi,dzflzi,visc,u,v,w,s,dsdtrk)
+    call momsad(n(1),n(2),n(3),dli(1),dli(2),dli(3),dzci,dzfi,visc,u,v,w,s,dsdtrk)
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP PRIVATE(i,j,k) &
     !$OMP SHARED(n,factor1,factor2,s,dsdtrk,dsdtrko)
