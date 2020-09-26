@@ -1,5 +1,5 @@
 module mod_types
-  use mpi
+  use mpi, only: MPI_REAL,MPI_DOUBLE_PRECISION
 #ifdef SINGLE_PRECISION
   integer, parameter, public :: rp = KIND(1.0)
   integer, parameter, public :: MPI_REAL_RP = MPI_REAL
