@@ -105,7 +105,7 @@ module mod_bound
       factor = 2.*factor
       sgn    = -1.
     endif
-    if(ctype.eq.'N'.and.centered) then
+    if(ctype.eq.'N') then
       if(    ibound.eq.0) then
         factor = -dr*factor
       elseif(ibound.eq.1) then
