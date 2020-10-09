@@ -21,14 +21,6 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
  
 The recent **many-GPU** version of CaNS can be found [**here**](https://github.com/maxcuda/CaNS).
 
-08/02/2019 -- Input files corresponding to the simulations presented in the manuscript above have been added to `examples/`.
-
-16/05/2019 -- Now a single input file, `dns.in`, can be used to run the executable without recompiling the source. The `examples/` folder has been updated accordingly. The implementation with the former input files (not maintained) can be found in branch `old_input_files`.
-
-20/11/2019 -- Different simulation termination criteria, and a constant body force density have been added as option in the input file `dns.in`, see [`src/INFO_INPUT.md`](src/INFO_INPUT.md) for more details.
-
-04/05/2020 -- Visualization of binary field data has been made easier, see [`src/INFO_VISU.md`](src/INFO_VISU.md) for more details.
-
 13/05/2020 -- An implementation that allows for an arbitrary default orientation of the pencil decomposition (i.e. x-, y- or z-aligned pencils) has been developed and kept for now in branch `x_pencil`. Using x-aligned pencils by default increases slightly the performance of CaNS by avoiding two *all-to-all* operations in the Poisson solver. To test this new feature, the code in branch `x_pencil` should be compiled with `-DDECOMP_X` (best performing) or `-DDECOMP_Y`.
 
 28/06/2020 -- The `isoutflow` input parameter is not required anymore to define a zero-pressure outflow, and has been removed.
@@ -90,7 +82,7 @@ Run the executable with `mpirun` with a number of tasks and shared threads compl
 
 ### Visualizing field data
 
-See `src/INFO_VISU.md`.
+See `[src/INFO_VISU.md](src/INFO_VISU.md)`.
 
 ## Notes
 
