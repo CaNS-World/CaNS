@@ -16,4 +16,4 @@ cp $TESTDIR/*.* data/ && cp $UTILSDIR/read_binary_data/python/read_single_field_
 echo "Running test..."
 sleep 2
 pytest test.py
-rm -rf ../../run
+rm -rf $RUNDIR
