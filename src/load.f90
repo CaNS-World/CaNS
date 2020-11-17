@@ -34,7 +34,7 @@ module mod_load
       call MPI_FILE_GET_SIZE(fh,filesize,ierr)
       ng(:)   = n(:)
       ng(1:2) = ng(1:2)*dims(:)
-      lenr = 8*storage_size(time)
+      lenr = storage_size(time)/8
       good = (product(ng)*4+2)*lenr
       if(filesize.ne.good) then
         if(myid.eq.0) print*, ''
