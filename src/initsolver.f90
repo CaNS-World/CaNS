@@ -108,7 +108,7 @@ module mod_initsolver
           lambda(l)   = -4.*sin((1.*(l-0))*pi/(2.*(n+1-1)))**2
         enddo
       endif
-    case('ND')
+    case('ND','DN')
       do l=1,n
         lambda(l)   = -4.*sin((1.*(2*l-1))*pi/(4.*n))**2
       enddo
