@@ -35,7 +35,7 @@ module mod_load
       ng(:)   = n(:)
       ng(1:2) = ng(1:2)*dims(:)
       lenr = storage_size(time)/8
-      good = (product(ng)*4+2)*lenr
+      good = int(product(ng)*4+2,MPI_OFFSET_KIND)*lenr
       if(filesize.ne.good) then
         if(myid.eq.0) print*, ''
         if(myid.eq.0) print*, '*** Simulation aborted due a checkpoint file with incorrect size ***'
