@@ -21,6 +21,8 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
  
 The recent **many-GPU** version of CaNS can be found [**here**](https://github.com/maxcuda/CaNS).
 
+**Please consider using the implementation in branch [`x_pencil`](https://github.com/p-costa/CaNS/tree/x_pencil) for faster calculations**. See the 13/05/2020 news entry below for more details. This implementation will be merged into `master` before the end of the year.
+
 13/05/2020 -- An implementation that allows for an arbitrary default orientation of the pencil decomposition (i.e. x-, y- or z-aligned pencils) has been developed and kept for now in branch `x_pencil`. Using x-aligned pencils by default increases slightly the performance of CaNS by avoiding two *all-to-all* operations in the Poisson solver. To test this new feature, the code in branch `x_pencil` should be compiled with `-DDECOMP_X` (best performing) or `-DDECOMP_Y`.
 
 28/06/2020 -- The `isoutflow` input parameter is not required anymore to define a zero-pressure outflow, and has been removed.
