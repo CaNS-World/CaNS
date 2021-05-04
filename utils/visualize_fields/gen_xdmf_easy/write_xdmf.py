@@ -11,7 +11,7 @@ non_uniform_grid = True
 # define data type and
 # read saved data log
 #
-dtype_saves = dtype([                                                      \
+dtype_saves = np.dtype([                                                   \
                         ('file' , 'U100'), ('variable', 'U100'),           \
                         ('imin' , int)   , ('jmin' , int), ('kmin' , int), \
                         ('imax' , int)   , ('jmax' , int), ('kmax' , int), \
