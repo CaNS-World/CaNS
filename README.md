@@ -80,7 +80,7 @@ Typing `make run` will compile the code and copy the executable `cans` and input
 
 ### Running the code
 
-Run the executable with `mpirun` with a number of tasks and shared threads complying to what has been set in the input file `dns.bin`. Data will be written by default in a folder named `data/`, which must be located where the executable is run.
+Run the executable with `mpirun` with a number of tasks and shared threads complying to what has been set in the input file `dns.in`. Data will be written by default in a folder named `data/`, which must be located where the executable is run.
 
 ### Visualizing field data
 
