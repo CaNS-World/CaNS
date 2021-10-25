@@ -23,7 +23,7 @@ module mod_fillps
     real(rp), intent(out), dimension(0:,0:,0:) :: p
     real(rp) :: dtidxi,dtidyi!,dtidzi
     real(rp), dimension(0:n(3)+1) :: dtidzfi
-    integer :: i,j,k,im,jm,km
+    integer :: i,j,k
     !
     dtidxi = dti*dli(1)
     dtidyi = dti*dli(2)
@@ -31,17 +31,14 @@ module mod_fillps
     dtidzfi(:) = dti*dzfi(:)
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(n,p,up,vp,wp,dtidzfi,dtidyi,dtidxi) &
-    !$OMP PRIVATE(i,j,k,im,jm,km)
+    !$OMP PRIVATE(i,j,k)
     do k=1,n(3)
-      km = k-1
       do j=1,n(2)
-        jm = j-1
         do i=1,n(1)
-          im = i-1
           p(i,j,k) = ( &
-                      (wp(i,j,k)-wp(i,j,km))*dtidzfi(k)+ &
-                      (vp(i,j,k)-vp(i,jm,k))*dtidyi    + &
-                      (up(i,j,k)-up(im,j,k))*dtidxi    )
+                      (wp(i,j,k)-wp(i,j,k-1))*dtidzfi(k)+ &
+                      (vp(i,j,k)-vp(i,j-1,k))*dtidyi    + &
+                      (up(i,j,k)-up(i-1,j,k))*dtidxi    )
         enddo
       enddo
     enddo

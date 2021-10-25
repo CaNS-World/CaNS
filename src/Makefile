@@ -47,7 +47,7 @@ debug.o: debug.f90 common_mpi.o types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
 fillps.o: fillps.f90 types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
-fft.o: fft.f90 common_mpi.o fftw.o types.o
+fft.o: fft.f90 common_mpi.o decomp_2d.o fftw.o types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
 fftw.o: fftw.f90
 	$(FC) $(FFLAGS) -cpp -c  $<

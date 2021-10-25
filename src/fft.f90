@@ -1,5 +1,6 @@
 module mod_fft
   use iso_c_binding , only: C_INT
+  use decomp_2d, only: xsize,ysize
   use mod_common_mpi, only: ierr
   use mod_fftw_param
   use mod_param     , only:dims
@@ -38,12 +39,12 @@ module mod_fft
     !
     ! prepare plans with guru interface
     !
-    nx_x = nx
-    ny_x = ny/dims(1)
-    nz_x = nz/dims(2)
-    nx_y = nx/dims(1)
-    ny_y = ny
-    nz_y = nz/dims(2)
+    nx_x = xsize(1)
+    ny_x = xsize(2)
+    nz_x = xsize(3)
+    nx_y = ysize(1)
+    ny_y = ysize(2)
+    nz_y = ysize(3)
     !
     normfft = 1.
     ix = 0 
