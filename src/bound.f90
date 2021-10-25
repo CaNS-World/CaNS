@@ -20,12 +20,12 @@ module mod_bound
     real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
     logical :: impose_norm_bc
     !
-    call updthalo((/n(1),n(2)/),1,u)
-    call updthalo((/n(1),n(2)/),2,u)
-    call updthalo((/n(1),n(2)/),1,v)
-    call updthalo((/n(1),n(2)/),2,v)
-    call updthalo((/n(1),n(2)/),1,w)
-    call updthalo((/n(1),n(2)/),2,w)
+    call updthalo([n(1),n(2)],1,u)
+    call updthalo([n(1),n(2)],2,u)
+    call updthalo([n(1),n(2)],1,v)
+    call updthalo([n(1),n(2)],2,v)
+    call updthalo([n(1),n(2)],1,w)
+    call updthalo([n(1),n(2)],2,w)
     !
     impose_norm_bc = (.not.is_correc).or.(cbc(0,1,1)//cbc(1,1,1).eq.'PP')
     if(left .eq.MPI_PROC_NULL) then
@@ -71,8 +71,8 @@ module mod_bound
     real(rp), intent(in), dimension(0:) :: dzc,dzf
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
     !
-    call updthalo((/n(1),n(2)/),1,p)
-    call updthalo((/n(1),n(2)/),2,p)
+    call updthalo([n(1),n(2)],1,p)
+    call updthalo([n(1),n(2)],2,p)
     !
     if(left .eq.MPI_PROC_NULL) then
       call set_bc(cbc(0,1),0,n(1),1,.true.,bc(0,1),dl(1),p)

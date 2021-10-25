@@ -161,7 +161,7 @@ module mod_output
     !
     ! fname  -> name of the output file
     ! nskip  -> array with the step size for which the
-    !           field is written; i.e.: (/1,1,1/) 
+    !           field is written; i.e.: [1,1,1] 
     !           writes the full field 
     ! p      -> 3D input scalar field
     !
@@ -190,9 +190,9 @@ module mod_output
     ! fname     -> name of the output log file
     ! fname_fld -> name of the saved binary file (excluding the directory)
     ! varname   -> name of the variable that is saved
-    ! nmin      -> first element of the field that is saved in each direction, e.g. (/1,1,1/)
-    ! nmax      -> last  element of the field that is saved in each direction, e.g. (/ng(1),ng(2),ng(3)/)
-    ! nskip     -> step size between nmin and nmax, e.g. (/1,1,1/) if the whole array is saved
+    ! nmin      -> first element of the field that is saved in each direction, e.g. [1,1,1]
+    ! nmax      -> last  element of the field that is saved in each direction, e.g. [ng(1),ng(2),ng(3)]
+    ! nskip     -> step size between nmin and nmax, e.g. [1,1,1] if the whole array is saved
     ! time      -> physical time
     ! istep     -> time step number
     !
@@ -246,16 +246,16 @@ module mod_output
     call out2d(trim(datadir)//trim(fname_bin),inorm,nslice,p)
     select case(inorm)
     case(1)
-      nmin_2d(:) = (/nslice,1    ,1    /)
-      nmax_2d(:) = (/nslice,ng(2),ng(3)/)
+      nmin_2d(:) = [nslice,1    ,1    ]
+      nmax_2d(:) = [nslice,ng(2),ng(3)]
     case(2)
-      nmin_2d(:) = (/1    ,nslice,1    /)
-      nmax_2d(:) = (/ng(1),nslice,ng(3)/)
+      nmin_2d(:) = [1    ,nslice,1    ]
+      nmax_2d(:) = [ng(1),nslice,ng(3)]
     case(3)
-      nmin_2d(:) = (/1    ,1    ,nslice/)
-      nmax_2d(:) = (/ng(1),ng(2),nslice/)
+      nmin_2d(:) = [1    ,1    ,nslice]
+      nmax_2d(:) = [ng(1),ng(2),nslice]
     end select
-    call write_log_output(trim(datadir)//trim(fname_log),trim(fname_bin),trim(varname),nmin_2d,nmax_2d,(/1,1,1/),time,istep)
+    call write_log_output(trim(datadir)//trim(fname_log),trim(fname_bin),trim(varname),nmin_2d,nmax_2d,[1,1,1],time,istep)
     return
   end subroutine write_visu_2d
   !

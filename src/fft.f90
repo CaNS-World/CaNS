@@ -134,46 +134,46 @@ module mod_fft
     case('PP')
       kind_fwd = FFTW_R2HC
       kind_bwd = FFTW_HC2R
-      norm = (/1.,0./)
+      norm = [1.,0.]
     case('NN')
       kind_fwd = FFTW_REDFT10
       kind_bwd = FFTW_REDFT01
-      norm = (/2.,0./)
+      norm = [2.,0.]
     case('DD')
       kind_fwd = FFTW_RODFT10
       kind_bwd = FFTW_RODFT01
-      norm = (/2.,0./)
+      norm = [2.,0.]
     case('ND')
       kind_fwd = FFTW_REDFT11
       kind_bwd = FFTW_REDFT11
-      norm = (/2.,0./)
+      norm = [2.,0.]
     case('DN')
       kind_fwd = FFTW_RODFT11
       kind_bwd = FFTW_RODFT11
-      norm = (/2.,0./)
+      norm = [2.,0.]
     end select
   elseif(c_or_f.eq.'f') then
     select case(bc(0)//bc(1))
     case('PP')
       kind_fwd = FFTW_R2HC
       kind_bwd = FFTW_HC2R
-      norm = (/1.,0./)
+      norm = [1.,0.]
     case('NN')
       kind_fwd = FFTW_REDFT00
       kind_bwd = FFTW_REDFT00
-      norm = (/2.,-1./)
+      norm = [2.,-1.]
     case('DD')
       kind_fwd = FFTW_RODFT00
       kind_bwd = FFTW_RODFT00
-      norm = (/2.,1./)
+      norm = [2.,1.]
     case('ND')
       kind_fwd = FFTW_REDFT10
       kind_bwd = FFTW_REDFT01
-      norm = (/2.,0./)
+      norm = [2.,0.]
     case('DN')
       kind_fwd = FFTW_RODFT01
       kind_bwd = FFTW_RODFT10
-      norm = (/2.,0./)
+      norm = [2.,0.]
     end select
   endif
   return

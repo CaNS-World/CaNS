@@ -62,12 +62,12 @@ module mod_initsolver
     dl(:)  = dli( :)**(-1)
     dzc(:) = dzci(:)**(-1)
     dzf(:) = dzfi(:)**(-1)
-    call bc_rhs(cbc(:,1),n(1),bc(:,1),(/dl(1) ,dl(1)    /),(/dl(1) ,dl(1)    /),c_or_f(1),rhsbx)
-    call bc_rhs(cbc(:,2),n(2),bc(:,2),(/dl(2) ,dl(2)    /),(/dl(2) ,dl(2)    /),c_or_f(2),rhsby)
+    call bc_rhs(cbc(:,1),n(1),bc(:,1),[dl(1) ,dl(1)      ],[dl(1) ,dl(1)    ],c_or_f(1),rhsbx)
+    call bc_rhs(cbc(:,2),n(2),bc(:,2),[dl(2) ,dl(2)      ],[dl(2) ,dl(2)    ],c_or_f(2),rhsby)
     if(    c_or_f(3).eq.'c') then
-      call bc_rhs(cbc(:,3),n(3),bc(:,3),(/dzc(0),dzc(n(3)  )/),(/dzf(1),dzf(n(3))/),c_or_f(3),rhsbz)
+      call bc_rhs(cbc(:,3),n(3),bc(:,3),[dzc(0),dzc(n(3)  )],[dzf(1),dzf(n(3))],c_or_f(3),rhsbz)
     elseif(c_or_f(3).eq.'f') then
-      call bc_rhs(cbc(:,3),n(3),bc(:,3),(/dzc(1),dzc(n(3)-1)/),(/dzf(1),dzf(n(3))/),c_or_f(3),rhsbz)
+      call bc_rhs(cbc(:,3),n(3),bc(:,3),[dzc(1),dzc(n(3)-1)],[dzf(1),dzf(n(3))],c_or_f(3),rhsbz)
     endif
     !
     ! prepare ffts

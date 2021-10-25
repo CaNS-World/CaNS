@@ -223,7 +223,7 @@ module mod_sanity
   !
   ! test pressure correction
   !
-  call initsolver(n,dli,dzci,dzfi,cbcpre,bcpre(:,:),lambdaxy,(/'c','c','c'/),a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
+  call initsolver(n,dli,dzci,dzfi,cbcpre,bcpre(:,:),lambdaxy,['c','c','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
   dl  = dli**(-1)
   dzc = dzci**(-1)
   dzf = dzfi**(-1)
@@ -231,8 +231,8 @@ module mod_sanity
   dti = dt**(-1)
   call bounduvw(cbcvel,n,bcvel,.false.,dl,dzc,dzf,up,vp,wp)
   call fillps(n,dli,dzfi,dti,up,vp,wp,p)
-  call updt_rhs_b((/'c','c','c'/),cbcpre,n,rhsbx,rhsby,rhsbz,p(1:n(1),1:n(2),1:n(3)))
-  call solver(n,arrplan,normfft,lambdaxy,a,b,c,cbcpre(:,3),(/'c','c','c'/),p(1:n(1),1:n(2),1:n(3)))
+  call updt_rhs_b(['c','c','c'],cbcpre,n,rhsbx,rhsby,rhsbz,p(1:n(1),1:n(2),1:n(3)))
+  call solver(n,arrplan,normfft,lambdaxy,a,b,c,cbcpre(:,3),['c','c','c'],p(1:n(1),1:n(2),1:n(3)))
   call boundp(cbcpre,n,bcpre,dl,dzc,dzf,p)
   call correc(n,dli,dzci,dt,p,up,vp,wp,u,v,w)
   call bounduvw(cbcvel,n,bcvel,.true.,dl,dzc,dzf,u,v,w)
@@ -250,49 +250,49 @@ module mod_sanity
   call add_noise(n,123,.5_rp,up(1:n(1),1:n(2),1:n(3)))
   call add_noise(n,456,.5_rp,vp(1:n(1),1:n(2),1:n(3)))
   call add_noise(n,789,.5_rp,wp(1:n(1),1:n(2),1:n(3)))
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,1),bcvel(:,:,1),lambdaxy,(/'f','c','c'/),a,b,c,arrplan,normfft, &
+  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,1),bcvel(:,:,1),lambdaxy,['f','c','c'],a,b,c,arrplan,normfft, &
                   rhsbx,rhsby,rhsbz)
   call bounduvw(cbcvel,n,bcvel,.false.,dl,dzc,dzf,up,vp,wp)
   up(:,:,:) = up(:,:,:)*alpha
   u( :,:,:) = up(:,:,:)
   bb(:) = b(:) + alpha
-  call updt_rhs_b((/'f','c','c'/),cbcvel(:,:,1),n,rhsbx,rhsby,rhsbz,up(1:n(1),1:n(2),1:n(3)))
-  call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,1),(/'f','c','c'/),up(1:n(1),1:n(2),1:n(3)))
+  call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,rhsbx,rhsby,rhsbz,up(1:n(1),1:n(2),1:n(3)))
+  call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,1),['f','c','c'],up(1:n(1),1:n(2),1:n(3)))
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,.false.,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
-  call chk_helmholtz(n,dli,dzci,dzfi,alpha,u,up,cbcvel(:,:,1),(/'f','c','c'/),resmax)
+  call chk_helmholtz(n,dli,dzci,dzfi,alpha,u,up,cbcvel(:,:,1),['f','c','c'],resmax)
   passed_loc = resmax.lt.small
   if(myid.eq.0.and.(.not.passed_loc)) &
   print*, 'ERROR: wrong solution of Helmholtz equation in x direction.'
   passed = passed.and.passed_loc
   !
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,2),bcvel(:,:,2),lambdaxy,(/'c','f','c'/),a,b,c,arrplan,normfft, &
+  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,2),bcvel(:,:,2),lambdaxy,['c','f','c'],a,b,c,arrplan,normfft, &
                   rhsbx,rhsby,rhsbz)
   call bounduvw(cbcvel,n,bcvel,.false.,dl,dzc,dzf,up,vp,wp)
   vp(:,:,:) = vp(:,:,:)*alpha
   v( :,:,:) = vp(:,:,:)
   bb(:) = b(:) + alpha
-  call updt_rhs_b((/'c','f','c'/),cbcvel(:,:,2),n,rhsbx,rhsby,rhsbz,vp(1:n(1),1:n(2),1:n(3)))
-  call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,2),(/'c','f','c'/),vp(1:n(1),1:n(2),1:n(3)))
+  call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,rhsbx,rhsby,rhsbz,vp(1:n(1),1:n(2),1:n(3)))
+  call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,2),['c','f','c'],vp(1:n(1),1:n(2),1:n(3)))
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,.false.,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
-  call chk_helmholtz(n,dli,dzci,dzfi,alpha,v,vp,cbcvel(:,:,2),(/'c','f','c'/),resmax)
+  call chk_helmholtz(n,dli,dzci,dzfi,alpha,v,vp,cbcvel(:,:,2),['c','f','c'],resmax)
   passed_loc = resmax.lt.small
   if(myid.eq.0.and.(.not.passed_loc)) &
   print*, 'ERROR: wrong solution of Helmholtz equation in y direction.'
   passed = passed.and.passed_loc
   !
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,3),bcvel(:,:,3),lambdaxy,(/'c','c','f'/),a,b,c,arrplan,normfft, &
+  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,3),bcvel(:,:,3),lambdaxy,['c','c','f'],a,b,c,arrplan,normfft, &
                   rhsbx,rhsby,rhsbz)
   call bounduvw(cbcvel,n,bcvel,.false.,dl,dzc,dzf,up,vp,wp)
   wp(:,:,:) = wp(:,:,:)*alpha
   w( :,:,:) = wp(:,:,:)
   bb(:) = b(:) + alpha
-  call updt_rhs_b((/'c','c','f'/),cbcvel(:,:,3),n,rhsbx,rhsby,rhsbz,wp(1:n(1),1:n(2),1:n(3)))
-  call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,3),(/'c','c','f'/),wp(1:n(1),1:n(2),1:n(3)))
+  call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,rhsbx,rhsby,rhsbz,wp(1:n(1),1:n(2),1:n(3)))
+  call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,3),['c','c','f'],wp(1:n(1),1:n(2),1:n(3)))
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,.false.,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
-  call chk_helmholtz(n,dli,dzci,dzfi,alpha,w,wp,cbcvel(:,:,3),(/'c','c','f'/),resmax)
+  call chk_helmholtz(n,dli,dzci,dzfi,alpha,w,wp,cbcvel(:,:,3),['c','c','f'],resmax)
   passed_loc = resmax.lt.small
   if(myid.eq.0.and.(.not.passed_loc)) &
   print*, 'ERROR: wrong solution of Helmholtz equation in z direction.'

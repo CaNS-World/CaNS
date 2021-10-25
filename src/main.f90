@@ -216,13 +216,13 @@ program cans
   !
   ! initialize Poisson solver
   !
-  call initsolver(n,dli,dzci,dzfi,cbcpre,bcpre(:,:),lambdaxyp,(/'c','c','c'/),ap,bp,cp,arrplanp,normfftp,rhsbp%x,rhsbp%y,rhsbp%z)
+  call initsolver(n,dli,dzci,dzfi,cbcpre,bcpre(:,:),lambdaxyp,['c','c','c'],ap,bp,cp,arrplanp,normfftp,rhsbp%x,rhsbp%y,rhsbp%z)
 #ifdef IMPDIFF
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,1),bcvel(:,:,1),lambdaxyu,(/'f','c','c'/),au,bu,cu,arrplanu,normfftu, &
+  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,1),bcvel(:,:,1),lambdaxyu,['f','c','c'],au,bu,cu,arrplanu,normfftu, &
                   rhsbu%x,rhsbu%y,rhsbu%z)
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,2),bcvel(:,:,2),lambdaxyv,(/'c','f','c'/),av,bv,cv,arrplanv,normfftv, &
+  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,2),bcvel(:,:,2),lambdaxyv,['c','f','c'],av,bv,cv,arrplanv,normfftv, &
                   rhsbv%x,rhsbv%y,rhsbv%z)
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,3),bcvel(:,:,3),lambdaxyw,(/'c','c','f'/),aw,bw,cw,arrplanw,normfftw, &
+  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,3),bcvel(:,:,3),lambdaxyw,['c','c','f'],aw,bw,cw,arrplanw,normfftw, &
                   rhsbw%x,rhsbw%y,rhsbw%z)
 #endif
   !
@@ -260,20 +260,20 @@ program cans
       up(1:n(1),1:n(2),1:n(3)) = up(1:n(1),1:n(2),1:n(3))*alpha
       !$OMP END WORKSHARE
       bb(:) = bu(:) + alpha
-      call updt_rhs_b((/'f','c','c'/),cbcvel(:,:,1),n,rhsbu%x,rhsbu%y,rhsbu%z,up)
-      call solver(n,arrplanu,normfftu,lambdaxyu,au,bb,cu,cbcvel(:,3,1),(/'f','c','c'/),up)
+      call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,rhsbu%x,rhsbu%y,rhsbu%z,up)
+      call solver(n,arrplanu,normfftu,lambdaxyu,au,bb,cu,cbcvel(:,3,1),['f','c','c'],up)
       !$OMP WORKSHARE
       vp(1:n(1),1:n(2),1:n(3)) = vp(1:n(1),1:n(2),1:n(3))*alpha
       !$OMP END WORKSHARE
       bb(:) = bv(:) + alpha
-      call updt_rhs_b((/'c','f','c'/),cbcvel(:,:,2),n,rhsbv%x,rhsbv%y,rhsbv%z,vp)
-      call solver(n,arrplanv,normfftv,lambdaxyv,av,bb,cv,cbcvel(:,3,2),(/'c','f','c'/),vp)
+      call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,rhsbv%x,rhsbv%y,rhsbv%z,vp)
+      call solver(n,arrplanv,normfftv,lambdaxyv,av,bb,cv,cbcvel(:,3,2),['c','f','c'],vp)
       !$OMP WORKSHARE
       wp(1:n(1),1:n(2),1:n(3)) = wp(1:n(1),1:n(2),1:n(3))*alpha
       !$OMP END WORKSHARE
       bb(:) = bw(:) + alpha
-      call updt_rhs_b((/'c','c','f'/),cbcvel(:,:,3),n,rhsbw%x,rhsbw%y,rhsbw%z,wp)
-      call solver(n,arrplanw,normfftw,lambdaxyw,aw,bb,cw,cbcvel(:,3,3),(/'c','c','f'/),wp)
+      call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,rhsbw%x,rhsbw%y,rhsbw%z,wp)
+      call solver(n,arrplanw,normfftw,lambdaxyw,aw,bb,cw,cbcvel(:,3,3),['c','c','f'],wp)
 #endif
       dpdl(:) = dpdl(:) + f(:)
       call bounduvw(cbcvel,n,bcvel,.false.,dl,dzc,dzf,up,vp,wp)
@@ -292,8 +292,8 @@ program cans
 #endif
 #endif
       call fillps(n,dli,dzfi,dtrki,up,vp,wp,pp)
-      call updt_rhs_b((/'c','c','c'/),cbcpre,n,rhsbp%x,rhsbp%y,rhsbp%z,pp)
-      call solver(n,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre(:,3),(/'c','c','c'/),pp)
+      call updt_rhs_b(['c','c','c'],cbcpre,n,rhsbp%x,rhsbp%y,rhsbp%z,pp)
+      call solver(n,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre(:,3),['c','c','c'],pp)
       call boundp(cbcpre,n,bcpre,dl,dzc,dzf,pp)
       call correc(n,dli,dzci,dtrk,pp,up,vp,wp,u,v,w)
       call bounduvw(cbcvel,n,bcvel,.true.,dl,dzc,dzf,u,v,w)
@@ -387,7 +387,7 @@ program cans
         if(.not.any(is_forced(:))) dpdl(:) = -bforce(:) ! constant pressure gradient
         var(1)   = time
         var(2:4) = dpdl(1:3)
-        var(5:7) = (/meanvelu,meanvelv,meanvelw/)
+        var(5:7) = [meanvelu,meanvelv,meanvelw]
         call out0d(trim(datadir)//'forcing.out',7,var)
       endif
       !deallocate(var)

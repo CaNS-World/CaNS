@@ -8,9 +8,9 @@ public
 real(rp), parameter :: pi = acos(-1._rp)
 real(rp), parameter :: small = epsilon(pi)*10**(precision(pi)/2)
 character(len=100), parameter :: datadir = 'data/'
-real(rp), parameter, dimension(2,3) :: rkcoeff = reshape((/ 32._rp/60._rp,  0._rp        , &
-                                                            25._rp/60._rp, -17._rp/60._rp, &
-                                                            45._rp/60._rp, -25._rp/60._rp/), shape(rkcoeff))
+real(rp), parameter, dimension(2,3) :: rkcoeff = reshape([32._rp/60._rp,  0._rp        , &
+                                                          25._rp/60._rp, -17._rp/60._rp, &
+                                                          45._rp/60._rp, -25._rp/60._rp], shape(rkcoeff))
 real(rp), parameter, dimension(3)   :: rkcoeff12 = rkcoeff(1,:)+rkcoeff(2,:)
 !
 ! variables to be determined from the input file 'dns.in'
@@ -96,11 +96,11 @@ contains
     jmax = jtot/dims(2)
     !
     visc = uref*lref/rey
-    ng  = (/itot,jtot,ktot/)
-    n   = (/imax,jmax,ktot/)
-    l   = (/lx,ly,lz/)
-    dl  = (/dx,dy,dz/)
-    dli = (/dxi,dyi,dzi/)
+    ng  = [itot,jtot,ktot]
+    n   = [imax,jmax,ktot]
+    l   = [lx,ly,lz]
+    dl  = [dx,dy,dz]
+    dli = [dxi,dyi,dzi]
   return
   end subroutine read_input
 end module mod_param
