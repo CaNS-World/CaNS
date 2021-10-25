@@ -93,7 +93,6 @@ module mod_rk
       call chkmean(n,dzclzi,wp,mean)
       f(3) = velf(3) - mean
     endif
-    return
   end subroutine rk
   subroutine rk_id(rkpar,n,dli,dzci,dzfi,dzflzi,dzclzi,visc,dt,l,u,v,w,p,dudtrko,dvdtrko,dwdtrko,tauxo,tauyo,tauzo,up,vp,wp,f)
     !
@@ -194,7 +193,6 @@ module mod_rk
       enddo
     enddo
     !$OMP END PARALLEL DO
-    return
   end subroutine rk_id
   subroutine rk_scal(rkpar,n,dli,dzci,dzfi,visc,dt,u,v,w,dsdtrko,s)
     !
@@ -230,6 +228,5 @@ module mod_rk
       enddo
     enddo
     !$OMP END PARALLEL DO
-    return
   end subroutine rk_scal
 end module mod_rk

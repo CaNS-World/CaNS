@@ -49,6 +49,5 @@ module mod_moms
       enddo
     enddo
     !$OMP END PARALLEL DO
-    return
   end subroutine momsad
 end module mod_moms

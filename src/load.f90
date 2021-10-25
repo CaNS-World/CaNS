@@ -73,6 +73,5 @@ module mod_load
       call decomp_2d_write_scalar(fh,disp,2,fldinfo)
       call MPI_FILE_CLOSE(fh,ierr)
     end select
-    return
   end subroutine load
 end module mod_load

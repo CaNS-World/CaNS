@@ -89,7 +89,6 @@ module mod_fft
     arrplan(2,1) = plan_bwd_x
     arrplan(1,2) = plan_fwd_y
     arrplan(2,2) = plan_bwd_y
-    return
   end subroutine fftini
   !
   subroutine fftend(arrplan)
@@ -108,7 +107,6 @@ module mod_fft
     call dfftw_destroy_plan(arrplan(2,2))
     !$call dfftw_cleanup_threads(ierr)
 #endif
-    return
   end subroutine fftend
   !
   subroutine fft(plan,arr)
@@ -120,7 +118,6 @@ module mod_fft
 #else
     call dfftw_execute_r2r(plan,arr,arr)
 #endif
-    return
   end subroutine fft
   !
   subroutine find_fft(bc,c_or_f,kind_fwd,kind_bwd,norm)
@@ -176,6 +173,5 @@ module mod_fft
       norm = [2.,0.]
     end select
   endif
-  return
   end subroutine find_fft
 end module mod_fft

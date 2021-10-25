@@ -66,6 +66,5 @@ module mod_chkdt
 #else
     dtmax = min(1.65/12./visc*dlmin**2,sqrt(3.)/dti)
 #endif
-    return
   end subroutine chkdt
 end module mod_chkdt

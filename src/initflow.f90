@@ -162,7 +162,6 @@ module mod_initflow
       !enddo
     endif
     deallocate(u1d)
-    return
   end subroutine initflow
   !
   subroutine add_noise(n,iseed,norm,p)
@@ -193,7 +192,6 @@ module mod_initflow
         enddo
       enddo
     enddo
-    return
   end subroutine add_noise
   !
   subroutine set_mean(n,mean,dzlzi,p)
@@ -225,7 +223,6 @@ module mod_initflow
       p(:,:,:) = p(:,:,:)/meanold*mean
       !$OMP END WORKSHARE
     endif
-    return
   end subroutine set_mean
   !
   subroutine couette(q,n,zc,norm,p)
@@ -244,7 +241,6 @@ module mod_initflow
       z    = zc(k)!1.*((k-1)+q)/(1.*n)
       p(k) = .5*(1.-2.*z)*norm
     enddo
-    return
   end subroutine couette
   !
   subroutine poiseuille(q,n,zc,norm,p)
@@ -263,7 +259,6 @@ module mod_initflow
       z    = zc(k)!1.*((k-1)+q)/(1.*n)
       p(k) = 6.*z*(1.-z)*norm
     enddo
-    return
   end subroutine poiseuille
   !
   subroutine log_profile(q,n,zc,reb,p)
@@ -282,7 +277,6 @@ module mod_initflow
       if (z.le.11.6) p(k)=z
       p(n+1-k) = p(k)
     enddo
-    return
   end subroutine log_profile
   !
   ! functions to initialize the streamwise vortex pair

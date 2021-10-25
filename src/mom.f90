@@ -79,7 +79,6 @@ module mod_mom
     taux(1) = taux(1)/(1.*nyg)
     taux(2) = taux(2)/(1.*nxg)
     taux(3) = taux(3)/(1.*nxg*nyg)
-    return
   end subroutine momxad
   !
   subroutine momyad(nx,ny,nz,dxi,dyi,dzi,dzci,dzfi,dzflzi,visc,u,v,w,dvdt,tauy)
@@ -154,7 +153,6 @@ module mod_mom
     tauy(1) = tauy(1)/(1.*nyg)
     tauy(2) = tauy(2)/(1.*nxg)
     tauy(3) = tauy(3)/(1.*nxg*nyg)
-    return
   end subroutine momyad
   !
   subroutine momzad(nx,ny,nz,dxi,dyi,dzi,dzci,dzfi,dzflzi,visc,u,v,w,dwdt,tauz)
@@ -229,7 +227,6 @@ module mod_mom
     tauz(1) = tauz(1)/(1.*nyg)
     tauz(2) = tauz(2)/(1.*nxg)
     tauz(3) = tauz(3)/(1.*nxg*nyg)
-    return
   end subroutine momzad
   !
   subroutine momxp(nx,ny,nz,dxi,p,dudt)
@@ -253,7 +250,6 @@ module mod_mom
       enddo
     enddo
     !$OMP END PARALLEL DO
-    return
   end subroutine momxp
   !
   subroutine momyp(nx,ny,nz,dyi,p,dvdt)
@@ -277,7 +273,6 @@ module mod_mom
       enddo
     enddo
     !$OMP END PARALLEL DO
-    return
   end subroutine momyp
   !
   subroutine momzp(nx,ny,nz,dzci,p,dwdt)
@@ -301,6 +296,5 @@ module mod_mom
       enddo
     enddo
     !$OMP END PARALLEL DO
-    return
   end subroutine momzp
 end module mod_mom

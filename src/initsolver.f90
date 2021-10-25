@@ -73,7 +73,6 @@ module mod_initsolver
     ! prepare ffts
     !
     call fftini(ng(1),ng(2),ng(3),cbc(:,1:2),c_or_f(1:2),arrplan,normfft)
-    return
   end subroutine initsolver
   !
   subroutine eigenvalues(n,bc,c_or_f,lambda)
@@ -113,7 +112,6 @@ module mod_initsolver
         lambda(l)   = -4.*sin((1.*(2*l-1))*pi/(4.*n))**2
       enddo
     end select   
-    return
   end subroutine eigenvalues
   !
   subroutine tridmatrix(bc,n,dzi,dzci,dzfi,c_or_f,a,b,c)
@@ -165,7 +163,6 @@ module mod_initsolver
     a(:) = a(:)! + eps
     b(:) = b(:)! + eps
     c(:) = c(:)! + eps
-    return
   end subroutine tridmatrix
   !
   subroutine bc_rhs(cbc,n,bc,dlc,dlf,c_or_f,rhs)
@@ -212,6 +209,5 @@ module mod_initsolver
       rhs(:,:,ibound) = factor(ibound)/dlc(ibound)/dlf(ibound)
       rhs(:,:,ibound) = factor(ibound)/dlc(ibound)/dlf(ibound)
     enddo
-    return
   end subroutine bc_rhs
 end module mod_initsolver

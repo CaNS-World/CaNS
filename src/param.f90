@@ -101,6 +101,5 @@ contains
     l   = [lx,ly,lz]
     dl  = [dx,dy,dz]
     dli = [dxi,dyi,dzi]
-  return
   end subroutine read_input
 end module mod_param

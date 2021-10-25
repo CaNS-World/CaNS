@@ -47,7 +47,6 @@ module mod_momd
       enddo
     enddo
     !$OMP END PARALLEL DO
-    return
   end subroutine momxa
   !
   subroutine momya(nx,ny,nz,dxi,dyi,dzci,dzfi,u,v,w,dvdt)
@@ -90,7 +89,6 @@ module mod_momd
       enddo
     enddo
     !$OMP END PARALLEL DO
-    return
   end subroutine momya
   !
   subroutine momza(nx,ny,nz,dxi,dyi,dzci,dzfi,u,v,w,dwdt)
@@ -133,7 +131,6 @@ module mod_momd
       enddo
     enddo
     !$OMP END PARALLEL DO
-    return
   end subroutine momza
   !
   subroutine momxpd(nx,ny,nz,dxi,dyi,dzci,dzfi,dzflzi,visc,p,u,dudt,dudtd,taux)
@@ -197,7 +194,6 @@ module mod_momd
     taux(1) = taux(1)/(1.*nyg)
     taux(2) = taux(2)/(1.*nxg)
     taux(3) = taux(3)/(1.*nxg*nyg)
-    return
   end subroutine momxpd
   !
   subroutine momypd(nx,ny,nz,dxi,dyi,dzci,dzfi,dzflzi,visc,p,v,dvdt,dvdtd,tauy)
@@ -261,7 +257,6 @@ module mod_momd
     tauy(1) = tauy(1)/(1.*nyg)
     tauy(2) = tauy(2)/(1.*nxg)
     tauy(3) = tauy(3)/(1.*nxg*nyg)
-    return
   end subroutine momypd
   !
   subroutine momzpd(nx,ny,nz,dxi,dyi,dzci,dzfi,dzflzi,visc,p,w,dwdt,dwdtd,tauz)
@@ -325,6 +320,5 @@ module mod_momd
     tauz(1) = tauz(1)/(1.*nyg)
     tauz(2) = tauz(2)/(1.*nxg)
     tauz(3) = tauz(3)/(1.*nxg*nyg)
-    return
   end subroutine momzpd
 end module mod_momd

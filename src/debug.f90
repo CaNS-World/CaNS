@@ -32,7 +32,6 @@ module mod_debug
     !$OMP END PARALLEL DO
     call mpi_allreduce(MPI_IN_PLACE,mean,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
     mean = mean/(1.*n(1)*dims(1)*n(2)*dims(2))
-    return
   end subroutine chkmean
   !
   subroutine chk_helmholtz(n,dli,dzci,dzfi,alpha,fp,fpp,bc,c_or_f,diffmax)
@@ -112,6 +111,5 @@ module mod_debug
       enddo
     end select
     call mpi_allreduce(MPI_IN_PLACE,diffmax,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
-    return
   end subroutine chk_helmholtz
 end module mod_debug

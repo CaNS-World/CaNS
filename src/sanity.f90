@@ -43,7 +43,6 @@ module mod_sanity
     call chk_forcing(cbcpre,is_forced  ,passed);   if(.not.passed) call abortit 
     !call chk_solvers(n,dli,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,passed)
     !if(.not.passed) call abortit
-    return
   end subroutine test_sanity
   !
   subroutine chk_stop_type(stop_type,passed)
@@ -55,7 +54,6 @@ module mod_sanity
     if(myid.eq.0) print*, 'ERROR: stopping criterion not chosen.'
     passed = .false.
   endif
-  return 
   end subroutine chk_stop_type
   !
   subroutine chk_dims(ng,dims,passed)
@@ -78,7 +76,6 @@ module mod_sanity
       print*, 'ERROR: jtot should be divisable by both dims(1) and dims(2), and &
                      &ktot should be divisable by dims(2)'
     passed = passed.and.passed_loc
-    return
   end subroutine chk_dims
   !
   subroutine chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed)
@@ -164,7 +161,6 @@ module mod_sanity
     print*, 'ERROR: velocity BCs with implicit diffusion in directions x and y must be homogeneous (value = 0.).'
   passed = passed.and.passed_loc
 #endif
-  return 
   end subroutine chk_bc
   !
   subroutine chk_forcing(cbcpre,is_forced,passed)
@@ -184,7 +180,6 @@ module mod_sanity
   enddo
   if(myid.eq.0.and.(.not.passed)) &
   print*, 'ERROR: Flow cannot be forced in a non-periodic direction; check the BCs and is_forced in dns.in.'
-  return 
   end subroutine chk_forcing
   !
   subroutine chk_solvers(n,dli,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,passed)
@@ -298,7 +293,6 @@ module mod_sanity
   print*, 'ERROR: wrong solution of Helmholtz equation in z direction.'
   passed = passed.and.passed_loc
 #endif
-  return
   end subroutine chk_solvers
   !
   subroutine abortit
@@ -309,6 +303,5 @@ module mod_sanity
       call decomp_2d_finalize
       call MPI_FINALIZE(ierr)
       error stop
-      return
   end subroutine abortit
 end module mod_sanity

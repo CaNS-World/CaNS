@@ -63,7 +63,6 @@ module mod_solver
     p(1:n(1),1:n(2),1:n(3)) = pz(:,:,:)
     !$OMP END WORKSHARE
     !deallocate(px,py)
-    return
   end subroutine solver
   !
   subroutine gaussel(nx,ny,n,a,b,c,lambdaxy,p)
@@ -89,7 +88,6 @@ module mod_solver
     enddo
     !$OMP END DO
     !$OMP END PARALLEL
-    return
   end subroutine gaussel
   !
   subroutine gaussel_periodic(nx,ny,n,a,b,c,lambdaxy,p)
@@ -123,7 +121,6 @@ module mod_solver
     enddo
     !$OMP END DO
     !$OMP END PARALLEL
-    return
   end subroutine gaussel_periodic
   subroutine dgtsv_homebrewed(n,a,b,c,p)
     implicit none
@@ -156,6 +153,5 @@ module mod_solver
     do l=n-1,1,-1
       p(l) = p(l) - d(l)*p(l+1)
     enddo
-    return
   end subroutine dgtsv_homebrewed
 end module mod_solver
