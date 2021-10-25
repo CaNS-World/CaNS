@@ -1,6 +1,6 @@
 module mod_bound
   use mpi
-  use mod_common_mpi, only: ierr,status,comm_cart,left,right,front,back,xhalo,yhalo
+  use mod_common_mpi, only: ierr,comm_cart,halo
   use mod_types
   implicit none
   private
@@ -20,43 +20,45 @@ module mod_bound
     real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
     logical :: impose_norm_bc
     !
-    call updthalo([n(1),n(2)],1,u)
-    call updthalo([n(1),n(2)],2,u)
-    call updthalo([n(1),n(2)],1,v)
-    call updthalo([n(1),n(2)],2,v)
-    call updthalo([n(1),n(2)],1,w)
-    call updthalo([n(1),n(2)],2,w)
+    do idir = 1,3
+      call updthalo(1,halo(idir),nb(:,idir),idir,u)
+      call updthalo(1,halo(idir),nb(:,idir),idir,v)
+      call updthalo(1,halo(idir),nb(:,idir),idir,w)
+    enddo
     !
     impose_norm_bc = (.not.is_correc).or.(cbc(0,1,1)//cbc(1,1,1).eq.'PP')
-    if(left .eq.MPI_PROC_NULL) then
+    if(is_bound(0,1)) then
       if(impose_norm_bc) call set_bc(cbc(0,1,1),0,n(1),1,.false.,bc(0,1,1),dl(1),u)
                          call set_bc(cbc(0,1,2),0,n(1),1,.true. ,bc(0,1,2),dl(1),v)
                          call set_bc(cbc(0,1,3),0,n(1),1,.true. ,bc(0,1,3),dl(1),w)
     endif
-    if(right.eq.MPI_PROC_NULL) then
+    if(is_bound(1,1)) then
       if(impose_norm_bc) call set_bc(cbc(1,1,1),1,n(1),1,.false.,bc(1,1,1),dl(1),u)
                          call set_bc(cbc(1,1,2),1,n(1),1,.true. ,bc(1,1,2),dl(1),v)
                          call set_bc(cbc(1,1,3),1,n(1),1,.true. ,bc(1,1,3),dl(1),w)
     endif
     impose_norm_bc = (.not.is_correc).or.(cbc(0,2,2)//cbc(1,2,2).eq.'PP')
-    if(front.eq.MPI_PROC_NULL) then
+    if(is_bound(0,2)) then
                          call set_bc(cbc(0,2,1),0,n(2),2,.true. ,bc(0,2,1),dl(2),u)
       if(impose_norm_bc) call set_bc(cbc(0,2,2),0,n(2),2,.false.,bc(0,2,2),dl(2),v)
                          call set_bc(cbc(0,2,3),0,n(2),2,.true. ,bc(0,2,3),dl(2),w)
      endif
-    if(back .eq.MPI_PROC_NULL) then
+    if(is_bound(1,2)) then
                          call set_bc(cbc(1,2,1),1,n(2),2,.true. ,bc(1,2,1),dl(2),u)
       if(impose_norm_bc) call set_bc(cbc(1,2,2),1,n(2),2,.false.,bc(1,2,2),dl(2),v)
                          call set_bc(cbc(1,2,3),1,n(2),2,.true. ,bc(1,2,3),dl(2),w)
     endif
     impose_norm_bc = (.not.is_correc).or.(cbc(0,3,3)//cbc(1,3,3).eq.'PP')
-                       call set_bc(cbc(0,3,1),0,n(3),3,.true. ,bc(0,3,1),dzc(0)   ,u)
-                       call set_bc(cbc(0,3,2),0,n(3),3,.true. ,bc(0,3,2),dzc(0)   ,v)
-    if(impose_norm_bc) call set_bc(cbc(0,3,3),0,n(3),3,.false.,bc(0,3,3),dzf(0)   ,w)
-                       call set_bc(cbc(1,3,1),1,n(3),3,.true. ,bc(1,3,1),dzc(n(3)),u)
-                       call set_bc(cbc(1,3,2),1,n(3),3,.true. ,bc(1,3,2),dzc(n(3)),v)
-    if(impose_norm_bc) call set_bc(cbc(1,3,3),1,n(3),3,.false.,bc(1,3,3),dzf(n(3)),w)
-    return
+    if(is_bound(0,3)) then
+                         call set_bc(cbc(0,3,1),0,n(3),3,.true. ,bc(0,3,1),dzc(0)   ,u)
+                         call set_bc(cbc(0,3,2),0,n(3),3,.true. ,bc(0,3,2),dzc(0)   ,v)
+      if(impose_norm_bc) call set_bc(cbc(0,3,3),0,n(3),3,.false.,bc(0,3,3),dzf(0)   ,w)
+    endif
+      if(is_bound(1,3)) then
+                         call set_bc(cbc(1,3,1),1,n(3),3,.true. ,bc(1,3,1),dzc(n(3)),u)
+                         call set_bc(cbc(1,3,2),1,n(3),3,.true. ,bc(1,3,2),dzc(n(3)),v)
+      if(impose_norm_bc) call set_bc(cbc(1,3,3),1,n(3),3,.false.,bc(1,3,3),dzf(n(3)),w)
+    endif
   end subroutine bounduvw
   !
   subroutine boundp(cbc,n,bc,dl,dzc,dzf,p)
@@ -88,7 +90,6 @@ module mod_bound
     endif
     call set_bc(cbc(0,3),0,n(3),3,.true.,bc(0,3),dzc(0)   ,p)
     call set_bc(cbc(1,3),1,n(3),3,.true.,bc(1,3),dzc(n(3)),p)
-    return
   end subroutine boundp
   !
   subroutine set_bc(ctype,ibound,n,idir,centered,rvalue,dr,p)
@@ -243,7 +244,6 @@ module mod_bound
         end select
       endif
     end select
-    return
   end subroutine set_bc
   !
   subroutine inflow(n,idir,dl,dzf,vel2d,u,v,w)
@@ -290,7 +290,6 @@ module mod_bound
           enddo
         enddo 
     end select
-    return
   end subroutine inflow
   !
   subroutine updt_rhs_b(c_or_f,cbc,n,rhsbx,rhsby,rhsbz,p)
@@ -330,53 +329,59 @@ module mod_bound
     p(1:n(1),1:n(2),1        ) = p(1:n(1),1:n(2),1        ) + rhsbz(:,:,0)
     p(1:n(1),1:n(2),n(3)-q(3)) = p(1:n(1),1:n(2),n(3)-q(3)) + rhsbz(:,:,1)
     !$OMP END WORKSHARE
-    return
   end subroutine updt_rhs_b
   !
-  subroutine updthalo(n,idir,p)
+  subroutine updthalo(nh,halo,nb,idir,p)
     implicit none
-    integer , dimension(2), intent(in) :: n
+    integer , dimension(3), intent(in) :: lo,hi
+    integer , intent(in) :: nh ! number of ghost points
+    integer , intent(in) :: halo
+    integer , intent(in), dimension(0:1) :: nb
     integer , intent(in) :: idir
-    real(rp), dimension(0:,0:,0:), intent(inout) :: p
-    !integer :: requests(4), statuses(MPI_STATUS_SIZE,4)
+    real(rp), dimension(1-nh:,1-nh:,1-nh:), intent(inout) :: p
+    integer , dimension(3) :: lo,hi
+    !type(MPI_REQUEST) :: requests(4)
     !
-    !  this subroutine updates the halos that store info
+    !  this subroutine updates the halo that store info
     !  from the neighboring computational sub-domain
     !
+    lo(:) = lbound(p)+nh
+    hi(:) = ubound(p)-nh
     select case(idir)
     case(1) ! x direction
-      call MPI_SENDRECV(p(1     ,0,0),1,xhalo,left ,0, &
-                        p(n(1)+1,0,0),1,xhalo,right,0, &
-                        comm_cart,status,ierr)
-      call MPI_SENDRECV(p(n(1),0,0),1,xhalo,right,0, &
-                        p(0   ,0,0),1,xhalo,left ,0, &
-                        comm_cart,status,ierr)
-         !call MPI_IRECV(p(0     ,0,0),1,xhalo,left ,1, &
-         !               comm_cart,requests(2),error)
-         !call MPI_IRECV(p(n(1)+1,0,0),1,xhalo,right,0, &
-         !               comm_cart,requests(1),error)
-         !call MPI_ISSEND(p(n(1),0,0),1,xhalo,right,1, &
-         !               comm_cart,requests(4),error)
-         !call MPI_ISSEND(p(1   ,0,0),1,xhalo,left ,0, &
-         !               comm_cart,requests(3),error)
-         !call MPI_WAITALL(4, requests, statuses, error)
+      call MPI_SENDRECV(p(lo(1)     ,lo(2)-nh,lo(3)-nh),1,halo,nb(0),0, &
+                        p(hi(1)+1   ,lo(2)-nh,lo(3)-nh),1,halo,nb(1),0, &
+                        MPI_COMM_WORLD,MPI_STATUS_IGNORE)
+      call MPI_SENDRECV(p(hi(1)-nh+1,lo(2)-nh,lo(3)-nh),1,halo,nb(1),0, &
+                        p(lo(1)-nh  ,lo(2)-nh,lo(3)-nh),1,halo,nb(0),0, &
+                        MPI_COMM_WORLD,MPI_STATUS_IGNORE)
+      !call MPI_IRECV( p(hi(1)+1   ,lo(2)-nh,lo(3)-nh),1,halo,nb(1),0, &
+      !                MPI_COMM_WORLD,requests(1))
+      !call MPI_IRECV( p(lo(1)-nh  ,lo(2)-nh,lo(3)-nh),1,halo,nb(0),1, &
+      !                MPI_COMM_WORLD,requests(2))
+      !call MPI_ISSEND(p(lo(1)     ,lo(2)-nh,lo(3)-nh),1,halo,nb(0),0, &
+      !                MPI_COMM_WORLD,requests(3))
+      !call MPI_ISSEND(p(hi(1)-nh+1,lo(2)-nh,lo(3)-nh),1,halo,nb(1),1, &
+      !                MPI_COMM_WORLD,requests(4))
+      !call MPI_WAITALL(4,requests,MPI_STATUSES_IGNORE)
     case(2) ! y direction
-      call MPI_SENDRECV(p(0,1     ,0),1,yhalo,front,0, &
-                        p(0,n(2)+1,0),1,yhalo,back ,0, &
-                        comm_cart,status,ierr)
-      call MPI_SENDRECV(p(0,n(2),0),1,yhalo,back ,0, &
-                        p(0,0   ,0),1,yhalo,front,0, &
-                        comm_cart,status,ierr)
-         !call MPI_IRECV(p(0,n(2)+1,0),1,yhalo,back ,0, &
-         !               comm_cart,requests(1),error)
-         !call MPI_IRECV(p(0,0     ,0),1,yhalo,front,1, &
-         !               comm_cart,requests(2),error)
-         !call MPI_ISSEND(p(0,1   ,0),1,yhalo,front,0, &
-         !               comm_cart,requests(3),error)
-         !call MPI_ISSEND(p(0,n(2),0),1,yhalo,back ,1, &
-         !               comm_cart,requests(4),error)
-         !call MPI_WAITALL(4, requests, statuses, error)
-    end select
-    return
-  end subroutine updthalo
+      call MPI_SENDRECV(p(lo(1)-nh,lo(2)     ,lo(3)-nh),1,halo,nb(0),0, &
+                        p(lo(1)-nh,hi(2)+1   ,lo(3)-nh),1,halo,nb(1),0, &
+                        MPI_COMM_WORLD,MPI_STATUS_IGNORE)
+      call MPI_SENDRECV(p(lo(1)-nh,hi(2)-nh+1,lo(3)-nh),1,halo,nb(1),0, &
+                        p(lo(1)-nh,lo(2)-nh  ,lo(3)-nh),1,halo,nb(0),0, &
+                        MPI_COMM_WORLD,MPI_STATUS_IGNORE)
+      !call MPI_IRECV( p(lo(1)-nh,hi(2)+1   ,lo(3)-nh),1,halo,nb(1),0, &
+      !                MPI_COMM_WORLD,requests(1))
+      !call MPI_IRECV( p(lo(1)-nh,lo(2)-nh  ,lo(3)-nh),1,halo,nb(0),1, &
+      !                MPI_COMM_WORLD,requests(2))
+      !call MPI_ISSEND(p(lo(1)-nh,lo(2)     ,lo(3)-nh),1,halo,nb(0),0, &
+      !                MPI_COMM_WORLD,requests(3))
+      !call MPI_ISSEND(p(lo(1)-nh,hi(2)-nh+1,lo(3)-nh),1,halo,nb(1),1, &
+      !                MPI_COMM_WORLD,requests(4))
+      !call MPI_WAITALL(4,requests,MPI_STATUSES_IGNORE)
+    case(3) ! z direction
+      call MPI_SENDRECV(p(lo(1)-nh,lo(2)-nh,lo(3)     ),1,halo,nb(0),0, &
+                        p(lo(1)-nh,lo(2)-nh,hi(3)+1   ),1,halo,nb(1),0, &
+                        MPI_COMM_WORLD,MPI_STATUS_IGNORE)
 end module mod_bound
