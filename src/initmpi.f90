@@ -2,7 +2,7 @@ module mod_initmpi
   use mpi
   use decomp_2d
   use mod_param     , only: dims
-  use mod_common_mpi, only: myid,nb,halo,ierr
+  use mod_common_mpi, only: comm_cart,myid,ierr,halo,ipencil
   use mod_types
   implicit none
   private
@@ -16,7 +16,7 @@ module mod_initmpi
     integer, intent(out), dimension(0:1,3) :: nb
     logical, intent(out), dimension(0:1,3) :: is_bound
     logical, dimension(3) :: periods
-    integer :: l
+    integer :: l1,l2,l
     !
     periods(:) = .false.
     if( bc(0,1)//bc(1,1).eq.'PP' ) periods(1) = .true.
@@ -52,7 +52,7 @@ module mod_initmpi
     is_bound(:,:) = .false.
     where(nb(:,:).eq.MPI_PROC_NULL) is_bound(:,:) = .true.
     do l=1,3
-      call makehalo(l,1,hi(l)-lo(l)+1,halo(l))
+      call makehalo(l,1,hi(:)-lo(:)+1,halo(l))
     enddo
   end subroutine initmpi
   subroutine makehalo(idir,nh,n,halo)
@@ -64,12 +64,12 @@ module mod_initmpi
     nn(:) = n(:) + 2*nh
     select case(idir)
     case(1)
-      call MPI_TYPE_VECTOR(nn(2)*nn(3),nh            ,nn(1)            ,MPI_REAL_RP,halo)
+      call MPI_TYPE_VECTOR(nn(2)*nn(3),nh            ,nn(1)            ,MPI_REAL_RP,halo,ierr)
     case(2)
-      call MPI_TYPE_VECTOR(      nn(3),nh*nn(1)      ,nn(1)*nn(2)      ,MPI_REAL_RP,halo)
+      call MPI_TYPE_VECTOR(      nn(3),nh*nn(1)      ,nn(1)*nn(2)      ,MPI_REAL_RP,halo,ierr)
     case(3)
-      call MPI_TYPE_VECTOR(          1,nh*nn(1)*nn(2),nn(1)*nn(2)*nn(3),MPI_REAL_RP,halo)
+      call MPI_TYPE_VECTOR(          1,nh*nn(1)*nn(2),nn(1)*nn(2)*nn(3),MPI_REAL_RP,halo,ierr)
     end select
-    call MPI_TYPE_COMMIT(halo)
+    call MPI_TYPE_COMMIT(halo,ierr)
   end subroutine makehalo
 end module mod_initmpi

@@ -2,15 +2,13 @@ module mod_solver
   use iso_c_binding, only: C_PTR
   use decomp_2d
   use mod_fft   , only: fft
-  use mod_param , only: dims
   use mod_types
   implicit none
   private
   public solver
   contains
-  subroutine solver(n,arrplan,normfft,lambdaxy,a,b,c,bcz,c_or_f,p)
+  subroutine solver(arrplan,normfft,lambdaxy,a,b,c,bcz,c_or_f,p)
     implicit none
-    integer , intent(in), dimension(3) :: n
     type(C_PTR), intent(in), dimension(2,2) :: arrplan
     real(rp), intent(in) :: normfft
     real(rp), intent(in), dimension(n(1),n(2)) :: lambdaxy
@@ -18,23 +16,31 @@ module mod_solver
     character(len=1), dimension(0:1), intent(in) :: bcz
     character(len=1), intent(in), dimension(3) :: c_or_f
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
-    real(rp), dimension(n(1)*dims(1),n(2)*dims(2)/dims(1),n(3)/dims(2)) :: px
-    real(rp), dimension(n(1)*dims(1)/dims(1),n(2)*dims(2),n(3)/dims(2)) :: py
-    real(rp), dimension(n(1)        ,n(2)                ,n(3)        ) :: pz
-    !real(rp), allocatable, dimension(:,:,:) :: px,py
-    integer , dimension(3) :: ng
+    real(rp), dimension(xsize(1),xsize(2),xsize(3)) :: px
+    real(rp), dimension(ysize(1),ysize(2),ysize(3)) :: py
+    real(rp), dimension(zsize(1),zsize(2),zsize(3)) :: pz
     integer :: q
-    ng(:) = n(:)
-    ng(1:2) = ng(1:2)*dims(1:2)
-    !allocate(px(ng(1),ng(2)/dims(1),ng(3)/dims(2)))
-    !allocate(py(ng(1)/dims(1),ng(2),ng(3)/dims(2)))
+    integer, dimension(3) :: n,n_z
     !
+    n(:) = size(p) - 2*1
+    n_z(:) = zsize(:)
+#ifdef DECOMP_X
+    !$OMP WORKSHARE
+    px(:,:,:) = p(1:n(1),1:n(2),1:n(3))
+    !$OMP END WORKSHARE
+#elif DECOMP_Y
+    !$OMP WORKSHARE
+    py(:,:,:) = p(1:n(1),1:n(2),1:n(3))
+    !$OMP END WORKSHARE
+    call transpose_y_to_x(py,px)
+#else /*DECOMP_Z*/
     !$OMP WORKSHARE
     pz(:,:,:) = p(1:n(1),1:n(2),1:n(3))
     !$OMP END WORKSHARE
     call transpose_z_to_x(pz,px)
     !call transpose_z_to_y(pz,py)
     !call transpose_y_to_x(py,px)
+#endif
     call fft(arrplan(1,1),px) ! fwd transform in x
     !
     call transpose_x_to_y(px,py)
@@ -44,9 +50,9 @@ module mod_solver
     q = 0
     if(c_or_f(3).eq.'f'.and.bcz(1).eq.'D') q = 1
     if(bcz(0)//bcz(1).eq.'PP') then
-      call gaussel_periodic(n(1),n(2),n(3)-q,a,b,c,lambdaxy,pz)
+      call gaussel_periodic(n_z(1),n_z(2),n_z(3)-q,a,b,c,lambdaxy,pz)
     else
-      call gaussel(         n(1),n(2),n(3)-q,a,b,c,lambdaxy,pz)
+      call gaussel(         n_z(1),n_z(2),n_z(3)-q,a,b,c,lambdaxy,pz)
     endif
     !
     call transpose_z_to_y(pz,py)
@@ -55,14 +61,23 @@ module mod_solver
     call transpose_y_to_x(py,px)
     call fft(arrplan(2,1),px) ! bwd transform in x
     !
+#ifdef DECOMP_X
+    !$OMP WORKSHARE
+    p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)*normfft
+    !$OMP END WORKSHARE
+#elif DECOMP_Y
+    call transpose_x_to_y(px,py)
+    !$OMP WORKSHARE
+    p(1:n(1),1:n(2),1:n(3)) = py(:,:,:)*normfft
+    !$OMP END WORKSHARE
+#else /*DECOMP_Z*/
     call transpose_x_to_z(px,pz)
     !call transpose_x_to_y(px,py)
     !call transpose_y_to_z(py,pz)
     !$OMP WORKSHARE
-    pz(:,:,:) = pz(:,:,:)*normfft
-    p(1:n(1),1:n(2),1:n(3)) = pz(:,:,:)
+    p(1:n(1),1:n(2),1:n(3)) = pz(:,:,:)*normfft
     !$OMP END WORKSHARE
-    !deallocate(px,py)
+#endif
   end subroutine solver
   !
   subroutine gaussel(nx,ny,n,a,b,c,lambdaxy,p)

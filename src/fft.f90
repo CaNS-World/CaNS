@@ -1,23 +1,21 @@
 module mod_fft
   use iso_c_binding , only: C_INT
-  use decomp_2d, only: xsize,ysize
   use mod_common_mpi, only: ierr
   use mod_fftw_param
-  use mod_param     , only:dims
   use mod_types
   !$ use omp_lib
   private
   public fftini,fftend,fft
   contains
-  subroutine fftini(nx,ny,nz,bcxy,c_or_f,arrplan,normfft)
+  subroutine fftini(n_x,n_y,bcxy,c_or_f,arrplan,normfft)
     implicit none
-    integer, intent(in) :: nx,ny,nz
+    integer, intent(in), dimension(3) :: n_x,n_y
     character(len=1), intent(in), dimension(0:1,2) :: bcxy
     character(len=1), intent(in), dimension(2) :: c_or_f
     type(C_PTR), intent(out), dimension(2,2) :: arrplan
     real(rp), intent(out) :: normfft
-    real(rp), dimension(nx,ny/dims(1),nz/dims(2))  :: arrx
-    real(rp), dimension(nx/dims(1),ny,nz/dims(2))  :: arry
+    real(rp), dimension(n_x(1),n_x(2),n_x(3))  :: arrx
+    real(rp), dimension(n_y(1),n_y(2),n_y(3))  :: arry
     type(C_PTR) :: plan_fwd_x,plan_bwd_x, &
                    plan_fwd_y,plan_bwd_y
     type(fftw_iodim), dimension(1) :: iodim
@@ -39,12 +37,12 @@ module mod_fft
     !
     ! prepare plans with guru interface
     !
-    nx_x = xsize(1)
-    ny_x = xsize(2)
-    nz_x = xsize(3)
-    nx_y = ysize(1)
-    ny_y = ysize(2)
-    nz_y = ysize(3)
+    nx_x = n_x(1)
+    ny_x = n_x(2)
+    nz_x = n_x(3)
+    nx_y = n_y(1)
+    ny_y = n_y(2)
+    nz_y = n_y(3)
     !
     normfft = 1.
     ix = 0 

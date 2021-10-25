@@ -1,20 +1,20 @@
 module mod_initflow
   use mpi
   use decomp_2d
-  use mod_common_mpi, only: ierr,coord,myid
+  use mod_common_mpi, only: ierr,myid
   use mod_param     , only: dims,pi,dx,dy,dz,lx,ly,lz,uref,lref,is_wallturb,bforce
   use mod_types
   implicit none
   private
   public initflow,add_noise
   contains
-  subroutine initflow(inivel,n,zclzi,dzclzi,dzflzi,visc,u,v,w,p)
+  subroutine initflow(inivel,ng,lo,zclzi,dzclzi,dzflzi,visc,u,v,w,p)
     !
     ! computes initial conditions for the velocity field
     !
     implicit none
     character(len=3), intent(in) :: inivel
-    integer , intent(in), dimension(3) :: n
+    integer , intent(in), dimension(3) :: ng,lo
     real(rp), intent(in), dimension(0:) :: zclzi,dzclzi,dzflzi
     real(rp), intent(in) :: visc
     real(rp), dimension(0:,0:,0:), intent(out) :: u,v,w,p
@@ -26,7 +26,9 @@ module mod_initflow
     real(rp) :: xc,yc,zc,xf,yf,zf
     real(rp) :: reb,retau
     real(rp) :: ubulk
+    integer, dimension(3) :: n
     !
+    n(:) = size(p) - 2*1
     allocate(u1d(n(3)))
     is_noise = .false.
     is_mean  = .false.
@@ -60,11 +62,11 @@ module mod_initflow
       do k=1,n(3)
         zc = zclzi(k)*2.*pi
         do j=1,n(2)
-          yc = (j+coord(2)*n(2)-.5)*dy/ly*2.*pi
-          yf = (j+coord(2)*n(2)-.0)*dy/ly*2.*pi
+          yc = (j+lo(2)-1-.5)*dy/ly*2.*pi
+          yf = (j+lo(2)-1-.0)*dy/ly*2.*pi
           do i=1,n(1)
-            xc = (i+coord(1)*n(1)-.5)*dx/lx*2.*pi
-            xf = (i+coord(1)*n(1)-.0)*dx/lx*2.*pi
+            xc = (i+lo(1)-1-.5)*dx/lx*2.*pi
+            xf = (i+lo(1)-1-.0)*dx/lx*2.*pi
             u(i,j,k) =  sin(xf)*cos(yc)*cos(zc)*uref
             v(i,j,k) = -cos(xc)*sin(yf)*cos(zc)*uref
             w(i,j,k) = 0.
@@ -104,12 +106,12 @@ module mod_initflow
       enddo
     endif
     if(is_noise) then
-      call add_noise(n,123,.5_rp,u(1:n(1),1:n(2),1:n(3)))
-      call add_noise(n,456,.5_rp,v(1:n(1),1:n(2),1:n(3)))
-      call add_noise(n,789,.5_rp,w(1:n(1),1:n(2),1:n(3)))
+      call add_noise(ng,lo,123,.5_rp,u(1:n(1),1:n(2),1:n(3)))
+      call add_noise(ng,lo,456,.5_rp,v(1:n(1),1:n(2),1:n(3)))
+      call add_noise(ng,lo,789,.5_rp,w(1:n(1),1:n(2),1:n(3)))
     endif
     if(is_mean) then
-      call set_mean(n,ubulk,dzflzi,u(1:n(1),1:n(2),1:n(3)))
+      call set_mean(n,ubulk,dzflzi*(dx/lx)*(dy/ly),u(1:n(1),1:n(2),1:n(3)))
     endif
     if(is_wallturb) is_pair = .true.
     if(is_pair) then
@@ -127,11 +129,11 @@ module mod_initflow
         zc = 2.*zclzi(k) - 1. ! z rescaled to be between -1 and +1
         zf = 2.*(zclzi(k) + .5*dzflzi(k)) - 1.
         do j=1,n(2)
-          yc = ((coord(2)*n(2)+j-0.5)*dy-.5*ly)*2./lz
-          yf = ((coord(2)*n(2)+j-0.0)*dy-.5*ly)*2./lz
+          yc = ((lo(2)-1+j-0.5)*dy-.5*ly)*2./lz
+          yf = ((lo(2)-1+j-0.0)*dy-.5*ly)*2./lz
           do i=1,n(1)
-            xc = ((coord(1)*n(1)+i-0.5)*dx-.5*lx)*2./lz
-            xf = ((coord(1)*n(1)+i-0.0)*dx-.5*lx)*2./lz
+            xc = ((lo(1)-1+i-0.5)*dx-.5*lx)*2./lz
+            xf = ((lo(1)-1+i-0.0)*dx-.5*lx)*2./lz
             !u(i,j,k) = u1d(k)
             v(i,j,k) = -1. * gxy(yf,xc)*dfz(zc) * ubulk * 1.5
             w(i,j,k) =  1. * fz(zf)*dgxy(yc,xc) * ubulk * 1.5
@@ -148,11 +150,11 @@ module mod_initflow
       !  zc = (zclzi(k)              )*2.*pi
       !  zf = (zclzi(k)+0.5*dzclzi(k))*2.*pi
       !  do j=1,n(2)
-      !    yc = (j+coord(2)*n(2)-.5)*dy/ly*2.*pi
-      !    yf = (j+coord(2)*n(2)-.0)*dy/ly*2.*pi
+      !    yc = (j+lo(2)-1-.5)*dy/ly*2.*pi
+      !    yf = (j+lo(2)-1-.0)*dy/ly*2.*pi
       !    do i=1,n(1)
-      !      xc = (i+coord(1)*n(1)-.5)*dx/lx*2.*pi
-      !      xf = (i+coord(1)*n(1)-.0)*dx/lx*2.*pi
+      !      xc = (i+lo(1)-1-.5)*dx/lx*2.*pi
+      !      xf = (i+lo(1)-1-.0)*dx/lx*2.*pi
       !      !u(i,j,k) = u1d(k)
       !      v(i,j,k) =  sin(xc)*cos(yf)*cos(zc)*ubulk
       !      w(i,j,k) = -cos(xc)*sin(yc)*cos(zf)*ubulk
@@ -164,65 +166,66 @@ module mod_initflow
     deallocate(u1d)
   end subroutine initflow
   !
-  subroutine add_noise(n,iseed,norm,p)
+  subroutine add_noise(ng,lo,iseed,norm,p)
     implicit none
-    integer , intent(in), dimension(3) :: n
+    integer , intent(in), dimension(3) :: ng,lo
     integer , intent(in) :: iseed
     real(rp), intent(in) :: norm 
-    real(rp), intent(inout), dimension(n(1),n(2),n(3)) :: p
+    real(rp), intent(inout), dimension(:,:,:) :: p
     integer(4), allocatable, dimension(:) :: seed
     real(rp) :: rn
-    integer, dimension(3) :: ng
-    integer :: i,j,k,ii,jj
+    integer, dimension(3) :: n
+    integer :: i,j,k,ii,jj,kk
+    !
+    n(:) = size(p)
     allocate(seed(64))
     seed(:) = iseed
     call random_seed( put = seed )
-    ng(:) = n(:)
-    ng(1:2) = ng(1:2)*dims(1:2)
     do k=1,ng(3)
+      kk = k-(lo(3)-1)
       do j=1,ng(2)
-        jj = j-coord(2)*n(2)
+        jj = j-(lo(2)-1)
         do i=1,ng(1)
-          ii = i-coord(1)*n(1)
+          ii = i-(lo(1)-1)
           call random_number(rn)
           if(ii.ge.1.and.ii.le.n(1) .and. &
-             jj.ge.1.and.jj.le.n(2) ) then
-             p(ii,jj,k) = p(ii,jj,k) + 2.*(rn-.5)*norm
+             jj.ge.1.and.jj.le.n(2) .and. &
+             kk.ge.1.and.kk.le.n(3) ) then
+             p(ii,jj,kk) = p(ii,jj,kk) + 2.*(rn-.5)*norm
           endif
         enddo
       enddo
     enddo
   end subroutine add_noise
   !
-  subroutine set_mean(n,mean,dzlzi,p)
+  subroutine set_mean(n,mean,grid_vol_ratio,p)
   implicit none
   integer , intent(in), dimension(3) :: n
-  real(rp), intent(in), dimension(0:) :: dzlzi 
+  real(rp), intent(in), dimension(0:) :: grid_vol_ratio
   real(rp), intent(in) :: mean
-  real(rp), intent(inout), dimension(n(1),n(2),n(3)) :: p
+  real(rp), intent(inout), dimension(:,:,:) :: p
   real(rp) :: meanold
   integer :: i,j,k
-    meanold = 0.
-    !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP SHARED(n,p,dzlzi) &
-    !$OMP PRIVATE(i,j,k) &
-    !$OMP REDUCTION(+:meanold)
-    do k=1,n(3)
-      do j=1,n(2)
-        do i=1,n(1)
-          meanold = meanold + p(i,j,k)*dzlzi(k)
-        enddo
+  meanold = 0.
+  !$OMP PARALLEL DO DEFAULT(none) &
+  !$OMP SHARED(n,p,dzlzi) &
+  !$OMP PRIVATE(i,j,k) &
+  !$OMP REDUCTION(+:meanold)
+  do k=1,n(3)
+    do j=1,n(2)
+      do i=1,n(1)
+        meanold = meanold + p(i,j,k)*grid_vol_ratio(k)
       enddo
     enddo
-    !$OMP END PARALLEL DO
-    call mpi_allreduce(MPI_IN_PLACE,meanold,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-    meanold = meanold/(1.*n(1)*dims(1)*n(2)*dims(2))
-    !
-    if(meanold.ne.0.) then
-      !$OMP WORKSHARE
-      p(:,:,:) = p(:,:,:)/meanold*mean
-      !$OMP END WORKSHARE
-    endif
+  enddo
+  !$OMP END PARALLEL DO
+  call mpi_allreduce(MPI_IN_PLACE,meanold,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+  !
+  if(meanold.ne.0.) then
+    !$OMP WORKSHARE
+    p(:,:,:) = p(:,:,:)/meanold*mean
+    !$OMP END WORKSHARE
+  endif
   end subroutine set_mean
   !
   subroutine couette(q,n,zc,norm,p)

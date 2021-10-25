@@ -15,10 +15,10 @@ module mod_fillps
     !          dz                    dy                    dx
     !
     implicit none
-    integer , intent(in), dimension(3) :: n
-    real(rp), intent(in), dimension(3) :: dli
-    real(rp), intent(in), dimension(0:) :: dzfi
-    real(rp), intent(in) :: dti
+    integer , intent(in ), dimension(3) :: n
+    real(rp), intent(in ), dimension(3) :: dli
+    real(rp), intent(in ), dimension(0:) :: dzfi
+    real(rp), intent(in ) :: dti
     real(rp), intent(in ), dimension(0:,0:,0:) :: up,vp,wp
     real(rp), intent(out), dimension(0:,0:,0:) :: p
     real(rp) :: dtidxi,dtidyi!,dtidzi
