@@ -31,7 +31,6 @@ module mod_initsolver
     integer :: i,j
     real(rp), dimension(ng(1))      :: lambdax
     real(rp), dimension(ng(2))      :: lambday
-    integer, dimension(3) :: ng
     !
     ! generating eigenvalues consistent with the BCs
     !
