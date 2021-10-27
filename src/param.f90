@@ -32,17 +32,19 @@ integer :: icheck,iout0d,iout1d,iout2d,iout3d,isave
 integer, dimension(2) :: dims
 integer :: nthreadsmax
 !
+integer, dimension(0:1,3) :: nb
+logical, dimension(0:1,3) :: is_bound
 character(len=1), dimension(0:1,3,3) ::  cbcvel
-real(rp)         , dimension(0:1,3,3) :: bcvel
+real(rp)        , dimension(0:1,3,3) :: bcvel
 character(len=1), dimension(0:1,3)   ::  cbcpre
-real(rp)         , dimension(0:1,3)   ::   bcpre
+real(rp)        , dimension(0:1,3)   ::   bcpre
 !
 real(rp), dimension(3) :: bforce
 logical , dimension(3) :: is_forced
 real(rp), dimension(3) :: velf
 !
 integer , dimension(3) :: ng
-integer , dimension(3) :: n
+integer , dimension(3) :: n,n_z,lo,hi
 real(rp), dimension(3) :: l
 real(rp), dimension(3) :: dl
 real(rp), dimension(3) :: dli

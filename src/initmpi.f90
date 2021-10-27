@@ -8,11 +8,11 @@ module mod_initmpi
   private
   public initmpi
   contains
-  subroutine initmpi(n,bc,lo,hi,nb,is_bound)
+  subroutine initmpi(n,bc,n_z,lo,hi,nb,is_bound)
     implicit none
     integer, intent(in), dimension(3) :: n
     character(len=1), intent(in ), dimension(0:1,3) :: bc
-    integer, intent(out), dimension(3    ) :: lo,hi
+    integer, intent(out), dimension(3    ) :: n_z,lo,hi
     integer, intent(out), dimension(0:1,3) :: nb
     logical, intent(out), dimension(0:1,3) :: is_bound
     logical, dimension(3) :: periods
@@ -24,6 +24,7 @@ module mod_initmpi
     if( bc(0,3)//bc(1,3).eq.'PP' ) periods(3) = .true.
     call decomp_2d_init(n(1),n(2),n(3),dims(1),dims(2),periods)
     myid = nrank
+    n_z(:) = zsize(:)
 #ifdef DECOMP_X
     ipencil=1
     l1 = 2

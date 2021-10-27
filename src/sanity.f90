@@ -19,14 +19,15 @@ module mod_sanity
   private
   public test_sanity
   contains
-  subroutine test_sanity(ng,n,dims,stop_type,cbcvel,cbcpre,bcvel,bcpre,is_forced, &
-                         nb,is_bound,dli,dzci,dzfi)
+  subroutine test_sanity(ng,dims,n,n_z,lo,hi,stop_type,cbcvel,cbcpre,bcvel,bcpre,is_forced, &
+                         nb,is_bound,dli,dzci_g,dzfi_g,dzci,dzfi)
     !
     ! performs some a priori checks of the input files before the calculation starts
     !
     implicit none
-    integer , intent(in), dimension(3) :: ng,n
+    integer , intent(in), dimension(3) :: ng
     integer , intent(in), dimension(2) :: dims
+    integer , intent(in), dimension(3) :: n,n_z,lo,hi
     logical , intent(in), dimension(3) :: stop_type
     character(len=1), intent(in), dimension(0:1,3,3)  :: cbcvel
     character(len=1), intent(in), dimension(0:1,3)    :: cbcpre
@@ -36,15 +37,15 @@ module mod_sanity
     integer , intent(in), dimension(0:1,3)            :: nb
     logical , intent(in), dimension(0:1,3)            :: is_bound
     real(rp), intent(in), dimension(3)                :: dli
-    real(rp), intent(in), dimension(0:)               :: dzci,dzfi
+    real(rp), intent(in), dimension(0:)               :: dzci,dzfi,dzci_g,dzfi_g
     logical :: passed
     !
     call chk_dims(ng,dims,passed);                 if(.not.passed) call abortit
     call chk_stop_type(stop_type,passed);          if(.not.passed) call abortit
     call chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed); if(.not.passed) call abortit
     call chk_forcing(cbcpre,is_forced  ,passed);   if(.not.passed) call abortit 
-    !call chk_solvers(n,dli,dzci,dzfi,cbcvel,cbcpre,bcvel,bcpre,passed)
-    !if(.not.passed) call abortit
+    call chk_solvers(ng,n,n_z,lo,hi,dli,dzci_g,dzfi_g,dzci,dzfi,nb,is_bound,cbcvel,cbcpre,bcvel,bcpre,passed)
+    if(.not.passed) call abortit
   end subroutine test_sanity
   !
   subroutine chk_stop_type(stop_type,passed)
