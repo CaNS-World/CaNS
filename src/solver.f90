@@ -11,8 +11,8 @@ module mod_solver
     implicit none
     type(C_PTR), intent(in), dimension(2,2) :: arrplan
     real(rp), intent(in) :: normfft
-    real(rp), intent(in), dimension(n(1),n(2)) :: lambdaxy
-    real(rp), intent(in), dimension(n(3)) :: a,b,c
+    real(rp), intent(in), dimension(:,:) :: lambdaxy
+    real(rp), intent(in), dimension(:) :: a,b,c
     character(len=1), dimension(0:1), intent(in) :: bcz
     character(len=1), intent(in), dimension(3) :: c_or_f
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
