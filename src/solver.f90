@@ -7,8 +7,9 @@ module mod_solver
   private
   public solver
   contains
-  subroutine solver(arrplan,normfft,lambdaxy,a,b,c,bcz,c_or_f,p)
+  subroutine solver(n,arrplan,normfft,lambdaxy,a,b,c,bcz,c_or_f,p)
     implicit none
+    integer , intent(in), dimension(3) :: n
     type(C_PTR), intent(in), dimension(2,2) :: arrplan
     real(rp), intent(in) :: normfft
     real(rp), intent(in), dimension(:,:) :: lambdaxy
@@ -20,9 +21,8 @@ module mod_solver
     real(rp), dimension(ysize(1),ysize(2),ysize(3)) :: py
     real(rp), dimension(zsize(1),zsize(2),zsize(3)) :: pz
     integer :: q
-    integer, dimension(3) :: n,n_z
+    integer, dimension(3) :: n_z
     !
-    n(:) = size(p) - 2*1
     n_z(:) = zsize(:)
 #ifdef DECOMP_X
     !$OMP WORKSHARE

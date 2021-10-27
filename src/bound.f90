@@ -12,7 +12,7 @@ module mod_bound
     !
     implicit none
     character(len=1), intent(in), dimension(0:1,3,3) :: cbc
-    integer , intent(in), dimension(3) :: n 
+    integer , intent(in), dimension(3      ) :: n
     real(rp), intent(in), dimension(0:1,3,3) :: bc
     integer , intent(in), dimension(0:1,3  ) :: nb
     logical , intent(in), dimension(0:1,3  ) :: is_bound
@@ -279,7 +279,7 @@ module mod_bound
             do j=1,n(2)
               u(i,j,k) = vel2d(j,k)
             enddo
-          enddo 
+          enddo
         endif
       case(2) ! y direction
         if(is_bound(0,2)) then
@@ -289,7 +289,7 @@ module mod_bound
             do i=1,n(1)
               v(i,j,k) = vel2d(i,k)
             enddo
-          enddo 
+          enddo
         endif
       case(3) ! z direction
         if(is_bound(0,3)) then
@@ -299,27 +299,25 @@ module mod_bound
             do i=1,n(1)
               w(i,j,k) = vel2d(i,j)
             enddo
-          enddo 
+          enddo
         endif
     end select
   end subroutine inflow
   !
-  subroutine updt_rhs_b(c_or_f,cbc,is_bound,rhsbx,rhsby,rhsbz,p)
+  subroutine updt_rhs_b(c_or_f,cbc,n,is_bound,rhsbx,rhsby,rhsbz,p)
     implicit none
     character, intent(in), dimension(3) :: c_or_f
     character(len=1), intent(in), dimension(0:1,3) :: cbc
+    integer , intent(in), dimension(3) :: n
     logical , intent(in), dimension(0:1,3) :: is_bound
     real(rp), intent(in), dimension(:,:,0:) :: rhsbx,rhsby,rhsbz
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
     integer , dimension(3) :: q
     integer :: idir
-    integer :: n(3),nh
     q(:) = 0
     do idir = 1,3
       if(c_or_f(idir).eq.'f'.and.cbc(1,idir).eq.'D') q(idir) = 1
     enddo
-    nh = 1
-    n(:) = size(p) - 2*nh
     if(is_bound(0,1)) then
       !$OMP WORKSHARE
       p(1        ,1:n(2),1:n(3)) = p(1        ,1:n(2),1:n(3)) + rhsbx(:,:,0)
