@@ -160,12 +160,12 @@ program cans
            rhsbw%y(n(1),n(3),0:1), &
            rhsbw%z(n(1),n(2),0:1))
 #endif
-  if(myid.eq.0) print*, '*******************************'
-  if(myid.eq.0) print*, '*** Beginning of simulation ***'
-  if(myid.eq.0) print*, '*******************************'
-  if(myid.eq.0) print*, ''
+  if(myid == 0) print*, '*******************************'
+  if(myid == 0) print*, '*** Beginning of simulation ***'
+  if(myid == 0) print*, '*******************************'
+  if(myid == 0) print*, ''
   call initgrid(inivel,ng(3),gr,lz,dzc_g,dzf_g,zc_g,zf_g)
-  if(myid.eq.0) then
+  if(myid == 0) then
     inquire(iolength=rlen) 1._rp
     open(99,file=trim(datadir)//'grid.bin',access='direct',recl=4*ng(3)*rlen)
     write(99,rec=1) dzc_g(1:ng(3)),dzf_g(1:ng(3)),zc_g(1:ng(3)),zf_g(1:ng(3))
@@ -201,10 +201,10 @@ program cans
     istep = 0
     time = 0.
     call initflow(inivel,ng,lo,zc/lz,dzc/lz,dzf/lz,visc,u,v,w,p)
-    if(myid.eq.0) print*, '*** Initial condition succesfully set ***'
+    if(myid == 0) print*, '*** Initial condition succesfully set ***'
   else
     call load('r',trim(datadir)//'fld.bin',MPI_COMM_WORLD,ng,[1,1,1],lo,hi,u,v,w,p,time,istep)
-    if(myid.eq.0) print*, '*** Checkpoint loaded at time = ', time, 'time step = ', istep, '. ***'
+    if(myid == 0) print*, '*** Checkpoint loaded at time = ', time, 'time step = ', istep, '. ***'
   endif
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
   call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
@@ -221,7 +221,7 @@ program cans
   dwdtrko(:,:,:) = 0.
   call chkdt(n,dl,dzci,dzfi,visc,u,v,w,dtmax)
   dt = min(cfl*dtmax,dtmin)
-  if(myid.eq.0) print*, 'dtmax = ', dtmax, 'dt = ',dt
+  if(myid == 0) print*, 'dtmax = ', dtmax, 'dt = ',dt
   dti = 1./dt
   kill = .false.
   !
@@ -240,7 +240,7 @@ program cans
   !
   ! main loop
   !
-  if(myid.eq.0) print*, '*** Calculation loop starts now ***'
+  if(myid == 0) print*, '*** Calculation loop starts now ***'
   is_done = .false.
   do while(.not.is_done)
 #ifdef TIMING
@@ -248,7 +248,7 @@ program cans
 #endif
     istep = istep + 1
     time = time + dt
-    if(myid.eq.0) print*, 'Timestep #', istep, 'Time = ', time
+    if(myid == 0) print*, 'Timestep #', istep, 'Time = ', time
     dpdl(:)  = 0.
     tauxo(:) = 0.
     tauyo(:) = 0.
@@ -293,7 +293,7 @@ program cans
 #ifdef ONE_PRESS_CORR
       dtrk  = dt
       dtrki = dt**(-1)
-      if(irk.lt.3) then ! pressure correction only at the last RK step
+      if(irk < 3) then ! pressure correction only at the last RK step
         !$OMP WORKSHARE
         u(:,:,:) = up(:,:,:)
         v(:,:,:) = vp(:,:,:)
@@ -338,32 +338,32 @@ program cans
     ! check simulation stopping criteria
     !
     if(stop_type(1)) then ! maximum number of time steps reached
-      if(istep.ge.nstep   ) is_done = is_done.or..true.
+      if(istep >= nstep   ) is_done = is_done.or..true.
     endif
     if(stop_type(2)) then ! maximum simulation time reached
-      if(time .ge.time_max) is_done = is_done.or..true.
+      if(time  >= time_max) is_done = is_done.or..true.
     endif
     if(stop_type(3)) then ! maximum wall-clock time reached
       tw = (MPI_WTIME()-twi)/3600.
-      if(tw   .ge.tw_max  ) is_done = is_done.or..true.
+      if(tw    >= tw_max  ) is_done = is_done.or..true.
     endif
-    if(mod(istep,icheck).eq.0) then
-      if(myid.eq.0) print*, 'Checking stability and divergence...'
+    if(mod(istep,icheck) == 0) then
+      if(myid == 0) print*, 'Checking stability and divergence...'
       call chkdt(n,dl,dzci,dzfi,visc,u,v,w,dtmax)
       dt  = min(cfl*dtmax,dtmin)
-      if(myid.eq.0) print*, 'dtmax = ', dtmax, 'dt = ',dt
-      if(dtmax.lt.small) then
-        if(myid.eq.0) print*, 'ERROR: timestep is too small.'
-        if(myid.eq.0) print*, 'Aborting...'
+      if(myid == 0) print*, 'dtmax = ', dtmax, 'dt = ',dt
+      if(dtmax < small) then
+        if(myid == 0) print*, 'ERROR: timestep is too small.'
+        if(myid == 0) print*, 'Aborting...'
         is_done = .true.
         kill = .true.
       endif
       dti = 1./dt
       call chkdiv(lo,hi,dli,dzfi,u,v,w,divtot,divmax)
-      if(myid.eq.0) print*, 'Total divergence = ', divtot, '| Maximum divergence = ', divmax
-      if(divmax.gt.small.or.divtot.ne.divtot) then
-        if(myid.eq.0) print*, 'ERROR: maximum divergence is too large.'
-        if(myid.eq.0) print*, 'Aborting...'
+      if(myid == 0) print*, 'Total divergence = ', divtot, '| Maximum divergence = ', divmax
+      if(divmax > small.or.divtot.ne.divtot) then
+        if(myid == 0) print*, 'ERROR: maximum divergence is too large.'
+        if(myid == 0) print*, 'Aborting...'
         is_done = .true.
         kill = .true.
       endif
@@ -371,24 +371,24 @@ program cans
     !
     ! output routines below
     !
-    if(mod(istep,iout0d).eq.0) then
+    if(mod(istep,iout0d) == 0) then
       !allocate(var(4))
       var(1) = 1.*istep
       var(2) = dt
       var(3) = time
       call out0d(trim(datadir)//'time.out',3,var)
       !
-      if(any(is_forced(:)).or.any(abs(bforce(:)).gt.0.)) then
+      if(any(is_forced(:)).or.any(abs(bforce(:)) > 0.)) then
         meanvelu = 0.
         meanvelv = 0.
         meanvelw = 0.
-        if(is_forced(1).or.abs(bforce(1)).gt.0.) then
+        if(is_forced(1).or.abs(bforce(1)) > 0.) then
           call chkmean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),up,meanvelu)
         endif
-        if(is_forced(2).or.abs(bforce(2)).gt.0.) then
+        if(is_forced(2).or.abs(bforce(2)) > 0.) then
           call chkmean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),vp,meanvelv)
         endif
-        if(is_forced(3).or.abs(bforce(3)).gt.0.) then
+        if(is_forced(3).or.abs(bforce(3)) > 0.) then
           call chkmean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),wp,meanvelw)
         endif
         if(.not.any(is_forced(:))) dpdl(:) = -bforce(:) ! constant pressure gradient
@@ -400,16 +400,16 @@ program cans
       !deallocate(var)
     endif
     write(fldnum,'(i7.7)') istep
-    if(mod(istep,iout1d).eq.0) then
+    if(mod(istep,iout1d) == 0) then
       include 'out1d.h90'
     endif
-    if(mod(istep,iout2d).eq.0) then
+    if(mod(istep,iout2d) == 0) then
       include 'out2d.h90'
     endif
-    if(mod(istep,iout3d).eq.0) then
+    if(mod(istep,iout3d) == 0) then
       include 'out3d.h90'
     endif
-    if(mod(istep,isave ).eq.0.or.(is_done.and..not.kill)) then
+    if(mod(istep,isave ) == 0.or.(is_done.and..not.kill)) then
       if(is_overwrite_save) then
         filename = 'fld.bin'
       else
@@ -420,17 +420,17 @@ program cans
         !
         ! fld.bin -> last checkpoint file (symbolic link)
         !
-        if(myid.eq.0) call execute_command_line('ln -sf '//trim(filename)//' '//trim(datadir)//'fld.bin')
+        if(myid == 0) call execute_command_line('ln -sf '//trim(filename)//' '//trim(datadir)//'fld.bin')
       endif
-      if(myid.eq.0) print*, '*** Checkpoint saved at time = ', time, 'time step = ', istep, '. ***'
+      if(myid == 0) print*, '*** Checkpoint saved at time = ', time, 'time step = ', istep, '. ***'
     endif
 #ifdef TIMING
       dt12 = MPI_WTIME()-dt12
       call MPI_ALLREDUCE(dt12,dt12av ,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       call MPI_ALLREDUCE(dt12,dt12min,1,MPI_REAL_RP,MPI_MIN,MPI_COMM_WORLD,ierr)
       call MPI_ALLREDUCE(dt12,dt12max,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
-      if(myid.eq.0) print*, 'Avrg, min & max elapsed time: '
-      if(myid.eq.0) print*, dt12av/(1.*product(dims)),dt12min,dt12max
+      if(myid == 0) print*, 'Avrg, min & max elapsed time: '
+      if(myid == 0) print*, dt12av/(1.*product(dims)),dt12min,dt12max
 #endif
   enddo
   !
@@ -458,7 +458,7 @@ program cans
              rhsbv%x,rhsbv%y,rhsbv%z, &
              rhsbw%x,rhsbw%y,rhsbw%z)
 #endif
-  if(myid.eq.0.and.(.not.kill)) print*, '*** Fim ***'
+  if(myid == 0.and.(.not.kill)) print*, '*** Fim ***'
   call decomp_2d_finalize
   call MPI_FINALIZE(ierr)
   stop

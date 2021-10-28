@@ -48,8 +48,8 @@ module mod_solver
     !
     call transpose_y_to_z(py,pz)
     q = 0
-    if(c_or_f(3).eq.'f'.and.bcz(1).eq.'D') q = 1
-    if(bcz(0)//bcz(1).eq.'PP') then
+    if(c_or_f(3) == 'f'.and.bcz(1) == 'D') q = 1
+    if(bcz(0)//bcz(1) == 'PP') then
       call gaussel_periodic(n_z(1),n_z(2),n_z(3)-q,a,b,c,lambdaxy,pz)
     else
       call gaussel(         n_z(1),n_z(2),n_z(3)-q,a,b,c,lambdaxy,pz)

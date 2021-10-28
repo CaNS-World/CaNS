@@ -19,9 +19,9 @@ module mod_initmpi
     integer :: l1,l2,l
     !
     periods(:) = .false.
-    if( bc(0,1)//bc(1,1).eq.'PP' ) periods(1) = .true.
-    if( bc(0,2)//bc(1,2).eq.'PP' ) periods(2) = .true.
-    if( bc(0,3)//bc(1,3).eq.'PP' ) periods(3) = .true.
+    if( bc(0,1)//bc(1,1) == 'PP' ) periods(1) = .true.
+    if( bc(0,2)//bc(1,2) == 'PP' ) periods(2) = .true.
+    if( bc(0,3)//bc(1,3) == 'PP' ) periods(3) = .true.
     call decomp_2d_init(n(1),n(2),n(3),dims(1),dims(2),periods)
     myid = nrank
     n_z(:) = zsize(:)
@@ -51,7 +51,7 @@ module mod_initmpi
     call MPI_CART_SHIFT(comm_cart,0,1,nb(0,l1),nb(1,l1),ierr)
     call MPI_CART_SHIFT(comm_cart,1,1,nb(0,l2),nb(1,l2),ierr)
     is_bound(:,:) = .false.
-    where(nb(:,:).eq.MPI_PROC_NULL) is_bound(:,:) = .true.
+    where(nb(:,:) == MPI_PROC_NULL) is_bound(:,:) = .true.
     do l=1,3
       call makehalo(l,1,hi(:)-lo(:)+1,halo(l))
     enddo

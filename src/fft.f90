@@ -47,7 +47,7 @@ module mod_fft
     normfft = 1.
     ix = 0 
     ! size of transform reduced by 1 point with Dirichlet BC in face
-    if(bcxy(0,1)//bcxy(1,1).eq.'DD'.and.c_or_f(1).eq.'f') ix = 1
+    if(bcxy(0,1)//bcxy(1,1) == 'DD'.and.c_or_f(1) == 'f') ix = 1
     iodim(1)%n  = nx_x-ix
     iodim(1)%is = 1
     iodim(1)%os = 1
@@ -68,7 +68,7 @@ module mod_fft
     !
     iy = 0
     ! size of transform reduced by 1 point with Dirichlet BC in face
-    if(bcxy(0,2)//bcxy(1,2).eq.'DD'.and.c_or_f(2).eq.'f') iy = 1
+    if(bcxy(0,2)//bcxy(1,2) == 'DD'.and.c_or_f(2) == 'f') iy = 1
     iodim(1)%n  = ny_y-iy
     iodim(1)%is = nx_y
     iodim(1)%os = nx_y
@@ -125,7 +125,7 @@ module mod_fft
   character(len=1), intent(in) :: c_or_f
   integer , intent(out) :: kind_fwd,kind_bwd
   real(rp), intent(out), dimension(2) :: norm
-  if(c_or_f.eq.'c') then
+  if(c_or_f == 'c') then
     select case(bc(0)//bc(1))
     case('PP')
       kind_fwd = FFTW_R2HC
@@ -148,7 +148,7 @@ module mod_fft
       kind_bwd = FFTW_RODFT11
       norm = [2.,0.]
     end select
-  elseif(c_or_f.eq.'f') then
+  elseif(c_or_f == 'f') then
     select case(bc(0)//bc(1))
     case('PP')
       kind_fwd = FFTW_R2HC

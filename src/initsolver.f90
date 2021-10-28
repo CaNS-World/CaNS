@@ -58,9 +58,9 @@ module mod_initsolver
     dzf(:) = dzfi(:)**(-1)
     call bc_rhs(cbc(:,1),bc(:,1),[dl(1) ,dl(1)      ],[dl(1) ,dl(1)    ],c_or_f(1),rhsbx)
     call bc_rhs(cbc(:,2),bc(:,2),[dl(2) ,dl(2)      ],[dl(2) ,dl(2)    ],c_or_f(2),rhsby)
-    if(    c_or_f(3).eq.'c') then
+    if(    c_or_f(3) == 'c') then
       call bc_rhs(cbc(:,3),bc(:,3),[dzc(0),dzc(ng(3)  )],[dzf(1),dzf(ng(3))],c_or_f(3),rhsbz)
-    elseif(c_or_f(3).eq.'f') then
+    elseif(c_or_f(3) == 'f') then
       call bc_rhs(cbc(:,3),bc(:,3),[dzc(1),dzc(ng(3)-1)],[dzf(1),dzf(ng(3))],c_or_f(3),rhsbz)
     endif
     !
@@ -82,21 +82,21 @@ module mod_initsolver
         lambda(l  )   = -4.*sin((1.*(l-1))*pi/(1.*n))**2
       enddo
     case('NN')
-      if(    c_or_f.eq.'c') then
+      if(    c_or_f == 'c') then
         do l=1,n
           lambda(l)   = -4.*sin((1.*(l-1))*pi/(2.*n))**2
         enddo
-      elseif(c_or_f.eq.'f') then
+      elseif(c_or_f == 'f') then
         do l=1,n
           lambda(l)   = -4.*sin((1.*(l-1))*pi/(2.*(n-1+1)))**2
         enddo
       endif
     case('DD')
-      if(    c_or_f.eq.'c') then
+      if(    c_or_f == 'c') then
         do l=1,n
           lambda(l)   = -4.*sin((1.*(l-0))*pi/(2.*n))**2
         enddo
-      elseif(c_or_f.eq.'f') then
+      elseif(c_or_f == 'f') then
         do l=1,n-1 ! point at n is a boundary and is excluded here
           lambda(l)   = -4.*sin((1.*(l-0))*pi/(2.*(n+1-1)))**2
         enddo
@@ -147,8 +147,8 @@ module mod_initsolver
       b(1) = b(1) + factor(0)*a(1)
       b(n) = b(n) + factor(1)*c(n)
     case('f')
-      if(bc(0).eq.'N') b(1) = b(1) + factor(0)*a(1)
-      if(bc(1).eq.'N') b(n) = b(n) + factor(1)*c(n)
+      if(bc(0) == 'N') b(1) = b(1) + factor(0)*a(1)
+      if(bc(1) == 'N') b(n) = b(n) + factor(1)*c(n)
     end select
   end subroutine tridmatrix
   !
@@ -172,8 +172,8 @@ module mod_initsolver
         case('D')
           factor(ibound) = -2.*bc(ibound)
         case('N')
-          if(ibound.eq.0) sgn =  1.
-          if(ibound.eq.1) sgn = -1.
+          if(ibound == 0) sgn =  1.
+          if(ibound == 1) sgn = -1.
           factor(ibound) = sgn*dlc(ibound)*bc(ibound)
         end select
       enddo
@@ -185,8 +185,8 @@ module mod_initsolver
         case('D')
           factor(ibound) = -bc(ibound)
         case('N')
-          if(ibound.eq.0) sgn =  1.
-          if(ibound.eq.1) sgn = -1.
+          if(ibound == 0) sgn =  1.
+          if(ibound == 1) sgn = -1.
           factor(ibound) = sgn*dlf(ibound)*bc(ibound)
         end select
       enddo

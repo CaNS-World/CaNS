@@ -54,7 +54,7 @@ module mod_sanity
   logical, intent(out) :: passed
   passed = .true.
   if(.not.any(stop_type(:))) then
-    if(myid.eq.0) print*, 'ERROR: stopping criterion not chosen.'
+    if(myid == 0) print*, 'ERROR: stopping criterion not chosen.'
     passed = .false.
   endif
   end subroutine chk_stop_type
@@ -67,8 +67,8 @@ module mod_sanity
     integer, dimension(2) :: ii
     logical :: passed_loc
     passed = .true.
-    passed_loc = all(mod(ng(1:2),2).eq.0)
-    if(myid.eq.0.and.(.not.passed_loc)) &
+    passed_loc = all(mod(ng(1:2),2) == 0)
+    if(myid == 0.and.(.not.passed_loc)) &
       print*, 'ERROR: itot and jtot should be even.'
     passed = passed.and.passed_loc
 #if !defined(DECOMP_Y) && !defined(DECOMP_Z)
@@ -79,7 +79,7 @@ module mod_sanity
     ii = [1,2]
 #endif
     passed_loc = passed_loc.and.all(dims(:)<=ng(ii)).and.all(dims(:)>=1)
-    if(myid.eq.0.and.(.not.passed_loc)) &
+    if(myid == 0.and.(.not.passed_loc)) &
       print*, 'ERROR: 1 <= dims(:) <= [itot,jtot] or [itot,ktot], or [jtot ktot] depending on the decomposition.'
     passed = passed.and.passed_loc
   end subroutine chk_dims
@@ -102,26 +102,26 @@ module mod_sanity
   do ivel = 1,3
     do idir=1,3
       bc01v = cbcvel(0,idir,ivel)//cbcvel(1,idir,ivel)
-      passed_loc = passed_loc.and.( (bc01v.eq.'PP').or. &
-                                    (bc01v.eq.'ND').or. &
-                                    (bc01v.eq.'DN').or. &
-                                    (bc01v.eq.'NN').or. &
-                                    (bc01v.eq.'DD') )
+      passed_loc = passed_loc.and.( (bc01v == 'PP').or. &
+                                    (bc01v == 'ND').or. &
+                                    (bc01v == 'DN').or. &
+                                    (bc01v == 'NN').or. &
+                                    (bc01v == 'DD') )
     enddo
   enddo
-  if(myid.eq.0.and.(.not.passed_loc)) print*, 'ERROR: velocity BCs not valid.'
+  if(myid == 0.and.(.not.passed_loc)) print*, 'ERROR: velocity BCs not valid.'
   passed = passed.and.passed_loc
   !
   passed_loc = .true.
   do idir=1,3
     bc01p = cbcpre(0,idir)//cbcpre(1,idir)
-    passed_loc = passed_loc.and.( (bc01p.eq.'PP').or. &
-                                  (bc01p.eq.'ND').or. &
-                                  (bc01p.eq.'DN').or. &
-                                  (bc01p.eq.'NN').or. &
-                                  (bc01p.eq.'DD') )
+    passed_loc = passed_loc.and.( (bc01p == 'PP').or. &
+                                  (bc01p == 'ND').or. &
+                                  (bc01p == 'DN').or. &
+                                  (bc01p == 'NN').or. &
+                                  (bc01p == 'DD') )
   enddo
-  if(myid.eq.0.and.(.not.passed_loc)) print*, 'ERROR: pressure BCs not valid.' 
+  if(myid == 0.and.(.not.passed_loc)) print*, 'ERROR: pressure BCs not valid.' 
   passed = passed.and.passed_loc
   !
   passed_loc = .true.
@@ -129,20 +129,20 @@ module mod_sanity
     ivel = idir
     bc01v = cbcvel(0,idir,ivel)//cbcvel(1,idir,ivel)
     bc01p = cbcpre(0,idir)//cbcpre(1,idir)
-    passed_loc = passed_loc.and.( (bc01v.eq.'PP'.and.bc01p.eq.'PP').or. &
-                                  (bc01v.eq.'ND'.and.bc01p.eq.'DN').or. &
-                                  (bc01v.eq.'DN'.and.bc01p.eq.'ND').or. &
-                                  (bc01v.eq.'DD'.and.bc01p.eq.'NN').or. &
-                                  (bc01v.eq.'NN'.and.bc01p.eq.'DD') )
+    passed_loc = passed_loc.and.( (bc01v == 'PP'.and.bc01p == 'PP').or. &
+                                  (bc01v == 'ND'.and.bc01p == 'DN').or. &
+                                  (bc01v == 'DN'.and.bc01p == 'ND').or. &
+                                  (bc01v == 'DD'.and.bc01p == 'NN').or. &
+                                  (bc01v == 'NN'.and.bc01p == 'DD') )
   enddo
-  if(myid.eq.0.and.(.not.passed_loc)) print*, 'ERROR: velocity and pressure BCs not compatible.'
+  if(myid == 0.and.(.not.passed_loc)) print*, 'ERROR: velocity and pressure BCs not compatible.'
   passed = passed.and.passed_loc
   !
   passed_loc = .true.
   do idir=1,2
-    passed_loc = passed_loc.and.((bcpre(0,idir).eq.0.).and.(bcpre(1,idir).eq.0.))
+    passed_loc = passed_loc.and.((bcpre(0,idir) == 0.).and.(bcpre(1,idir) == 0.))
   enddo
-  if(myid.eq.0.and.(.not.passed_loc)) &
+  if(myid == 0.and.(.not.passed_loc)) &
     print*, 'ERROR: pressure BCs in directions x and y must be homogeneous (value = 0.).'
   passed = passed.and.passed_loc
 #ifdef IMPDIFF
@@ -153,17 +153,17 @@ module mod_sanity
       passed_loc = passed_loc.and.(bc01v.ne.'NN')
     enddo
   enddo
-  if(myid.eq.0.and.(.not.passed_loc)) &
+  if(myid == 0.and.(.not.passed_loc)) &
     print*, 'ERROR: Neumann-Neumann velocity BCs with implicit diffusion currently not supported in x and y; only in z.'
   passed = passed.and.passed_loc
   !
   passed_loc = .true.
   do ivel = 1,3
     do idir=1,2
-      passed_loc = passed_loc.and.((bcvel(0,idir,ivel).eq.0.).and.(bcvel(1,idir,ivel).eq.0.))
+      passed_loc = passed_loc.and.((bcvel(0,idir,ivel) == 0.).and.(bcvel(1,idir,ivel) == 0.))
     enddo
   enddo
-  if(myid.eq.0.and.(.not.passed_loc)) &
+  if(myid == 0.and.(.not.passed_loc)) &
     print*, 'ERROR: velocity BCs with implicit diffusion in directions x and y must be homogeneous (value = 0.).'
   passed = passed.and.passed_loc
 #endif
@@ -181,10 +181,10 @@ module mod_sanity
   !
   do idir=1,3
     if(is_forced(idir)) then
-      passed = passed.and.(cbcpre(0,idir)//cbcpre(1,idir).eq.'PP')
+      passed = passed.and.(cbcpre(0,idir)//cbcpre(1,idir) == 'PP')
     endif
   enddo
-  if(myid.eq.0.and.(.not.passed)) &
+  if(myid == 0.and.(.not.passed)) &
   print*, 'ERROR: Flow cannot be forced in a non-periodic direction; check the BCs and is_forced in dns.in.'
   end subroutine chk_forcing
   !
@@ -240,8 +240,8 @@ module mod_sanity
   call correc(n,dli,dzci,dt,p,up,vp,wp,u,v,w)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.true.,dl,dzc,dzf,u,v,w)
   call chkdiv(lo,hi,dli,dzfi,u,v,w,divtot,divmax)
-  passed_loc = divmax.lt.small
-  if(myid.eq.0.and.(.not.passed_loc)) &
+  passed_loc = divmax < small
+  if(myid == 0.and.(.not.passed_loc)) &
   print*, 'ERROR: Pressure correction: Divergence is too large.'
   passed = passed.and.passed_loc
   call fftend(arrplan)
@@ -264,8 +264,8 @@ module mod_sanity
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
   call chk_helmholtz(n,dli,dzci,dzfi,alpha,u,up,cbcvel(:,:,1),['f','c','c'],resmax)
-  passed_loc = resmax.lt.small
-  if(myid.eq.0.and.(.not.passed_loc)) &
+  passed_loc = resmax < small
+  if(myid == 0.and.(.not.passed_loc)) &
   print*, 'ERROR: wrong solution of Helmholtz equation in x direction.'
   passed = passed.and.passed_loc
   !
@@ -280,8 +280,8 @@ module mod_sanity
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
   call chk_helmholtz(n,dli,dzci,dzfi,alpha,v,vp,cbcvel(:,:,2),['c','f','c'],resmax)
-  passed_loc = resmax.lt.small
-  if(myid.eq.0.and.(.not.passed_loc)) &
+  passed_loc = resmax < small
+  if(myid == 0.and.(.not.passed_loc)) &
   print*, 'ERROR: wrong solution of Helmholtz equation in y direction.'
   passed = passed.and.passed_loc
   !
@@ -296,8 +296,8 @@ module mod_sanity
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
   call chk_helmholtz(n,dli,dzci,dzfi,alpha,w,wp,cbcvel(:,:,3),['c','c','f'],resmax)
-  passed_loc = resmax.lt.small
-  if(myid.eq.0.and.(.not.passed_loc)) &
+  passed_loc = resmax < small
+  if(myid == 0.and.(.not.passed_loc)) &
   print*, 'ERROR: wrong solution of Helmholtz equation in z direction.'
   passed = passed.and.passed_loc
 #endif
@@ -305,9 +305,9 @@ module mod_sanity
   !
   subroutine abortit
       implicit none
-      if(myid.eq.0) print*, ''
-      if(myid.eq.0) print*, '*** Simulation aborted due to errors in the input file ***'
-      if(myid.eq.0) print*, '    check dns.in'
+      if(myid == 0) print*, ''
+      if(myid == 0) print*, '*** Simulation aborted due to errors in the input file ***'
+      if(myid == 0) print*, '    check dns.in'
       call decomp_2d_finalize
       call MPI_FINALIZE(ierr)
       error stop

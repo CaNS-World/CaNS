@@ -37,7 +37,7 @@ module mod_chkdiv
                 (u(i,j,k)-u(i-1,j,k))*dxi
           divmax = max(divmax,abs(div))
           divtot = divtot + div
-          !if(abs(div).ge.1.e-12) print*,div,'Large divergence at grid cell: ',i,j,k,div
+          !if(abs(div) >= 1.e-12) print*,div,'Large divergence at grid cell: ',i,j,k,div
         enddo
       enddo
     enddo

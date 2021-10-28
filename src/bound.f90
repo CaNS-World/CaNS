@@ -29,7 +29,7 @@ module mod_bound
       call updthalo(1,halo(idir),nb(:,idir),idir,w)
     enddo
     !
-    impose_norm_bc = (.not.is_correc).or.(cbc(0,1,1)//cbc(1,1,1).eq.'PP')
+    impose_norm_bc = (.not.is_correc).or.(cbc(0,1,1)//cbc(1,1,1) == 'PP')
     if(is_bound(0,1)) then
       if(impose_norm_bc) call set_bc(cbc(0,1,1),0,1,.false.,bc(0,1,1),dl(1),u)
                          call set_bc(cbc(0,1,2),0,1,.true. ,bc(0,1,2),dl(1),v)
@@ -40,7 +40,7 @@ module mod_bound
                          call set_bc(cbc(1,1,2),1,1,.true. ,bc(1,1,2),dl(1),v)
                          call set_bc(cbc(1,1,3),1,1,.true. ,bc(1,1,3),dl(1),w)
     endif
-    impose_norm_bc = (.not.is_correc).or.(cbc(0,2,2)//cbc(1,2,2).eq.'PP')
+    impose_norm_bc = (.not.is_correc).or.(cbc(0,2,2)//cbc(1,2,2) == 'PP')
     if(is_bound(0,2)) then
                          call set_bc(cbc(0,2,1),0,2,.true. ,bc(0,2,1),dl(2),u)
       if(impose_norm_bc) call set_bc(cbc(0,2,2),0,2,.false.,bc(0,2,2),dl(2),v)
@@ -51,7 +51,7 @@ module mod_bound
       if(impose_norm_bc) call set_bc(cbc(1,2,2),1,2,.false.,bc(1,2,2),dl(2),v)
                          call set_bc(cbc(1,2,3),1,2,.true. ,bc(1,2,3),dl(2),w)
     endif
-    impose_norm_bc = (.not.is_correc).or.(cbc(0,3,3)//cbc(1,3,3).eq.'PP')
+    impose_norm_bc = (.not.is_correc).or.(cbc(0,3,3)//cbc(1,3,3) == 'PP')
     if(is_bound(0,3)) then
                          call set_bc(cbc(0,3,1),0,3,.true. ,bc(0,3,1),dzc(0)   ,u)
                          call set_bc(cbc(0,3,2),0,3,.true. ,bc(0,3,2),dzc(0)   ,v)
@@ -116,14 +116,14 @@ module mod_bound
     nh = 1
     n = size(p,idir) - 2*nh
     factor = rvalue
-    if(ctype.eq.'D'.and.centered) then
+    if(ctype == 'D'.and.centered) then
       factor = 2.*factor
       sgn    = -1.
     endif
-    if(ctype.eq.'N') then
-      if(    ibound.eq.0) then
+    if(ctype == 'N') then
+      if(    ibound == 0) then
         factor = -dr*factor
-      elseif(ibound.eq.1) then
+      elseif(ibound == 1) then
         factor =  dr*factor
       endif
       sgn    = 1.
@@ -148,81 +148,81 @@ module mod_bound
       if(centered) then
         select case(idir)
         case(1)
-          if    (ibound.eq.0) then
+          if    (ibound == 0) then
             !$OMP WORKSHARE
             p(0  ,:,:) = factor+sgn*p(1,:,:)
             !$OMP END WORKSHARE
-          elseif(ibound.eq.1) then
+          elseif(ibound == 1) then
             !$OMP WORKSHARE
             p(n+1,:,:) = factor+sgn*p(n,:,:)
             !$OMP END WORKSHARE
           endif
         case(2)
-          if    (ibound.eq.0) then
+          if    (ibound == 0) then
             !$OMP WORKSHARE
             p(:,0  ,:) = factor+sgn*p(:,1,:)
             !$OMP END WORKSHARE
-          elseif(ibound.eq.1) then
+          elseif(ibound == 1) then
             !$OMP WORKSHARE
             p(:,n+1,:) = factor+sgn*p(:,n,:)
             !$OMP END WORKSHARE
           endif
         case(3)
-          if    (ibound.eq.0) then
+          if    (ibound == 0) then
             !$OMP WORKSHARE
             p(:,:,0  ) = factor+sgn*p(:,:,1)
             !$OMP END WORKSHARE
-          elseif(ibound.eq.1) then
+          elseif(ibound == 1) then
             !$OMP WORKSHARE
             p(:,:,n+1) = factor+sgn*p(:,:,n)
             !$OMP END WORKSHARE
           endif
         end select
-      elseif(.not.centered.and.ctype.eq.'D') then
+      elseif(.not.centered.and.ctype == 'D') then
         select case(idir)
         case(1)
-          if    (ibound.eq.0) then
+          if    (ibound == 0) then
             !$OMP WORKSHARE
             p(0,:,:) = factor 
             !$OMP END WORKSHARE
-          elseif(ibound.eq.1) then
+          elseif(ibound == 1) then
             !$OMP WORKSHARE
             p(n  ,:,:) = factor
             p(n+1,:,:) = p(n-1,:,:)
             !$OMP END WORKSHARE
           endif
         case(2)
-          if    (ibound.eq.0) then
+          if    (ibound == 0) then
             !$OMP WORKSHARE
             p(:,0,:) = factor 
             !$OMP END WORKSHARE
-          elseif(ibound.eq.1) then
+          elseif(ibound == 1) then
             !$OMP WORKSHARE
             p(:,n  ,:) = factor
             p(:,n+1,:) = p(:,n-1,:)
             !$OMP END WORKSHARE
           endif
         case(3)
-          if    (ibound.eq.0) then
+          if    (ibound == 0) then
             !$OMP WORKSHARE
             p(:,:,0) = factor 
             !$OMP END WORKSHARE
-          elseif(ibound.eq.1) then
+          elseif(ibound == 1) then
             !$OMP WORKSHARE
             p(:,:,n  ) = factor
             p(:,:,n+1) = p(:,:,n-1)
             !$OMP END WORKSHARE
           endif
         end select
-      elseif(.not.centered.and.ctype.eq.'N') then
+      elseif(.not.centered.and.ctype == 'N') then
         select case(idir)
         case(1)
-          if    (ibound.eq.0) then
+          if    (ibound == 0) then
             !$OMP WORKSHARE
             !p(0,:,:) = 1./3.*(-2.*factor+4.*p(1  ,:,:)-p(2  ,:,:))
             p(0,:,:) = 1.*factor + p(1  ,:,:)
             !$OMP END WORKSHARE
-          elseif(ibound.eq.1) then
+          elseif(ibound == 1) then
             !$OMP WORKSHARE
             !p(n,:,:) = 1./3.*(-2.*factor+4.*p(n-1,:,:)-p(n-2,:,:))
             p(n,:,:) = 1.*factor + p(n-1,:,:)
@@ -230,12 +230,12 @@ module mod_bound
             !$OMP END WORKSHARE
           endif
         case(2)
-          if    (ibound.eq.0) then
+          if    (ibound == 0) then
             !$OMP WORKSHARE
             !p(:,0  ,:) = 1./3.*(-2.*factor+4.*p(:,1,:)-p(:,2  ,:))
             p(:,0,:) = 1.*factor + p(:,1  ,:)
             !$OMP END WORKSHARE
-          elseif(ibound.eq.1) then
+          elseif(ibound == 1) then
             !$OMP WORKSHARE
             !p(:,n,:) = 1./3.*(-2.*factor+4.*p(:,n-1,:)-p(:,n-2,:))
             p(:,n,:) = 1.*factor + p(:,n-1,:)
@@ -243,12 +243,12 @@ module mod_bound
             !$OMP END WORKSHARE
           endif
         case(3)
-          if    (ibound.eq.0) then
+          if    (ibound == 0) then
             !$OMP WORKSHARE
             !p(:,:,0) = 1./3.*(-2.*factor+4.*p(:,:,1  )-p(:,:,2  ))
             p(:,:,0) = 1.*factor + p(:,:,1  )
             !$OMP END WORKSHARE
-          elseif(ibound.eq.1) then
+          elseif(ibound == 1) then
             !$OMP WORKSHARE
             !p(:,:,n) = 1./3.*(-2.*factor+4.*p(:,:,n-1)-p(:,:,n-2))
             p(:,:,n) = 1.*factor + p(:,:,n-1)
@@ -315,7 +315,7 @@ module mod_bound
     integer :: idir
     q(:) = 0
     do idir = 1,3
-      if(c_or_f(idir).eq.'f'.and.cbc(1,idir).eq.'D') q(idir) = 1
+      if(c_or_f(idir) == 'f'.and.cbc(1,idir) == 'D') q(idir) = 1
     enddo
     if(is_bound(0,1)) then
       !$OMP WORKSHARE

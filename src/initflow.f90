@@ -85,10 +85,10 @@ module mod_initflow
       call poiseuille(q,n(3),zclzi,ubulk,u1d)
       is_mean=.true.
     case default
-      if(myid.eq.0) print*, 'ERROR: invalid name for initial velocity field'
-      if(myid.eq.0) print*, ''
-      if(myid.eq.0) print*, '*** Simulation aborted due to errors in the case file ***'
-      if(myid.eq.0) print*, '    check INFO_INPUT.md'
+      if(myid == 0) print*, 'ERROR: invalid name for initial velocity field'
+      if(myid == 0) print*, ''
+      if(myid == 0) print*, '*** Simulation aborted due to errors in the case file ***'
+      if(myid == 0) print*, '    check INFO_INPUT.md'
       call decomp_2d_finalize
       call MPI_FINALIZE(ierr)
       error stop
@@ -188,9 +188,9 @@ module mod_initflow
         do i=1,ng(1)
           ii = i-(lo(1)-1)
           call random_number(rn)
-          if(ii.ge.1.and.ii.le.n(1) .and. &
-             jj.ge.1.and.jj.le.n(2) .and. &
-             kk.ge.1.and.kk.le.n(3) ) then
+          if(ii >= 1.and.ii <= n(1) .and. &
+             jj >= 1.and.jj <= n(2) .and. &
+             kk >= 1.and.kk <= n(3) ) then
              p(ii,jj,kk) = p(ii,jj,kk) + 2.*(rn-.5)*norm
           endif
         enddo
@@ -277,7 +277,7 @@ module mod_initflow
     do k=1,n/2
       z    = zc(k)*2.*retau!1.*((k-1)+q)/(1.*n)*2.*retau
       p(k) = 2.5*log(z) + 5.5
-      if (z.le.11.6) p(k)=z
+      if (z <= 11.6) p(k)=z
       p(n+1-k) = p(k)
     enddo
   end subroutine log_profile

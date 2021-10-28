@@ -56,7 +56,7 @@ contains
   integer, intent(in) :: myid
   integer :: iunit,ierr
     open(newunit=iunit,file='dns.in',status='old',action='read',iostat=ierr)
-      if( ierr.eq.0 ) then
+      if( ierr == 0 ) then
         read(iunit,*) itot,jtot,ktot
         read(iunit,*) lx,ly,lz
         read(iunit,*) gr
@@ -82,8 +82,8 @@ contains
         read(iunit,*) dims(1),dims(2)
         read(iunit,*) nthreadsmax
       else
-        if(myid.eq.0) print*, 'Error reading the input file' 
-        if(myid.eq.0) print*, 'Aborting...'
+        if(myid == 0) print*, 'Error reading the input file' 
+        if(myid == 0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
         error stop
       endif
