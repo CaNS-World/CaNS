@@ -32,14 +32,14 @@ module mod_initgrid
       z0  = (k-0.)/(1.*n)
       call gridpoint(gr,z0,zf(k))
       zf(k) = zf(k)*lz
-    enddo
+    end do
     zf(0) = 0.
     !
     ! step 2) determine grid spacing between faces dzf
     !
     do k=1,n
       dzf(k) = zf(k)-zf(k-1)
-    enddo
+    end do
     dzf(0  ) = dzf(1)
     dzf(n+1) = dzf(n)
     !
@@ -47,7 +47,7 @@ module mod_initgrid
     !
     do k=0,n
       dzc(k) = .5*(dzf(k)+dzf(k+1))
-    enddo
+    end do
     dzc(n+1) = dzc(n)
     !
     ! step 4) compute coordinates of cell centers zc and faces zf
@@ -57,10 +57,10 @@ module mod_initgrid
     do k=1,n+1
       zc(k) = zc(k-1) + dzc(k-1)
       zf(k) = zf(k-1) + dzf(k)
-    enddo
+    end do
   end subroutine initgrid
   !
-  ! grid stretching functions 
+  ! grid stretching functions
   ! see e.g., Fluid Flow Phenomena -- A Numerical Toolkit, by P. Orlandi
   !           Pirozzoli et al. JFM 788, 614–639 (commented)
   !
@@ -76,7 +76,7 @@ module mod_initgrid
       !z = 0.5*(1.+erf( (z0-0.5)*alpha)/erf( alpha/2.))
     else
       z = z0
-    endif
+    end if
   end subroutine gridpoint_cluster_two_end
   subroutine gridpoint_cluster_one_end(alpha,z0,z)
     !
@@ -90,7 +90,7 @@ module mod_initgrid
       !z = 1.0*(1.+erf( (z0-1.0)*alpha)/erf( alpha/1.))
     else
       z = z0
-    endif
+    end if
   end subroutine gridpoint_cluster_one_end
   subroutine gridpoint_cluster_middle(alpha,z0,z)
     !
@@ -100,15 +100,15 @@ module mod_initgrid
     real(rp), intent(in) :: alpha,z0
     real(rp), intent(out) :: z
     if(alpha.ne.0.) then
-      if(    z0 <= 0.5) then 
+      if(    z0 <= 0.5) then
         z = 0.5*(1.-1.+tanh(2.*alpha*(z0-0.))/tanh(alpha))
         !z = 0.5*(1.-1.+erf( 2.*alpha*(z0-0.))/erf( alpha))
       elseif(z0 > 0.5) then
         z = 0.5*(1.+1.+tanh(2.*alpha*(z0-1.))/tanh(alpha))
         !z = 0.5*(1.+1.+erf( 2.*alpha*(z0-1.))/erf( alpha))
-      endif
+      end if
     else
       z = z0
-    endif
+    end if
   end subroutine gridpoint_cluster_middle
 end module mod_initgrid

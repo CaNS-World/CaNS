@@ -26,9 +26,9 @@ module mod_output
     write(cfmt,'(A,I3,A)') '(',n,'E15.7)'
     if (myid  ==  0) then
       open(newunit=iunit,file=fname,position='append')
-      write(iunit,trim(cfmt)) (var(i),i=1,n) 
+      write(iunit,trim(cfmt)) (var(i),i=1,n)
       close(iunit)
-    endif
+    end if
   end subroutine out0d
   !
   subroutine out1d(fname,ng,lo,hi,idir,dl,l,z_g,dz_g,p)
@@ -66,36 +66,36 @@ module mod_output
         do j=lo(2),hi(2)
           do i=lo(1),hi(1)
             p1d(k) = p1d(k) + p(i,j,k)
-          enddo
-        enddo
-      enddo
+          end do
+        end do
+      end do
       call mpi_allreduce(MPI_IN_PLACE,p1d(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       p1d(:) = p1d(:)*grid_area_ratio
       if(myid == 0) then
         open(newunit=iunit,file=fname)
         do k=1,ng(3)
           write(iunit,'(2E15.7)') z_g(k),p1d(k)
-        enddo
+        end do
         close(iunit)
-      endif
+      end if
     case(2)
       grid_area_ratio = dl(1)/l(1)
       do j=lo(2),hi(2)
         do k=lo(3),hi(3)
           do i=lo(1),hi(1)
             p1d(j) = p1d(j) + p(i,j,k)*dz_g(k)/l(3)
-          enddo
-        enddo
-      enddo
+          end do
+        end do
+      end do
       call mpi_allreduce(MPI_IN_PLACE,p1d(1),ng(2),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       p1d(:) = p1d(:)*grid_area_ratio
       if(myid == 0) then
         open(newunit=iunit,file=fname)
         do j=1,ng(2)
           write(iunit,'(2E15.7)') (j-.5)*dl(2),p1d(j)
-        enddo
+        end do
         close(iunit)
-      endif
+      end if
     case(1)
       grid_area_ratio = dl(2)/l(2)
       do i=lo(1),hi(1)
@@ -103,18 +103,18 @@ module mod_output
         do k=lo(3),hi(3)
           do j=lo(2),hi(2)
             p1d(i) = p1d(i) + p(i,j,k)*dz_g(k)/l(3)
-          enddo
-        enddo
-      enddo
+          end do
+        end do
+      end do
       call mpi_allreduce(MPI_IN_PLACE,p1d(1),ng(1),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       p1d(:) = p1d(:)*grid_area_ratio
       if(myid == 0) then
         open(newunit=iunit,file=fname)
         do i=1,ng(1)
           write(iunit,'(2E15.7)') (i-.5)*dl(1),p1d(i)
-        enddo
+        end do
         close(iunit)
-      endif
+      end if
     end select
     deallocate(p1d)
   end subroutine out1d
@@ -127,7 +127,7 @@ module mod_output
     ! fname  -> name of the output file
     ! inorm  -> plane is perpendicular to direction
     !           inorm (1,2,3)
-    ! islice -> plane is of constant index islice 
+    ! islice -> plane is of constant index islice
     !           in direction inorm
     ! p      -> 3D input scalar field
     !
@@ -153,8 +153,8 @@ module mod_output
     !
     ! fname  -> name of the output file
     ! nskip  -> array with the step size for which the
-    !           field is written; i.e.: [1,1,1] 
-    !           writes the full field 
+    !           field is written; i.e.: [1,1,1]
+    !           writes the full field
     ! p      -> 3D input scalar field
     !
     implicit none
@@ -200,7 +200,7 @@ module mod_output
       open(newunit=iunit,file=fname,position='append')
       write(iunit,trim(cfmt)) trim(fname_fld),' ',trim(varname),nmin,nmax,nskip,time,istep
       close(iunit)
-    endif
+    end if
   end subroutine write_log_output
   !
   subroutine write_visu_3d(datadir,fname_bin,fname_log,varname,nmin,nmax,nskip,time,istep,p)
@@ -283,9 +283,9 @@ module mod_output
             w2(k) = w2(k) + 0.50*(w(i,j,k)**2+w(i,j,k-1)**2)
             uw(k) = uw(k) + 0.25*(u(i-1,j,k) + u(i,j,k))* &
                                  (w(i,j,k-1) + w(i,j,k))
-          enddo
-        enddo
-      enddo
+          end do
+        end do
+      end do
       call mpi_allreduce(MPI_IN_PLACE,um(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       call mpi_allreduce(MPI_IN_PLACE,vm(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       call mpi_allreduce(MPI_IN_PLACE,wm(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -306,9 +306,9 @@ module mod_output
           write(iunit,'(8E15.7)') z_g(k),um(k),vm(k),wm(k), &
                                          u2(k),v2(k),w2(k), &
                                          uw(k)
-        enddo
+        end do
         close(iunit)
-      endif
+      end if
       deallocate(um,vm,wm,u2,v2,w2,uw)
     case(2)
     case(1)
@@ -359,9 +359,9 @@ module mod_output
                                      (w(i,j,k-1) + w(i,j,k))
             uv(i,k) = uv(i,k) + 0.25*(u(i-1,j,k) + u(i,j,k))* &
                                      (v(i,j-1,k) + v(i,j,k))
-          enddo
-        enddo
-      enddo
+          end do
+        end do
+      end do
       call mpi_allreduce(MPI_IN_PLACE,um(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       call mpi_allreduce(MPI_IN_PLACE,vm(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       call mpi_allreduce(MPI_IN_PLACE,wm(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -386,10 +386,10 @@ module mod_output
             write(iunit,'(10E15.7)') x_g,z_g(k),um(i,k),vm(i,k),wm(i,k), &
                                                 u2(i,k),v2(i,k),w2(i,k), &
                                                 vw(i,k),uv(i,k)
-          enddo
-        enddo
+          end do
+        end do
         close(iunit)
-      endif
+      end if
       deallocate(um,vm,wm,u2,v2,w2,vw,uv)
     case(1)
       grid_area_ratio = dl(1)/l(1)
@@ -418,9 +418,9 @@ module mod_output
                                      (v(i,j-1,k) + v(i,j,k))
             uw(j,k) = uw(j,k) + 0.25*(u(i-1,j,k) + u(i,j,k))* &
                                          (w(i,j,k-1) + w(i,j,k))
-          enddo
-        enddo
-      enddo
+          end do
+        end do
+      end do
       call mpi_allreduce(MPI_IN_PLACE,um(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       call mpi_allreduce(MPI_IN_PLACE,vm(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       call mpi_allreduce(MPI_IN_PLACE,wm(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -445,10 +445,10 @@ module mod_output
             write(iunit,'(10E15.7)') y_g,z_g(k),um(j,k),vm(j,k),wm(j,k), &
                                                 u2(j,k),v2(j,k),w2(j,k), &
                                                 uv(j,k),uw(j,k)
-          enddo
-        enddo
+          end do
+        end do
         close(iunit)
-      endif
+      end if
       deallocate(um,vm,wm,u2,v2,w2,vw,uv)
     end select
     return

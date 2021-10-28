@@ -43,9 +43,9 @@ module mod_momd
                         dyi*(     -uvjp + uvjm ) + &
                         dzfi(k)*( -uwkp + uwkm ) + &
                         bforce(1)
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
   end subroutine momxa
   !
@@ -85,9 +85,9 @@ module mod_momd
                         dyi*(     -vvjp + vvjm ) + &
                         dzfi(k)*( -wvkp + wvkm ) + &
                         bforce(2)
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
   end subroutine momya
   !
@@ -127,9 +127,9 @@ module mod_momd
                         dyi*(     -vwjp + vwjm ) + &
                         dzci(k)*( -wwkp + wwkm ) + &
                         bforce(3)
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
   end subroutine momza
   !
@@ -168,9 +168,9 @@ module mod_momd
                          (dudyp-dudym)*visc*dyi + &
                          (dudzp-dudzm)*visc*dzfi(k)
           dudt(i,j,k) = - dxi*( p(ip,j,k)-p(i,j,k) ) + dudtd(i,j,k)
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
     taux(:) = 0.
     do k=1,nz
@@ -178,15 +178,15 @@ module mod_momd
         dudyp = (u(i,1 ,k)-u(i,0   ,k))*dyi*visc*dzflzi(k)
         dudym = (u(i,ny,k)-u(i,ny+1,k))*dyi*visc*dzflzi(k)
         taux(2) = taux(2) + (dudyp+dudym)
-      enddo
-    enddo
+      end do
+    end do
     do j=1,ny
       do i=1,nx
         dudzp = (u(i,j,1 )-u(i,j,0   ))*dzci(0)*visc
         dudzm = (u(i,j,nz)-u(i,j,nz+1))*dzci(nz)*visc
         taux(3) = taux(3) + (dudzp+dudzm)
-      enddo
-    enddo
+      end do
+    end do
     call mpi_allreduce(MPI_IN_PLACE,taux(1),3,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
     nxg = nx*dims(1)
     nyg = ny*dims(2)
@@ -230,10 +230,10 @@ module mod_momd
           dvdtd(i,j,k) = (dvdxp-dvdxm)*visc*dxi+ &
                          (dvdyp-dvdym)*visc*dyi+ &
                          (dvdzp-dvdzm)*visc*dzfi(k)
-          dvdt(i,j,k) = - dyi*( p(i,jp,k)-p(i,j,k) ) + dvdtd(i,j,k) 
-        enddo
-      enddo
-    enddo
+          dvdt(i,j,k) = - dyi*( p(i,jp,k)-p(i,j,k) ) + dvdtd(i,j,k)
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
     tauy(:) = 0.
     do k=1,nz
@@ -241,15 +241,15 @@ module mod_momd
         dvdxp = (v(1 ,j,k)-v(0   ,j,k))*dxi*visc*dzflzi(k)
         dvdxm = (v(nx,j,k)-v(nx+1,j,k))*dxi*visc*dzflzi(k)
         tauy(1) = tauy(1) + (dvdxp+dvdxm)
-      enddo
-    enddo
+      end do
+    end do
     do j=1,ny
       do i=1,nx
         dvdzp = (v(i,j,1 )-v(i,j,0   ))*dzci(0)*visc
         dvdzm = (v(i,j,nz)-v(i,j,nz+1))*dzci(nz)*visc
         tauy(3) = tauy(3) + (dvdzp+dvdzm)
-      enddo
-    enddo
+      end do
+    end do
     call mpi_allreduce(MPI_IN_PLACE,tauy(1),3,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
     nxg = nx*dims(1)
     nyg = ny*dims(2)
@@ -294,9 +294,9 @@ module mod_momd
                          (dwdyp-dwdym)*visc*dyi+ &
                          (dwdzp-dwdzm)*visc*dzci(k)
           dwdt(i,j,k) = - dzci(k)*( p(i,j,kp)-p(i,j,k) ) + dwdtd(i,j,k)
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
     tauz(:) = 0.
     do k=1,nz
@@ -304,15 +304,15 @@ module mod_momd
         dwdxp = (w(1 ,j,k)-w(0   ,j,k))*dxi*visc*dzflzi(k)
         dwdxm = (w(nx,j,k)-w(nx+1,j,k))*dxi*visc*dzflzi(k)
         tauz(1) = tauz(1) + (dwdxp+dwdxm)
-      enddo
-    enddo
+      end do
+    end do
     do k=1,nz
       do i=1,nx
         dwdyp = (w(i,1,k )-w(i,0   ,k))*dyi*visc*dzflzi(k)
         dwdym = (w(i,ny,k)-w(i,ny+1,k))*dyi*visc*dzflzi(k)
         tauz(2) = tauz(2) + (dwdyp+dwdym)
-      enddo
-    enddo
+      end do
+    end do
     call mpi_allreduce(MPI_IN_PLACE,tauz(1),3,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
     nxg = nx*dims(1)
     nyg = ny*dims(2)

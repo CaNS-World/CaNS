@@ -71,9 +71,9 @@ module mod_initflow
             v(i,j,k) = -cos(xc)*sin(yf)*cos(zc)*uref
             w(i,j,k) = 0.
             p(i,j,k) = 0.!(cos(2.*xc)+cos(2.*yc))*(cos(2.*zc)+2.)/16.
-          enddo
-        enddo
-      enddo
+          end do
+        end do
+      end do
     case('pdc')
       if(is_wallturb) then ! turbulent flow
         retau = uref*lref/visc
@@ -81,7 +81,7 @@ module mod_initflow
         ubulk = (reb/2.)/retau*uref
       else                 ! laminar flow
         ubulk = (bforce(1)*lref**2/(3.*visc))
-      endif
+      end if
       call poiseuille(q,n(3),zclzi,ubulk,u1d)
       is_mean=.true.
     case default
@@ -101,18 +101,18 @@ module mod_initflow
             v(i,j,k) = 0.
             w(i,j,k) = 0.
             p(i,j,k) = 0.
-          enddo
-        enddo
-      enddo
-    endif
+          end do
+        end do
+      end do
+    end if
     if(is_noise) then
       call add_noise(ng,lo,123,.5_rp,u(1:n(1),1:n(2),1:n(3)))
       call add_noise(ng,lo,456,.5_rp,v(1:n(1),1:n(2),1:n(3)))
       call add_noise(ng,lo,789,.5_rp,w(1:n(1),1:n(2),1:n(3)))
-    endif
+    end if
     if(is_mean) then
       call set_mean(n,ubulk,dzflzi*(dx/lx)*(dy/ly),u(1:n(1),1:n(2),1:n(3)))
-    endif
+    end if
     if(is_wallturb) is_pair = .true.
     if(is_pair) then
       !
@@ -138,11 +138,11 @@ module mod_initflow
             v(i,j,k) = -1. * gxy(yf,xc)*dfz(zc) * ubulk * 1.5
             w(i,j,k) =  1. * fz(zf)*dgxy(yc,xc) * ubulk * 1.5
             p(i,j,k) = 0.
-          enddo
-        enddo
-      enddo
+          end do
+        end do
+      end do
       !
-      ! alternatively, using a Taylor-Green vortex 
+      ! alternatively, using a Taylor-Green vortex
       ! for the cross-stream velocity components
       ! (commented below)
       !
@@ -159,10 +159,10 @@ module mod_initflow
       !      v(i,j,k) =  sin(xc)*cos(yf)*cos(zc)*ubulk
       !      w(i,j,k) = -cos(xc)*sin(yc)*cos(zf)*ubulk
       !      p(i,j,k) = 0.!(cos(2.*xc)+cos(2.*yc))*(cos(2.*zc)+2.)/16.
-      !    enddo
-      !  enddo
-      !enddo
-    endif
+      !    end do
+      !  end do
+      !end do
+    end if
     deallocate(u1d)
   end subroutine initflow
   !
@@ -170,7 +170,7 @@ module mod_initflow
     implicit none
     integer , intent(in), dimension(3) :: ng,lo
     integer , intent(in) :: iseed
-    real(rp), intent(in) :: norm 
+    real(rp), intent(in) :: norm
     real(rp), intent(inout), dimension(:,:,:) :: p
     integer(4), allocatable, dimension(:) :: seed
     real(rp) :: rn
@@ -192,10 +192,10 @@ module mod_initflow
              jj >= 1.and.jj <= n(2) .and. &
              kk >= 1.and.kk <= n(3) ) then
              p(ii,jj,kk) = p(ii,jj,kk) + 2.*(rn-.5)*norm
-          endif
-        enddo
-      enddo
-    enddo
+          end if
+        end do
+      end do
+    end do
   end subroutine add_noise
   !
   subroutine set_mean(n,mean,grid_vol_ratio,p)
@@ -215,9 +215,9 @@ module mod_initflow
     do j=1,n(2)
       do i=1,n(1)
         meanold = meanold + p(i,j,k)*grid_vol_ratio(k)
-      enddo
-    enddo
-  enddo
+      end do
+    end do
+  end do
   !$OMP END PARALLEL DO
   call mpi_allreduce(MPI_IN_PLACE,meanold,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
   !
@@ -225,7 +225,7 @@ module mod_initflow
     !$OMP WORKSHARE
     p(:,:,:) = p(:,:,:)/meanold*mean
     !$OMP END WORKSHARE
-  endif
+  end if
   end subroutine set_mean
   !
   subroutine couette(q,n,zc,norm,p)
@@ -243,7 +243,7 @@ module mod_initflow
     do k=1,n
       z    = zc(k)!1.*((k-1)+q)/(1.*n)
       p(k) = .5*(1.-2.*z)*norm
-    enddo
+    end do
   end subroutine couette
   !
   subroutine poiseuille(q,n,zc,norm,p)
@@ -261,7 +261,7 @@ module mod_initflow
     do k=1,n
       z    = zc(k)!1.*((k-1)+q)/(1.*n)
       p(k) = 6.*z*(1.-z)*norm
-    enddo
+    end do
   end subroutine poiseuille
   !
   subroutine log_profile(q,n,zc,reb,p)
@@ -279,7 +279,7 @@ module mod_initflow
       p(k) = 2.5*log(z) + 5.5
       if (z <= 11.6) p(k)=z
       p(n+1-k) = p(k)
-    enddo
+    end do
   end subroutine log_profile
   !
   ! functions to initialize the streamwise vortex pair

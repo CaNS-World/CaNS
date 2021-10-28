@@ -39,9 +39,9 @@ module mod_fillps
                       (wp(i,j,k)-wp(i,j,k-1))*dtidzfi(k)+ &
                       (vp(i,j,k)-vp(i,j-1,k))*dtidyi    + &
                       (up(i,j,k)-up(i-1,j,k))*dtidxi    )
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
     !
   end subroutine fillps

@@ -49,7 +49,7 @@ real(rp), dimension(3) :: l
 real(rp), dimension(3) :: dl
 real(rp), dimension(3) :: dli
 !
-contains 
+contains
   subroutine read_input(myid)
   use mpi
   implicit none
@@ -82,11 +82,11 @@ contains
         read(iunit,*) dims(1),dims(2)
         read(iunit,*) nthreadsmax
       else
-        if(myid == 0) print*, 'Error reading the input file' 
+        if(myid == 0) print*, 'Error reading the input file'
         if(myid == 0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
         error stop
-      endif
+      end if
     close(iunit)
     dx = lx/(1.*itot)
     dy = ly/(1.*jtot)

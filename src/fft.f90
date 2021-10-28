@@ -45,7 +45,7 @@ module mod_fft
     nz_y = n_y(3)
     !
     normfft = 1.
-    ix = 0 
+    ix = 0
     ! size of transform reduced by 1 point with Dirichlet BC in face
     if(bcxy(0,1)//bcxy(1,1) == 'DD'.and.c_or_f(1) == 'f') ix = 1
     iodim(1)%n  = nx_x-ix
@@ -110,7 +110,7 @@ module mod_fft
   !
   subroutine fft(plan,arr)
     implicit none
-    type(C_PTR), intent(in) :: plan 
+    type(C_PTR), intent(in) :: plan
     real(rp), intent(inout), dimension(:,:,:) :: arr
 #ifdef SINGLE_PRECISION
     call sfftw_execute_r2r(plan,arr,arr)
@@ -171,6 +171,6 @@ module mod_fft
       kind_bwd = FFTW_RODFT10
       norm = [2.,0.]
     end select
-  endif
+  end if
   end subroutine find_fft
 end module mod_fft

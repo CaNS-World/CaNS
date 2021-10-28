@@ -69,7 +69,7 @@ program cans
     real(rp), allocatable, dimension(:,:,:) :: x
     real(rp), allocatable, dimension(:,:,:) :: y
     real(rp), allocatable, dimension(:,:,:) :: z
-  end type rhs_bound 
+  end type rhs_bound
   type(rhs_bound) :: rhsbp
 #ifdef IMPDIFF
   type(C_PTR), dimension(2,2) :: arrplanu,arrplanv,arrplanw
@@ -173,20 +173,20 @@ program cans
     open(99,file=trim(datadir)//'grid.out')
     do kk=0,ng(3)+1
       write(99,'(5E15.7)') 0.,zf_g(kk),zc_g(kk),dzf_g(kk),dzc_g(kk)
-    enddo
+    end do
     close(99)
     open(99,file=trim(datadir)//'geometry.out')
-      write(99,*) ng(1),ng(2),ng(3) 
-      write(99,*) l(1),l(2),l(3) 
+      write(99,*) ng(1),ng(2),ng(3)
+      write(99,*) l(1),l(2),l(3)
     close(99)
-  endif
+  end if
   do kk=lo(3)-1,hi(3)+1
     k = kk - (lo(3)-1)
     zc( k) = zc_g(kk)
     zf( k) = zf_g(kk)
     dzc(k) = dzc_g(kk)
     dzf(k) = dzf_g(kk)
-  enddo
+  end do
   dzci(:) = dzc(:)**(-1)
   dzfi(:) = dzf(:)**(-1)
   dzci_g(:) = dzc_g(:)**(-1)
@@ -194,8 +194,8 @@ program cans
   !
   ! test input files before proceeding with the calculation
   !
-  !call test_sanity(ng,dims,n,n_z,lo,hi,stop_type,cbcvel,cbcpre,bcvel,bcpre,is_forced, &
-  !                 nb,is_bound,dli,dzci_g,dzfi_g,dzci,dzfi)
+  call test_sanity(ng,dims,n,n_z,lo,hi,stop_type,cbcvel,cbcpre,bcvel,bcpre,is_forced, &
+                   nb,is_bound,dli,dzci_g,dzfi_g,dzci,dzfi)
   !
   if(.not.restart) then
     istep = 0
@@ -205,7 +205,7 @@ program cans
   else
     call load('r',trim(datadir)//'fld.bin',MPI_COMM_WORLD,ng,[1,1,1],lo,hi,u,v,w,p,time,istep)
     if(myid == 0) print*, '*** Checkpoint loaded at time = ', time, 'time step = ', istep, '. ***'
-  endif
+  end if
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
   call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
   !
@@ -300,7 +300,7 @@ program cans
         w(:,:,:) = wp(:,:,:)
         !$OMP END WORKSHARE
         cycle
-      endif
+      end if
 #endif
 #endif
       call fillps(n,dli,dzfi,dtrki,up,vp,wp,pp)
@@ -322,9 +322,9 @@ program cans
                         (pp(i,j+1,k)-2.*pp(i,j,k)+pp(i,j-1,k))*(dyi**2) + &
                         ((pp(i,j,k+1)-pp(i,j,k  ))*dzci(k  ) - &
                          (pp(i,j,k  )-pp(i,j,k-1))*dzci(k-1))*dzfi(k) )
-          enddo
-        enddo
-      enddo
+          end do
+        end do
+      end do
       !$OMP END PARALLEL DO
 #else
       !$OMP WORKSHARE
@@ -332,21 +332,21 @@ program cans
       !$OMP END WORKSHARE
 #endif
       call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
-    enddo
+    end do
     dpdl(:) = -dpdl(:)*dti
     !
     ! check simulation stopping criteria
     !
     if(stop_type(1)) then ! maximum number of time steps reached
       if(istep >= nstep   ) is_done = is_done.or..true.
-    endif
+    end if
     if(stop_type(2)) then ! maximum simulation time reached
       if(time  >= time_max) is_done = is_done.or..true.
-    endif
+    end if
     if(stop_type(3)) then ! maximum wall-clock time reached
       tw = (MPI_WTIME()-twi)/3600.
       if(tw    >= tw_max  ) is_done = is_done.or..true.
-    endif
+    end if
     if(mod(istep,icheck) == 0) then
       if(myid == 0) print*, 'Checking stability and divergence...'
       call chkdt(n,dl,dzci,dzfi,visc,u,v,w,dtmax)
@@ -357,7 +357,7 @@ program cans
         if(myid == 0) print*, 'Aborting...'
         is_done = .true.
         kill = .true.
-      endif
+      end if
       dti = 1./dt
       call chkdiv(lo,hi,dli,dzfi,u,v,w,divtot,divmax)
       if(myid == 0) print*, 'Total divergence = ', divtot, '| Maximum divergence = ', divmax
@@ -366,8 +366,8 @@ program cans
         if(myid == 0) print*, 'Aborting...'
         is_done = .true.
         kill = .true.
-      endif
-    endif
+      end if
+    end if
     !
     ! output routines below
     !
@@ -384,46 +384,46 @@ program cans
         meanvelw = 0.
         if(is_forced(1).or.abs(bforce(1)) > 0.) then
           call chkmean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),up,meanvelu)
-        endif
+        end if
         if(is_forced(2).or.abs(bforce(2)) > 0.) then
           call chkmean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),vp,meanvelv)
-        endif
+        end if
         if(is_forced(3).or.abs(bforce(3)) > 0.) then
           call chkmean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),wp,meanvelw)
-        endif
+        end if
         if(.not.any(is_forced(:))) dpdl(:) = -bforce(:) ! constant pressure gradient
         var(1)   = time
         var(2:4) = dpdl(1:3)
         var(5:7) = [meanvelu,meanvelv,meanvelw]
         call out0d(trim(datadir)//'forcing.out',7,var)
-      endif
+      end if
       !deallocate(var)
-    endif
+    end if
     write(fldnum,'(i7.7)') istep
     if(mod(istep,iout1d) == 0) then
       include 'out1d.h90'
-    endif
+    end if
     if(mod(istep,iout2d) == 0) then
       include 'out2d.h90'
-    endif
+    end if
     if(mod(istep,iout3d) == 0) then
       include 'out3d.h90'
-    endif
+    end if
     if(mod(istep,isave ) == 0.or.(is_done.and..not.kill)) then
       if(is_overwrite_save) then
         filename = 'fld.bin'
       else
         filename = 'fld_'//fldnum//'.bin'
-      endif
+      end if
       call load('w',trim(datadir)//'fld.bin',MPI_COMM_WORLD,ng,[1,1,1],lo,hi,u,v,w,p,time,istep)
       if(.not.is_overwrite_save) then
         !
         ! fld.bin -> last checkpoint file (symbolic link)
         !
         if(myid == 0) call execute_command_line('ln -sf '//trim(filename)//' '//trim(datadir)//'fld.bin')
-      endif
+      end if
       if(myid == 0) print*, '*** Checkpoint saved at time = ', time, 'time step = ', istep, '. ***'
-    endif
+    end if
 #ifdef TIMING
       dt12 = MPI_WTIME()-dt12
       call MPI_ALLREDUCE(dt12,dt12av ,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -432,7 +432,7 @@ program cans
       if(myid == 0) print*, 'Avrg, min & max elapsed time: '
       if(myid == 0) print*, dt12av/(1.*product(dims)),dt12min,dt12max
 #endif
-  enddo
+  end do
   !
   ! clear ffts
   !

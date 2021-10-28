@@ -11,14 +11,14 @@ module mod_rk
   contains
   subroutine rk(rkpar,n,dli,dzci,dzfi,dzflzi,dzclzi,visc,dt,l,u,v,w,p,dudtrko,dvdtrko,dwdtrko,tauxo,tauyo,tauzo,up,vp,wp,f)
     !
-    ! low-storage 3rd-order Runge-Kutta scheme 
+    ! low-storage 3rd-order Runge-Kutta scheme
     ! for time integration of the momentum equations.
     !
     implicit none
     real(rp), intent(in), dimension(2) :: rkpar
     integer , intent(in), dimension(3) :: n
     real(rp), intent(in) :: visc,dt
-    real(rp), intent(in   ), dimension(3) :: dli,l 
+    real(rp), intent(in   ), dimension(3) :: dli,l
     real(rp), intent(in   ), dimension(0:) :: dzci,dzfi,dzflzi,dzclzi
     real(rp), intent(in   ), dimension(0:,0:,0:) :: u,v,w,p
     real(rp), intent(inout), dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
@@ -47,9 +47,9 @@ module mod_rk
           up(i,j,k) = u(i,j,k) + factor12*dudtrk(i,j,k)
           vp(i,j,k) = v(i,j,k) + factor12*dvdtrk(i,j,k)
           wp(i,j,k) = w(i,j,k) + factor12*dwdtrk(i,j,k)
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
     call momxad(n(1),n(2),n(3),dli(1),dli(2),dli(3),dzci,dzfi,dzflzi,visc,u,v,w,dudtrk,taux)
     call momyad(n(1),n(2),n(3),dli(1),dli(2),dli(3),dzci,dzfi,dzflzi,visc,u,v,w,dvdtrk,tauy)
@@ -73,9 +73,9 @@ module mod_rk
           dudtrko(i,j,k) = dudtrk(i,j,k)
           dvdtrko(i,j,k) = dvdtrk(i,j,k)
           dwdtrko(i,j,k) = dwdtrk(i,j,k)
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
     !
     ! bulk velocity forcing
@@ -84,26 +84,26 @@ module mod_rk
     if(is_forced(1)) then
       call chkmean(n,dzflzi*1./(dli(1)*dli(2)*l(1)*l(2)),up,mean)
       f(1) = velf(1) - mean
-    endif
+    end if
     if(is_forced(2)) then
       call chkmean(n,dzflzi*1./(dli(1)*dli(2)*l(1)*l(2)),vp,mean)
       f(2) = velf(2) - mean
-    endif
+    end if
     if(is_forced(3)) then
       call chkmean(n,dzclzi*1./(dli(1)*dli(2)*l(1)*l(2)),wp,mean)
       f(3) = velf(3) - mean
-    endif
+    end if
   end subroutine rk
   subroutine rk_id(rkpar,n,dli,dzci,dzfi,dzflzi,dzclzi,visc,dt,l,u,v,w,p,dudtrko,dvdtrko,dwdtrko,tauxo,tauyo,tauzo,up,vp,wp,f)
     !
-    ! low-storage 3rd-order Runge-Kutta scheme 
+    ! low-storage 3rd-order Runge-Kutta scheme
     ! for time integration of the momentum equations with implicit diffusion.
     !
     implicit none
     real(rp), intent(in), dimension(2) :: rkpar
     integer , intent(in), dimension(3) :: n
     real(rp), intent(in) :: visc,dt
-    real(rp), intent(in   ), dimension(3) :: dli,l 
+    real(rp), intent(in   ), dimension(3) :: dli,l
     real(rp), intent(in   ), dimension(0:) :: dzci,dzfi,dzflzi,dzclzi
     real(rp), intent(in   ), dimension(0:,0:,0:) :: u,v,w,p
     real(rp), intent(inout), dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
@@ -137,9 +137,9 @@ module mod_rk
           up(i,j,k) = u(i,j,k) + factor12*dudtrk(i,j,k)
           vp(i,j,k) = v(i,j,k) + factor12*dvdtrk(i,j,k)
           wp(i,j,k) = w(i,j,k) + factor12*dwdtrk(i,j,k)
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
     call momxa(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,u,v,w,dudtrk)
     call momya(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,u,v,w,dvdtrk)
@@ -157,9 +157,9 @@ module mod_rk
           dudtrko(i,j,k) = dudtrk(i,j,k)
           dvdtrko(i,j,k) = dvdtrk(i,j,k)
           dwdtrko(i,j,k) = dwdtrk(i,j,k)
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
     !
     ! bulk velocity forcing
@@ -168,15 +168,15 @@ module mod_rk
     if(is_forced(1)) then
       call chkmean(n,dzflzi*1./(dli(1)*dli(2)*l(1)*l(2)),up,mean)
       f(1) = velf(1) - mean
-    endif
+    end if
     if(is_forced(2)) then
       call chkmean(n,dzflzi*1./(dli(1)*dli(2)*l(1)*l(2)),vp,mean)
       f(2) = velf(2) - mean
-    endif
+    end if
     if(is_forced(3)) then
       call chkmean(n,dzclzi*1./(dli(1)*dli(2)*l(1)*l(2)),wp,mean)
       f(3) = velf(3) - mean
-    endif
+    end if
     !
     ! compute rhs of helmholtz equation
     !
@@ -189,14 +189,14 @@ module mod_rk
           up(i,j,k) = up(i,j,k) - .5*factor12*dudtrkd(i,j,k)
           vp(i,j,k) = vp(i,j,k) - .5*factor12*dvdtrkd(i,j,k)
           wp(i,j,k) = wp(i,j,k) - .5*factor12*dwdtrkd(i,j,k)
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
   end subroutine rk_id
   subroutine rk_scal(rkpar,n,dli,dzci,dzfi,visc,dt,u,v,w,dsdtrko,s)
     !
-    ! low-storage 3rd-order Runge-Kutta scheme 
+    ! low-storage 3rd-order Runge-Kutta scheme
     ! for time integration of the scalar field.
     !
     implicit none
@@ -224,9 +224,9 @@ module mod_rk
         do i=1,n(1)
           s(i,j,k) = s(i,j,k) + factor1*dsdtrk(i,j,k) + factor2*dsdtrko(i,j,k)
           dsdtrko(i,j,k) = dsdtrk(i,j,k)
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
   end subroutine rk_scal
 end module mod_rk

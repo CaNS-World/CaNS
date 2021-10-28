@@ -47,9 +47,9 @@ module mod_chkdt
           wz = abs(w(i,j,k))
           dtiz = uz*dxi+vz*dyi+wz*dzci(k)
           dti = max(dti,dtix,dtiy,dtiz)
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
     call mpi_allreduce(MPI_IN_PLACE,dti,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
     if(dti == 0.) dti = 1.

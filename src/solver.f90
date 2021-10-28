@@ -53,7 +53,7 @@ module mod_solver
       call gaussel_periodic(n_z(1),n_z(2),n_z(3)-q,a,b,c,lambdaxy,pz)
     else
       call gaussel(         n_z(1),n_z(2),n_z(3)-q,a,b,c,lambdaxy,pz)
-    endif
+    end if
     !
     call transpose_z_to_y(pz,py)
     call fft(arrplan(2,2),py) ! bwd transform in y
@@ -99,8 +99,8 @@ module mod_solver
       do i=1,nx
         bb(:) = b(1:n) + lambdaxy(i,j)
         call dgtsv_homebrewed(n,a,bb,c,p(i,j,1:n))
-      enddo
-    enddo
+      end do
+    end do
     !$OMP END DO
     !$OMP END PARALLEL
   end subroutine gaussel
@@ -132,8 +132,8 @@ module mod_solver
         p(i,j,n) = (p(i,j,n) - c(n)*p1(1) - a(n)*p1(n-1)) / &
                    (bb(   n) + c(n)*p2(1) + a(n)*p2(n-1))
         p(i,j,1:n-1) = p1(1:n-1) + p2(1:n-1)*p(i,j,n)
-      enddo
-    enddo
+      end do
+    end do
     !$OMP END DO
     !$OMP END PARALLEL
   end subroutine gaussel_periodic
@@ -155,18 +155,18 @@ module mod_solver
       z    = 1./(b(l)-a(l)*d(l-1))
       d(l) = c(l)*z
       p(l) = (p(l)-a(l)*p(l-1))*z
-    enddo
+    end do
     z = b(n)-a(n)*d(n-1)
     if(z.ne.0.) then
       p(n) = (p(n)-a(n)*p(n-1))/z
     else
       p(n) = 0.
-    endif
+    end if
     !
     ! backward substitution
     !
     do l=n-1,1,-1
       p(l) = p(l) - d(l)*p(l+1)
-    enddo
+    end do
   end subroutine dgtsv_homebrewed
 end module mod_solver

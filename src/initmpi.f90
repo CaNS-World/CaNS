@@ -54,7 +54,7 @@ module mod_initmpi
     where(nb(:,:) == MPI_PROC_NULL) is_bound(:,:) = .true.
     do l=1,3
       call makehalo(l,1,hi(:)-lo(:)+1,halo(l))
-    enddo
+    end do
   end subroutine initmpi
   subroutine makehalo(idir,nh,n,halo)
     implicit none

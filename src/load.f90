@@ -38,7 +38,7 @@ module mod_load
         if(myid == 0) print*, '    file: ', filename, ' | expected size: ', good, '| actual size: ', filesize
         call MPI_FINALIZE(ierr)
         error stop
-      endif
+      end if
       !
       ! read
       !

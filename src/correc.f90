@@ -31,9 +31,9 @@ module mod_correc
       do j=0,n(2)+1
         do i=0,n(1)
           u(i,j,k) = up(i,j,k) - factori*(   p(i+1,j,k)-p(i,j,k))
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(n,factorj,v,vp,p) &
@@ -42,9 +42,9 @@ module mod_correc
       do j=0,n(2)
         do i=0,n(1)+1
           v(i,j,k) = vp(i,j,k) - factorj*(   p(i,j+1,k)-p(i,j,k))
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(n,factork,w,wp,p) &
@@ -53,9 +53,9 @@ module mod_correc
       do j=0,n(2)+1
         do i=0,n(1)+1
           w(i,j,k) = wp(i,j,k) - factork(k)*(p(i,j,k+1)-p(i,j,k))
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
   end subroutine correc
 end module mod_correc

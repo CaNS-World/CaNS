@@ -44,8 +44,8 @@ module mod_initsolver
     do j=lo_z(2),hi_z(2)
       do i=lo_z(1),hi_z(1)
         lambdaxy(i,j) = lambdax(i)+lambday(j)
-      enddo
-    enddo
+      end do
+    end do
     !
     ! compute coefficients for tridiagonal solver
     !
@@ -62,7 +62,7 @@ module mod_initsolver
       call bc_rhs(cbc(:,3),bc(:,3),[dzc(0),dzc(ng(3)  )],[dzf(1),dzf(ng(3))],c_or_f(3),rhsbz)
     elseif(c_or_f(3) == 'f') then
       call bc_rhs(cbc(:,3),bc(:,3),[dzc(1),dzc(ng(3)-1)],[dzf(1),dzf(ng(3))],c_or_f(3),rhsbz)
-    endif
+    end if
     !
     ! prepare ffts
     !
@@ -75,37 +75,37 @@ module mod_initsolver
     character(len=1), intent(in), dimension(0:1) :: bc
     character(len=1), intent(in) :: c_or_f ! c -> cell-centered; f -> face-centered
     real(rp), intent(out), dimension(n) :: lambda
-    integer :: l 
+    integer :: l
     select case(bc(0)//bc(1))
     case('PP')
       do l=1,n
         lambda(l  )   = -4.*sin((1.*(l-1))*pi/(1.*n))**2
-      enddo
+      end do
     case('NN')
       if(    c_or_f == 'c') then
         do l=1,n
           lambda(l)   = -4.*sin((1.*(l-1))*pi/(2.*n))**2
-        enddo
+        end do
       elseif(c_or_f == 'f') then
         do l=1,n
           lambda(l)   = -4.*sin((1.*(l-1))*pi/(2.*(n-1+1)))**2
-        enddo
-      endif
+        end do
+      end if
     case('DD')
       if(    c_or_f == 'c') then
         do l=1,n
           lambda(l)   = -4.*sin((1.*(l-0))*pi/(2.*n))**2
-        enddo
+        end do
       elseif(c_or_f == 'f') then
         do l=1,n-1 ! point at n is a boundary and is excluded here
           lambda(l)   = -4.*sin((1.*(l-0))*pi/(2.*(n+1-1)))**2
-        enddo
-      endif
+        end do
+      end if
     case('ND','DN')
       do l=1,n
         lambda(l)   = -4.*sin((1.*(2*l-1))*pi/(4.*n))**2
-      enddo
-    end select   
+      end do
+    end select
   end subroutine eigenvalues
   !
   subroutine tridmatrix(bc,n,dzi,dzci,dzfi,c_or_f,a,b,c)
@@ -124,12 +124,12 @@ module mod_initsolver
       do k=1,n
         a(k) = dzfi(k)*dzci(k-1)
         c(k) = dzfi(k)*dzci(k)
-      enddo
+      end do
     case('f')
       do k = 1,n
         a(k) = dzfi(k)*dzci(k)
         c(k) = dzfi(k+1)*dzci(k)
-      enddo
+      end do
     end select
     b(:) = -(a(:)+c(:))
     do ibound = 0,1
@@ -141,7 +141,7 @@ module mod_initsolver
       case('N')
         factor(ibound) = 1.
       end select
-    enddo
+    end do
     select case(c_or_f)
     case('c')
       b(1) = b(1) + factor(0)*a(1)
@@ -176,7 +176,7 @@ module mod_initsolver
           if(ibound == 1) sgn = -1.
           factor(ibound) = sgn*dlc(ibound)*bc(ibound)
         end select
-      enddo
+      end do
     case('f')
       do ibound = 0,1
         select case(cbc(ibound))
@@ -189,11 +189,11 @@ module mod_initsolver
           if(ibound == 1) sgn = -1.
           factor(ibound) = sgn*dlf(ibound)*bc(ibound)
         end select
-      enddo
+      end do
     end select
     do concurrent(ibound=0:1)
       rhs(:,:,ibound) = factor(ibound)/dlc(ibound)/dlf(ibound)
       rhs(:,:,ibound) = factor(ibound)/dlc(ibound)/dlf(ibound)
-    enddo
+    end do
   end subroutine bc_rhs
 end module mod_initsolver

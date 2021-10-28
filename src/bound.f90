@@ -27,41 +27,41 @@ module mod_bound
       call updthalo(1,halo(idir),nb(:,idir),idir,u)
       call updthalo(1,halo(idir),nb(:,idir),idir,v)
       call updthalo(1,halo(idir),nb(:,idir),idir,w)
-    enddo
+    end do
     !
     impose_norm_bc = (.not.is_correc).or.(cbc(0,1,1)//cbc(1,1,1) == 'PP')
     if(is_bound(0,1)) then
       if(impose_norm_bc) call set_bc(cbc(0,1,1),0,1,.false.,bc(0,1,1),dl(1),u)
                          call set_bc(cbc(0,1,2),0,1,.true. ,bc(0,1,2),dl(1),v)
                          call set_bc(cbc(0,1,3),0,1,.true. ,bc(0,1,3),dl(1),w)
-    endif
+    end if
     if(is_bound(1,1)) then
       if(impose_norm_bc) call set_bc(cbc(1,1,1),1,1,.false.,bc(1,1,1),dl(1),u)
                          call set_bc(cbc(1,1,2),1,1,.true. ,bc(1,1,2),dl(1),v)
                          call set_bc(cbc(1,1,3),1,1,.true. ,bc(1,1,3),dl(1),w)
-    endif
+    end if
     impose_norm_bc = (.not.is_correc).or.(cbc(0,2,2)//cbc(1,2,2) == 'PP')
     if(is_bound(0,2)) then
                          call set_bc(cbc(0,2,1),0,2,.true. ,bc(0,2,1),dl(2),u)
       if(impose_norm_bc) call set_bc(cbc(0,2,2),0,2,.false.,bc(0,2,2),dl(2),v)
                          call set_bc(cbc(0,2,3),0,2,.true. ,bc(0,2,3),dl(2),w)
-     endif
+     end if
     if(is_bound(1,2)) then
                          call set_bc(cbc(1,2,1),1,2,.true. ,bc(1,2,1),dl(2),u)
       if(impose_norm_bc) call set_bc(cbc(1,2,2),1,2,.false.,bc(1,2,2),dl(2),v)
                          call set_bc(cbc(1,2,3),1,2,.true. ,bc(1,2,3),dl(2),w)
-    endif
+    end if
     impose_norm_bc = (.not.is_correc).or.(cbc(0,3,3)//cbc(1,3,3) == 'PP')
     if(is_bound(0,3)) then
                          call set_bc(cbc(0,3,1),0,3,.true. ,bc(0,3,1),dzc(0)   ,u)
                          call set_bc(cbc(0,3,2),0,3,.true. ,bc(0,3,2),dzc(0)   ,v)
       if(impose_norm_bc) call set_bc(cbc(0,3,3),0,3,.false.,bc(0,3,3),dzf(0)   ,w)
-    endif
+    end if
     if(is_bound(1,3)) then
                          call set_bc(cbc(1,3,1),1,3,.true. ,bc(1,3,1),dzc(n(3)),u)
                          call set_bc(cbc(1,3,2),1,3,.true. ,bc(1,3,2),dzc(n(3)),v)
       if(impose_norm_bc) call set_bc(cbc(1,3,3),1,3,.false.,bc(1,3,3),dzf(n(3)),w)
-    endif
+    end if
   end subroutine bounduvw
   !
   subroutine boundp(cbc,n,bc,nb,is_bound,dl,dzc,p)
@@ -70,7 +70,7 @@ module mod_bound
     !
     implicit none
     character(len=1), intent(in), dimension(0:1,3) :: cbc
-    integer , intent(in), dimension(3) :: n 
+    integer , intent(in), dimension(3) :: n
     real(rp)         , intent(in), dimension(0:1,3) :: bc
     integer , intent(in), dimension(0:1,3  ) :: nb
     logical , intent(in), dimension(0:1,3  ) :: is_bound
@@ -81,26 +81,26 @@ module mod_bound
     !
     do idir = 1,3
       call updthalo(1,halo(idir),nb(:,idir),idir,p)
-    enddo
+    end do
     !
     if(is_bound(0,1)) then
       call set_bc(cbc(0,1),0,1,.true.,bc(0,1),dl(1),p)
-    endif
+    end if
     if(is_bound(1,1)) then
       call set_bc(cbc(1,1),1,1,.true.,bc(1,1),dl(1),p)
-    endif
+    end if
     if(is_bound(0,2)) then
       call set_bc(cbc(0,2),0,2,.true.,bc(0,2),dl(2),p)
-     endif
+     end if
     if(is_bound(1,2)) then
       call set_bc(cbc(1,2),1,2,.true.,bc(1,2),dl(2),p)
-    endif
+    end if
     if(is_bound(0,3)) then
       call set_bc(cbc(0,3),0,3,.true.,bc(0,3),dzc(0)   ,p)
-    endif
+    end if
     if(is_bound(1,3)) then
       call set_bc(cbc(1,3),1,3,.true.,bc(1,3),dzc(n(3)),p)
-    endif
+    end if
   end subroutine boundp
   !
   subroutine set_bc(ctype,ibound,idir,centered,rvalue,dr,p)
@@ -119,15 +119,15 @@ module mod_bound
     if(ctype == 'D'.and.centered) then
       factor = 2.*factor
       sgn    = -1.
-    endif
+    end if
     if(ctype == 'N') then
       if(    ibound == 0) then
         factor = -dr*factor
       elseif(ibound == 1) then
         factor =  dr*factor
-      endif
+      end if
       sgn    = 1.
-    endif
+    end if
     !
     select case(ctype)
     case('P')
@@ -156,7 +156,7 @@ module mod_bound
             !$OMP WORKSHARE
             p(n+1,:,:) = factor+sgn*p(n,:,:)
             !$OMP END WORKSHARE
-          endif
+          end if
         case(2)
           if    (ibound == 0) then
             !$OMP WORKSHARE
@@ -166,7 +166,7 @@ module mod_bound
             !$OMP WORKSHARE
             p(:,n+1,:) = factor+sgn*p(:,n,:)
             !$OMP END WORKSHARE
-          endif
+          end if
         case(3)
           if    (ibound == 0) then
             !$OMP WORKSHARE
@@ -176,43 +176,43 @@ module mod_bound
             !$OMP WORKSHARE
             p(:,:,n+1) = factor+sgn*p(:,:,n)
             !$OMP END WORKSHARE
-          endif
+          end if
         end select
       elseif(.not.centered.and.ctype == 'D') then
         select case(idir)
         case(1)
           if    (ibound == 0) then
             !$OMP WORKSHARE
-            p(0,:,:) = factor 
+            p(0,:,:) = factor
             !$OMP END WORKSHARE
           elseif(ibound == 1) then
             !$OMP WORKSHARE
             p(n  ,:,:) = factor
             p(n+1,:,:) = p(n-1,:,:)
             !$OMP END WORKSHARE
-          endif
+          end if
         case(2)
           if    (ibound == 0) then
             !$OMP WORKSHARE
-            p(:,0,:) = factor 
+            p(:,0,:) = factor
             !$OMP END WORKSHARE
           elseif(ibound == 1) then
             !$OMP WORKSHARE
             p(:,n  ,:) = factor
             p(:,n+1,:) = p(:,n-1,:)
             !$OMP END WORKSHARE
-          endif
+          end if
         case(3)
           if    (ibound == 0) then
             !$OMP WORKSHARE
-            p(:,:,0) = factor 
+            p(:,:,0) = factor
             !$OMP END WORKSHARE
           elseif(ibound == 1) then
             !$OMP WORKSHARE
             p(:,:,n  ) = factor
             p(:,:,n+1) = p(:,:,n-1)
             !$OMP END WORKSHARE
-          endif
+          end if
         end select
       elseif(.not.centered.and.ctype == 'N') then
         select case(idir)
@@ -228,7 +228,7 @@ module mod_bound
             p(n,:,:) = 1.*factor + p(n-1,:,:)
             p(n+1,:,:) = p(n,:,:) ! not needed
             !$OMP END WORKSHARE
-          endif
+          end if
         case(2)
           if    (ibound == 0) then
             !$OMP WORKSHARE
@@ -241,7 +241,7 @@ module mod_bound
             p(:,n,:) = 1.*factor + p(:,n-1,:)
             p(:,n+1,:) = p(:,n,:) ! not needed
             !$OMP END WORKSHARE
-          endif
+          end if
         case(3)
           if    (ibound == 0) then
             !$OMP WORKSHARE
@@ -254,9 +254,9 @@ module mod_bound
             p(:,:,n) = 1.*factor + p(:,:,n-1)
             p(:,:,n+1) = p(:,:,n) ! not needed
             !$OMP END WORKSHARE
-          endif
+          end if
         end select
-      endif
+      end if
     end select
   end subroutine set_bc
   !
@@ -277,9 +277,9 @@ module mod_bound
           do k=1,n(3)
             do j=1,n(2)
               u(i,j,k) = vel2d(j,k)
-            enddo
-          enddo
-        endif
+            end do
+          end do
+        end if
       case(2) ! y direction
         if(is_bound(0,2)) then
           n(:) = shape(v) - 2*1
@@ -287,9 +287,9 @@ module mod_bound
           do k=1,n(3)
             do i=1,n(1)
               v(i,j,k) = vel2d(i,k)
-            enddo
-          enddo
-        endif
+            end do
+          end do
+        end if
       case(3) ! z direction
         if(is_bound(0,3)) then
           n(:) = shape(w) - 2*1
@@ -297,9 +297,9 @@ module mod_bound
           do j=1,n(2)
             do i=1,n(1)
               w(i,j,k) = vel2d(i,j)
-            enddo
-          enddo
-        endif
+            end do
+          end do
+        end if
     end select
   end subroutine inflow
   !
@@ -316,37 +316,37 @@ module mod_bound
     q(:) = 0
     do idir = 1,3
       if(c_or_f(idir) == 'f'.and.cbc(1,idir) == 'D') q(idir) = 1
-    enddo
+    end do
     if(is_bound(0,1)) then
       !$OMP WORKSHARE
       p(1        ,1:n(2),1:n(3)) = p(1        ,1:n(2),1:n(3)) + rhsbx(:,:,0)
       !$OMP END WORKSHARE
-    endif  
+    end if
     if(is_bound(1,1)) then
       !$OMP WORKSHARE
       p(n(1)-q(1),1:n(2),1:n(3)) = p(n(1)-q(1),1:n(2),1:n(3)) + rhsbx(:,:,1)
       !$OMP END WORKSHARE
-    endif
+    end if
     if(is_bound(0,2)) then
       !$OMP WORKSHARE
       p(1:n(1),1        ,1:n(3)) = p(1:n(1),1        ,1:n(3)) + rhsby(:,:,0)
       !$OMP END WORKSHARE
-    endif
+    end if
     if(is_bound(1,2)) then
       !$OMP WORKSHARE
       p(1:n(1),n(2)-q(2),1:n(3)) = p(1:n(1),n(2)-q(2),1:n(3)) + rhsby(:,:,1)
       !$OMP END WORKSHARE
-    endif
+    end if
     if(is_bound(0,3)) then
       !$OMP WORKSHARE
       p(1:n(1),1:n(2),1        ) = p(1:n(1),1:n(2),1        ) + rhsbz(:,:,0)
       !$OMP END WORKSHARE
-    endif
+    end if
     if(is_bound(1,3)) then
       !$OMP WORKSHARE
       p(1:n(1),1:n(2),n(3)-q(3)) = p(1:n(1),1:n(2),n(3)-q(3)) + rhsbz(:,:,1)
       !$OMP END WORKSHARE
-    endif
+    end if
   end subroutine updt_rhs_b
   !
   subroutine updthalo(nh,halo,nb,idir,p)

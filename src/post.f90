@@ -49,9 +49,9 @@ contains
                                    (uy(i  ,j  ,k)-uy(i-1,j  ,k))*dxi - (ux(i-1,j+1,k)-ux(i-1,j  ,k))*dyi + &
                                    (uy(i  ,j-1,k)-uy(i-1,j-1,k))*dxi - (ux(i-1,j  ,k)-ux(i-1,j-1,k))*dyi &
                                   )
-          enddo
-       enddo
-    enddo
+          end do
+       end do
+    end do
     !$OMP END PARALLEL
   end subroutine vorticity
   subroutine strain_rate(n,dli,dzci,dzfi,ux,uy,uz,str)
@@ -98,9 +98,9 @@ contains
                            ((uy(i,j-1,k  )-uy(i,j-1,k-1))*dzci(k-1) + (uz(i,j  ,k-1)-uz(i,j-1,k-1))*dyi)**2 &
                           )*.25_rp
              str(i,j,k) = s11+s22+s33 + 2*(s12+s13+s23)
-          enddo
-       enddo
-    enddo
+          end do
+       end do
+    end do
     !$OMP END PARALLEL
   end subroutine strain_rate
   subroutine rotation_rate(n,dli,dzci,ux,uy,uz,ens)
@@ -144,9 +144,9 @@ contains
                         ((uy(i,j-1,k  )-uy(i,j-1,k-1))*dzci(k-1) - (uz(i,j  ,k-1)-uz(i,j-1,k-1))*dyi)**2 &
                        )*.25_rp
           ens(i,j,k) =  2._rp*(e12+e13+e23)
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL
   end subroutine rotation_rate
   subroutine q_criterion(n,ens,str,qcr)
@@ -163,9 +163,9 @@ contains
       do j=1,n(2)
         do i=1,n(1)
           qcr(i,j,k) = .5_rp*(ens(i,j,k)-str(i,j,k))
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL
   end subroutine q_criterion
 end module mod_post

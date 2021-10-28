@@ -39,9 +39,9 @@ module mod_moms
           dsdt(i,j,k) = dxi*(     -usip + usim ) + (dsdxp-dsdxm)*visc*dxi + &
                         dyi*(     -vsjp + vsjm ) + (dsdyp-dsdym)*visc*dyi + &
                         dzfi(k)*( -wskp + wskm ) + (dsdzp-dsdzm)*visc*dzfi(k)
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
     return
   end subroutine momsad

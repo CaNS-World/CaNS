@@ -38,9 +38,9 @@ module mod_chkdiv
           divmax = max(divmax,abs(div))
           divtot = divtot + div
           !if(abs(div) >= 1.e-12) print*,div,'Large divergence at grid cell: ',i,j,k,div
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
     call mpi_allreduce(MPI_IN_PLACE,divtot,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
     call mpi_allreduce(MPI_IN_PLACE,divmax,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
