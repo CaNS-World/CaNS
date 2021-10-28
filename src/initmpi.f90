@@ -25,21 +25,21 @@ module mod_initmpi
     call decomp_2d_init(n(1),n(2),n(3),dims(1),dims(2),periods)
     myid = nrank
     n_z(:) = zsize(:)
-#if !defined(DECOMP_Y) && !defined(DECOMP_Z)
+#if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
     ipencil=1
     l1 = 2
     l2 = 3
     comm_cart = DECOMP_2D_COMM_CART_X
     lo(:) = xstart(:)
     hi(:) = xend(:)
-#elif defined(DECOMP_Y)
+#elif defined(_DECOMP_Y)
     ipencil=2
     l1 = 1
     l2 = 3
     comm_cart = DECOMP_2D_COMM_CART_Y
     lo(:) = ystart(:)
     hi(:) = yend(:)
-#elif defined(DECOMP_Z)
+#elif defined(_DECOMP_Z)
     ipencil=3
     l1 = 1
     l2 = 2

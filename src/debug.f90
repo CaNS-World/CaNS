@@ -54,7 +54,7 @@ module mod_debug
     integer, dimension(3) :: q
     q(:) = 0
     do idir = 1,3
-      if(bc(1,idir).ne.'P'.and.c_or_f(idir) == 'f'.and.is_bound(1,idir)) q(idir) = 1 ! NOTE, FIX: only for the boundary!
+      if(bc(1,idir).ne.'P'.and.c_or_f(idir) == 'f'.and.is_bound(1,idir)) q(idir) = 1
     end do
     select case(c_or_f(3))
     !

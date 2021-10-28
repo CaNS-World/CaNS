@@ -71,7 +71,7 @@ program cans
     real(rp), allocatable, dimension(:,:,:) :: z
   end type rhs_bound
   type(rhs_bound) :: rhsbp
-#ifdef IMPDIFF
+#if defined(_IMPDIFF)
   type(C_PTR), dimension(2,2) :: arrplanu,arrplanv,arrplanw
   real(rp), allocatable, dimension(:,:) :: lambdaxyu,lambdaxyv,lambdaxyw
   real(rp), allocatable, dimension(:) :: au,av,aw,bu,bv,bw,bb,cu,cv,cw
@@ -88,13 +88,13 @@ program cans
   real(rp), dimension(3) :: dpdl
   !real(rp), allocatable, dimension(:) :: var
   real(rp), dimension(10) :: var
-#ifdef TIMING
+#if defined(_TIMING)
   real(rp) :: dt12,dt12av,dt12min,dt12max
 #endif
   real(rp) :: twi,tw
   character(len=7  ) :: fldnum
   character(len=100) :: filename
-  integer :: k,kk
+  integer :: kk
   logical :: is_done,kill
   integer :: rlen
   !
@@ -142,7 +142,7 @@ program cans
   allocate(rhsbp%x(n(2),n(3),0:1), &
            rhsbp%y(n(1),n(3),0:1), &
            rhsbp%z(n(1),n(2),0:1))
-#ifdef IMPDIFF
+#if defined(_IMPDIFF)
   allocate(lambdaxyu(n_z(1),n_z(2)), &
            lambdaxyv(n_z(1),n_z(2)), &
            lambdaxyw(n_z(1),n_z(2)))
@@ -181,11 +181,10 @@ program cans
     close(99)
   end if
   do kk=lo(3)-1,hi(3)+1
-    k = kk - (lo(3)-1)
-    zc( k) = zc_g(kk)
-    zf( k) = zf_g(kk)
-    dzc(k) = dzc_g(kk)
-    dzf(k) = dzf_g(kk)
+    zc( kk - (lo(3)-1)) = zc_g(kk)
+    zf( kk - (lo(3)-1)) = zf_g(kk)
+    dzc(kk - (lo(3)-1)) = dzc_g(kk)
+    dzf(kk - (lo(3)-1)) = dzf_g(kk)
   end do
   dzci(:) = dzc(:)**(-1)
   dzfi(:) = dzf(:)**(-1)
@@ -229,7 +228,7 @@ program cans
   !
   call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:),lambdaxyp,['c','c','c'],ap,bp,cp,arrplanp,normfftp, &
                   rhsbp%x,rhsbp%y,rhsbp%z)
-#ifdef IMPDIFF
+#if defined(_IMPDIFF)
   call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1),lambdaxyu,['f','c','c'],au,bu,cu,arrplanu,normfftu, &
                   rhsbu%x,rhsbu%y,rhsbu%z)
   call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2),lambdaxyv,['c','f','c'],av,bv,cv,arrplanv,normfftv, &
@@ -243,7 +242,7 @@ program cans
   if(myid == 0) print*, '*** Calculation loop starts now ***'
   is_done = .false.
   do while(.not.is_done)
-#ifdef TIMING
+#if defined(_TIMING)
     dt12 = MPI_WTIME()
 #endif
     istep = istep + 1
@@ -256,7 +255,7 @@ program cans
     do irk=1,3
       dtrk = sum(rkcoeff(:,irk))*dt
       dtrki = dtrk**(-1)
-#ifndef IMPDIFF
+#if defined(_IMPDIFF)
       call rk(rkcoeff(:,irk),n,dli,dzci,dzfi,dzf/lz,dzc/lz,visc,dt,l, &
                  u,v,w,p,dudtrko,dvdtrko,dwdtrko,tauxo,tauyo,tauzo,up,vp,wp,f)
 #else
@@ -266,7 +265,7 @@ program cans
       if(is_forced(1)) up(1:n(1),1:n(2),1:n(3)) = up(1:n(1),1:n(2),1:n(3)) + f(1)
       if(is_forced(2)) vp(1:n(1),1:n(2),1:n(3)) = vp(1:n(1),1:n(2),1:n(3)) + f(2)
       if(is_forced(3)) wp(1:n(1),1:n(2),1:n(3)) = wp(1:n(1),1:n(2),1:n(3)) + f(3)
-#ifdef IMPDIFF
+#if defined(_IMPDIFF)
       alpha = -1./(.5*visc*dtrk)
       !$OMP WORKSHARE
       up(1:n(1),1:n(2),1:n(3)) = up(1:n(1),1:n(2),1:n(3))*alpha
@@ -289,8 +288,8 @@ program cans
 #endif
       dpdl(:) = dpdl(:) + f(:)
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
-#ifndef IMPDIFF
-#ifdef ONE_PRESS_CORR
+#if !defined(_IMPDIFF)
+#if defined(_ONE_PRESS_CORR)
       dtrk  = dt
       dtrki = dt**(-1)
       if(irk < 3) then ! pressure correction only at the last RK step
@@ -309,7 +308,7 @@ program cans
       call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,pp)
       call correc(n,dli,dzci,dtrk,pp,up,vp,wp,u,v,w)
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.true.,dl,dzc,dzf,u,v,w)
-#ifdef IMPDIFF
+#if defined(_IMPDIFF)
       alphai = alpha**(-1)
       !$OMP PARALLEL DO DEFAULT(none) &
       !$OMP PRIVATE(i,j,k) &
@@ -424,7 +423,7 @@ program cans
       end if
       if(myid == 0) print*, '*** Checkpoint saved at time = ', time, 'time step = ', istep, '. ***'
     end if
-#ifdef TIMING
+#if defined(_TIMING)
       dt12 = MPI_WTIME()-dt12
       call MPI_ALLREDUCE(dt12,dt12av ,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       call MPI_ALLREDUCE(dt12,dt12min,1,MPI_REAL_RP,MPI_MIN,MPI_COMM_WORLD,ierr)
@@ -437,7 +436,7 @@ program cans
   ! clear ffts
   !
   call fftend(arrplanp)
-#ifdef IMPDIFF
+#if defined(_IMPDIFF)
   call fftend(arrplanu)
   call fftend(arrplanv)
   call fftend(arrplanw)
@@ -451,7 +450,7 @@ program cans
   deallocate(ap,bp,cp)
   deallocate(dzc,dzf,zc,zf,dzci,dzfi)
   deallocate(rhsbp%x,rhsbp%y,rhsbp%z)
-#ifdef IMPDIFF
+#if defined(_IMPDIFF)
   deallocate(lambdaxyu,lambdaxyv,lambdaxyw)
   deallocate(au,bu,cu,av,bv,cv,aw,bw,cw,bb)
   deallocate(rhsbu%x,rhsbu%y,rhsbu%z, &

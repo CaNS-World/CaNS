@@ -23,7 +23,7 @@ The recent **many-GPU** version of CaNS can be found [**here**](https://github.c
 
 **Please consider using the implementation in branch [`x_pencil`](https://github.com/p-costa/CaNS/tree/x_pencil) for faster calculations**. See the 13/05/2020 news entry below for more details. This implementation will be merged into `master` before the end of the year.
 
-13/05/2020 -- An implementation that allows for an arbitrary default orientation of the pencil decomposition (i.e. x-, y- or z-aligned pencils) has been developed and kept for now in branch `x_pencil`. Using x-aligned pencils by default increases slightly the performance of CaNS by avoiding two *all-to-all* operations in the Poisson solver. To test this new feature, the code in branch `x_pencil` should be compiled with `-DDECOMP_X` (best performing) or `-DDECOMP_Y`.
+13/05/2020 -- An implementation that allows for an arbitrary default orientation of the pencil decomposition (i.e. x-, y- or z-aligned pencils) has been developed and kept for now in branch `x_pencil`. Using x-aligned pencils by default increases slightly the performance of CaNS by avoiding two *all-to-all* operations in the Poisson solver. To test this new feature, the code in branch `x_pencil` should be compiled with `-D_DECOMP_X` (best performing) or `-D_DECOMP_Y`.
 
 28/06/2020 -- The `isoutflow` input parameter is not required anymore to define a zero-pressure outflow, and has been removed.
 
@@ -71,10 +71,10 @@ The code should be compiled in `src/`. The prerequisites are the following:
 
 The Makefile in `src/` should be modified in agreement to the installation paths of each library. Also, the following preprocessor options are available:
 
- * `-DDEBUG`            : performs some basic checks for debugging purposes
- * `-DTIMING`           : wall-clock time per timestep is computed
- * `-DIMPDIFF`          : diffusion term of the N-S equations is integrated in time with an implicit discretization (thereby improving the stability of the numerical algorithm for viscous-dominated flows)
- * `-DSINGLE_PRECISION` : calculation will be carried out in single precision (the default precision is double)
+ * `-D_DEBUG`            : performs some basic checks for debugging purposes
+ * `-D_TIMING`           : wall-clock time per timestep is computed
+ * `-D_IMPDIFF`          : diffusion term of the N-S equations is integrated in time with an implicit discretization (thereby improving the stability of the numerical algorithm for viscous-dominated flows)
+ * `-D_SINGLE_PRECISION` : calculation will be carried out in single precision (the default precision is double)
 
 Typing `make run` will compile the code and copy the executable `cans` and input file `dns.in` to a `run/` folder.
 
