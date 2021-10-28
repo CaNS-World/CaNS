@@ -71,11 +71,11 @@ module mod_sanity
     if(myid == 0.and.(.not.passed_loc)) &
       print*, 'ERROR: itot and jtot should be even.'
     passed = passed.and.passed_loc
-#if !defined(DECOMP_Y) && !defined(DECOMP_Z)
+#if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
     ii = [2,3]
-#elif defined(DECOMP_Y)
+#elif defined(_DECOMP_Y)
     ii = [1,3]
-#elif defined(DECOMP_Z)
+#elif defined(_DECOMP_Z)
     ii = [1,2]
 #endif
     passed_loc = passed_loc.and.all(dims(:)<=ng(ii)).and.all(dims(:)>=1)
@@ -145,7 +145,7 @@ module mod_sanity
   if(myid == 0.and.(.not.passed_loc)) &
     print*, 'ERROR: pressure BCs in directions x and y must be homogeneous (value = 0.).'
   passed = passed.and.passed_loc
-#ifdef IMPDIFF
+#if defined(_IMPDIFF)
   passed_loc = .true.
   do ivel = 1,3
     do idir=1,2
@@ -245,15 +245,15 @@ module mod_sanity
   print*, 'ERROR: Pressure correction: Divergence is too large.'
   passed = passed.and.passed_loc
   call fftend(arrplan)
-#ifdef IMPDIFF
+#if defined(_IMPDIFF)
   alpha = acos(-1.) ! irrelevant
   up(:,:,:) = 0.
   vp(:,:,:) = 0.
   wp(:,:,:) = 0.
-  call add_noise(n,123,.5_rp,up(1:n(1),1:n(2),1:n(3)))
-  call add_noise(n,456,.5_rp,vp(1:n(1),1:n(2),1:n(3)))
-  call add_noise(n,789,.5_rp,wp(1:n(1),1:n(2),1:n(3)))
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,1),bcvel(:,:,1),lambdaxy,['f','c','c'],a,b,c,arrplan,normfft, &
+  call add_noise(ng,lo,123,.5_rp,up(1:n(1),1:n(2),1:n(3)))
+  call add_noise(ng,lo,456,.5_rp,vp(1:n(1),1:n(2),1:n(3)))
+  call add_noise(ng,lo,789,.5_rp,wp(1:n(1),1:n(2),1:n(3)))
+  call initsolver(ng,zstart,zend,dli,dzci,dzfi,cbcvel(:,:,1),bcvel(:,:,1),lambdaxy,['f','c','c'],a,b,c,arrplan,normfft, &
                   rhsbx,rhsby,rhsbz)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
   up(:,:,:) = up(:,:,:)*alpha
@@ -263,13 +263,13 @@ module mod_sanity
   call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,1),['f','c','c'],up(1:n(1),1:n(2),1:n(3)))
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
-  call chk_helmholtz(n,dli,dzci,dzfi,alpha,u,up,cbcvel(:,:,1),['f','c','c'],resmax)
+  call chk_helmholtz(lo,hi,dli,dzci,dzfi,alpha,u,up,cbcvel(:,:,1),is_bound,['f','c','c'],resmax)
   passed_loc = resmax < small
   if(myid == 0.and.(.not.passed_loc)) &
   print*, 'ERROR: wrong solution of Helmholtz equation in x direction.'
   passed = passed.and.passed_loc
   !
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,2),bcvel(:,:,2),lambdaxy,['c','f','c'],a,b,c,arrplan,normfft, &
+  call initsolver(ng,zstart,zend,dli,dzci,dzfi,cbcvel(:,:,2),bcvel(:,:,2),lambdaxy,['c','f','c'],a,b,c,arrplan,normfft, &
                   rhsbx,rhsby,rhsbz)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
   vp(:,:,:) = vp(:,:,:)*alpha
@@ -279,13 +279,13 @@ module mod_sanity
   call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,2),['c','f','c'],vp(1:n(1),1:n(2),1:n(3)))
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
-  call chk_helmholtz(n,dli,dzci,dzfi,alpha,v,vp,cbcvel(:,:,2),['c','f','c'],resmax)
+  call chk_helmholtz(lo,hi,dli,dzci,dzfi,alpha,v,vp,cbcvel(:,:,2),is_bound,['c','f','c'],resmax)
   passed_loc = resmax < small
   if(myid == 0.and.(.not.passed_loc)) &
   print*, 'ERROR: wrong solution of Helmholtz equation in y direction.'
   passed = passed.and.passed_loc
   !
-  call initsolver(n,dli,dzci,dzfi,cbcvel(:,:,3),bcvel(:,:,3),lambdaxy,['c','c','f'],a,b,c,arrplan,normfft, &
+  call initsolver(ng,zstart,zend,dli,dzci,dzfi,cbcvel(:,:,3),bcvel(:,:,3),lambdaxy,['c','c','f'],a,b,c,arrplan,normfft, &
                   rhsbx,rhsby,rhsbz)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
   wp(:,:,:) = wp(:,:,:)*alpha
@@ -295,7 +295,7 @@ module mod_sanity
   call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,3),['c','c','f'],wp(1:n(1),1:n(2),1:n(3)))
   call fftend(arrplan)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
-  call chk_helmholtz(n,dli,dzci,dzfi,alpha,w,wp,cbcvel(:,:,3),['c','c','f'],resmax)
+  call chk_helmholtz(lo,hi,dli,dzci,dzfi,alpha,w,wp,cbcvel(:,:,3),is_bound,['c','c','f'],resmax)
   passed_loc = resmax < small
   if(myid == 0.and.(.not.passed_loc)) &
   print*, 'ERROR: wrong solution of Helmholtz equation in z direction.'
