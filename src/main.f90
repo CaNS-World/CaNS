@@ -38,7 +38,7 @@ program cans
   use mod_load       , only: load
   use mod_rk         , only: rk,rk_id
   use mod_output     , only: out0d,out1d,out1d_2,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
-  use mod_param      , only: itot,jtot,ktot,lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,uref,lref,rey,visc,small, &
+  use mod_param      , only: lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,uref,lref,rey,visc,small, &
                              nb,is_bound,cbcvel,bcvel,cbcpre,bcpre, &
                              icheck,iout0d,iout1d,iout2d,iout3d,isave, &
                              nstep,time_max,tw_max,stop_type,restart,is_overwrite_save, &
@@ -46,7 +46,7 @@ program cans
                              datadir,   &
                              cfl,dtmin, &
                              inivel,    &
-                             imax,jmax,dims, &
+                             dims, &
                              nthreadsmax, &
                              gr, &
                              is_forced,bforce, &
@@ -77,10 +77,9 @@ program cans
   real(rp), allocatable, dimension(:) :: au,av,aw,bu,bv,bw,bb,cu,cv,cw
   real(rp) :: normfftu,normfftv,normfftw
   real(rp) :: alpha,alphai
-  integer :: i,j,k,im,ip,jm,jp,km,kp
+  integer :: i,j,k
   type(rhs_bound) :: rhsbu,rhsbv,rhsbw
 #endif
-  real(rp) :: ristep
   real(rp) :: dt,dti,dtmax,time,dtrk,dtrki,divtot,divmax
   integer :: irk,istep
   real(rp), allocatable, dimension(:) :: dzc  ,dzf  ,zc  ,zf  ,dzci  ,dzfi, &
@@ -95,7 +94,7 @@ program cans
   real(rp) :: twi,tw
   character(len=7  ) :: fldnum
   character(len=100) :: filename
-  integer :: kk
+  integer :: k,kk
   logical :: is_done,kill
   integer :: rlen
   !
@@ -110,6 +109,7 @@ program cans
   !
   !$call omp_set_num_threads(nthreadsmax)
   call initmpi(ng,cbcpre,n_z,lo,hi,nb,is_bound)
+  n(:) = hi(:) - lo(:) + 1
   twi = MPI_WTIME()
   !
   ! allocate variables
@@ -164,17 +164,15 @@ program cans
   if(myid.eq.0) print*, '*** Beginning of simulation ***'
   if(myid.eq.0) print*, '*******************************'
   if(myid.eq.0) print*, ''
-  call initgrid(inivel,n(3),gr,lz,dzc,dzf,zc,zf)
-  dzci(:) = dzc(:)**(-1)
-  dzfi(:) = dzf(:)**(-1)
+  call initgrid(inivel,ng(3),gr,lz,dzc_g,dzf_g,zc_g,zf_g)
   if(myid.eq.0) then
     inquire(iolength=rlen) 1._rp
-    open(99,file=trim(datadir)//'grid.bin',access='direct',recl=4*n(3)*rlen)
-    write(99,rec=1) dzc(1:n(3)),dzf(1:n(3)),zc(1:n(3)),zf(1:n(3))
+    open(99,file=trim(datadir)//'grid.bin',access='direct',recl=4*ng(3)*rlen)
+    write(99,rec=1) dzc_g(1:ng(3)),dzf_g(1:ng(3)),zc_g(1:ng(3)),zf_g(1:ng(3))
     close(99)
     open(99,file=trim(datadir)//'grid.out')
-    do kk=0,ktot+1
-      write(99,'(5E15.7)') 0.,zf(kk),zc(kk),dzf(kk),dzc(kk)
+    do kk=0,ng(3)+1
+      write(99,'(5E15.7)') 0.,zf_g(kk),zc_g(kk),dzf_g(kk),dzc_g(kk)
     enddo
     close(99)
     open(99,file=trim(datadir)//'geometry.out')
@@ -182,11 +180,22 @@ program cans
       write(99,*) l(1),l(2),l(3) 
     close(99)
   endif
+  do kk=lo(3)-1,hi(3)+1
+    k = kk - (lo(3)-1)
+    zc( k) = zc_g(kk)
+    zf( k) = zf_g(kk)
+    dzc(k) = dzc_g(kk)
+    dzf(k) = dzf_g(kk)
+  enddo
+  dzci(:) = dzc(:)**(-1)
+  dzfi(:) = dzf(:)**(-1)
+  dzci_g(:) = dzc_g(:)**(-1)
+  dzfi_g(:) = dzf_g(:)**(-1)
   !
   ! test input files before proceeding with the calculation
   !
-  call test_sanity(ng,dims,n,n_z,lo,hi,stop_type,cbcvel,cbcpre,bcvel,bcpre,is_forced, &
-                   nb,is_bound,dli,dzci_g,dzfi_g,dzci,dzfi)
+  !call test_sanity(ng,dims,n,n_z,lo,hi,stop_type,cbcvel,cbcpre,bcvel,bcpre,is_forced, &
+  !                 nb,is_bound,dli,dzci_g,dzfi_g,dzci,dzfi)
   !
   if(.not.restart) then
     istep = 0
@@ -198,7 +207,7 @@ program cans
     if(myid.eq.0) print*, '*** Checkpoint loaded at time = ', time, 'time step = ', istep, '. ***'
   endif
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
-  call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,dzf,p)
+  call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
   !
   ! post-process and write initial condition
   !
@@ -218,14 +227,14 @@ program cans
   !
   ! initialize Poisson solver
   !
-  call initsolver(ng,lo,hi,dli,dzci,dzfi,cbcpre,bcpre(:,:),lambdaxyp,['c','c','c'],ap,bp,cp,arrplanp,normfftp, &
+  call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:),lambdaxyp,['c','c','c'],ap,bp,cp,arrplanp,normfftp, &
                   rhsbp%x,rhsbp%y,rhsbp%z)
 #ifdef IMPDIFF
-  call initsolver(ng,lo,hi,dli,dzci,dzfi,cbcvel(:,:,1),bcvel(:,:,1),lambdaxyu,['f','c','c'],au,bu,cu,arrplanu,normfftu, &
+  call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1),lambdaxyu,['f','c','c'],au,bu,cu,arrplanu,normfftu, &
                   rhsbu%x,rhsbu%y,rhsbu%z)
-  call initsolver(ng,lo,hi,dli,dzci,dzfi,cbcvel(:,:,2),bcvel(:,:,2),lambdaxyv,['c','f','c'],av,bv,cv,arrplanv,normfftv, &
+  call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2),lambdaxyv,['c','f','c'],av,bv,cv,arrplanv,normfftv, &
                   rhsbv%x,rhsbv%y,rhsbv%z)
-  call initsolver(ng,lo,hi,dli,dzci,dzfi,cbcvel(:,:,3),bcvel(:,:,3),lambdaxyw,['c','c','f'],aw,bw,cw,arrplanw,normfftw, &
+  call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3),lambdaxyw,['c','c','f'],aw,bw,cw,arrplanw,normfftw, &
                   rhsbw%x,rhsbw%y,rhsbw%z)
 #endif
   !
@@ -297,28 +306,22 @@ program cans
       call fillps(n,dli,dzfi,dtrki,up,vp,wp,pp)
       call updt_rhs_b(['c','c','c'],cbcpre,n,is_bound,rhsbp%x,rhsbp%y,rhsbp%z,pp)
       call solver(n,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre(:,3),['c','c','c'],pp)
-      call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,dzf,pp)
+      call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,pp)
       call correc(n,dli,dzci,dtrk,pp,up,vp,wp,u,v,w)
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.true.,dl,dzc,dzf,u,v,w)
 #ifdef IMPDIFF
       alphai = alpha**(-1)
       !$OMP PARALLEL DO DEFAULT(none) &
-      !$OMP PRIVATE(i,j,k,im,jm,km,ip,jp,kp) &
+      !$OMP PRIVATE(i,j,k) &
       !$OMP SHARED(n,p,pp,dxi,dyi,dzfi,dzci,alphai)
       do k=1,n(3)
-        kp = k + 1
-        km = k - 1
         do j=1,n(2)
-          jp = j + 1
-          jm = j - 1
           do i=1,n(1)
-            ip = i + 1
-            im = i - 1
             p(i,j,k) = p(i,j,k) + pp(i,j,k) + alphai*( &
-                        (pp(ip,j,k)-2.*pp(i,j,k)+pp(im,j,k))*(dxi**2) + &
-                        (pp(i,jp,k)-2.*pp(i,j,k)+pp(i,jm,k))*(dyi**2) + &
-                        ((pp(i,j,kp)-pp(i,j,k ))*dzci(k ) - &
-                         (pp(i,j,k )-pp(i,j,km))*dzci(km))*dzfi(k) )
+                        (pp(i+1,j,k)-2.*pp(i,j,k)+pp(i-1,j,k))*(dxi**2) + &
+                        (pp(i,j+1,k)-2.*pp(i,j,k)+pp(i,j-1,k))*(dyi**2) + &
+                        ((pp(i,j,k+1)-pp(i,j,k  ))*dzci(k  ) - &
+                         (pp(i,j,k  )-pp(i,j,k-1))*dzci(k-1))*dzfi(k) )
           enddo
         enddo
       enddo
@@ -328,7 +331,7 @@ program cans
       p(1:n(1),1:n(2),1:n(3)) = p(1:n(1),1:n(2),1:n(3)) + pp(1:n(1),1:n(2),1:n(3))
       !$OMP END WORKSHARE
 #endif
-      call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,dzf,p)
+      call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
     enddo
     dpdl(:) = -dpdl(:)*dti
     !
@@ -380,13 +383,13 @@ program cans
         meanvelv = 0.
         meanvelw = 0.
         if(is_forced(1).or.abs(bforce(1)).gt.0.) then
-          call chkmean(n,dzf/lz,up,meanvelu)
+          call chkmean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),up,meanvelu)
         endif
         if(is_forced(2).or.abs(bforce(2)).gt.0.) then
-          call chkmean(n,dzf/lz,vp,meanvelv)
+          call chkmean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),vp,meanvelv)
         endif
         if(is_forced(3).or.abs(bforce(3)).gt.0.) then
-          call chkmean(n,dzc/lz,wp,meanvelw)
+          call chkmean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),wp,meanvelw)
         endif
         if(.not.any(is_forced(:))) dpdl(:) = -bforce(:) ! constant pressure gradient
         var(1)   = time

@@ -1,5 +1,4 @@
 module mod_common_mpi
-  use mpi
   use mod_param, only: dims
   implicit none
   integer :: myid

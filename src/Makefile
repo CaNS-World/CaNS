@@ -2,7 +2,7 @@
 FC   = mpif90
 # flags
 BIG := # -mcmodel=medium
-DBG := #-g -fbacktrace -Wall -O0 -Wextra -pedantic -fcheck=all
+DBG := -O0 -g -fbacktrace -Wall -Wextra -pedantic -fcheck=all -finit-real=snan -ffpe-trap=invalid -std=f2018
 OMP := #-openmp
 OPT := -O3
 OTH := -DDEBUG -DTIMING #-DIMPDIFF
@@ -10,7 +10,7 @@ PROF := #-pg
 FFLAGS := $(OPT) $(BIG) $(DBG) $(PROF) $(OMP) $(OTH)
 TARGET = cans
 #
-OBJ = bound.o chkdiv.o chkdt.o common_mpi.o correc.o debug.o fft.o fftw.o fillps.o initflow.o initgrid.o initmpi.o initsolver.o load.o main.o mom.o momd.o scal.o output.o param.o rk.o sanity.o solver.o decomp_2d.o io.o types.o
+OBJ = bound.o chkdiv.o chkdt.o common_mpi.o correc.o debug.o fft.o fftw.o fillps.o initflow.o initgrid.o initmpi.o initsolver.o load.o main.o mom.o momd.o scal.o output.o param.o post.o rk.o sanity.o solver.o decomp_2d.o io.o types.o
 #
 LIBS = -lfftw3 -lfftw3_threads
 #
@@ -72,6 +72,8 @@ scal.o: scal.f90 types.o
 output.o: output.f90 io.o param.o types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
 param.o: param.f90 types.o
+	$(FC) $(FFLAGS) -cpp -c  $<
+post.o: post.f90 types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
 rk.o: rk.f90 debug.o mom.o momd.o scal.o param.o types.o
 	$(FC) $(FFLAGS) -cpp -c  $<

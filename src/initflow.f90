@@ -28,7 +28,7 @@ module mod_initflow
     real(rp) :: ubulk
     integer, dimension(3) :: n
     !
-    n(:) = size(p) - 2*1
+    n(:) = shape(p) - 2*1
     allocate(u1d(n(3)))
     is_noise = .false.
     is_mean  = .false.
@@ -177,7 +177,7 @@ module mod_initflow
     integer, dimension(3) :: n
     integer :: i,j,k,ii,jj,kk
     !
-    n(:) = size(p)
+    n(:) = shape(p)
     allocate(seed(64))
     seed(:) = iseed
     call random_seed( put = seed )

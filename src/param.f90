@@ -15,7 +15,7 @@ real(rp), parameter, dimension(3)   :: rkcoeff12 = rkcoeff(1,:)+rkcoeff(2,:)
 !
 ! variables to be determined from the input file 'dns.in'
 !
-integer :: itot,jtot,ktot,imax,jmax
+integer :: itot,jtot,ktot
 real(rp) :: lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,gr
 real(rp) :: cfl,dtmin
 real(rp) :: uref,lref,rey,visc
@@ -94,12 +94,9 @@ contains
     dxi = dx**(-1)
     dyi = dy**(-1)
     dzi = dz**(-1)
-    imax = itot/dims(1)
-    jmax = jtot/dims(2)
     !
     visc = uref*lref/rey
     ng  = [itot,jtot,ktot]
-    n   = [imax,jmax,ktot]
     l   = [lx,ly,lz]
     dl  = [dx,dy,dz]
     dli = [dxi,dyi,dzi]

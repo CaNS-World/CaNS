@@ -8,17 +8,17 @@ module mod_initsolver
   private
   public initsolver
   contains
-  subroutine initsolver(ng,lo,hi,dli,dzci,dzfi,cbc,bc,lambdaxy,c_or_f,a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
+  subroutine initsolver(ng,lo_z,hi_z,dli,dzci,dzfi,cbc,bc,lambdaxy,c_or_f,a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
     !
     ! initializes the Poisson/Helmholtz solver
     !
     implicit none
-    integer , intent(in), dimension(3) :: ng,lo,hi
+    integer , intent(in), dimension(3) :: ng,lo_z,hi_z
     real(rp), intent(in), dimension(3) :: dli
     real(rp), intent(in), dimension(0:) :: dzci,dzfi
     character(len=1), intent(in), dimension(0:1,3) :: cbc
-    real(rp)         , intent(in), dimension(0:1,3) :: bc
-    real(rp), intent(out), dimension(lo(1):,lo(2):) :: lambdaxy
+    real(rp)        , intent(in), dimension(0:1,3) :: bc
+    real(rp), intent(out), dimension(lo_z(1):,lo_z(2):) :: lambdaxy
     character(len=1), intent(in), dimension(3) :: c_or_f
     real(rp), intent(out), dimension(:) :: a,b,c
     type(C_PTR), intent(out), dimension(2,2) :: arrplan
@@ -41,8 +41,8 @@ module mod_initsolver
     !
     ! add eigenvalues
     !
-    do j=lo(2),hi(2)
-      do i=lo(1),hi(1)
+    do j=lo_z(2),hi_z(2)
+      do i=lo_z(1),hi_z(1)
         lambdaxy(i,j) = lambdax(i)+lambday(j)
       enddo
     enddo
@@ -110,7 +110,6 @@ module mod_initsolver
   !
   subroutine tridmatrix(bc,n,dzi,dzci,dzfi,c_or_f,a,b,c)
     implicit none
-    real(rp), parameter :: eps = epsilon(1._rp)*10.
     character(len=1), intent(in), dimension(0:1) :: bc
     integer , intent(in) :: n
     real(rp), intent(in) :: dzi
@@ -151,12 +150,6 @@ module mod_initsolver
       if(bc(0).eq.'N') b(1) = b(1) + factor(0)*a(1)
       if(bc(1).eq.'N') b(n) = b(n) + factor(1)*c(n)
     end select
-    ! n.b.: a(1) and c(n) not set to zero here;
-    !       the values are not used in the solver unless
-    !       the direction is periodic
-    a(:) = a(:)! + eps
-    b(:) = b(:)! + eps
-    c(:) = c(:)! + eps
   end subroutine tridmatrix
   !
   subroutine bc_rhs(cbc,bc,dlc,dlf,c_or_f,rhs)

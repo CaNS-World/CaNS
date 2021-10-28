@@ -82,15 +82,15 @@ module mod_rk
     !
     f(:) = 0.
     if(is_forced(1)) then
-      call chkmean(n,dzflzi,up,mean)
+      call chkmean(n,dzflzi*1./(dli(1)*dli(2)*l(1)*l(2)),up,mean)
       f(1) = velf(1) - mean
     endif
     if(is_forced(2)) then
-      call chkmean(n,dzflzi,vp,mean)
+      call chkmean(n,dzflzi*1./(dli(1)*dli(2)*l(1)*l(2)),vp,mean)
       f(2) = velf(2) - mean
     endif
     if(is_forced(3)) then
-      call chkmean(n,dzclzi,wp,mean)
+      call chkmean(n,dzclzi*1./(dli(1)*dli(2)*l(1)*l(2)),wp,mean)
       f(3) = velf(3) - mean
     endif
   end subroutine rk
@@ -166,15 +166,15 @@ module mod_rk
     !
     f(:) = 0.
     if(is_forced(1)) then
-      call chkmean(n,dzflzi,up,mean)
+      call chkmean(n,dzflzi*1./(dli(1)*dli(2)*l(1)*l(2)),up,mean)
       f(1) = velf(1) - mean
     endif
     if(is_forced(2)) then
-      call chkmean(n,dzflzi,vp,mean)
+      call chkmean(n,dzflzi*1./(dli(1)*dli(2)*l(1)*l(2)),vp,mean)
       f(2) = velf(2) - mean
     endif
     if(is_forced(3)) then
-      call chkmean(n,dzclzi,wp,mean)
+      call chkmean(n,dzclzi*1./(dli(1)*dli(2)*l(1)*l(2)),wp,mean)
       f(3) = velf(3) - mean
     endif
     !

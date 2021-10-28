@@ -71,11 +71,11 @@ module mod_sanity
     if(myid.eq.0.and.(.not.passed_loc)) &
       print*, 'ERROR: itot and jtot should be even.'
     passed = passed.and.passed_loc
-#ifdef DECOMP_X
+#if !defined(DECOMP_Y) && !defined(DECOMP_Z)
     ii = [2,3]
-#elif DECOMP_Y
+#elif defined(DECOMP_Y)
     ii = [1,3]
-#else
+#elif defined(DECOMP_Z)
     ii = [1,2]
 #endif
     passed_loc = passed_loc.and.all(dims(:)<=ng(ii)).and.all(dims(:)>=1)
@@ -226,7 +226,7 @@ module mod_sanity
   !
   ! test pressure correction
   !
-  call initsolver(ng,lo,hi,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:),lambdaxy,['c','c','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
+  call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:),lambdaxy,['c','c','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
   dl  = dli**(-1)
   dzc = dzci**(-1)
   dzf = dzfi**(-1)
@@ -236,7 +236,7 @@ module mod_sanity
   call fillps(n,dli,dzfi,dti,up,vp,wp,p)
   call updt_rhs_b(['c','c','c'],cbcpre,n,is_bound,rhsbx,rhsby,rhsbz,p(1:n(1),1:n(2),1:n(3)))
   call solver(n,arrplan,normfft,lambdaxy,a,b,c,cbcpre(:,3),['c','c','c'],p(1:n(1),1:n(2),1:n(3)))
-  call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,dzf,p)
+  call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
   call correc(n,dli,dzci,dt,p,up,vp,wp,u,v,w)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.true.,dl,dzc,dzf,u,v,w)
   call chkdiv(lo,hi,dli,dzfi,u,v,w,divtot,divmax)

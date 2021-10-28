@@ -258,7 +258,7 @@ module mod_output
     integer :: i,j,k
     integer :: iunit
     integer :: q
-    real(rp) :: x_g,y_g,grid_area_ratio
+    real(rp) :: grid_area_ratio
     !
     q = ng(idir)
     select case(idir)
@@ -299,7 +299,7 @@ module mod_output
       u2(:) = sqrt(u2(:)*grid_area_ratio - um(:)**2)
       v2(:) = sqrt(v2(:)*grid_area_ratio - vm(:)**2)
       w2(:) = sqrt(w2(:)*grid_area_ratio - wm(:)**2)
-      uw(:) = uw(:)/(1.*ng(1)*ng(2)) - um(:)*wm(:)
+      uw(:) = uw(:)*grid_area_ratio - um(:)*wm(:)
       if(myid.eq.0) then
         open(newunit=iunit,file=fname)
         do k=1,ng(3)

@@ -10,7 +10,7 @@ contains
     real(rp), intent(in ), dimension(3)        :: dli
     real(rp), intent(in ), dimension(0:)       :: dzci
     real(rp), intent(in ), dimension(0:,0:,0:) :: ux ,uy ,uz
-    real(rp), intent(out), dimension(1:,1:,1:) :: vox,voy,voz
+    real(rp), intent(out), dimension( :, :, :) :: vox,voy,voz
     real(rp) :: dxi,dyi
     integer :: i,j,k
     dxi = dli(1)
@@ -76,8 +76,8 @@ contains
     do k=1,n(3)
        do j=1,n(2)
           do i=1,n(1)
-             s11 = ((ux(i,j,k)-ux(i-1,j,k))*dxi)**2
-             s22 = ((uy(i,j,k)-uy(i,j-1,k))*dyi)**2
+             s11 = ((ux(i,j,k)-ux(i-1,j,k))*dxi    )**2
+             s22 = ((uy(i,j,k)-uy(i,j-1,k))*dyi    )**2
              s33 = ((uz(i,j,k)-uz(i,j,k-1))*dzfi(k))**2
              s12 = .25_rp*( &
                            ((ux(i  ,j+1,k)-ux(i  ,j  ,k))*dyi + (uy(i+1,j  ,k)-uy(i  ,j  ,k))*dxi)**2 + &
@@ -110,7 +110,7 @@ contains
     real(rp), intent(in ), dimension(0:)       :: dzci
     real(rp), intent(in ), dimension(0:,0:,0:) :: ux,uy,uz
     real(rp), intent(out), dimension(1:,1:,1:) :: ens
-    real(rp) :: e11,e22,e33,e12,e13,e23
+    real(rp) :: e12,e13,e23
     real(rp) :: dxi,dyi
     integer :: i,j,k
     !
@@ -154,7 +154,6 @@ contains
     integer , intent(in ), dimension(3)        :: n
     real(rp), intent(in ), dimension(1:,1:,1:) :: ens,str
     real(rp), intent(out), dimension(0:,0:,0:) :: qcr
-    real(rp) :: s11,s22,s33,s12,s13,s23
     integer  :: i,j,k
     !$OMP PARALLEL DEFAULT(none) &
     !$OMP SHARED(n,ens,str,qcr) &

@@ -57,14 +57,14 @@ module mod_bound
                          call set_bc(cbc(0,3,2),0,3,.true. ,bc(0,3,2),dzc(0)   ,v)
       if(impose_norm_bc) call set_bc(cbc(0,3,3),0,3,.false.,bc(0,3,3),dzf(0)   ,w)
     endif
-      if(is_bound(1,3)) then
+    if(is_bound(1,3)) then
                          call set_bc(cbc(1,3,1),1,3,.true. ,bc(1,3,1),dzc(n(3)),u)
                          call set_bc(cbc(1,3,2),1,3,.true. ,bc(1,3,2),dzc(n(3)),v)
       if(impose_norm_bc) call set_bc(cbc(1,3,3),1,3,.false.,bc(1,3,3),dzf(n(3)),w)
     endif
   end subroutine bounduvw
   !
-  subroutine boundp(cbc,n,bc,nb,is_bound,dl,dzc,dzf,p)
+  subroutine boundp(cbc,n,bc,nb,is_bound,dl,dzc,p)
     !
     ! imposes pressure boundary conditions
     !
@@ -75,7 +75,7 @@ module mod_bound
     integer , intent(in), dimension(0:1,3  ) :: nb
     logical , intent(in), dimension(0:1,3  ) :: is_bound
     real(rp), intent(in), dimension(3) :: dl
-    real(rp), intent(in), dimension(0:) :: dzc,dzf
+    real(rp), intent(in), dimension(0:) :: dzc
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
     integer :: idir
     !
@@ -133,11 +133,11 @@ module mod_bound
     case('P')
       select case(idir)
       case(1)
-        !p(0  ,:,:) = p(n,:,:)
-        !p(n+1,:,:) = p(1,:,:)
+        p(0  ,:,:) = p(n,:,:)
+        p(n+1,:,:) = p(1,:,:)
       case(2)
-        !p(:,0  ,:) = p(:,n,:)
-        !p(:,n+1,:) = p(:,1,:)
+        p(:,0  ,:) = p(:,n,:)
+        p(:,n+1,:) = p(:,1,:)
       case(3)
         !$OMP WORKSHARE
         p(:,:,0  ) = p(:,:,n)
@@ -260,11 +260,10 @@ module mod_bound
     end select
   end subroutine set_bc
   !
-  subroutine inflow(idir,is_bound,dl,vel2d,u,v,w)
+  subroutine inflow(idir,is_bound,vel2d,u,v,w)
     implicit none
     integer, intent(in) :: idir
     logical , intent(in), dimension(0:1,3) :: is_bound
-    real(rp), intent(in), dimension(3) :: dl
     real(rp), dimension(0:,0:), intent(in) :: vel2d
     real(rp), dimension(0:,0:,0:), intent(inout) :: u,v,w
     integer :: i,j,k
@@ -273,7 +272,7 @@ module mod_bound
     select case(idir)
       case(1) ! x direction
         if(is_bound(0,1)) then
-          n(:) = size(u) - 2*1
+          n(:) = shape(u) - 2*1
           i = 0
           do k=1,n(3)
             do j=1,n(2)
@@ -283,7 +282,7 @@ module mod_bound
         endif
       case(2) ! y direction
         if(is_bound(0,2)) then
-          n(:) = size(v) - 2*1
+          n(:) = shape(v) - 2*1
           j = 0
           do k=1,n(3)
             do i=1,n(1)
@@ -293,7 +292,7 @@ module mod_bound
         endif
       case(3) ! z direction
         if(is_bound(0,3)) then
-          n(:) = size(w) - 2*1
+          n(:) = shape(w) - 2*1
           k = 0
           do j=1,n(2)
             do i=1,n(1)
