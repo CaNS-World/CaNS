@@ -36,7 +36,7 @@ program cans
   use mod_initmpi    , only: initmpi
   use mod_initsolver , only: initsolver
   use mod_load       , only: load
-  use mod_rk         , only: rk,rk_id
+  use mod_rk         , only: rk
   use mod_output     , only: out0d,out1d,out1d_2,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
   use mod_param      , only: lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,uref,lref,rey,visc,small, &
                              nb,is_bound,cbcvel,bcvel,cbcpre,bcpre, &
@@ -49,7 +49,7 @@ program cans
                              dims, &
                              nthreadsmax, &
                              gr, &
-                             is_forced,bforce, &
+                             is_forced,velf,bforce, &
                              n,n_z,ng,lo,hi,l,dl,dli, &
                              read_input
   use mod_sanity     , only: test_sanity
@@ -255,13 +255,8 @@ program cans
     do irk=1,3
       dtrk = sum(rkcoeff(:,irk))*dt
       dtrki = dtrk**(-1)
-#if defined(_IMPDIFF)
-      call rk(rkcoeff(:,irk),n,dli,dzci,dzfi,dzf/lz,dzc/lz,visc,dt,l, &
-                 u,v,w,p,dudtrko,dvdtrko,dwdtrko,tauxo,tauyo,tauzo,up,vp,wp,f)
-#else
-      call rk_id(rkcoeff(:,irk),n,dli,dzci,dzfi,dzf/lz,dzc/lz,visc,dt,l, &
-                 u,v,w,p,dudtrko,dvdtrko,dwdtrko,tauxo,tauyo,tauzo,up,vp,wp,f)
-#endif
+      call rk(rkcoeff(:,irk),n,dli,l,dzci,dzfi,visc,dt,u,v,w,p,is_bound,is_forced,velf,bforce, &
+              dudtrko,dvdtrko,dwdtrko,tauxo,tauyo,tauzo,up,vp,wp,f)
       if(is_forced(1)) up(1:n(1),1:n(2),1:n(3)) = up(1:n(1),1:n(2),1:n(3)) + f(1)
       if(is_forced(2)) vp(1:n(1),1:n(2),1:n(3)) = vp(1:n(1),1:n(2),1:n(3)) + f(2)
       if(is_forced(3)) wp(1:n(1),1:n(2),1:n(3)) = wp(1:n(1),1:n(2),1:n(3)) + f(3)
