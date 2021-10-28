@@ -271,4 +271,126 @@ module mod_mom
     end do
     !$OMP END PARALLEL DO
   end subroutine momzp
+  subroutine cmpt_wallshear(n,is_bound,l,dl,dzc,dzf,visc,u,v,w,taux,tauy,tauz)
+    implicit none
+    integer , intent(in ), dimension(3) :: n
+    logical , intent(in ), dimension(0:1,3) :: is_bound
+    real(rp), intent(in ), dimension(3)     :: l,dl
+    real(rp), intent(in ), dimension(0:)    :: dzc,dzf
+    real(rp), intent(in )                   :: visc
+    real(rp), intent(in ), dimension(0:,0:,0:) :: u,v,w
+    real(rp), intent(out), dimension(3) :: taux,tauy,tauz
+    real(rp) :: dudxp,dudxm,dudyp,dudym,dudzp,dudzm, &
+                dvdxp,dvdxm,dvdyp,dvdym,dvdzp,dvdzm, &
+                dwdxp,dwdxm,dwdyp,dwdym,dwdzp,dwdzm
+    integer :: i,j,k,nx,ny,nz
+    !
+    nx = n(1)
+    ny = n(2)
+    nz = n(3)
+    taux(:) = 0.
+    if(is_bound(0,2)) then
+      do k=1,nz
+        do i=1,nx
+          dudyp = (u(i,1 ,k)-u(i,0   ,k))/dl(2)*visc
+          taux(2) = taux(2) + dudyp*(dl(1)*dzf(k))/(l(1)*l(3))
+        enddo
+      enddo
+    endif
+    if(is_bound(1,2)) then
+      do k=1,nz
+        do i=1,nx
+          dudym = (u(i,ny,k)-u(i,ny+1,k))/dl(2)*visc
+          taux(2) = taux(2) + dudyp*(dl(1)*dzf(k))/(l(1)*l(3))
+        enddo
+      enddo
+    endif
+    if(is_bound(0,3)) then
+      do j=1,ny
+        do i=1,nx
+          dudzp = (u(i,j,1 )-u(i,j,0   ))/dzc(0)*visc
+          taux(3) = taux(3) + dudzp*(dl(1)*dl(2))/(l(1)*l(2))
+        enddo
+      enddo
+    endif
+    if(is_bound(1,3)) then
+      do j=1,ny
+        do i=1,nx
+          dudzm = (u(i,j,nz)-u(i,j,nz+1))/dzc(nz)*visc
+          taux(3) = taux(3) + dudzm*(dl(1)*dl(2))/(l(1)*l(2))
+        enddo
+      enddo
+    endif
+    call mpi_allreduce(MPI_IN_PLACE,taux(1),3,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+    !
+    tauy(:) = 0.
+    if(is_bound(0,1)) then
+      do k=1,nz
+        do j=1,ny
+          dvdxp = (v(1 ,j,k)-v(0   ,j,k))/dl(1)*visc
+          tauy(1) = tauy(1) + dvdxp*(dl(2)*dzf(1))/(l(2)*l(3))
+        enddo
+      enddo
+    endif
+    if(is_bound(1,1)) then
+      do k=1,nz
+        do j=1,ny
+          dvdxm = (v(nx,j,k)-v(nx+1,j,k))/dl(1)*visc
+          tauy(1) = tauy(1) + dvdxm*(dl(2)*dzf(1))/(l(2)*l(3))
+        enddo
+      enddo
+    endif
+    if(is_bound(0,3)) then
+      do j=1,ny
+        do i=1,nx
+          dvdzp = (v(i,j,1 )-v(i,j,0   ))/dzc(0)*visc
+          tauy(3) = tauy(3) + dvdzp*(dl(1)*dl(2))/(l(1)*l(2))
+        enddo
+      enddo
+    endif
+    if(is_bound(1,3)) then
+      do j=1,ny
+        do i=1,nx
+          dvdzm = (v(i,j,nz)-v(i,j,nz+1))/dzc(nz)*visc
+          tauy(3) = tauy(3) + dvdzm*(dl(1)*dl(2))/(l(1)*l(2))
+        enddo
+      enddo
+    endif
+    call mpi_allreduce(MPI_IN_PLACE,tauy(1),3,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+    !
+    tauz(:) = 0.
+    if(is_bound(0,1)) then
+      do k=1,nz
+        do j=1,ny
+          dwdxp = (w(1 ,j,k)-w(0   ,j,k))/dl(1)*visc
+          tauz(1) = tauz(1) + dwdxp*(dl(2)*dzf(k))/(l(2)*l(3))
+        enddo
+      enddo
+    endif
+    if(is_bound(1,1)) then
+      do k=1,nz
+        do j=1,ny
+          dwdxm = (w(nx,j,k)-w(nx+1,j,k))/dl(1)*visc
+          tauz(1) = tauz(1) + dwdxm*(dl(2)*dzf(k))/(l(2)*l(3))
+        enddo
+      enddo
+    endif
+    if(is_bound(0,2)) then
+      do k=1,nz
+        do i=1,nx
+          dwdyp = (w(i,1,k )-w(i,0   ,k))/dl(2)*visc
+          tauz(2) = tauz(2) + dwdyp*(dl(1)*dzf(k))/(l(1)*l(3))
+        enddo
+      enddo
+    endif
+    if(is_bound(1,2)) then
+      do k=1,nz
+        do i=1,nx
+          dwdym = (w(i,ny,k)-w(i,ny+1,k))/dl(2)*visc
+          tauz(2) = tauz(2) + dwdym*(dl(1)*dzf(k))/(l(1)*l(3))
+        enddo
+      enddo
+    endif
+    call mpi_allreduce(MPI_IN_PLACE,tauz(1),3,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+  end subroutine cmpt_wallshear
 end module mod_mom
