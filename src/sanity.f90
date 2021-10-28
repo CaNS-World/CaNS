@@ -177,7 +177,7 @@ module mod_sanity
   integer :: idir
   passed = .true.
   !
-  ! 1) check for compatibility between pressure BCs and forcing BC
+  ! 1) check for compatibility between pressure BCs and flow forcing
   !
   do idir=1,3
     if(is_forced(idir)) then

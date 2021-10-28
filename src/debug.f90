@@ -5,9 +5,9 @@ module mod_debug
   use mod_types
   implicit none
   private
-  public chkmean,chk_helmholtz
+  public chk_mean,chk_helmholtz
   contains
-  subroutine chkmean(n,grid_vol_ratio,p,mean)
+  subroutine chk_mean(n,grid_vol_ratio,p,mean)
     !
     ! compute the mean value of an observable over the entire domain
     !
@@ -31,12 +31,12 @@ module mod_debug
     end do
     !$OMP END PARALLEL DO
     call mpi_allreduce(MPI_IN_PLACE,mean,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-  end subroutine chkmean
+  end subroutine chk_mean
   !
   subroutine chk_helmholtz(lo,hi,dli,dzci,dzfi,alpha,fp,fpp,bc,is_bound,c_or_f,diffmax)
     !
     ! this subroutine checks if the implementation of implicit diffusion is
-    ! correct
+    ! correct under sanity.f90
     !
     implicit none
     integer , intent(in), dimension(3) :: lo,hi
@@ -57,9 +57,6 @@ module mod_debug
       if(bc(1,idir).ne.'P'.and.c_or_f(idir) == 'f'.and.is_bound(1,idir)) q(idir) = 1
     end do
     select case(c_or_f(3))
-    !
-    ! need to compute the maximum difference!
-    !
     case('c')
       diffmax = 0.
       do k=lo(3),hi(3)-q(3)

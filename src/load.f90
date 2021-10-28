@@ -76,6 +76,7 @@ module mod_load
       call MPI_FILE_CLOSE(fh,ierr)
     end select
   end subroutine load
+  !
   subroutine io_field(io,fh,ng,nh,lo,hi,disp,var)
     implicit none
     character(len=1), intent(in)                 :: io

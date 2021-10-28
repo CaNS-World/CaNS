@@ -1,28 +1,26 @@
 module mod_initmpi
   use mpi
   use decomp_2d
-  use mod_param     , only: dims
   use mod_common_mpi, only: comm_cart,myid,ierr,halo,ipencil
   use mod_types
   implicit none
   private
   public initmpi
   contains
-  subroutine initmpi(n,bc,n_z,lo,hi,nb,is_bound)
+  subroutine initmpi(ng,dims,bc,n_z,lo,hi,n,nb,is_bound)
     implicit none
-    integer, intent(in), dimension(3) :: n
+    integer, intent(in   ), dimension(3) :: ng
+    integer, intent(inout), dimension(2) :: dims
     character(len=1), intent(in ), dimension(0:1,3) :: bc
-    integer, intent(out), dimension(3    ) :: n_z,lo,hi
+    integer, intent(out), dimension(3    ) :: n_z,lo,hi,n
     integer, intent(out), dimension(0:1,3) :: nb
     logical, intent(out), dimension(0:1,3) :: is_bound
     logical, dimension(3) :: periods
     integer :: l1,l2,l
     !
     periods(:) = .false.
-    if( bc(0,1)//bc(1,1) == 'PP' ) periods(1) = .true.
-    if( bc(0,2)//bc(1,2) == 'PP' ) periods(2) = .true.
-    if( bc(0,3)//bc(1,3) == 'PP' ) periods(3) = .true.
-    call decomp_2d_init(n(1),n(2),n(3),dims(1),dims(2),periods)
+    where(bc(0,:)//bc(1,:) == 'PP') periods(:) = .true.
+    call decomp_2d_init(ng(1),ng(2),ng(3),dims(1),dims(2),periods)
     myid = nrank
     n_z(:) = zsize(:)
 #if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
@@ -47,6 +45,7 @@ module mod_initmpi
     lo(:) = zstart(:)
     hi(:) = zend(:)
 #endif
+    n(:) = hi(:) - lo(:) + 1
     nb(:,ipencil) = MPI_PROC_NULL
     call MPI_CART_SHIFT(comm_cart,0,1,nb(0,l1),nb(1,l1),ierr)
     call MPI_CART_SHIFT(comm_cart,1,1,nb(0,l2),nb(1,l2),ierr)
@@ -56,6 +55,7 @@ module mod_initmpi
       call makehalo(l,1,hi(:)-lo(:)+1,halo(l))
     end do
   end subroutine initmpi
+  !
   subroutine makehalo(idir,nh,n,halo)
     implicit none
     integer, intent(in ) :: idir,nh

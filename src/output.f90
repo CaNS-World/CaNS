@@ -31,7 +31,7 @@ module mod_output
     end if
   end subroutine out0d
   !
-  subroutine out1d(fname,ng,lo,hi,idir,dl,l,z_g,dz_g,p)
+  subroutine out1d(fname,ng,lo,hi,idir,l,dl,z_g,dz_g,p)
     !
     ! writes the profile of a variable averaged
     ! over two domain directions

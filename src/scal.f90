@@ -1,10 +1,13 @@
-module mod_moms
+module mod_scal
   use mod_types
   implicit none
   private
-  public momsad
+  public scal
   contains
-  subroutine momsad(nx,ny,nz,dxi,dyi,dzi,dzci,dzfi,visc,u,v,w,s,dsdt)
+  subroutine scal(nx,ny,nz,dxi,dyi,dzi,dzci,dzfi,visc,u,v,w,s,dsdt)
+    !
+    !
+    !
     implicit none
     integer , intent(in) :: nx,ny,nz
     real(rp), intent(in) :: dxi,dyi,dzi,visc
@@ -44,5 +47,5 @@ module mod_moms
     end do
     !$OMP END PARALLEL DO
     return
-  end subroutine momsad
-end module mod_moms
+  end subroutine scal
+end module mod_scal

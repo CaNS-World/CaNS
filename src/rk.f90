@@ -1,9 +1,9 @@
 module mod_rk
   use mod_param, only: is_forced,velf
-  use mod_debug, only: chkmean
+  use mod_debug, only: chk_mean
   use mod_mom  , only: momxad,momyad,momzad,momxp,momyp,momzp
   use mod_momd , only: momxpd,momypd,momzpd,momxa,momya,momza
-  use mod_moms , only: momsad
+  use mod_scal , only: scal
   use mod_types
   implicit none
   private
@@ -82,15 +82,15 @@ module mod_rk
     !
     f(:) = 0.
     if(is_forced(1)) then
-      call chkmean(n,dzflzi*1./(dli(1)*dli(2)*l(1)*l(2)),up,mean)
+      call chk_mean(n,dzflzi*1./(dli(1)*dli(2)*l(1)*l(2)),up,mean)
       f(1) = velf(1) - mean
     end if
     if(is_forced(2)) then
-      call chkmean(n,dzflzi*1./(dli(1)*dli(2)*l(1)*l(2)),vp,mean)
+      call chk_mean(n,dzflzi*1./(dli(1)*dli(2)*l(1)*l(2)),vp,mean)
       f(2) = velf(2) - mean
     end if
     if(is_forced(3)) then
-      call chkmean(n,dzclzi*1./(dli(1)*dli(2)*l(1)*l(2)),wp,mean)
+      call chk_mean(n,dzclzi*1./(dli(1)*dli(2)*l(1)*l(2)),wp,mean)
       f(3) = velf(3) - mean
     end if
   end subroutine rk
@@ -166,15 +166,15 @@ module mod_rk
     !
     f(:) = 0.
     if(is_forced(1)) then
-      call chkmean(n,dzflzi*1./(dli(1)*dli(2)*l(1)*l(2)),up,mean)
+      call chk_mean(n,dzflzi*1./(dli(1)*dli(2)*l(1)*l(2)),up,mean)
       f(1) = velf(1) - mean
     end if
     if(is_forced(2)) then
-      call chkmean(n,dzflzi*1./(dli(1)*dli(2)*l(1)*l(2)),vp,mean)
+      call chk_mean(n,dzflzi*1./(dli(1)*dli(2)*l(1)*l(2)),vp,mean)
       f(2) = velf(2) - mean
     end if
     if(is_forced(3)) then
-      call chkmean(n,dzclzi*1./(dli(1)*dli(2)*l(1)*l(2)),wp,mean)
+      call chk_mean(n,dzclzi*1./(dli(1)*dli(2)*l(1)*l(2)),wp,mean)
       f(3) = velf(3) - mean
     end if
     !
@@ -215,7 +215,7 @@ module mod_rk
     factor1 = rkpar(1)*dt
     factor2 = rkpar(2)*dt
     factor12 = factor1 + factor2
-    call momsad(n(1),n(2),n(3),dli(1),dli(2),dli(3),dzci,dzfi,visc,u,v,w,s,dsdtrk)
+    call scal(n(1),n(2),n(3),dli(1),dli(2),dli(3),dzci,dzfi,visc,u,v,w,s,dsdtrk)
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP PRIVATE(i,j,k) &
     !$OMP SHARED(n,factor1,factor2,s,dsdtrk,dsdtrko)

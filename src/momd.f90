@@ -14,28 +14,22 @@ module mod_momd
     real(rp), intent(in), dimension(0:) :: dzci,dzfi
     real(rp), dimension(0:,0:,0:), intent(in) :: u,v,w
     real(rp), dimension(:,:,:), intent(out) :: dudt
-    integer :: im,ip,jm,jp,km,kp,i,j,k
+    integer :: i,j,k
     real(rp) :: uuip,uuim,uvjp,uvjm,uwkp,uwkm
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k,im,jm,km,ip,jp,kp) &
+    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(uuip,uuim,uvjp,uvjm,uwkp,uwkm) &
     !$OMP SHARED(nx,ny,nz,dxi,dyi,u,v,w,dudt,dzci,dzfi,bforce)
     do k=1,nz
-      kp = k + 1
-      km = k - 1
       do j=1,ny
-        jp = j + 1
-        jm = j - 1
         do i=1,nx
-          ip = i + 1
-          im = i - 1
-          uuip  = 0.25*( u(ip,j,k)+u(i,j,k) )*( u(ip,j ,k )+u(i,j ,k ) )
-          uuim  = 0.25*( u(im,j,k)+u(i,j,k) )*( u(im,j ,k )+u(i,j ,k ) )
-          uvjp  = 0.25*( u(i,jp,k)+u(i,j,k) )*( v(ip,j ,k )+v(i,j ,k ) )
-          uvjm  = 0.25*( u(i,jm,k)+u(i,j,k) )*( v(ip,jm,k )+v(i,jm,k ) )
-          uwkp  = 0.25*( u(i,j,kp)+u(i,j,k) )*( w(ip,j ,k )+w(i,j ,k ) )
-          uwkm  = 0.25*( u(i,j,km)+u(i,j,k) )*( w(ip,j ,km)+w(i,j ,km) )
+          uuip  = 0.25*( u(i+1,j,k)+u(i,j,k) )*( u(i+1,j  ,k  )+u(i,j  ,k  ) )
+          uuim  = 0.25*( u(i-1,j,k)+u(i,j,k) )*( u(i-1,j  ,k  )+u(i,j  ,k  ) )
+          uvjp  = 0.25*( u(i,j+1,k)+u(i,j,k) )*( v(i+1,j  ,k  )+v(i,j  ,k  ) )
+          uvjm  = 0.25*( u(i,j-1,k)+u(i,j,k) )*( v(i+1,j-1,k  )+v(i,j-1,k  ) )
+          uwkp  = 0.25*( u(i,j,k+1)+u(i,j,k) )*( w(i+1,j  ,k  )+w(i,j  ,k  ) )
+          uwkm  = 0.25*( u(i,j,k-1)+u(i,j,k) )*( w(i+1,j  ,k-1)+w(i,j  ,k-1) )
           !
           ! Momentum balance
           !
@@ -56,28 +50,22 @@ module mod_momd
     real(rp), intent(in), dimension(0:) :: dzci,dzfi
     real(rp), dimension(0:,0:,0:), intent(in) :: u,v,w
     real(rp), dimension(:,:,:), intent(out) :: dvdt
-    integer :: im,ip,jm,jp,km,kp,i,j,k
+    integer :: i,j,k
     real(rp) :: uvip,uvim,vvjp,vvjm,wvkp,wvkm
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k,im,jm,km,ip,jp,kp) &
+    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(uvip,uvim,vvjp,vvjm,wvkp,wvkm) &
     !$OMP SHARED(nx,ny,nz,dxi,dyi,dzci,dzfi,u,v,w,dvdt,bforce)
     do k=1,nz
-      kp = k + 1
-      km = k - 1
       do j=1,ny
-        jp = j + 1
-        jm = j - 1
         do i=1,nx
-          ip = i + 1
-          im = i - 1
-          uvip  = 0.25*( u(i ,j,k)+u(i ,jp,k) )*( v(i,j,k )+v(ip,j ,k) )
-          uvim  = 0.25*( u(im,j,k)+u(im,jp,k) )*( v(i,j,k )+v(im,j ,k) )
-          vvjp  = 0.25*( v(i,j,k )+v(i,jp,k)  )*( v(i,j,k )+v(i ,jp,k) )
-          vvjm  = 0.25*( v(i,j,k )+v(i,jm,k)  )*( v(i,j,k )+v(i ,jm,k) )
-          wvkp  = 0.25*( w(i,j,k )+w(i,jp,k)  )*( v(i,j,kp)+v(i ,j ,k) )
-          wvkm  = 0.25*( w(i,j,km)+w(i,jp,km) )*( v(i,j,km)+v(i ,j ,k) )
+          uvip  = 0.25*( u(i  ,j,k  )+u(i  ,j+1,k  ) )*( v(i,j,k)+v(i+1,j,k) )
+          uvim  = 0.25*( u(i-1,j,k  )+u(i-1,j+1,k  ) )*( v(i,j,k)+v(i-1,j,k) )
+          vvjp  = 0.25*( v(i  ,j,k  )+v(i  ,j+1,k  ) )*( v(i,j,k)+v(i,j+1,k) )
+          vvjm  = 0.25*( v(i  ,j,k  )+v(i  ,j-1,k  ) )*( v(i,j,k)+v(i,j-1,k) )
+          wvkp  = 0.25*( w(i  ,j,k  )+w(i  ,j+1,k  ) )*( v(i,j,k+1)+v(i,j,k) )
+          wvkm  = 0.25*( w(i  ,j,k-1)+w(i  ,j+1,k-1) )*( v(i,j,k-1)+v(i,j,k) )
           !
           ! Momentum balance
           !
@@ -98,28 +86,22 @@ module mod_momd
     real(rp), intent(in), dimension(0:) :: dzci,dzfi
     real(rp), dimension(0:,0:,0:), intent(in) :: u,v,w
     real(rp), dimension(:,:,:), intent(out) :: dwdt
-    integer :: im,ip,jm,jp,km,kp,i,j,k
+    integer :: i,j,k
     real(rp) :: uwip,uwim,vwjp,vwjm,wwkp,wwkm
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k,im,jm,km,ip,jp,kp) &
+    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(uwip,uwim,vwjp,vwjm,wwkp,wwkm) &
     !$OMP SHARED(nx,ny,nz,dxi,dyi,dzci,dzfi,u,v,w,dwdt,bforce)
     do k=1,nz
-      kp = k + 1
-      km = k - 1
       do j=1,ny
-        jp = j + 1
-        jm = j - 1
         do i=1,nx
-          ip = i + 1
-          im = i - 1
-          uwip  = 0.25*( w(i,j,k)+w(ip,j,k) )*( u(i ,j ,k)+u(i ,j ,kp) )
-          uwim  = 0.25*( w(i,j,k)+w(im,j,k) )*( u(im,j ,k)+u(im,j ,kp) )
-          vwjp  = 0.25*( w(i,j,k)+w(i,jp,k) )*( v(i ,j ,k)+v(i ,j ,kp) )
-          vwjm  = 0.25*( w(i,j,k)+w(i,jm,k) )*( v(i ,jm,k)+v(i ,jm,kp) )
-          wwkp  = 0.25*( w(i,j,k)+w(i,j,kp) )*( w(i ,j ,k)+w(i ,j ,kp) )
-          wwkm  = 0.25*( w(i,j,k)+w(i,j,km) )*( w(i ,j ,k)+w(i ,j ,km) )
+          uwip  = 0.25*( w(i,j,k)+w(i+1,j,k) )*( u(i  ,j  ,k)+u(i  ,j  ,k+1) )
+          uwim  = 0.25*( w(i,j,k)+w(i-1,j,k) )*( u(i-1,j  ,k)+u(i-1,j  ,k+1) )
+          vwjp  = 0.25*( w(i,j,k)+w(i,j+1,k) )*( v(i  ,j  ,k)+v(i  ,j  ,k+1) )
+          vwjm  = 0.25*( w(i,j,k)+w(i,j-1,k) )*( v(i  ,j-1,k)+v(i  ,j-1,k+1) )
+          wwkp  = 0.25*( w(i,j,k)+w(i,j,k+1) )*( w(i  ,j  ,k)+w(i  ,j  ,k+1) )
+          wwkm  = 0.25*( w(i,j,k)+w(i,j,k-1) )*( w(i  ,j  ,k)+w(i  ,j  ,k-1) )
           !
           ! Momentum balance
           !
@@ -142,32 +124,26 @@ module mod_momd
     real(rp), dimension(:,:,:), intent(out) :: dudt,dudtd
     real(rp), dimension(3)  , intent(out) :: taux
     real(rp) :: dudxp,dudxm,dudyp,dudym,dudzp,dudzm
-    integer :: im,ip,jm,jp,km,kp,i,j,k
+    integer :: i,j,k
     integer :: nxg,nyg,nzg
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k,im,jm,km,ip,jp,kp) &
+    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(dudxp,dudxm,dudyp,dudym,dudzp,dudzm) &
     !$OMP SHARED(nx,ny,nz,dxi,dyi,dzci,dzfi,u,p,dudt,dudtd,visc)
     do k=1,nz
-      kp = k + 1
-      km = k - 1
       do j=1,ny
-        jp = j + 1
-        jm = j - 1
         do i=1,nx
-          ip = i + 1
-          im = i - 1
-          dudxp = (u(ip,j,k)-u(i,j,k))*dxi
-          dudxm = (u(i,j,k)-u(im,j,k))*dxi
-          dudyp = (u(i,jp,k)-u(i,j,k))*dyi
-          dudym = (u(i,j,k)-u(i,jm,k))*dyi
-          dudzp = (u(i,j,kp)-u(i,j,k))*dzci(k)
-          dudzm = (u(i,j,k)-u(i,j,km))*dzci(km)
+          dudxp = (u(i+1,j,k)-u(i,j,k))*dxi
+          dudxm = (u(i,j,k)-u(i-1,j,k))*dxi
+          dudyp = (u(i,j+1,k)-u(i,j,k))*dyi
+          dudym = (u(i,j,k)-u(i,j-1,k))*dyi
+          dudzp = (u(i,j,k+1)-u(i,j,k))*dzci(k  )
+          dudzm = (u(i,j,k)-u(i,j,k-1))*dzci(k-1)
           dudtd(i,j,k) = (dudxp-dudxm)*visc*dxi + &
                          (dudyp-dudym)*visc*dyi + &
                          (dudzp-dudzm)*visc*dzfi(k)
-          dudt(i,j,k) = - dxi*( p(ip,j,k)-p(i,j,k) ) + dudtd(i,j,k)
+          dudt(i,j,k) = - dxi*( p(i+1,j,k)-p(i,j,k) ) + dudtd(i,j,k)
         end do
       end do
     end do
@@ -205,32 +181,26 @@ module mod_momd
     real(rp), dimension(:,:,:), intent(out) :: dvdt,dvdtd
     real(rp), dimension(3)  , intent(out) :: tauy
     real(rp) :: dvdxp,dvdxm,dvdyp,dvdym,dvdzp,dvdzm
-    integer :: im,ip,jm,jp,km,kp,i,j,k
+    integer :: i,j,k
     integer :: nxg,nyg,nzg
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k,im,jm,km,ip,jp,kp) &
+    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(dvdxp,dvdxm,dvdyp,dvdym,dvdzp,dvdzm) &
     !$OMP SHARED(nx,ny,nz,dxi,dyi,dzci,dzfi,v,p,dvdt,dvdtd,visc)
     do k=1,nz
-      kp = k + 1
-      km = k - 1
       do j=1,ny
-        jp = j + 1
-        jm = j - 1
         do i=1,nx
-          ip = i + 1
-          im = i - 1
-          dvdxp = (v(ip,j,k)-v(i,j,k))*dxi
-          dvdxm = (v(i,j,k)-v(im,j,k))*dxi
-          dvdyp = (v(i,jp,k)-v(i,j,k))*dyi
-          dvdym = (v(i,j,k)-v(i,jm,k))*dyi
-          dvdzp = (v(i,j,kp)-v(i,j,k))*dzci(k)
-          dvdzm = (v(i,j,k)-v(i,j,km))*dzci(km)
+          dvdxp = (v(i+1,j,k)-v(i,j,k))*dxi
+          dvdxm = (v(i,j,k)-v(i-1,j,k))*dxi
+          dvdyp = (v(i,j+1,k)-v(i,j,k))*dyi
+          dvdym = (v(i,j,k)-v(i,j-1,k))*dyi
+          dvdzp = (v(i,j,k+1)-v(i,j,k))*dzci(k  )
+          dvdzm = (v(i,j,k)-v(i,j,k-1))*dzci(k-1)
           dvdtd(i,j,k) = (dvdxp-dvdxm)*visc*dxi+ &
                          (dvdyp-dvdym)*visc*dyi+ &
                          (dvdzp-dvdzm)*visc*dzfi(k)
-          dvdt(i,j,k) = - dyi*( p(i,jp,k)-p(i,j,k) ) + dvdtd(i,j,k)
+          dvdt(i,j,k) = - dyi*( p(i,j+1,k)-p(i,j,k) ) + dvdtd(i,j,k)
         end do
       end do
     end do
@@ -267,33 +237,27 @@ module mod_momd
     real(rp), dimension(0:,0:,0:), intent(in) :: p,w
     real(rp), dimension(:,:,:), intent(out) :: dwdt,dwdtd
     real(rp), dimension(3)  , intent(out) :: tauz
-    integer :: im,ip,jm,jp,km,kp,i,j,k
+    integer :: i,j,k
     real(rp) :: dwdxp,dwdxm,dwdyp,dwdym,dwdzp,dwdzm
     integer :: nxg,nyg,nzg
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k,im,jm,km,ip,jp,kp) &
+    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(dwdxp,dwdxm,dwdyp,dwdym,dwdzp,dwdzm) &
     !$OMP SHARED(nx,ny,nz,dxi,dyi,dzci,dzfi,w,p,dwdt,dwdtd,visc)
     do k=1,nz
-      kp = k + 1
-      km = k - 1
       do j=1,ny
-        jp = j + 1
-        jm = j - 1
         do i=1,nx
-          ip = i + 1
-          im = i - 1
-          dwdxp = (w(ip,j,k)-w(i,j,k))*dxi
-          dwdxm = (w(i,j,k)-w(im,j,k))*dxi
-          dwdyp = (w(i,jp,k)-w(i,j,k))*dyi
-          dwdym = (w(i,j,k)-w(i,jm,k))*dyi
-          dwdzp = (w(i,j,kp)-w(i,j,k))*dzfi(kp)
-          dwdzm = (w(i,j,k)-w(i,j,km))*dzfi(k)
+          dwdxp = (w(i+1,j,k)-w(i,j,k))*dxi
+          dwdxm = (w(i,j,k)-w(i-1,j,k))*dxi
+          dwdyp = (w(i,j+1,k)-w(i,j,k))*dyi
+          dwdym = (w(i,j,k)-w(i,j-1,k))*dyi
+          dwdzp = (w(i,j,k+1)-w(i,j,k))*dzfi(k+1)
+          dwdzm = (w(i,j,k)-w(i,j,k-1))*dzfi(k  )
           dwdtd(i,j,k) = (dwdxp-dwdxm)*visc*dxi+ &
                          (dwdyp-dwdym)*visc*dyi+ &
                          (dwdzp-dwdzm)*visc*dzci(k)
-          dwdt(i,j,k) = - dzci(k)*( p(i,j,kp)-p(i,j,k) ) + dwdtd(i,j,k)
+          dwdt(i,j,k) = - dzci(k)*( p(i,j,k+1)-p(i,j,k) ) + dwdtd(i,j,k)
         end do
       end do
     end do

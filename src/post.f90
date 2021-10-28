@@ -2,9 +2,12 @@ module mod_post
   use mod_types
   implicit none
   private
-  public vorticity, rotation_rate, strain_rate, q_criterion
-contains
+  public vorticity,rotation_rate,strain_rate,q_criterion
+  contains
   subroutine vorticity(n,dli,dzci,ux,uy,uz,vox,voy,voz)
+    !
+    ! computes the vorticity field
+    !
     implicit none
     integer , intent(in ), dimension(3)        :: n
     real(rp), intent(in ), dimension(3)        :: dli
@@ -54,6 +57,7 @@ contains
     end do
     !$OMP END PARALLEL
   end subroutine vorticity
+  !
   subroutine strain_rate(n,dli,dzci,dzfi,ux,uy,uz,str)
     implicit none
     integer , intent(in ), dimension(3)        :: n
@@ -103,6 +107,7 @@ contains
     end do
     !$OMP END PARALLEL
   end subroutine strain_rate
+  !
   subroutine rotation_rate(n,dli,dzci,ux,uy,uz,ens)
     implicit none
     integer , intent(in ), dimension(3)        :: n
@@ -149,6 +154,7 @@ contains
     end do
     !$OMP END PARALLEL
   end subroutine rotation_rate
+  !
   subroutine q_criterion(n,ens,str,qcr)
     implicit none
     integer , intent(in ), dimension(3)        :: n

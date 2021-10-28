@@ -7,7 +7,7 @@ module mod_initgrid
   contains
   subroutine initgrid(inivel,n,gr,lz,dzc,dzf,zc,zf)
     !
-    ! initializes the non-uniform grid in z
+    ! initializes the non-uniform grid along z
     !
     implicit none
     character(len=3), intent(in) :: inivel

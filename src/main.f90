@@ -28,7 +28,7 @@ program cans
   use mod_chkdt      , only: chkdt
   use mod_common_mpi , only: myid,ierr
   use mod_correc     , only: correc
-  use mod_debug      , only: chkmean
+  use mod_debug      , only: chk_mean
   use mod_fft        , only: fftini,fftend
   use mod_fillps     , only: fillps
   use mod_initflow   , only: initflow
@@ -77,7 +77,7 @@ program cans
   real(rp), allocatable, dimension(:) :: au,av,aw,bu,bv,bw,bb,cu,cv,cw
   real(rp) :: normfftu,normfftv,normfftw
   real(rp) :: alpha,alphai
-  integer :: i,j,k
+  integer :: i,j
   type(rhs_bound) :: rhsbu,rhsbv,rhsbw
 #endif
   real(rp) :: dt,dti,dtmax,time,dtrk,dtrki,divtot,divmax
@@ -94,7 +94,7 @@ program cans
   real(rp) :: twi,tw
   character(len=7  ) :: fldnum
   character(len=100) :: filename
-  integer :: kk
+  integer :: k,kk
   logical :: is_done,kill
   integer :: rlen
   !
@@ -108,8 +108,7 @@ program cans
   ! initialize MPI/OpenMP
   !
   !$call omp_set_num_threads(nthreadsmax)
-  call initmpi(ng,cbcpre,n_z,lo,hi,nb,is_bound)
-  n(:) = hi(:) - lo(:) + 1
+  call initmpi(ng,dims,cbcpre,n_z,lo,hi,n,nb,is_bound)
   twi = MPI_WTIME()
   !
   ! allocate variables
@@ -181,10 +180,11 @@ program cans
     close(99)
   end if
   do kk=lo(3)-1,hi(3)+1
-    zc( kk - (lo(3)-1)) = zc_g(kk)
-    zf( kk - (lo(3)-1)) = zf_g(kk)
-    dzc(kk - (lo(3)-1)) = dzc_g(kk)
-    dzf(kk - (lo(3)-1)) = dzf_g(kk)
+    k = kk-(lo(3)-1)
+    zc( k) = zc_g(kk)
+    zf( k) = zf_g(kk)
+    dzc(k) = dzc_g(kk)
+    dzf(k) = dzf_g(kk)
   end do
   dzci(:) = dzc(:)**(-1)
   dzfi(:) = dzf(:)**(-1)
@@ -382,13 +382,13 @@ program cans
         meanvelv = 0.
         meanvelw = 0.
         if(is_forced(1).or.abs(bforce(1)) > 0.) then
-          call chkmean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),up,meanvelu)
+          call chk_mean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),up,meanvelu)
         end if
         if(is_forced(2).or.abs(bforce(2)) > 0.) then
-          call chkmean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),vp,meanvelv)
+          call chk_mean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),vp,meanvelv)
         end if
         if(is_forced(3).or.abs(bforce(3)) > 0.) then
-          call chkmean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),wp,meanvelw)
+          call chk_mean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),wp,meanvelw)
         end if
         if(.not.any(is_forced(:))) dpdl(:) = -bforce(:) ! constant pressure gradient
         var(1)   = time
