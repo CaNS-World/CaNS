@@ -16,8 +16,8 @@ module mod_bound
     real(rp), intent(in), dimension(0:1,3,3) :: bc
     integer , intent(in), dimension(0:1,3  ) :: nb
     logical , intent(in), dimension(0:1,3  ) :: is_bound
-    logical , intent(in)                   :: is_correc
-    real(rp), intent(in), dimension(3) :: dl
+    logical , intent(in)                     :: is_correc
+    real(rp), intent(in), dimension(3 ) :: dl
     real(rp), intent(in), dimension(0:) :: dzc,dzf
     real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
     logical :: impose_norm_bc
@@ -76,7 +76,7 @@ module mod_bound
     real(rp)         , intent(in), dimension(0:1,3) :: bc
     integer , intent(in), dimension(0:1,3  ) :: nb
     logical , intent(in), dimension(0:1,3  ) :: is_bound
-    real(rp), intent(in), dimension(3) :: dl
+    real(rp), intent(in), dimension(3 ) :: dl
     real(rp), intent(in), dimension(0:) :: dzc
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
     integer :: idir,nh
@@ -270,7 +270,7 @@ module mod_bound
   !
   subroutine inflow(idir,is_bound,vel2d,u,v,w)
     implicit none
-    integer, intent(in) :: idir
+    integer , intent(in) :: idir
     logical , intent(in), dimension(0:1,3) :: is_bound
     real(rp), dimension(0:,0:), intent(in) :: vel2d
     real(rp), dimension(0:,0:,0:), intent(inout) :: u,v,w

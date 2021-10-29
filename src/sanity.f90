@@ -29,15 +29,15 @@ module mod_sanity
     integer , intent(in), dimension(2) :: dims
     integer , intent(in), dimension(3) :: n,n_z,lo,hi
     logical , intent(in), dimension(3) :: stop_type
-    character(len=1), intent(in), dimension(0:1,3,3)  :: cbcvel
-    character(len=1), intent(in), dimension(0:1,3)    :: cbcpre
-    real(rp), intent(in), dimension(0:1,3,3)          :: bcvel
-    real(rp), intent(in), dimension(0:1,3)            :: bcpre
-    logical , intent(in), dimension(3)                :: is_forced
-    integer , intent(in), dimension(0:1,3)            :: nb
-    logical , intent(in), dimension(0:1,3)            :: is_bound
-    real(rp), intent(in), dimension(3)                :: dli
-    real(rp), intent(in), dimension(0:)               :: dzci,dzfi,dzci_g,dzfi_g
+    character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
+    character(len=1), intent(in), dimension(0:1,3)   :: cbcpre
+    real(rp)        , intent(in), dimension(0:1,3,3) :: bcvel
+    real(rp)        , intent(in), dimension(0:1,3)   :: bcpre
+    logical         , intent(in), dimension(3)       :: is_forced
+    integer         , intent(in), dimension(0:1,3)   :: nb
+    logical         , intent(in), dimension(0:1,3)   :: is_bound
+    real(rp)        , intent(in), dimension(3)       :: dli
+    real(rp)        , intent(in), dimension(0:)      :: dzci,dzfi,dzci_g,dzfi_g
     logical :: passed
     !
     call chk_dims(ng,dims,passed);                 if(.not.passed) call abortit

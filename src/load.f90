@@ -13,13 +13,13 @@ module mod_load
     implicit none
     character(len=1), intent(in) :: io
     character(len=*), intent(in) :: filename
-    integer         , intent(in)         :: comm
+    integer         , intent(in) :: comm
     integer , intent(in), dimension(3) :: ng,nh,lo,hi
     real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: u,v,w,p
     real(rp), intent(inout) :: time
     integer , intent(inout) :: istep
     real(rp), dimension(2) :: fldinfo
-    integer        :: fh
+    integer :: fh
     integer :: nreals_myid
     integer(kind=MPI_OFFSET_KIND) :: filesize,disp,good
     !
@@ -80,7 +80,7 @@ module mod_load
   subroutine io_field(io,fh,ng,nh,lo,hi,disp,var)
     implicit none
     character(len=1), intent(in)                 :: io
-    integer         , intent(in)                 :: fh
+    integer , intent(in)                         :: fh
     integer , intent(in), dimension(3)           :: ng,nh,lo,hi
     integer(kind=MPI_OFFSET_KIND), intent(inout) :: disp
     real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: var

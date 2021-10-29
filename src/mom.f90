@@ -221,8 +221,8 @@ module mod_mom
     integer , intent(in) :: nx,ny,nz
     real(rp), intent(in) :: dxi
     real(rp), intent(in) :: bforce
-    real(rp), dimension(0:,0:,0:), intent(in) :: p
-    real(rp), dimension(:,:,:), intent(out) :: dudt
+    real(rp), dimension(0:,0:,0:), intent(in ) :: p
+    real(rp), dimension( :, :, :), intent(out) :: dudt
     integer :: i,j,k
     !
     !$OMP PARALLEL DO DEFAULT(none) &
@@ -243,8 +243,8 @@ module mod_mom
     integer , intent(in) :: nx,ny,nz
     real(rp), intent(in) :: dyi
     real(rp), intent(in) :: bforce
-    real(rp), dimension(0:,0:,0:), intent(in) :: p
-    real(rp), dimension(:,:,:), intent(out) :: dvdt
+    real(rp), dimension(0:,0:,0:), intent(in ) :: p
+    real(rp), dimension( :, :, :), intent(out) :: dvdt
     integer :: i,j,k
     !
     !$OMP PARALLEL DO DEFAULT(none) &
@@ -265,8 +265,8 @@ module mod_mom
     integer , intent(in) :: nx,ny,nz
     real(rp), intent(in), dimension(0:) :: dzci
     real(rp), intent(in) :: bforce
-    real(rp), dimension(0:,0:,0:), intent(in) :: p
-    real(rp), dimension(:,:,:), intent(out) :: dwdt
+    real(rp), dimension(0:,0:,0:), intent(in ) :: p
+    real(rp), dimension( :, :, :), intent(out) :: dwdt
     integer :: i,j,k
     !
     !$OMP PARALLEL DO DEFAULT(none) &

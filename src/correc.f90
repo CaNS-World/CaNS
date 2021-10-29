@@ -10,7 +10,7 @@ module mod_correc
     !
     implicit none
     integer , intent(in), dimension(3) :: n
-    real(rp), intent(in), dimension(3) :: dli
+    real(rp), intent(in), dimension(3 ) :: dli
     real(rp), intent(in), dimension(0:) :: dzci
     real(rp), intent(in) :: dt
     real(rp), intent(in) , dimension(0:,0:,0:) :: p,up,vp,wp

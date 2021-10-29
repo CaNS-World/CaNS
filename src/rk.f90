@@ -118,8 +118,8 @@ module mod_rk
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
-          up(i,j,k) = up(i,j,k) + factor12*(bforce(1) - dli(1)*(    p(i+1,j,k)-p(i,j,k)) )
-          vp(i,j,k) = vp(i,j,k) + factor12*(bforce(2) - dli(2)*(    p(i,j+1,k)-p(i,j,k)))
+          up(i,j,k) = up(i,j,k) + factor12*(bforce(1) - dli(1)*( p(i+1,j,k)-p(i,j,k)))
+          vp(i,j,k) = vp(i,j,k) + factor12*(bforce(2) - dli(2)*( p(i,j+1,k)-p(i,j,k)))
           wp(i,j,k) = wp(i,j,k) + factor12*(bforce(3) - dzci(k)*(p(i,j,k+1)-p(i,j,k)))
         end do
       end do

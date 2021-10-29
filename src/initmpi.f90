@@ -11,7 +11,7 @@ module mod_initmpi
     implicit none
     integer, intent(in   ), dimension(3) :: ng
     integer, intent(inout), dimension(2) :: dims
-    character(len=1), intent(in ), dimension(0:1,3) :: bc
+    character(len=1), intent(in), dimension(0:1,3) :: bc
     integer, intent(out), dimension(3    ) :: n_z,lo,hi,n
     integer, intent(out), dimension(0:1,3) :: nb
     logical, intent(out), dimension(0:1,3) :: is_bound
