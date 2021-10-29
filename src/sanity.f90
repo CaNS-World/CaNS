@@ -189,127 +189,128 @@ module mod_sanity
   end subroutine chk_forcing
   !
   subroutine chk_solvers(ng,n,n_z,lo,hi,dli,dzci_g,dzfi_g,dzci,dzfi,nb,is_bound,cbcvel,cbcpre,bcvel,bcpre,passed)
-  implicit none
-  integer , intent(in), dimension(3) :: ng,n,n_z,lo,hi
-  real(rp), intent(in), dimension(3) :: dli
-  real(rp), intent(in), dimension(0:) :: dzci_g,dzfi_g,dzci,dzfi
-  integer , intent(in), dimension(0:1,3) :: nb
-  logical , intent(in), dimension(0:1,3) :: is_bound
-  character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
-  character(len=1), intent(in), dimension(0:1,3)   :: cbcpre
-  real(rp), intent(in), dimension(0:1,3,3)          :: bcvel
-  real(rp), intent(in), dimension(0:1,3)            :: bcpre
-  logical , intent(out) :: passed
-  real(rp), dimension(0:n(1)+1,0:n(2)+1,0:n(3)+1) :: u,v,w,p,up,vp,wp
-  type(C_PTR), dimension(2,2) :: arrplan
-  real(rp), dimension(n_z(1),n_z(2)) :: lambdaxy
-  real(rp) :: normfft
-  real(rp), dimension(n_z(3)) :: a,b,c,bb
-  real(rp), dimension(n_z(2),n_z(3),0:1) :: rhsbx
-  real(rp), dimension(n_z(1),n_z(3),0:1) :: rhsby
-  real(rp), dimension(n_z(1),n_z(2),0:1) :: rhsbz
-  real(rp), dimension(3) :: dl
-  real(rp), dimension(0:n_z(3)+1) :: dzc,dzf
-  real(rp) :: dt,dti,alpha
-  real(rp) :: divtot,divmax,resmax
-  logical :: passed_loc
-  passed = .true.
-  !
-  ! initialize velocity below with some random noise
-  !
-  up(:,:,:) = 0.
-  vp(:,:,:) = 0.
-  wp(:,:,:) = 0.
-  call add_noise(ng,lo,123,.5_rp,up(1:n(1),1:n(2),1:n(3)))
-  call add_noise(ng,lo,456,.5_rp,vp(1:n(1),1:n(2),1:n(3)))
-  call add_noise(ng,lo,789,.5_rp,wp(1:n(1),1:n(2),1:n(3)))
-  !
-  ! test pressure correction
-  !
-  call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:),lambdaxy,['c','c','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
-  dl  = dli**(-1)
-  dzc = dzci**(-1)
-  dzf = dzfi**(-1)
-  dt  = acos(-1.) ! value is irrelevant
-  dti = dt**(-1)
-  call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
-  call fillps(n,dli,dzfi,dti,up,vp,wp,p)
-  call updt_rhs_b(['c','c','c'],cbcpre,n,is_bound,rhsbx,rhsby,rhsbz,p(1:n(1),1:n(2),1:n(3)))
-  call solver(n,arrplan,normfft,lambdaxy,a,b,c,cbcpre(:,3),['c','c','c'],p(1:n(1),1:n(2),1:n(3)))
-  call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
-  call correc(n,dli,dzci,dt,p,up,vp,wp,u,v,w)
-  call bounduvw(cbcvel,n,bcvel,nb,is_bound,.true.,dl,dzc,dzf,u,v,w)
-  call chkdiv(lo,hi,dli,dzfi,u,v,w,divtot,divmax)
-  passed_loc = divmax < small
-  if(myid == 0.and.(.not.passed_loc)) &
-  print*, 'ERROR: Pressure correction: Divergence is too large.'
-  passed = passed.and.passed_loc
-  call fftend(arrplan)
+    implicit none
+    integer , intent(in), dimension(3) :: ng,n,n_z,lo,hi
+    real(rp), intent(in), dimension(3) :: dli
+    real(rp), intent(in), dimension(0:) :: dzci_g,dzfi_g,dzci,dzfi
+    integer , intent(in), dimension(0:1,3) :: nb
+    logical , intent(in), dimension(0:1,3) :: is_bound
+    character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
+    character(len=1), intent(in), dimension(0:1,3)   :: cbcpre
+    real(rp), intent(in), dimension(0:1,3,3)          :: bcvel
+    real(rp), intent(in), dimension(0:1,3)            :: bcpre
+    logical , intent(out) :: passed
+    real(rp), dimension(0:n(1)+1,0:n(2)+1,0:n(3)+1) :: u,v,w,p,up,vp,wp
+    type(C_PTR), dimension(2,2) :: arrplan
+    real(rp), dimension(n_z(1),n_z(2)) :: lambdaxy
+    real(rp) :: normfft
+    real(rp), dimension(n_z(3)) :: a,b,c,bb
+    real(rp), dimension(n(2),n(3),0:1) :: rhsbx
+    real(rp), dimension(n(1),n(3),0:1) :: rhsby
+    real(rp), dimension(n(1),n(2),0:1) :: rhsbz
+    real(rp), dimension(3) :: dl
+    real(rp), dimension(0:n(3)+1) :: dzc,dzf
+    real(rp) :: dt,dti,alpha
+    real(rp) :: divtot,divmax,resmax
+    logical :: passed_loc
+    passed = .true.
+    !
+    ! initialize velocity below with some random noise
+    !
+    up(:,:,:) = 0.
+    vp(:,:,:) = 0.
+    wp(:,:,:) = 0.
+    call add_noise(ng,lo,123,.5_rp,up(1:n(1),1:n(2),1:n(3)))
+    call add_noise(ng,lo,456,.5_rp,vp(1:n(1),1:n(2),1:n(3)))
+    call add_noise(ng,lo,789,.5_rp,wp(1:n(1),1:n(2),1:n(3)))
+    !
+    ! test pressure correction
+    !
+    call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:),lambdaxy,['c','c','c'],a,b,c,arrplan,normfft, &
+                    rhsbx,rhsby,rhsbz)
+    dl  = dli**(-1)
+    dzc = dzci**(-1)
+    dzf = dzfi**(-1)
+    dt  = acos(-1.) ! value is irrelevant
+    dti = dt**(-1)
+    call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
+    call fillps(n,dli,dzfi,dti,up,vp,wp,p)
+    call updt_rhs_b(['c','c','c'],cbcpre,n,is_bound,rhsbx,rhsby,rhsbz,p)
+    call solver(n,arrplan,normfft,lambdaxy,a,b,c,cbcpre(:,3),['c','c','c'],p)
+    call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
+    call correc(n,dli,dzci,dt,p,up,vp,wp,u,v,w)
+    call bounduvw(cbcvel,n,bcvel,nb,is_bound,.true.,dl,dzc,dzf,u,v,w)
+    call chkdiv(lo,hi,dli,dzfi,u,v,w,divtot,divmax)
+    passed_loc = divmax < small
+    if(myid == 0.and.(.not.passed_loc)) &
+    print*, 'ERROR: Pressure correction: Divergence is too large.'
+    passed = passed.and.passed_loc
+    call fftend(arrplan)
 #if defined(_IMPDIFF)
-  alpha = acos(-1.) ! irrelevant
-  up(:,:,:) = 0.
-  vp(:,:,:) = 0.
-  wp(:,:,:) = 0.
-  call add_noise(ng,lo,123,.5_rp,up(1:n(1),1:n(2),1:n(3)))
-  call add_noise(ng,lo,456,.5_rp,vp(1:n(1),1:n(2),1:n(3)))
-  call add_noise(ng,lo,789,.5_rp,wp(1:n(1),1:n(2),1:n(3)))
-  call initsolver(ng,zstart,zend,dli,dzci,dzfi,cbcvel(:,:,1),bcvel(:,:,1),lambdaxy,['f','c','c'],a,b,c,arrplan,normfft, &
-                  rhsbx,rhsby,rhsbz)
-  call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
-  up(:,:,:) = up(:,:,:)*alpha
-  u( :,:,:) = up(:,:,:)
-  bb(:) = b(:) + alpha
-  call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,is_bound,rhsbx,rhsby,rhsbz,up(1:n(1),1:n(2),1:n(3)))
-  call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,1),['f','c','c'],up(1:n(1),1:n(2),1:n(3)))
-  call fftend(arrplan)
-  call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
-  call chk_helmholtz(lo,hi,dli,dzci,dzfi,alpha,u,up,cbcvel(:,:,1),is_bound,['f','c','c'],resmax)
-  passed_loc = resmax < small
-  if(myid == 0.and.(.not.passed_loc)) &
-  print*, 'ERROR: wrong solution of Helmholtz equation in x direction.'
-  passed = passed.and.passed_loc
-  !
-  call initsolver(ng,zstart,zend,dli,dzci,dzfi,cbcvel(:,:,2),bcvel(:,:,2),lambdaxy,['c','f','c'],a,b,c,arrplan,normfft, &
-                  rhsbx,rhsby,rhsbz)
-  call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
-  vp(:,:,:) = vp(:,:,:)*alpha
-  v( :,:,:) = vp(:,:,:)
-  bb(:) = b(:) + alpha
-  call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,is_bound,rhsbx,rhsby,rhsbz,vp(1:n(1),1:n(2),1:n(3)))
-  call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,2),['c','f','c'],vp(1:n(1),1:n(2),1:n(3)))
-  call fftend(arrplan)
-  call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
-  call chk_helmholtz(lo,hi,dli,dzci,dzfi,alpha,v,vp,cbcvel(:,:,2),is_bound,['c','f','c'],resmax)
-  passed_loc = resmax < small
-  if(myid == 0.and.(.not.passed_loc)) &
-  print*, 'ERROR: wrong solution of Helmholtz equation in y direction.'
-  passed = passed.and.passed_loc
-  !
-  call initsolver(ng,zstart,zend,dli,dzci,dzfi,cbcvel(:,:,3),bcvel(:,:,3),lambdaxy,['c','c','f'],a,b,c,arrplan,normfft, &
-                  rhsbx,rhsby,rhsbz)
-  call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
-  wp(:,:,:) = wp(:,:,:)*alpha
-  w( :,:,:) = wp(:,:,:)
-  bb(:) = b(:) + alpha
-  call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,is_bound,rhsbx,rhsby,rhsbz,wp(1:n(1),1:n(2),1:n(3)))
-  call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,3),['c','c','f'],wp(1:n(1),1:n(2),1:n(3)))
-  call fftend(arrplan)
-  call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
-  call chk_helmholtz(lo,hi,dli,dzci,dzfi,alpha,w,wp,cbcvel(:,:,3),is_bound,['c','c','f'],resmax)
-  passed_loc = resmax < small
-  if(myid == 0.and.(.not.passed_loc)) &
-  print*, 'ERROR: wrong solution of Helmholtz equation in z direction.'
-  passed = passed.and.passed_loc
+    alpha = acos(-1.) ! irrelevant
+    up(:,:,:) = 0.
+    vp(:,:,:) = 0.
+    wp(:,:,:) = 0.
+    call add_noise(ng,lo,123,.5_rp,up(1:n(1),1:n(2),1:n(3)))
+    call add_noise(ng,lo,456,.5_rp,vp(1:n(1),1:n(2),1:n(3)))
+    call add_noise(ng,lo,789,.5_rp,wp(1:n(1),1:n(2),1:n(3)))
+    call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1),lambdaxy,['f','c','c'],a,b,c,arrplan,normfft, &
+                    rhsbx,rhsby,rhsbz)
+    call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
+    up(:,:,:) = up(:,:,:)*alpha
+    u( :,:,:) = up(:,:,:)
+    bb(:) = b(:) + alpha
+    call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,is_bound,rhsbx,rhsby,rhsbz,up)
+    call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,1),['f','c','c'],up)
+    call fftend(arrplan)
+    call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in up
+    call chk_helmholtz(lo,hi,dli,dzci,dzfi,alpha,u,up,cbcvel(:,:,1),is_bound,['f','c','c'],resmax)
+    passed_loc = resmax < small
+    if(myid == 0.and.(.not.passed_loc)) &
+    print*, 'ERROR: wrong solution of Helmholtz equation in x direction.'
+    passed = passed.and.passed_loc
+    !
+    call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2),lambdaxy,['c','f','c'],a,b,c,arrplan,normfft, &
+                    rhsbx,rhsby,rhsbz)
+    call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
+    vp(:,:,:) = vp(:,:,:)*alpha
+    v( :,:,:) = vp(:,:,:)
+    bb(:) = b(:) + alpha
+    call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,is_bound,rhsbx,rhsby,rhsbz,vp)
+    call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,2),['c','f','c'],vp)
+    call fftend(arrplan)
+    call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in vp
+    call chk_helmholtz(lo,hi,dli,dzci,dzfi,alpha,v,vp,cbcvel(:,:,2),is_bound,['c','f','c'],resmax)
+    passed_loc = resmax < small
+    if(myid == 0.and.(.not.passed_loc)) &
+    print*, 'ERROR: wrong solution of Helmholtz equation in y direction.'
+    passed = passed.and.passed_loc
+    !
+    call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3),lambdaxy,['c','c','f'],a,b,c,arrplan,normfft, &
+                    rhsbx,rhsby,rhsbz)
+    call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
+    wp(:,:,:) = wp(:,:,:)*alpha
+    w( :,:,:) = wp(:,:,:)
+    bb(:) = b(:) + alpha
+    call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,is_bound,rhsbx,rhsby,rhsbz,wp)
+    call solver(n,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,3,3),['c','c','f'],wp)
+    call fftend(arrplan)
+    call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp) ! actually we are only interested in boundary condition in wp
+    call chk_helmholtz(lo,hi,dli,dzci,dzfi,alpha,w,wp,cbcvel(:,:,3),is_bound,['c','c','f'],resmax)
+    passed_loc = resmax < small
+    if(myid == 0.and.(.not.passed_loc)) &
+    print*, 'ERROR: wrong solution of Helmholtz equation in z direction.'
+    passed = passed.and.passed_loc
 #endif
   end subroutine chk_solvers
   !
   subroutine abortit
-      implicit none
-      if(myid == 0) print*, ''
-      if(myid == 0) print*, '*** Simulation aborted due to errors in the input file ***'
-      if(myid == 0) print*, '    check dns.in'
-      call decomp_2d_finalize
-      call MPI_FINALIZE(ierr)
-      error stop
+    implicit none
+    if(myid == 0) print*, ''
+    if(myid == 0) print*, '*** Simulation aborted due to errors in the input file ***'
+    if(myid == 0) print*, '    check dns.in'
+    call decomp_2d_finalize
+    call MPI_FINALIZE(ierr)
+    error stop
   end subroutine abortit
 end module mod_sanity
