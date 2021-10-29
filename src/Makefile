@@ -10,7 +10,7 @@ PROF := #-pg
 FFLAGS := $(OPT) $(BIG) $(DBG) $(PROF) $(OMP) $(OTH)
 TARGET = cans
 #
-OBJ = bound.o chkdiv.o chkdt.o common_mpi.o correc.o debug.o fft.o fftw.o fillps.o initflow.o initgrid.o initmpi.o initsolver.o load.o main.o mom.o momd.o scal.o output.o param.o post.o rk.o sanity.o solver.o decomp_2d.o io.o types.o
+OBJ = bound.o chkdiv.o chkdt.o common_mpi.o correc.o debug.o fft.o fftw.o fillps.o initflow.o initgrid.o initmpi.o initsolver.o load.o main.o mom.o scal.o output.o param.o post.o rk.o sanity.o solver.o decomp_2d.o io.o types.o
 #
 LIBS = -lfftw3 -lfftw3_threads
 #
@@ -65,8 +65,6 @@ main.o: main.f90 bound.o chkdiv.o chkdt.o debug.o fft.o fillps.o initflow.o init
 	$(FC) $(FFLAGS) -cpp -c  $<
 mom.o: mom.f90 common_mpi.o types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
-momd.o: momd.f90 common_mpi.o types.o
-	$(FC) $(FFLAGS) -cpp -c  $<
 scal.o: scal.f90 types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
 output.o: output.f90 io.o param.o types.o
@@ -75,7 +73,7 @@ param.o: param.f90 types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
 post.o: post.f90 types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
-rk.o: rk.f90 debug.o mom.o momd.o scal.o param.o types.o
+rk.o: rk.f90 debug.o mom.o scal.o param.o types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
 sanity.o: sanity.f90 bound.o chkdiv.o common_mpi.o correc.o debug.o decomp_2d.o fft.o fillps.o initflow.o initmpi.o initsolver.o param.o solver.o types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
