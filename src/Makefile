@@ -2,10 +2,10 @@
 FC   = mpif90
 # flags
 BIG := # -mcmodel=medium
-DBG := -O0 -g -fbacktrace -Wall -Wextra -pedantic -fcheck=all -finit-real=snan -ffpe-trap=invalid -std=f2018
-OMP := #-openmp
+DBG := # -g -fbacktrace -Wall -O0 -Wextra -pedantic -fcheck=all
+OMP := # -fopenmp
 OPT := -O3
-OTH := -DDEBUG -DTIMING #-DIMPDIFF
+OTH := -D_DEBUG -D_TIMING #-D_IMPDIFF
 PROF := #-pg
 FFLAGS := $(OPT) $(BIG) $(DBG) $(PROF) $(OMP) $(OTH)
 TARGET = cans
@@ -84,7 +84,7 @@ solver.o: solver.f90 fft.o param.o types.o
 types.o: types.f90
 	$(FC) $(FFLAGS) -cpp -c  $<
 # 2decomp&fft library
-FFLAGS_2DECOMP := -DOVERWRITE -DEVEN
+FFLAGS_2DECOMP := #-DOVERWRITE #-DEVEN
 2decompdir=2decomp/
 decomp_2d.o: $(2decompdir)decomp_2d.f90
 	$(FC) $(FFLAGS) -cpp $(FFLAGS_2DECOMP) -c  $<
