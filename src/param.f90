@@ -8,14 +8,14 @@ public
 real(rp), parameter :: pi = acos(-1._rp)
 real(rp), parameter :: small = epsilon(pi)*10**(precision(pi)/2)
 character(len=100), parameter :: datadir = 'data/'
-real(rp), parameter, dimension(2,3) :: rkcoeff = reshape((/ 32._rp/60._rp,  0._rp        , &
-                                                            25._rp/60._rp, -17._rp/60._rp, &
-                                                            45._rp/60._rp, -25._rp/60._rp/), shape(rkcoeff))
+real(rp), parameter, dimension(2,3) :: rkcoeff = reshape([32._rp/60._rp,  0._rp        , &
+                                                          25._rp/60._rp, -17._rp/60._rp, &
+                                                          45._rp/60._rp, -25._rp/60._rp], shape(rkcoeff))
 real(rp), parameter, dimension(3)   :: rkcoeff12 = rkcoeff(1,:)+rkcoeff(2,:)
 !
 ! variables to be determined from the input file 'dns.in'
 !
-integer :: itot,jtot,ktot,imax,jmax
+integer :: itot,jtot,ktot
 real(rp) :: lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,gr
 real(rp) :: cfl,dtmin
 real(rp) :: uref,lref,rey,visc
@@ -32,29 +32,31 @@ integer :: icheck,iout0d,iout1d,iout2d,iout3d,isave
 integer, dimension(2) :: dims
 integer :: nthreadsmax
 !
+integer, dimension(0:1,3) :: nb
+logical, dimension(0:1,3) :: is_bound
 character(len=1), dimension(0:1,3,3) ::  cbcvel
-real(rp)         , dimension(0:1,3,3) :: bcvel
+real(rp)        , dimension(0:1,3,3) :: bcvel
 character(len=1), dimension(0:1,3)   ::  cbcpre
-real(rp)         , dimension(0:1,3)   ::   bcpre
+real(rp)        , dimension(0:1,3)   ::   bcpre
 !
 real(rp), dimension(3) :: bforce
 logical , dimension(3) :: is_forced
 real(rp), dimension(3) :: velf
 !
 integer , dimension(3) :: ng
-integer , dimension(3) :: n
+integer , dimension(3) :: n,n_z,lo,hi
 real(rp), dimension(3) :: l
 real(rp), dimension(3) :: dl
 real(rp), dimension(3) :: dli
 !
-contains 
+contains
   subroutine read_input(myid)
   use mpi
   implicit none
   integer, intent(in) :: myid
   integer :: iunit,ierr
     open(newunit=iunit,file='dns.in',status='old',action='read',iostat=ierr)
-      if( ierr.eq.0 ) then
+      if( ierr == 0 ) then
         read(iunit,*) itot,jtot,ktot
         read(iunit,*) lx,ly,lz
         read(iunit,*) gr
@@ -80,11 +82,11 @@ contains
         read(iunit,*) dims(1),dims(2)
         read(iunit,*) nthreadsmax
       else
-        if(myid.eq.0) print*, 'Error reading the input file' 
-        if(myid.eq.0) print*, 'Aborting...'
+        if(myid == 0) print*, 'Error reading the input file'
+        if(myid == 0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
         error stop
-      endif
+      end if
     close(iunit)
     dx = lx/(1.*itot)
     dy = ly/(1.*jtot)
@@ -92,15 +94,11 @@ contains
     dxi = dx**(-1)
     dyi = dy**(-1)
     dzi = dz**(-1)
-    imax = itot/dims(1)
-    jmax = jtot/dims(2)
     !
     visc = uref*lref/rey
-    ng  = (/itot,jtot,ktot/)
-    n   = (/imax,jmax,ktot/)
-    l   = (/lx,ly,lz/)
-    dl  = (/dx,dy,dz/)
-    dli = (/dxi,dyi,dzi/)
-  return
+    ng  = [itot,jtot,ktot]
+    l   = [lx,ly,lz]
+    dl  = [dx,dy,dz]
+    dli = [dxi,dyi,dzi]
   end subroutine read_input
 end module mod_param

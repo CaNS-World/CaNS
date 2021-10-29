@@ -4,21 +4,23 @@
   ! over two domain directions (see output.f90)
   !
   ! fname -> name of the file
-  ! n     -> size of the input array
+  ! ng    -> global domain sizes
+  ! lo,hi -> upper and lower extents of the input array
   ! idir  -> direction of the profile
-  ! z     -> z coordinate (grid is non-uniform in z)
-  ! dzlzi -> dz/lz weight of a grid cell for averaging over z
+  ! dl,dl -> uniform grid spacing and length arrays
+  ! z_g   -> global z coordinate array (grid is non-uniform in z)
+  ! dz_g  -> global z grid spacing array
   ! p     -> 3D input scalar field
   !
   ! modify the calls below as desired
   !
-  call out1d(trim(datadir)//'umean_z_fld_'   //fldnum//'.out',n,3,zc,dzf/lz,u)
-  call out1d(trim(datadir)//'vmean_z_fld_'   //fldnum//'.out',n,3,zc,dzf/lz,v)
-  call out1d(trim(datadir)//'wmean_z_fld_'   //fldnum//'.out',n,3,zf,dzc/lz,w)
-  !call out1d(trim(datadir)//'umean_y_fld_'   //fldnum//'.out',n,2,zc,dzf/lz,u)
-  !call out1d(trim(datadir)//'vmean_y_fld_'   //fldnum//'.out',n,2,zc,dzf/lz,v)
-  !call out1d(trim(datadir)//'wmean_y_fld_'   //fldnum//'.out',n,2,zc,dzf/lz,w)
-  !call out1d(trim(datadir)//'umean_x_fld_'   //fldnum//'.out',n,1,zc,dzf/lz,u)
-  !call out1d(trim(datadir)//'vmean_x_fld_'   //fldnum//'.out',n,1,zc,dzf/lz,v)
-  !call out1d(trim(datadir)//'wmean_x_fld_'   //fldnum//'.out',n,1,zc,dzf/lz,w)
-  !call out1d_2(trim(datadir)//'velstats_fld_'//fldnum//'.out',n,3,zc,u,v,w)
+  call out1d(trim(datadir)//'umean_z_fld_'   //fldnum//'.out',ng,lo,hi,3,l,dl,zc_g,dzf_g,u)
+  call out1d(trim(datadir)//'vmean_z_fld_'   //fldnum//'.out',ng,lo,hi,3,l,dl,zc_g,dzf_g,v)
+  call out1d(trim(datadir)//'wmean_z_fld_'   //fldnum//'.out',ng,lo,hi,3,l,dl,zf_g,dzc_g,w)
+  !call out1d(trim(datadir)//'umean_y_fld_'   //fldnum//'.out',ng,lo,hi,2,l,dl,zc_g,dzf_g,u)
+  !call out1d(trim(datadir)//'vmean_y_fld_'   //fldnum//'.out',ng,lo,hi,2,l,dl,zc_g,dzf_g,v)
+  !call out1d(trim(datadir)//'wmean_y_fld_'   //fldnum//'.out',ng,lo,hi,2,l,dl,zc_g,dzf_g,w)
+  !call out1d(trim(datadir)//'umean_x_fld_'   //fldnum//'.out',ng,lo,hi,1,l,dl,zc_g,dzf_g,u)
+  !call out1d(trim(datadir)//'vmean_x_fld_'   //fldnum//'.out',ng,lo,hi,1,l,dl,zc_g,dzf_g,v)
+  !call out1d(trim(datadir)//'wmean_x_fld_'   //fldnum//'.out',ng,lo,hi,1,l,dl,zc_g,dzf_g,w)
+  !call out1d_2(trim(datadir)//'velstats_fld_'//fldnum//'.out',ng,lo,hi,3,l,dl,zc_g,u,v,w)

@@ -2,7 +2,6 @@ module mod_solver
   use iso_c_binding, only: C_PTR
   use decomp_2d
   use mod_fft   , only: fft
-  use mod_param , only: dims
   use mod_types
   implicit none
   private
@@ -13,28 +12,35 @@ module mod_solver
     integer , intent(in), dimension(3) :: n
     type(C_PTR), intent(in), dimension(2,2) :: arrplan
     real(rp), intent(in) :: normfft
-    real(rp), intent(in), dimension(n(1),n(2)) :: lambdaxy
-    real(rp), intent(in), dimension(n(3)) :: a,b,c
+    real(rp), intent(in), dimension(:,:) :: lambdaxy
+    real(rp), intent(in), dimension(:) :: a,b,c
     character(len=1), dimension(0:1), intent(in) :: bcz
     character(len=1), intent(in), dimension(3) :: c_or_f
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
-    real(rp), dimension(n(1)*dims(1),n(2)*dims(2)/dims(1),n(3)/dims(2)) :: px
-    real(rp), dimension(n(1)*dims(1)/dims(1),n(2)*dims(2),n(3)/dims(2)) :: py
-    real(rp), dimension(n(1)        ,n(2)                ,n(3)        ) :: pz
-    !real(rp), allocatable, dimension(:,:,:) :: px,py
-    integer , dimension(3) :: ng
+    real(rp), dimension(xsize(1),xsize(2),xsize(3)) :: px
+    real(rp), dimension(ysize(1),ysize(2),ysize(3)) :: py
+    real(rp), dimension(zsize(1),zsize(2),zsize(3)) :: pz
     integer :: q
-    ng(:) = n(:)
-    ng(1:2) = ng(1:2)*dims(1:2)
-    !allocate(px(ng(1),ng(2)/dims(1),ng(3)/dims(2)))
-    !allocate(py(ng(1)/dims(1),ng(2),ng(3)/dims(2)))
+    integer, dimension(3) :: n_z
     !
+    n_z(:) = zsize(:)
+#if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
+    !$OMP WORKSHARE
+    px(:,:,:) = p(1:n(1),1:n(2),1:n(3))
+    !$OMP END WORKSHARE
+#elif defined(_DECOMP_Y)
+    !$OMP WORKSHARE
+    py(:,:,:) = p(1:n(1),1:n(2),1:n(3))
+    !$OMP END WORKSHARE
+    call transpose_y_to_x(py,px)
+#elif defined(_DECOMP_Z)
     !$OMP WORKSHARE
     pz(:,:,:) = p(1:n(1),1:n(2),1:n(3))
     !$OMP END WORKSHARE
     call transpose_z_to_x(pz,px)
     !call transpose_z_to_y(pz,py)
     !call transpose_y_to_x(py,px)
+#endif
     call fft(arrplan(1,1),px) ! fwd transform in x
     !
     call transpose_x_to_y(px,py)
@@ -42,12 +48,12 @@ module mod_solver
     !
     call transpose_y_to_z(py,pz)
     q = 0
-    if(c_or_f(3).eq.'f'.and.bcz(1).eq.'D') q = 1
-    if(bcz(0)//bcz(1).eq.'PP') then
-      call gaussel_periodic(n(1),n(2),n(3)-q,a,b,c,lambdaxy,pz)
+    if(c_or_f(3) == 'f'.and.bcz(1) == 'D') q = 1
+    if(bcz(0)//bcz(1) == 'PP') then
+      call gaussel_periodic(n_z(1),n_z(2),n_z(3)-q,a,b,c,lambdaxy,pz)
     else
-      call gaussel(         n(1),n(2),n(3)-q,a,b,c,lambdaxy,pz)
-    endif
+      call gaussel(         n_z(1),n_z(2),n_z(3)-q,a,b,c,lambdaxy,pz)
+    end if
     !
     call transpose_z_to_y(pz,py)
     call fft(arrplan(2,2),py) ! bwd transform in y
@@ -55,15 +61,23 @@ module mod_solver
     call transpose_y_to_x(py,px)
     call fft(arrplan(2,1),px) ! bwd transform in x
     !
+#if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
+    !$OMP WORKSHARE
+    p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)*normfft
+    !$OMP END WORKSHARE
+#elif defined(_DECOMP_Y)
+    call transpose_x_to_y(px,py)
+    !$OMP WORKSHARE
+    p(1:n(1),1:n(2),1:n(3)) = py(:,:,:)*normfft
+    !$OMP END WORKSHARE
+#elif defined(_DECOMP_Z)
     call transpose_x_to_z(px,pz)
     !call transpose_x_to_y(px,py)
     !call transpose_y_to_z(py,pz)
     !$OMP WORKSHARE
-    pz(:,:,:) = pz(:,:,:)*normfft
-    p(1:n(1),1:n(2),1:n(3)) = pz(:,:,:)
+    p(1:n(1),1:n(2),1:n(3)) = pz(:,:,:)*normfft
     !$OMP END WORKSHARE
-    !deallocate(px,py)
-    return
+#endif
   end subroutine solver
   !
   subroutine gaussel(nx,ny,n,a,b,c,lambdaxy,p)
@@ -85,11 +99,10 @@ module mod_solver
       do i=1,nx
         bb(:) = b(1:n) + lambdaxy(i,j)
         call dgtsv_homebrewed(n,a,bb,c,p(i,j,1:n))
-      enddo
-    enddo
+      end do
+    end do
     !$OMP END DO
     !$OMP END PARALLEL
-    return
   end subroutine gaussel
   !
   subroutine gaussel_periodic(nx,ny,n,a,b,c,lambdaxy,p)
@@ -119,11 +132,10 @@ module mod_solver
         p(i,j,n) = (p(i,j,n) - c(n)*p1(1) - a(n)*p1(n-1)) / &
                    (bb(   n) + c(n)*p2(1) + a(n)*p2(n-1))
         p(i,j,1:n-1) = p1(1:n-1) + p2(1:n-1)*p(i,j,n)
-      enddo
-    enddo
+      end do
+    end do
     !$OMP END DO
     !$OMP END PARALLEL
-    return
   end subroutine gaussel_periodic
   subroutine dgtsv_homebrewed(n,a,b,c,p)
     implicit none
@@ -143,19 +155,18 @@ module mod_solver
       z    = 1./(b(l)-a(l)*d(l-1))
       d(l) = c(l)*z
       p(l) = (p(l)-a(l)*p(l-1))*z
-    enddo
+    end do
     z = b(n)-a(n)*d(n-1)
     if(z.ne.0.) then
       p(n) = (p(n)-a(n)*p(n-1))/z
     else
       p(n) = 0.
-    endif
+    end if
     !
     ! backward substitution
     !
     do l=n-1,1,-1
       p(l) = p(l) - d(l)*p(l+1)
-    enddo
-    return
+    end do
   end subroutine dgtsv_homebrewed
 end module mod_solver

@@ -10,14 +10,14 @@ module mod_correc
     !
     implicit none
     integer , intent(in), dimension(3) :: n
-    real(rp), intent(in), dimension(3) :: dli
+    real(rp), intent(in), dimension(3 ) :: dli
     real(rp), intent(in), dimension(0:) :: dzci
     real(rp), intent(in) :: dt
     real(rp), intent(in) , dimension(0:,0:,0:) :: p,up,vp,wp
     real(rp), intent(out), dimension(0:,0:,0:) :: u,v,w
     real(rp) :: factori,factorj
     real(rp), dimension(0:n(3)+1) :: factork
-    integer :: i,j,k,ip,jp,kp
+    integer :: i,j,k
     !
     !factor = rkcoeffab(rkiter)*dt
     !
@@ -26,40 +26,36 @@ module mod_correc
     factork = dt*dzci!dli(3)
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(n,factori,u,up,p) &
-    !$OMP PRIVATE(i,j,k,ip)
+    !$OMP PRIVATE(i,j,k)
     do k=0,n(3)+1
       do j=0,n(2)+1
         do i=0,n(1)
-          ip = i+1
-          u(i,j,k) = up(i,j,k) - factori*(   p(ip,j,k)-p(i,j,k))
-        enddo
-      enddo
-    enddo
+          u(i,j,k) = up(i,j,k) - factori*(   p(i+1,j,k)-p(i,j,k))
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(n,factorj,v,vp,p) &
-    !$OMP PRIVATE(i,j,k,jp)
+    !$OMP PRIVATE(i,j,k)
     do k=0,n(3)+1
       do j=0,n(2)
-        jp = j+1
         do i=0,n(1)+1
-          v(i,j,k) = vp(i,j,k) - factorj*(   p(i,jp,k)-p(i,j,k))
-        enddo
-      enddo
-    enddo
+          v(i,j,k) = vp(i,j,k) - factorj*(   p(i,j+1,k)-p(i,j,k))
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(n,factork,w,wp,p) &
-    !$OMP PRIVATE(i,j,k,kp)
+    !$OMP PRIVATE(i,j,k)
     do k=0,n(3)
-      kp = k+1
       do j=0,n(2)+1
         do i=0,n(1)+1
-          w(i,j,k) = wp(i,j,k) - factork(k)*(p(i,j,kp)-p(i,j,k))
-        enddo
-      enddo
-    enddo
+          w(i,j,k) = wp(i,j,k) - factork(k)*(p(i,j,k+1)-p(i,j,k))
+        end do
+      end do
+    end do
     !$OMP END PARALLEL DO
-    return
   end subroutine correc
 end module mod_correc
