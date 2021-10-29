@@ -19,14 +19,14 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 ## News
 
-29/10/2021 -- A few neat features have been incorporated in the the most recent version of *CaNS*:
+[29/10/2021] **Major update** -- a few neat features have been incorporated in the the most recent version of *CaNS*:
 
-* **X-aligned pencils are now used by default**, which results in improved speed and scalability. This behavior can be changed using the flags `-D_DECOMP_Y`/`-D_DECOMP_Z` for Y-/Z-aligned pencils;
-* **Support uneven partitioning of the computational subdomains**: the total number of grid points along one direction does not have to be divisible by the number of tasks;
-* **Simplified the `rk.f90` and `mom.f90` routines and the option of implicit diffusion** (based on [*SNaC*](github.com/p-costa/SNaC));
-* Improved the routines for imposing boundary conditions, and the MPI I/O checkpointing  (based on [*SNaC*](github.com/p-costa/SNaC));
+* **x-aligned pencils are now used by default**, which results in improved speed and scalability. This behavior can be changed using the flags `-D_DECOMP_Y`/`-D_DECOMP_Z` for y- or z-aligned pencils;
+* **support uneven partitioning of the computational subdomains**: the total number of grid points along one direction does not have to be divisible by the number of tasks;
+* simplified `rk.f90` and `mom.f90` routines and the option of implicit diffusion (based on [*SNaC*](github.com/p-costa/SNaC));
+* improved the routines for imposing boundary conditions, and the MPI I/O checkpointing  (based on [*SNaC*](github.com/p-costa/SNaC));
 * ... and lots of minor improvements and polishing.
- 
+
 The **many-GPU** version of CaNS can be found [**here**](https://github.com/maxcuda/CaNS).
 
 ## Features
