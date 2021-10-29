@@ -11,3 +11,4 @@ cans
 run/
 src/data/*.*
 run/data/*.*
+!src/data/readme.txt
