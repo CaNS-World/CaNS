@@ -18,14 +18,16 @@ CaNS now allows for choosing an implicit temporal discretization of the diffusio
 P. Costa. *A FFT-based finite-difference solver for massively-parallel direct numerical simulations of turbulent flows.* *Computers & Mathematics with Applications* 76: 1853--1862 (2018). [doi:10.1016/j.camwa.2018.07.034](https://doi.org/10.1016/j.camwa.2018.07.034) [[arXiv preprint]](https://arxiv.org/abs/1802.10323)
 
 ## News
+
+29/10/2021 -- A few neat features have been incorporated in the the most recent version of *CaNS*:
+
+* **X-aligned pencils are now used by default**, which results in improved speed and scalability. This behavior can be changed using the flags `-D_DECOMP_Y`/`-D_DECOMP_Z` for Y-/Z-aligned pencils;
+* **Support uneven partitioning of the computational subdomains**: the total number of grid points along one direction does not have to be divisible by the number of tasks;
+* **Simplified the `rk.f90` and `mom.f90` routines and the option of implicit diffusion** (based on [*SNaC*](github.com/p-costa/SNaC));
+* Improved the routines for imposing boundary conditions, and the MPI I/O checkpointing  (based on [*SNaC*](github.com/p-costa/SNaC));
+* ... and lots of minor improvements and polishing.
  
-The recent **many-GPU** version of CaNS can be found [**here**](https://github.com/maxcuda/CaNS).
-
-**Please consider using the implementation in branch [`x_pencil`](https://github.com/p-costa/CaNS/tree/x_pencil) for faster calculations**. See the 13/05/2020 news entry below for more details. This implementation will be merged into `master` before the end of the year.
-
-13/05/2020 -- An implementation that allows for an arbitrary default orientation of the pencil decomposition (i.e. x-, y- or z-aligned pencils) has been developed and kept for now in branch `x_pencil`. Using x-aligned pencils by default increases slightly the performance of CaNS by avoiding two *all-to-all* operations in the Poisson solver. To test this new feature, the code in branch `x_pencil` should be compiled with `-D_DECOMP_X` (best performing) or `-D_DECOMP_Y`.
-
-28/06/2020 -- The `isoutflow` input parameter is not required anymore to define a zero-pressure outflow, and has been removed.
+The **many-GPU** version of CaNS can be found [**here**](https://github.com/maxcuda/CaNS).
 
 ## Features
 
