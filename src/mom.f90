@@ -304,33 +304,33 @@ module mod_mom
         do i=1,nx
           dudyp = (u(i,1 ,k)-u(i,0   ,k))*dli(2)*visc
           taux(2) = taux(2) + dudyp/(dli(1)*dzfi(k)*l(1)*l(3))
-        enddo
-      enddo
-    endif
+        end do
+      end do
+    end if
     if(is_bound(1,2)) then
       do k=1,nz
         do i=1,nx
           dudym = (u(i,ny,k)-u(i,ny+1,k))*dli(2)*visc
           taux(2) = taux(2) + dudyp/(dli(1)*dzfi(k)*l(1)*l(3))
-        enddo
-      enddo
-    endif
+        end do
+      end do
+    end if
     if(is_bound(0,3)) then
       do j=1,ny
         do i=1,nx
           dudzp = (u(i,j,1 )-u(i,j,0   ))*dzci(0)*visc
           taux(3) = taux(3) + dudzp/(dli(1)*dli(2)*l(1)*l(2))
-        enddo
-      enddo
-    endif
+        end do
+      end do
+    end if
     if(is_bound(1,3)) then
       do j=1,ny
         do i=1,nx
           dudzm = (u(i,j,nz)-u(i,j,nz+1))*dzci(nz)*visc
           taux(3) = taux(3) + dudzm/(dli(1)*dli(2)*l(1)*l(2))
-        enddo
-      enddo
-    endif
+        end do
+      end do
+    end if
     call mpi_allreduce(MPI_IN_PLACE,taux(1),3,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
     !
     tauy(:) = 0.
@@ -339,33 +339,33 @@ module mod_mom
         do j=1,ny
           dvdxp = (v(1  ,j,k)-v(0  ,j,k))*dli(1)*visc
           tauy(1) = tauy(1) + dvdxp/(dli(2)*dzfi(1)*l(2)*l(3))
-        enddo
-      enddo
-    endif
+        end do
+      end do
+    end if
     if(is_bound(1,1)) then
       do k=1,nz
         do j=1,ny
           dvdxm = (v(nx,j,k)-v(nx+1,j,k))*dli(1)*visc
           tauy(1) = tauy(1) + dvdxm/(dli(2)*dzfi(1)*l(2)*l(3))
-        enddo
-      enddo
-    endif
+        end do
+      end do
+    end if
     if(is_bound(0,3)) then
       do j=1,ny
         do i=1,nx
           dvdzp = (v(i,j,1 )-v(i,j,0   ))*dzci(0)*visc
           tauy(3) = tauy(3) + dvdzp/(dli(1)*dli(2)*l(1)*l(2))
-        enddo
-      enddo
-    endif
+        end do
+      end do
+    end if
     if(is_bound(1,3)) then
       do j=1,ny
         do i=1,nx
           dvdzm = (v(i,j,nz)-v(i,j,nz+1))*dzci(nz)*visc
           tauy(3) = tauy(3) + dvdzm/(dli(1)*dli(2)*l(1)*l(2))
-        enddo
-      enddo
-    endif
+        end do
+      end do
+    end if
     call mpi_allreduce(MPI_IN_PLACE,tauy(1),3,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
     !
     tauz(:) = 0.
@@ -374,33 +374,33 @@ module mod_mom
         do j=1,ny
           dwdxp = (w(1 ,j,k)-w(0   ,j,k))*dli(1)*visc
           tauz(1) = tauz(1) + dwdxp/(dli(2)*dzfi(k)*l(2)*l(3))
-        enddo
-      enddo
-    endif
+        end do
+      end do
+    end if
     if(is_bound(1,1)) then
       do k=1,nz
         do j=1,ny
           dwdxm = (w(nx,j,k)-w(nx+1,j,k))*dli(1)*visc
           tauz(1) = tauz(1) + dwdxm/(dli(2)*dzfi(k)*l(2)*l(3))
-        enddo
-      enddo
-    endif
+        end do
+      end do
+    end if
     if(is_bound(0,2)) then
       do k=1,nz
         do i=1,nx
           dwdyp = (w(i,1,k )-w(i,0   ,k))*dli(2)*visc
           tauz(2) = tauz(2) + dwdyp/(dli(1)*dzfi(k)*l(1)*l(3))
-        enddo
-      enddo
-    endif
+        end do
+      end do
+    end if
     if(is_bound(1,2)) then
       do k=1,nz
         do i=1,nx
           dwdym = (w(i,ny,k)-w(i,ny+1,k))*dli(2)*visc
           tauz(2) = tauz(2) + dwdym/(dli(1)*dzfi(k)*l(1)*l(3))
-        enddo
-      enddo
-    endif
+        end do
+      end do
+    end if
     call mpi_allreduce(MPI_IN_PLACE,tauz(1),3,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
   end subroutine cmpt_wallshear
 end module mod_mom

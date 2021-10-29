@@ -30,7 +30,7 @@ module mod_rk
     real(rp), intent(out), dimension(0:,0:,0:) :: up,vp,wp
     real(rp), intent(out), dimension(3) :: f
     real(rp),              dimension(n(1),n(2),n(3)) :: dudtrk ,dvdtrk ,dwdtrk
-#ifdef _IMPDIFF
+#if defined(_IMPDIFF)
     real(rp),              dimension(n(1),n(2),n(3)) :: dudtrkd,dvdtrkd,dwdtrkd
 #endif
     real(rp) :: factor1,factor2,factor12
@@ -47,7 +47,7 @@ module mod_rk
     dvdtrk(:,:,:) = 0._rp
     dwdtrk(:,:,:) = 0._rp
     !$OMP END WORKSHARE
-#ifndef _IMPDIFF
+#if !defined(_IMPDIFF)
     call momx_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,u,dudtrk)
     call momy_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,v,dvdtrk)
     call momz_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,w,dwdtrk)
@@ -66,7 +66,7 @@ module mod_rk
     call momz_a(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,u,v,w,dwdtrk)
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP PRIVATE(i,j,k) &
-#ifdef _IMPDIFF
+#if defined(_IMPDIFF)
     !$OMP SHARED(factor12,dudtrkd,dvdtrkd,dwdtrkd) &
 #endif
     !$OMP SHARED(n,factor1,factor2,u,v,w,up,vp,wp,dudtrk,dvdtrk,dwdtrk,dudtrko,dvdtrko,dwdtrko)
@@ -76,7 +76,7 @@ module mod_rk
           up(i,j,k) = u(i,j,k) + factor1*dudtrk(i,j,k) + factor2*dudtrko(i,j,k)
           vp(i,j,k) = v(i,j,k) + factor1*dvdtrk(i,j,k) + factor2*dvdtrko(i,j,k)
           wp(i,j,k) = w(i,j,k) + factor1*dwdtrk(i,j,k) + factor2*dwdtrko(i,j,k)
-#ifdef _IMPDIFF
+#if defined(_IMPDIFF)
           up(i,j,k) = up(i,j,k) + factor12*dudtrkd(i,j,k)
           vp(i,j,k) = vp(i,j,k) + factor12*dvdtrkd(i,j,k)
           wp(i,j,k) = wp(i,j,k) + factor12*dwdtrkd(i,j,k)
@@ -89,46 +89,47 @@ module mod_rk
     end do
     !$OMP END PARALLEL DO
 !#if 0 /*pressure gradient term treated explicitly later */
-    !$OMP WORKSHARE
-    dudtrk(:,:,:) = 0._rp
-    dvdtrk(:,:,:) = 0._rp
-    dwdtrk(:,:,:) = 0._rp
-    !$OMP END WORKSHARE
-    call momx_p(n(1),n(2),n(3),dli(1),bforce(1),p,dudtrk)
-    call momy_p(n(1),n(2),n(3),dli(2),bforce(2),p,dvdtrk)
-    call momz_p(n(1),n(2),n(3),dzci  ,bforce(3),p,dwdtrk)
-    !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
-    !$OMP SHARED(n,factor12,u,v,w,up,vp,wp,dudtrk,dvdtrk,dwdtrk)
-    do k=1,n(3)
-      do j=1,n(2)
-        do i=1,n(1)
-          up(i,j,k) = up(i,j,k) + factor12*dudtrk(i,j,k)
-          vp(i,j,k) = vp(i,j,k) + factor12*dvdtrk(i,j,k)
-          wp(i,j,k) = wp(i,j,k) + factor12*dwdtrk(i,j,k)
-        end do
-      end do
-    end do ! pressure gradient term in the loop below
-    !$OMP END PARALLEL DO
-!#endif
+!    !$OMP WORKSHARE
+!    dudtrk(:,:,:) = 0._rp
+!    dvdtrk(:,:,:) = 0._rp
+!    dwdtrk(:,:,:) = 0._rp
+!    !$OMP END WORKSHARE
+!    call momx_p(n(1),n(2),n(3),dli(1),bforce(1),p,dudtrk)
+!    call momy_p(n(1),n(2),n(3),dli(2),bforce(2),p,dvdtrk)
+!    call momz_p(n(1),n(2),n(3),dzci  ,bforce(3),p,dwdtrk)
 !    !$OMP PARALLEL DO DEFAULT(none) &
 !    !$OMP PRIVATE(i,j,k) &
-!    !$OMP SHARED(n,factor12,dli,dzci,bforce,u,v,w,up,vp,wp,p)
+!    !$OMP SHARED(n,factor12,u,v,w,up,vp,wp,dudtrk,dvdtrk,dwdtrk)
 !    do k=1,n(3)
 !      do j=1,n(2)
 !        do i=1,n(1)
-!          up(i,j,k) = up(i,j,k) + factor12*(bforce(1) - dli(1)*(    p(i+1,j,k)-p(i,j,k)) )
-!          vp(i,j,k) = vp(i,j,k) + factor12*(bforce(2) - dli(2)*(    p(i,j+1,k)-p(i,j,k)))
-!          wp(i,j,k) = wp(i,j,k) + factor12*(bforce(3) - dzci(k)*(p(i,j,k+1)-p(i,j,k)))
+!          up(i,j,k) = up(i,j,k) + factor12*dudtrk(i,j,k)
+!          vp(i,j,k) = vp(i,j,k) + factor12*dvdtrk(i,j,k)
+!          wp(i,j,k) = wp(i,j,k) + factor12*dwdtrk(i,j,k)
 !        end do
 !      end do
 !    end do
 !    !$OMP END PARALLEL DO
+!#endif
+    ! pressure gradient term in the loop below
+    !$OMP PARALLEL DO DEFAULT(none) &
+    !$OMP PRIVATE(i,j,k) &
+    !$OMP SHARED(n,factor12,dli,dzci,bforce,u,v,w,up,vp,wp,p)
+    do k=1,n(3)
+      do j=1,n(2)
+        do i=1,n(1)
+          up(i,j,k) = up(i,j,k) + factor12*(bforce(1) - dli(1)*(    p(i+1,j,k)-p(i,j,k)) )
+          vp(i,j,k) = vp(i,j,k) + factor12*(bforce(2) - dli(2)*(    p(i,j+1,k)-p(i,j,k)))
+          wp(i,j,k) = wp(i,j,k) + factor12*(bforce(3) - dzci(k)*(p(i,j,k+1)-p(i,j,k)))
+        end do
+      end do
+    end do
+    !$OMP END PARALLEL DO
     !
     ! compute mean wall shear stresses
     !
     call cmpt_wallshear(n,is_bound,l,dli,dzci,dzfi,visc,u,v,w,taux,tauy,tauz)
-#ifndef _IMPDIFF
+#if !defined(_IMPDIFF)
     f(1) = (factor1*sum(taux(:)/l(:)) + factor2*sum(tauxo(:)/l(:)))
     f(2) = (factor1*sum(tauy(:)/l(:)) + factor2*sum(tauyo(:)/l(:)))
     f(3) = (factor1*sum(tauz(:)/l(:)) + factor2*sum(tauzo(:)/l(:)))
@@ -159,7 +160,7 @@ module mod_rk
       call chk_mean(n,grid_vol_ratio,wp,mean)
       f(3) = velf(3) - mean
     end if
-#ifdef _IMPDIFF
+#if defined(_IMPDIFF)
     !
     ! compute rhs of helmholtz equation
     !
