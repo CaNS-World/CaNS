@@ -100,10 +100,10 @@ module mod_initgrid
     real(rp), intent(in) :: alpha,z0
     real(rp), intent(out) :: z
     if(alpha.ne.0.) then
-      if(    z0 <= 0.5) then
+      if(     z0 <= 0.5) then
         z = 0.5*(1.-1.+tanh(2.*alpha*(z0-0.))/tanh(alpha))
         !z = 0.5*(1.-1.+erf( 2.*alpha*(z0-0.))/erf( alpha))
-      elseif(z0 > 0.5) then
+      else if(z0  > 0.5) then
         z = 0.5*(1.+1.+tanh(2.*alpha*(z0-1.))/tanh(alpha))
         !z = 0.5*(1.+1.+erf( 2.*alpha*(z0-1.))/erf( alpha))
       end if

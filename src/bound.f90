@@ -124,9 +124,9 @@ module mod_bound
       sgn    = -1.
     end if
     if(ctype == 'N') then
-      if(    ibound == 0) then
+      if(     ibound == 0) then
         factor = -dr*factor ! n.b.: only valid for nh /= 1 or factor /= 0
-      elseif(ibound == 1) then
+      else if(ibound == 1) then
         factor =  dr*factor ! n.b.: only valid for nh /= 1 or factor /= 0
       end if
       sgn    = 1.
@@ -156,81 +156,81 @@ module mod_bound
       if(centered) then
         select case(idir)
         case(1)
-          if    (ibound == 0) then
+          if     (ibound == 0) then
             !$OMP WORKSHARE
             p(0  :  0-dh,:,:) = factor+sgn*p(1:1+dh,:,:)
             !$OMP END WORKSHARE
-          elseif(ibound == 1) then
+          else if(ibound == 1) then
             !$OMP WORKSHARE
             p(n+1:n+1+dh,:,:) = factor+sgn*p(n:n-dh,:,:)
             !$OMP END WORKSHARE
           end if
         case(2)
-          if    (ibound == 0) then
+          if     (ibound == 0) then
             !$OMP WORKSHARE
             p(:,0  :  0-dh,:) = factor+sgn*p(:,1:1+dh,:)
             !$OMP END WORKSHARE
-          elseif(ibound == 1) then
+          else if(ibound == 1) then
             !$OMP WORKSHARE
             p(:,n+1:n+1+dh,:) = factor+sgn*p(:,n:n-dh,:)
             !$OMP END WORKSHARE
           end if
         case(3)
-          if    (ibound == 0) then
+          if     (ibound == 0) then
             !$OMP WORKSHARE
             p(:,:,0  :  0-dh) = factor+sgn*p(:,:,1:1+dh)
             !$OMP END WORKSHARE
-          elseif(ibound == 1) then
+          else if(ibound == 1) then
             !$OMP WORKSHARE
             p(:,:,n+1:n+1+dh) = factor+sgn*p(:,:,n:n-dh)
             !$OMP END WORKSHARE
           end if
         end select
-      elseif(.not.centered.and.ctype == 'D') then
+      else if(.not.centered.and.ctype == 'D') then
         select case(idir)
         case(1)
-          if    (ibound == 0) then
+          if     (ibound == 0) then
             !$OMP WORKSHARE
             p(0:0-dh,:,:) = factor
             !$OMP END WORKSHARE
-          elseif(ibound == 1) then
+          else if(ibound == 1) then
             !$OMP WORKSHARE
             p(n+1   ,:,:) = p(n-1,:,:) ! unused
             p(n:n+dh,:,:) = factor
             !$OMP END WORKSHARE
           end if
         case(2)
-          if    (ibound == 0) then
+          if     (ibound == 0) then
             !$OMP WORKSHARE
             p(:,0:0-dh,:) = factor
             !$OMP END WORKSHARE
-          elseif(ibound == 1) then
+          else if(ibound == 1) then
             !$OMP WORKSHARE
             p(:,n+1   ,:) = p(:,n-1,:) ! unused
             p(:,n:n+dh,:) = factor
             !$OMP END WORKSHARE
           end if
         case(3)
-          if    (ibound == 0) then
+          if     (ibound == 0) then
             !$OMP WORKSHARE
             p(:,:,0:0-dh) = factor
             !$OMP END WORKSHARE
-          elseif(ibound == 1) then
+          else if(ibound == 1) then
             !$OMP WORKSHARE
             p(:,:,n+1   ) = p(:,:,n-1) ! unused
             p(:,:,n:n+dh) = factor
             !$OMP END WORKSHARE
           end if
         end select
-      elseif(.not.centered.and.ctype == 'N') then
+      else if(.not.centered.and.ctype == 'N') then
         select case(idir)
         case(1)
-          if    (ibound == 0) then
+          if     (ibound == 0) then
             !$OMP WORKSHARE
             !p(0,:,:) = 1./3.*(-2.*factor+4.*p(1  ,:,:)-p(2  ,:,:))
             p(0:0-dh,:,:) = 1.*factor + p(1  :  1+dh,:,:)
             !$OMP END WORKSHARE
-          elseif(ibound == 1) then
+          else if(ibound == 1) then
             !$OMP WORKSHARE
             !p(n,:,:) = 1./3.*(-2.*factor+4.*p(n-1,:,:)-p(n-2,:,:))
             p(n+1,:,:) = p(n,:,:) ! unused
@@ -238,12 +238,12 @@ module mod_bound
             !$OMP END WORKSHARE
           end if
         case(2)
-          if    (ibound == 0) then
+          if     (ibound == 0) then
             !$OMP WORKSHARE
             !p(:,0  ,:) = 1./3.*(-2.*factor+4.*p(:,1,:)-p(:,2  ,:))
             p(:,0:0-dh,:) = 1.*factor + p(:,1  :  1+dh,:)
             !$OMP END WORKSHARE
-          elseif(ibound == 1) then
+          else if(ibound == 1) then
             !$OMP WORKSHARE
             !p(:,n,:) = 1./3.*(-2.*factor+4.*p(:,n-1,:)-p(:,n-2,:))
             p(:,n+1,:) = p(:,n,:) ! unused
@@ -251,12 +251,12 @@ module mod_bound
             !$OMP END WORKSHARE
           end if
         case(3)
-          if    (ibound == 0) then
+          if     (ibound == 0) then
             !$OMP WORKSHARE
             !p(:,:,0) = 1./3.*(-2.*factor+4.*p(:,:,1  )-p(:,:,2  ))
             p(:,:,0:0-dh) = 1.*factor + p(:,:,1  :  1+dh)
             !$OMP END WORKSHARE
-          elseif(ibound == 1) then
+          else if(ibound == 1) then
             !$OMP WORKSHARE
             !p(:,:,n) = 1./3.*(-2.*factor+4.*p(:,:,n-1)-p(:,:,n-2))
             p(:,:,n+1) = p(:,:,n) ! unused

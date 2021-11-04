@@ -59,9 +59,9 @@ module mod_initsolver
     dzf(:) = dzfi(:)**(-1)
     call bc_rhs(cbc(:,1),bc(:,1),[dl(1) ,dl(1)      ],[dl(1) ,dl(1)    ],c_or_f(1),rhsbx)
     call bc_rhs(cbc(:,2),bc(:,2),[dl(2) ,dl(2)      ],[dl(2) ,dl(2)    ],c_or_f(2),rhsby)
-    if(    c_or_f(3) == 'c') then
+    if(     c_or_f(3) == 'c') then
       call bc_rhs(cbc(:,3),bc(:,3),[dzc(0),dzc(ng(3)  )],[dzf(1),dzf(ng(3))],c_or_f(3),rhsbz)
-    elseif(c_or_f(3) == 'f') then
+    else if(c_or_f(3) == 'f') then
       call bc_rhs(cbc(:,3),bc(:,3),[dzc(1),dzc(ng(3)-1)],[dzf(1),dzf(ng(3))],c_or_f(3),rhsbz)
     end if
     !
@@ -83,21 +83,21 @@ module mod_initsolver
         lambda(l  )   = -4.*sin((1.*(l-1))*pi/(1.*n))**2
       end do
     case('NN')
-      if(    c_or_f == 'c') then
+      if(     c_or_f == 'c') then
         do l=1,n
           lambda(l)   = -4.*sin((1.*(l-1))*pi/(2.*n))**2
         end do
-      elseif(c_or_f == 'f') then
+      else if(c_or_f == 'f') then
         do l=1,n
           lambda(l)   = -4.*sin((1.*(l-1))*pi/(2.*(n-1+1)))**2
         end do
       end if
     case('DD')
-      if(    c_or_f == 'c') then
+      if(     c_or_f == 'c') then
         do l=1,n
           lambda(l)   = -4.*sin((1.*(l-0))*pi/(2.*n))**2
         end do
-      elseif(c_or_f == 'f') then
+      else if(c_or_f == 'f') then
         do l=1,n-1 ! point at n is a boundary and is excluded here
           lambda(l)   = -4.*sin((1.*(l-0))*pi/(2.*(n+1-1)))**2
         end do

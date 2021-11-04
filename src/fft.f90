@@ -148,7 +148,7 @@ module mod_fft
       kind_bwd = FFTW_RODFT11
       norm = [2.,0.]
     end select
-  elseif(c_or_f == 'f') then
+  else if(c_or_f == 'f') then
     select case(bc(0)//bc(1))
     case('PP')
       kind_fwd = FFTW_R2HC
