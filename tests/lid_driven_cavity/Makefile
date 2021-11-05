@@ -73,6 +73,8 @@ param.o: param.f90 types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
 post.o: post.f90 types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
+rk.o: rk.f90 debug.o mom.o scal.o param.o types.o
+	$(FC) $(FFLAGS) -cpp -c  $<
 sanity.o: sanity.f90 bound.o chkdiv.o common_mpi.o correc.o debug.o decomp_2d.o fft.o fillps.o initflow.o initmpi.o initsolver.o param.o solver.o types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
 solver.o: solver.f90 fft.o param.o types.o

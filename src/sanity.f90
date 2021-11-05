@@ -44,8 +44,10 @@ module mod_sanity
     call chk_stop_type(stop_type,passed);          if(.not.passed) call abortit
     call chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed); if(.not.passed) call abortit
     call chk_forcing(cbcpre,is_forced  ,passed);   if(.not.passed) call abortit
-    !call chk_solvers(ng,n,n_z,lo,hi,dli,dzci_g,dzfi_g,dzci,dzfi,nb,is_bound,cbcvel,cbcpre,bcvel,bcpre,passed)
-    !if(.not.passed) call abortit
+#if defined(_DEBUG)
+    call chk_solvers(ng,n,n_z,lo,hi,dli,dzci_g,dzfi_g,dzci,dzfi,nb,is_bound,cbcvel,cbcpre,bcvel,bcpre,passed)
+    if(.not.passed) call abortit
+#endif
   end subroutine test_sanity
   !
   subroutine chk_stop_type(stop_type,passed)
