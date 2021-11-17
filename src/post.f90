@@ -23,37 +23,37 @@ module mod_post
     !$OMP PRIVATE(i,j,k)
     !$OMP DO
     do k=1,n(3)
-       do j=1,n(2)
-          do i=1,n(1)
-             !
-             ! x component of the vorticity at cell center
-             !
-             vox(i,j,k) = 0.25_rp*( &
-                                   (uz(i,j+1,k  )-uz(i,j  ,k  ))*dyi - (uy(i,j  ,k+1)-uy(i,j  ,k  ))*dzci(k  ) + &
-                                   (uz(i,j+1,k-1)-uz(i,j  ,k-1))*dyi - (uy(i,j  ,k  )-uy(i,j  ,k-1))*dzci(k-1) + &
-                                   (uz(i,j  ,k  )-uz(i,j-1,k  ))*dyi - (uy(i,j-1,k+1)-uy(i,j-1,k  ))*dzci(k  ) + &
-                                   (uz(i,j  ,k-1)-uz(i,j-1,k-1))*dyi - (uy(i,j-1,k  )-uy(i,j-1,k-1))*dzci(k-1) &
-                                  )
-             !
-             ! y component of the vorticity at cell center
-             !
-             voy(i,j,k) = 0.25_rp*( &
-                                   (ux(i  ,j,k+1)-ux(i  ,j,k  ))*dzci(k  ) - (uz(i+1,j,k  )-uz(i  ,j,k  ))*dxi + &
-                                   (ux(i  ,j,k  )-ux(i  ,j,k-1))*dzci(k-1) - (uz(i+1,j,k-1)-uz(i  ,j,k-1))*dxi + &
-                                   (ux(i-1,j,k+1)-ux(i-1,j,k  ))*dzci(k  ) - (uz(i  ,j,k  )-uz(i-1,j,k  ))*dxi + &
-                                   (ux(i-1,j,k  )-ux(i-1,j,k-1))*dzci(k-1) - (uz(i  ,j,k-1)-uz(i-1,j,k-1))*dxi &
-                                  )
-             !
-             ! z component of the vorticity at cell center
-             !
-             voz(i,j,k) = 0.25_rp*( &
-                                   (uy(i+1,j  ,k)-uy(i  ,j  ,k))*dxi - (ux(i  ,j+1,k)-ux(i  ,j  ,k))*dyi + &
-                                   (uy(i+1,j-1,k)-uy(i  ,j-1,k))*dxi - (ux(i  ,j  ,k)-ux(i ,j-1 ,k))*dyi + &
-                                   (uy(i  ,j  ,k)-uy(i-1,j  ,k))*dxi - (ux(i-1,j+1,k)-ux(i-1,j  ,k))*dyi + &
-                                   (uy(i  ,j-1,k)-uy(i-1,j-1,k))*dxi - (ux(i-1,j  ,k)-ux(i-1,j-1,k))*dyi &
-                                  )
-          end do
-       end do
+      do j=1,n(2)
+        do i=1,n(1)
+          !
+          ! x component of the vorticity at cell center
+          !
+          vox(i,j,k) = 0.25_rp*( &
+                                (uz(i,j+1,k  )-uz(i,j  ,k  ))*dyi - (uy(i,j  ,k+1)-uy(i,j  ,k  ))*dzci(k  ) + &
+                                (uz(i,j+1,k-1)-uz(i,j  ,k-1))*dyi - (uy(i,j  ,k  )-uy(i,j  ,k-1))*dzci(k-1) + &
+                                (uz(i,j  ,k  )-uz(i,j-1,k  ))*dyi - (uy(i,j-1,k+1)-uy(i,j-1,k  ))*dzci(k  ) + &
+                                (uz(i,j  ,k-1)-uz(i,j-1,k-1))*dyi - (uy(i,j-1,k  )-uy(i,j-1,k-1))*dzci(k-1) &
+                               )
+          !
+          ! y component of the vorticity at cell center
+          !
+          voy(i,j,k) = 0.25_rp*( &
+                                (ux(i  ,j,k+1)-ux(i  ,j,k  ))*dzci(k  ) - (uz(i+1,j,k  )-uz(i  ,j,k  ))*dxi + &
+                                (ux(i  ,j,k  )-ux(i  ,j,k-1))*dzci(k-1) - (uz(i+1,j,k-1)-uz(i  ,j,k-1))*dxi + &
+                                (ux(i-1,j,k+1)-ux(i-1,j,k  ))*dzci(k  ) - (uz(i  ,j,k  )-uz(i-1,j,k  ))*dxi + &
+                                (ux(i-1,j,k  )-ux(i-1,j,k-1))*dzci(k-1) - (uz(i  ,j,k-1)-uz(i-1,j,k-1))*dxi &
+                               )
+          !
+          ! z component of the vorticity at cell center
+          !
+          voz(i,j,k) = 0.25_rp*( &
+                                (uy(i+1,j  ,k)-uy(i  ,j  ,k))*dxi - (ux(i  ,j+1,k)-ux(i  ,j  ,k))*dyi + &
+                                (uy(i+1,j-1,k)-uy(i  ,j-1,k))*dxi - (ux(i  ,j  ,k)-ux(i  ,j-1,k))*dyi + &
+                                (uy(i  ,j  ,k)-uy(i-1,j  ,k))*dxi - (ux(i-1,j+1,k)-ux(i-1,j  ,k))*dyi + &
+                                (uy(i  ,j-1,k)-uy(i-1,j-1,k))*dxi - (ux(i-1,j  ,k)-ux(i-1,j-1,k))*dyi &
+                               )
+        end do
+      end do
     end do
     !$OMP END PARALLEL
   end subroutine vorticity
@@ -78,32 +78,32 @@ module mod_post
     !$OMP PRIVATE(i,j,k,s11,s12,s13,s22,s23,s33)
     !$OMP DO
     do k=1,n(3)
-       do j=1,n(2)
-          do i=1,n(1)
-             s11 = ((ux(i,j,k)-ux(i-1,j,k))*dxi    )**2
-             s22 = ((uy(i,j,k)-uy(i,j-1,k))*dyi    )**2
-             s33 = ((uz(i,j,k)-uz(i,j,k-1))*dzfi(k))**2
-             s12 = .25_rp*( &
-                           ((ux(i  ,j+1,k)-ux(i  ,j  ,k))*dyi + (uy(i+1,j  ,k)-uy(i  ,j  ,k))*dxi)**2 + &
-                           ((ux(i  ,j  ,k)-ux(i ,j-1 ,k))*dyi + (uy(i+1,j-1,k)-uy(i  ,j-1,k))*dxi)**2 + &
-                           ((ux(i-1,j+1,k)-ux(i-1,j  ,k))*dyi + (uy(i  ,j  ,k)-uy(i-1,j  ,k))*dxi)**2 + &
-                           ((ux(i-1,j  ,k)-ux(i-1,j-1,k))*dyi + (uy(i  ,j-1,k)-uy(i-1,j-1,k))*dxi)**2 &
-                          )*.25_rp
-             s13 = .25_rp*( &
-                            ((ux(i  ,j,k+1)-ux(i  ,j,k  ))*dzci(k  ) + (uz(i+1,j,k  )-uz(i  ,j,k  ))*dxi)**2 + &
-                            ((ux(i  ,j,k  )-ux(i  ,j,k-1))*dzci(k-1) + (uz(i+1,j,k-1)-uz(i  ,j,k-1))*dxi)**2 + &
-                            ((ux(i-1,j,k+1)-ux(i-1,j,k  ))*dzci(k  ) + (uz(i  ,j,k  )-uz(i-1,j,k  ))*dxi)**2 + &
-                            ((ux(i-1,j,k  )-ux(i-1,j,k-1))*dzci(k-1) + (uz(i  ,j,k-1)-uz(i-1,j,k-1))*dxi)**2 &
-                          )*.25_rp
-             s23 = .25_rp*( &
-                           ((uy(i,j  ,k+1)-uy(i,j  ,k  ))*dzci(k  ) + (uz(i,j+1,k  )-uz(i,j  ,k  ))*dyi)**2 + &
-                           ((uy(i,j  ,k  )-uy(i,j  ,k-1))*dzci(k-1) + (uz(i,j+1,k-1)-uz(i,j  ,k-1))*dyi)**2 + &
-                           ((uy(i,j-1,k+1)-uy(i,j-1,k  ))*dzci(k  ) + (uz(i,j  ,k  )-uz(i,j-1,k  ))*dyi)**2 + &
-                           ((uy(i,j-1,k  )-uy(i,j-1,k-1))*dzci(k-1) + (uz(i,j  ,k-1)-uz(i,j-1,k-1))*dyi)**2 &
-                          )*.25_rp
-             str(i,j,k) = s11+s22+s33 + 2*(s12+s13+s23)
-          end do
-       end do
+      do j=1,n(2)
+        do i=1,n(1)
+          s11 = ((ux(i,j,k)-ux(i-1,j,k))*dxi    )**2
+          s22 = ((uy(i,j,k)-uy(i,j-1,k))*dyi    )**2
+          s33 = ((uz(i,j,k)-uz(i,j,k-1))*dzfi(k))**2
+          s12 = .25_rp*( &
+                        ((ux(i  ,j+1,k)-ux(i  ,j  ,k))*dyi + (uy(i+1,j  ,k)-uy(i  ,j  ,k))*dxi)**2 + &
+                        ((ux(i  ,j  ,k)-ux(i  ,j-1,k))*dyi + (uy(i+1,j-1,k)-uy(i  ,j-1,k))*dxi)**2 + &
+                        ((ux(i-1,j+1,k)-ux(i-1,j  ,k))*dyi + (uy(i  ,j  ,k)-uy(i-1,j  ,k))*dxi)**2 + &
+                        ((ux(i-1,j  ,k)-ux(i-1,j-1,k))*dyi + (uy(i  ,j-1,k)-uy(i-1,j-1,k))*dxi)**2 &
+                       )*.25_rp
+          s13 = .25_rp*( &
+                         ((ux(i  ,j,k+1)-ux(i  ,j,k  ))*dzci(k  ) + (uz(i+1,j,k  )-uz(i  ,j,k  ))*dxi)**2 + &
+                         ((ux(i  ,j,k  )-ux(i  ,j,k-1))*dzci(k-1) + (uz(i+1,j,k-1)-uz(i  ,j,k-1))*dxi)**2 + &
+                         ((ux(i-1,j,k+1)-ux(i-1,j,k  ))*dzci(k  ) + (uz(i  ,j,k  )-uz(i-1,j,k  ))*dxi)**2 + &
+                         ((ux(i-1,j,k  )-ux(i-1,j,k-1))*dzci(k-1) + (uz(i  ,j,k-1)-uz(i-1,j,k-1))*dxi)**2 &
+                       )*.25_rp
+          s23 = .25_rp*( &
+                        ((uy(i,j  ,k+1)-uy(i,j  ,k  ))*dzci(k  ) + (uz(i,j+1,k  )-uz(i,j  ,k  ))*dyi)**2 + &
+                        ((uy(i,j  ,k  )-uy(i,j  ,k-1))*dzci(k-1) + (uz(i,j+1,k-1)-uz(i,j  ,k-1))*dyi)**2 + &
+                        ((uy(i,j-1,k+1)-uy(i,j-1,k  ))*dzci(k  ) + (uz(i,j  ,k  )-uz(i,j-1,k  ))*dyi)**2 + &
+                        ((uy(i,j-1,k  )-uy(i,j-1,k-1))*dzci(k-1) + (uz(i,j  ,k-1)-uz(i,j-1,k-1))*dyi)**2 &
+                       )*.25_rp
+          str(i,j,k) = s11+s22+s33 + 2*(s12+s13+s23)
+        end do
+      end do
     end do
     !$OMP END PARALLEL
   end subroutine strain_rate
@@ -132,7 +132,7 @@ module mod_post
         do i=1,n(1)
           e12 = .25_rp*( &
                         ((ux(i  ,j+1,k)-ux(i  ,j  ,k))*dyi - (uy(i+1,j  ,k)-uy(i  ,j  ,k))*dxi)**2 + &
-                        ((ux(i  ,j  ,k)-ux(i ,j-1 ,k))*dyi - (uy(i+1,j-1,k)-uy(i  ,j-1,k))*dxi)**2 + &
+                        ((ux(i  ,j  ,k)-ux(i  ,j-1,k))*dyi - (uy(i+1,j-1,k)-uy(i  ,j-1,k))*dxi)**2 + &
                         ((ux(i-1,j+1,k)-ux(i-1,j  ,k))*dyi - (uy(i  ,j  ,k)-uy(i-1,j  ,k))*dxi)**2 + &
                         ((ux(i-1,j  ,k)-ux(i-1,j-1,k))*dyi - (uy(i  ,j-1,k)-uy(i-1,j-1,k))*dxi)**2 &
                        )*.25_rp
