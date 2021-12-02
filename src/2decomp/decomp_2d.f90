@@ -539,7 +539,7 @@ contains
     integer :: buf_size, status, errorcode
 
     ! verify the global size can actually be distributed as pencils
-    if (nx<dims(1) .or. ny<dims(1) .or. ny<dims(2) .or. nz<dims(2)) then
+    if (nx_global<dims(1) .or. ny_global<dims(1) .or. ny_global<dims(2) .or. nz_global<dims(2)) then
        errorcode = 6
        call decomp_2d_abort(errorcode, &
             'Invalid 2D processor grid. ' // &
