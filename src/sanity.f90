@@ -69,10 +69,10 @@ module mod_sanity
     integer, dimension(2) :: ii
     logical :: passed_loc
     passed = .true.
-    passed_loc = all(mod(ng(1:2),2) == 0)
-    if(myid == 0.and.(.not.passed_loc)) &
-      print*, 'ERROR: itot and jtot should be even.'
-    passed = passed.and.passed_loc
+    !passed_loc = all(mod(ng(1:2),2) == 0)
+    !if(myid == 0.and.(.not.passed_loc)) &
+    !  print*, 'ERROR: itot and jtot should be even.'
+    !passed = passed.and.passed_loc
 #if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
     ii = [2,3]
 #elif defined(_DECOMP_Y)
@@ -82,7 +82,7 @@ module mod_sanity
 #endif
     passed_loc = passed_loc.and.all(dims(:)<=ng(ii)).and.all(dims(:)>=1)
     if(myid == 0.and.(.not.passed_loc)) &
-      print*, 'ERROR: 1 <= dims(:) <= [itot,jtot] or [itot,ktot], or [jtot ktot] depending on the decomposition.'
+      print*, 'ERROR: 1 <= dims(:) <= [itot,jtot], or [itot,ktot], or [jtot ktot] depending on the decomposition.'
     passed = passed.and.passed_loc
   end subroutine chk_dims
   !
