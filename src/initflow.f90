@@ -43,6 +43,8 @@ module mod_initflow
       is_mean=.true.
     case('zer')
       u1d(:) = 0.
+    case('uni')
+      u1d(:) = uref
     case('log')
       call log_profile(q,n(3),zclzi,ubulk*lref/visc,u1d)
       is_noise = .true.
