@@ -80,7 +80,7 @@ module mod_sanity
 #elif defined(_DECOMP_Z)
     ii = [1,2]
 #endif
-    passed_loc = passed_loc.and.all(dims(:)<=ng(ii)).and.all(dims(:)>=1)
+    passed_loc = all(dims(:)<=ng(ii)).and.all(dims(:)>=1)
     if(myid == 0.and.(.not.passed_loc)) &
       print*, 'ERROR: 1 <= dims(:) <= [itot,jtot], or [itot,ktot], or [jtot ktot] depending on the decomposition.'
     passed = passed.and.passed_loc
