@@ -9,9 +9,7 @@
 
 In the third domain direction, the solver is more flexible as it uses Gauss elimination. There the grid can also be non-uniform (e.g. fine at the boundary and coarser in the center).
 
-**Update**
-
-CaNS now allows for choosing an implicit temporal discretization of the diffusion term of the N-S equations. This results in solving a Helmholtz equation for each velocity component. Since FFT-based solvers are also used, the same options described above for pressure boundary conditions apply to the velocity, in case implicit diffusion is used.
+CaNS also allows for choosing an implicit temporal discretization of the diffusion term of the N-S equations. This results in solving a Helmholtz equation for each velocity component. Since FFT-based solvers are also used, the same options described above for pressure boundary conditions apply to the velocity, in case implicit diffusion is active.
 
 **Reference**
 
