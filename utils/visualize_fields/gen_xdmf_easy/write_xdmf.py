@@ -5,6 +5,10 @@ import os
 #
 iseek      = 0            # number of bytes to skip relative to the origin of the binary file (0 for CaNS)
 iprecision = 8            # precision of real-valued data
+if(    iprecision == 4):
+    my_dtype = 'float32'
+else:
+    my_dtype = 'float64'
 r0 = np.array([0.,0.,0.]) # domain origin
 non_uniform_grid = True
 #
@@ -64,16 +68,13 @@ if os.path.exists(ygridfile): os.remove(ygridfile)
 if os.path.exists(zgridfile): os.remove(zgridfile)
 if(non_uniform_grid):
     f   = open('grid.bin','rb')
-    if(    iprecision == 4):
-        grid_z = np.fromfile(f,dtype='float32')
-    else:
-        grid_z = np.fromfile(f,dtype='float64')
+    grid_z = np.fromfile(f,dtype=my_dtype)
     f.close()
     grid_z = np.reshape(grid_z,(ng[2],4),order='F')
     z = r0[2] + grid_z[:,2]
-x[nmin[0]-1:nmax[0]:nstep[0]].astype('float64').tofile(xgridfile)
-y[nmin[1]-1:nmax[1]:nstep[1]].astype('float64').tofile(ygridfile)
-z[nmin[2]-1:nmax[2]:nstep[2]].astype('float64').tofile(zgridfile)
+x[nmin[0]-1:nmax[0]:nstep[0]].astype(my_dtype).tofile(xgridfile)
+y[nmin[1]-1:nmax[1]:nstep[1]].astype(my_dtype).tofile(ygridfile)
+z[nmin[2]-1:nmax[2]:nstep[2]].astype(my_dtype).tofile(zgridfile)
 #
 # write xml file
 #

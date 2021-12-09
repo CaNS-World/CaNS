@@ -9,6 +9,10 @@ import struct
 # define some custom parameters, not defined in the DNS code
 #
 iprecision = 8            # precision of the real-valued data
+if(    iprecision == 4):
+    my_dtype = 'float32'
+else:
+    my_dtype = 'float64'
 r0 = np.array([0.,0.,0.]) # domain origin
 non_uniform_grid = True
 #
@@ -37,11 +41,15 @@ rtimes = np.zeros(nsaves)
 isteps = np.zeros(nsaves,dtype=int)
 iseek   = n[0]*n[1]*n[2]*iprecision*nflds # file offset in bytes with respect to the origin
                                           # (to retrieve the simulation time and time step number)
+if(iprecision == 4):
+    my_format = '2f'
+else:
+    my_format = '2d'
 for i in range(nsaves):
     with open(files[i], 'rb') as f:
         raw   = f.read()[iseek:iseek+iprecision*2]
-    rtimes[i] =     struct.unpack('2d',raw)[0]
-    isteps[i] = int(struct.unpack('2d',raw)[1])
+    rtimes[i] =     struct.unpack(my_format,raw)[0]
+    isteps[i] = int(struct.unpack(my_format,raw)[1])
     f.close()
 #
 # remove duplicates
@@ -68,16 +76,13 @@ if os.path.exists(ygridfile): os.remove(ygridfile)
 if os.path.exists(zgridfile): os.remove(zgridfile)
 if(non_uniform_grid):
     f   = open('grid.bin','rb')
-    if(    iprecision == 4):
-        grid_z = np.fromfile(f,dtype='float32')
-    else:
-        grid_z = np.fromfile(f,dtype='float64')
+    grid_z = np.fromfile(f,dtype=my_dtype)
     f.close()
     grid_z = np.reshape(grid_z,(ng[2],4),order='F')
     z = r0[2] + grid_z[:,2]
-x[0:n[0]].astype('float64').tofile(xgridfile)
-y[0:n[1]].astype('float64').tofile(ygridfile)
-z[0:n[2]].astype('float64').tofile(zgridfile)
+x[0:n[0]].astype(my_dtype).tofile(xgridfile)
+y[0:n[1]].astype(my_dtype).tofile(ygridfile)
+z[0:n[2]].astype(my_dtype).tofile(zgridfile)
 #
 # write xml file
 #
