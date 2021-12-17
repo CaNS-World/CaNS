@@ -83,7 +83,8 @@ These lines set the initial velocity field.
 * `log`: logarithmic profile with mean velocity `uref`                              ; streamwise direction in `x`
 * `hcp`: half channel with plane Poiseuille profile and mean velocity `uref`        ; streamwise direction in `x`
 * `hcl`: half channel with logarithmic profile and mean velocity `uref`             ; streamwise direction in `x`
-* `tgv`: Taylor-Green vortex
+* `tgv`: three-dimensional Taylor-Green vortex
+* `tgw`: two-dimensional   Taylor-Green vortex
 
 `is_wallturb`, if true, **superimposes a high amplitude disturbance on the initial velocity field** that effectively triggers transition to turbulence in a wall-bounded shear flow.
 

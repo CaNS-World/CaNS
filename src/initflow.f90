@@ -72,7 +72,23 @@ module mod_initflow
             u(i,j,k) =  sin(xf)*cos(yc)*cos(zc)*uref
             v(i,j,k) = -cos(xc)*sin(yf)*cos(zc)*uref
             w(i,j,k) = 0.
-            p(i,j,k) = 0.!(cos(2.*xc)+cos(2.*yc))*(cos(2.*zc)+2.)/16.
+            p(i,j,k) = 0.!(cos(2.*xc)+cos(2.*yc))*(cos(2.*zc)+2.)/16.*uref**2
+          end do
+        end do
+      end do
+    case('tgw')
+      do k=1,n(3)
+        zc = zclzi(k)
+        do j=1,n(2)
+          yc = (j+lo(2)-1-.5)*dy
+          yf = (j+lo(2)-1-.0)*dy
+          do i=1,n(1)
+            xc = (i+lo(1)-1-.5)*dx
+            xf = (i+lo(1)-1-.0)*dx
+            u(i,j,k) =  cos(xf)*sin(yc)*uref
+            v(i,j,k) = -sin(xc)*cos(yf)*uref
+            w(i,j,k) = 0.
+            p(i,j,k) = -(cos(2.*xc)+cos(2.*yc))/4.*uref**2
           end do
         end do
       end do
@@ -95,7 +111,7 @@ module mod_initflow
       call MPI_FINALIZE(ierr)
       error stop
     end select
-    if(inivel.ne.'tgv') then
+    if(.not.any(inivel == ['tgv','tgw'])) then
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
