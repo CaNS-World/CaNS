@@ -3,6 +3,7 @@ module mod_solver
   use decomp_2d
   use mod_fft   , only: fft
   use mod_types
+  use mod_param , only: eps => small
   implicit none
   private
   public solver
@@ -124,13 +125,13 @@ module mod_solver
       do i=1,nx
         bb(:)  = b(:) + lambdaxy(i,j)
         p1(1:n-1) = p(i,j,1:n-1)
-        call dgtsv_homebrewed(n-1,a(1:n-1),bb(1:n-1),c(1:n-1),p1(1:n-1))
+        call dgtsv_homebrewed(n-1,a,bb,c,p1)
         p2(:) = 0.
         p2(1  ) = -a(1  )
         p2(n-1) = -c(n-1)
-        call dgtsv_homebrewed(n-1,a(1:n-1),bb(1:n-1),c(1:n-1),p2(1:n-1))
+        call dgtsv_homebrewed(n-1,a,bb,c,p2)
         p(i,j,n) = (p(i,j,n) - c(n)*p1(1) - a(n)*p1(n-1)) / &
-                   (bb(   n) + c(n)*p2(1) + a(n)*p2(n-1))
+                   (bb(   n) + c(n)*p2(1) + a(n)*p2(n-1)+eps)
         p(i,j,1:n-1) = p1(1:n-1) + p2(1:n-1)*p(i,j,n)
       end do
     end do
@@ -148,20 +149,14 @@ module mod_solver
     !
     ! Gauss elimination
     !
-    z = 1./b(1)
+    z = 1./(b(1)+eps)
     d(1) = c(1)*z
     p(1) = p(1)*z
-    do l=2,n-1
-      z    = 1./(b(l)-a(l)*d(l-1))
+    do l=2,n
+      z    = 1./(b(l)-a(l)*d(l-1)+eps)
       d(l) = c(l)*z
       p(l) = (p(l)-a(l)*p(l-1))*z
     end do
-    z = b(n)-a(n)*d(n-1)
-    if(z.ne.0.) then
-      p(n) = (p(n)-a(n)*p(n-1))/z
-    else
-      p(n) = 0.
-    end if
     !
     ! backward substitution
     !

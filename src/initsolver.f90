@@ -151,6 +151,9 @@ module mod_initsolver
       if(bc(0) == 'N') b(1) = b(1) + factor(0)*a(1)
       if(bc(1) == 'N') b(n) = b(n) + factor(1)*c(n)
     end select
+    a(:) = a(:)
+    b(:) = b(:)
+    c(:) = c(:)
   end subroutine tridmatrix
   !
   subroutine bc_rhs(cbc,bc,dlc,dlf,c_or_f,rhs)
