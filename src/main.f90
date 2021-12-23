@@ -283,20 +283,6 @@ program cans
 #endif
       dpdl(:) = dpdl(:) + f(:)
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
-#if !defined(_IMPDIFF)
-#if defined(_ONE_PRESS_CORR)
-      dtrk  = dt
-      dtrki = dt**(-1)
-      if(irk < 3) then ! pressure correction only at the last RK step
-        !$OMP WORKSHARE
-        u(:,:,:) = up(:,:,:)
-        v(:,:,:) = vp(:,:,:)
-        w(:,:,:) = wp(:,:,:)
-        !$OMP END WORKSHARE
-        cycle
-      end if
-#endif
-#endif
       call fillps(n,dli,dzfi,dtrki,up,vp,wp,pp)
       call updt_rhs_b(['c','c','c'],cbcpre,n,is_bound,rhsbp%x,rhsbp%y,rhsbp%z,pp)
       call solver(n,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre(:,3),['c','c','c'],pp)
