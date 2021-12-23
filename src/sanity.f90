@@ -245,10 +245,10 @@ module mod_sanity
     call chkdiv(lo,hi,dli,dzfi,u,v,w,divtot,divmax)
     passed_loc = divmax < small
     if(myid == 0.and.(.not.passed_loc)) &
-    print*, 'ERROR: Pressure correction: Divergence is too large.'
+    print*, 'ERROR: Pressure correction: Divergence is too large, with maximum = ', divmax
     passed = passed.and.passed_loc
     call fftend(arrplan)
-#if defined(_IMPDIFF)
+#if defined(_IMPDIFF) && !defined(_IMPDIFF_1D)
     alpha = acos(-1.) ! irrelevant
     up(:,:,:) = 0.
     vp(:,:,:) = 0.
