@@ -54,6 +54,9 @@ program cans
                              read_input
   use mod_sanity     , only: test_sanity
   use mod_solver     , only: solver
+#if defined(_IMPDIFF) && defined(_IMPDIFF_1D)
+  use mod_solver     , only: solver_gaussel_z
+#endif
   use mod_types
   !$ use omp_lib
   implicit none
@@ -235,6 +238,12 @@ program cans
                   rhsbv%x,rhsbv%y,rhsbv%z)
   call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3),lambdaxyw,['c','c','f'],aw,bw,cw,arrplanw,normfftw, &
                   rhsbw%x,rhsbw%y,rhsbw%z)
+#if defined(_IMPDIFF_1D)
+  deallocate(lambdaxyu,lambdaxyv,lambdaxyw)
+  call fftend(arrplanu)
+  call fftend(arrplanv)
+  call fftend(arrplanw)
+#endif
 #endif
   !
   ! main loop
@@ -270,6 +279,7 @@ program cans
 #if !defined(_IMPDIFF_1D)
       call solver(n,arrplanu,normfftu,lambdaxyu,au,bb,cu,cbcvel(:,3,1),['f','c','c'],up)
 #else
+      call solver_gaussel_z(n                  ,au,bb,cu,cbcvel(:,3,1),['f','c','c'],up)
 #endif
       !$OMP WORKSHARE
       vp(1:n(1),1:n(2),1:n(3)) = vp(1:n(1),1:n(2),1:n(3))*alpha
@@ -279,6 +289,7 @@ program cans
 #if !defined(_IMPDIFF_1D)
       call solver(n,arrplanv,normfftv,lambdaxyv,av,bb,cv,cbcvel(:,3,2),['c','f','c'],vp)
 #else
+      call solver_gaussel_z(n                  ,av,bb,cv,cbcvel(:,3,2),['c','f','c'],vp)
 #endif
       !$OMP WORKSHARE
       wp(1:n(1),1:n(2),1:n(3)) = wp(1:n(1),1:n(2),1:n(3))*alpha
@@ -288,6 +299,7 @@ program cans
 #if !defined(_IMPDIFF_1D)
       call solver(n,arrplanw,normfftw,lambdaxyw,aw,bb,cw,cbcvel(:,3,3),['c','c','f'],wp)
 #else
+      call solver_gaussel_z(n                  ,aw,bb,cw,cbcvel(:,3,3),['c','c','f'],wp)
 #endif
 #endif
       dpdl(:) = dpdl(:) + f(:)
@@ -321,8 +333,10 @@ program cans
         do j=1,n(2)
           do i=1,n(1)
             p(i,j,k) = p(i,j,k) + pp(i,j,k) + alphai*( &
+#if !defined(_IMPDIFF_1D)
                         (pp(i+1,j,k)-2.*pp(i,j,k)+pp(i-1,j,k))*(dxi**2) + &
                         (pp(i,j+1,k)-2.*pp(i,j,k)+pp(i,j-1,k))*(dyi**2) + &
+#endif
                         ((pp(i,j,k+1)-pp(i,j,k  ))*dzci(k  ) - &
                          (pp(i,j,k  )-pp(i,j,k-1))*dzci(k-1))*dzfi(k) )
           end do
@@ -440,7 +454,7 @@ program cans
   ! clear ffts
   !
   call fftend(arrplanp)
-#if defined(_IMPDIFF)
+#if defined(_IMPDIFF) && !defined(_IMPDIFF_1D)
   call fftend(arrplanu)
   call fftend(arrplanv)
   call fftend(arrplanw)
@@ -455,7 +469,9 @@ program cans
   deallocate(dzc,dzf,zc,zf,dzci,dzfi)
   deallocate(rhsbp%x,rhsbp%y,rhsbp%z)
 #if defined(_IMPDIFF)
+#if !defined(_IMPDIFF_1D)
   deallocate(lambdaxyu,lambdaxyv,lambdaxyw)
+#endif
   deallocate(au,bu,cu,av,bv,cv,aw,bw,cw,bb)
   deallocate(rhsbu%x,rhsbu%y,rhsbu%z, &
              rhsbv%x,rhsbv%y,rhsbv%z, &
