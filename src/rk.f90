@@ -5,7 +5,7 @@ module mod_rk
                        momx_p,momy_p,momz_p, cmpt_wallshear
 #if defined(_IMPDIFF) && defined(_IMPDIFF_1D)
   use mod_mom  , only: momx_d_xy,momy_d_xy,momz_d_xy, &
-                 only: momx_d_z ,momy_d_z ,momz_d_z
+                       momx_d_z ,momy_d_z ,momz_d_z
 #endif
   use mod_scal , only: scal
   use mod_types
