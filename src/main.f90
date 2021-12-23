@@ -267,19 +267,28 @@ program cans
       !$OMP END WORKSHARE
       bb(:) = bu(:) + alpha
       call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,is_bound,rhsbu%x,rhsbu%y,rhsbu%z,up)
+#if !defined(_IMPDIFF_1D)
       call solver(n,arrplanu,normfftu,lambdaxyu,au,bb,cu,cbcvel(:,3,1),['f','c','c'],up)
+#else
+#endif
       !$OMP WORKSHARE
       vp(1:n(1),1:n(2),1:n(3)) = vp(1:n(1),1:n(2),1:n(3))*alpha
       !$OMP END WORKSHARE
       bb(:) = bv(:) + alpha
       call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,is_bound,rhsbv%x,rhsbv%y,rhsbv%z,vp)
+#if !defined(_IMPDIFF_1D)
       call solver(n,arrplanv,normfftv,lambdaxyv,av,bb,cv,cbcvel(:,3,2),['c','f','c'],vp)
+#else
+#endif
       !$OMP WORKSHARE
       wp(1:n(1),1:n(2),1:n(3)) = wp(1:n(1),1:n(2),1:n(3))*alpha
       !$OMP END WORKSHARE
       bb(:) = bw(:) + alpha
       call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,is_bound,rhsbw%x,rhsbw%y,rhsbw%z,wp)
+#if !defined(_IMPDIFF_1D)
       call solver(n,arrplanw,normfftw,lambdaxyw,aw,bb,cw,cbcvel(:,3,3),['c','c','f'],wp)
+#else
+#endif
 #endif
       dpdl(:) = dpdl(:) + f(:)
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
