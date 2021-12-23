@@ -74,6 +74,7 @@ The Makefile in `src/` should be modified in agreement to the installation paths
  * `-D_DEBUG`            : performs some basic checks for debugging purposes
  * `-D_TIMING`           : wall-clock time per timestep is computed
  * `-D_IMPDIFF`          : diffusion term of the N-S equations is integrated in time with an implicit discretization (thereby improving the stability of the numerical algorithm for viscous-dominated flows)
+ * `-D_IMPDIFF_1D`       : same as above, but with implicit diffusion *only* along Z; this option needs to be combined with `-D_IMPDIFF`
  * `-D_SINGLE_PRECISION` : calculation will be carried out in single precision (the default precision is double)
 
 Typing `make run` will compile the code and copy the executable `cans` and input file `dns.in` to a `run/` folder.
