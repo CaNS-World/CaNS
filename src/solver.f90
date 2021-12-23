@@ -266,5 +266,39 @@ module mod_solver
     !$OMP END WORKSHARE
 #endif
   end subroutine solver_gaussel_z
+  !
+#if 0
+  subroutine gaussel_lapack(nx,ny,n,a,b,c,p)
+    implicit none
+#if !defined(_SINGLE_PRECISION)
+    external :: dgttrf,dgttrs
+    procedure(), pointer :: gttrf => dgttrf, gttrs => dgttrs
+#else
+    external :: sgttrf,sgttrs
+    procedure(), pointer :: gttrf => sgttrf, gttrs => sgttrs
+#endif
+    integer , intent(in) :: nx,ny,n
+    real(rp), intent(in), dimension(:) :: a,b,c
+    real(rp), intent(inout), dimension(:,:,:) :: p
+    real(rp), allocatable, dimension(:) :: aa,bb,cc,ccc
+    integer , allocatable, dimension(:) :: ipiv
+    integer :: i,j,info
+    !real(rp), dimension(n,nx,ny) :: p_t
+    !
+    allocate(aa,source=a(2:n  ))
+    allocate(bb,source=b(1:n  ))
+    allocate(cc,source=c(1:n-1))
+    allocate(ccc(n-2),ipiv(n))
+    call gttrf(n,aa,bb,cc,ccc,ipiv,info)
+    do j=1,ny
+      do i=1,nx
+        call gttrs('N',n,1,aa,bb,cc,ccc,ipiv,p(i,j,1:n),n,info)
+      end do
+    end do
+    !p_t = reshape(p(1:nx,1:ny,1:n),shape(p_t),order=[2,3,1])
+    !call gttrs('N',n,nx*ny,aa,bb,cc,ccc,ipiv,p_t(1:n,:,:),n,info)
+    !p(1:nx,1:ny,1:n) = reshape(p_t,shape(p(1:nx,1:ny,1:n)),order=[3,1,2])
+  end subroutine gaussel_lapack
+#endif
 #endif
 end module mod_solver
