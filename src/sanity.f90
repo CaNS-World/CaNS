@@ -43,7 +43,10 @@ module mod_sanity
     call chk_dims(ng,dims,passed);                 if(.not.passed) call abortit
     call chk_stop_type(stop_type,passed);          if(.not.passed) call abortit
     call chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed); if(.not.passed) call abortit
-    call chk_forcing(cbcpre,is_forced  ,passed);   if(.not.passed) call abortit
+    call chk_forcing(cbcpre,is_forced,passed);     if(.not.passed) call abortit
+#if defined(_IMPDIFF_1D) && !defined(_IMPDIFF)
+    if(myid == 0)  print*, 'ERROR: `_IMPDIFF_1D` cpp macro requires building with `_IMPDIFF` too.'; call abortit
+#endif
 #if defined(_DEBUG)
     call chk_solvers(ng,n,n_z,lo,hi,dli,dzci_g,dzfi_g,dzci,dzfi,nb,is_bound,cbcvel,cbcpre,bcvel,bcpre,passed)
     if(.not.passed) call abortit
@@ -245,10 +248,10 @@ module mod_sanity
     call chkdiv(lo,hi,dli,dzfi,u,v,w,divtot,divmax)
     passed_loc = divmax < small
     if(myid == 0.and.(.not.passed_loc)) &
-    print*, 'ERROR: Pressure correction: Divergence is too large.'
+    print*, 'ERROR: Pressure correction: Divergence is too large, with maximum = ', divmax
     passed = passed.and.passed_loc
     call fftend(arrplan)
-#if defined(_IMPDIFF)
+#if defined(_IMPDIFF) && !defined(_IMPDIFF_1D)
     alpha = acos(-1.) ! irrelevant
     up(:,:,:) = 0.
     vp(:,:,:) = 0.

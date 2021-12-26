@@ -53,10 +53,12 @@ module mod_chkdt
     !$OMP END PARALLEL DO
     call mpi_allreduce(MPI_IN_PLACE,dti,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
     if(dti == 0.) dti = 1.
-    dlmin     = minval(dl)
-    dlmin     = min(dlmin,minval(1./dzfi)) ! minimum of dzf is an estimate on the safe side
+    dlmin     = minval(dl(1:2))
+#if !defined(_IMPDIFF_1D)
+    dlmin     = min(dlmin,minval(1./dzfi))
+#endif
     call mpi_allreduce(MPI_IN_PLACE,dlmin,1,MPI_REAL_RP,MPI_MIN,MPI_COMM_WORLD,ierr)
-#if defined(_IMPDIFF)
+#if defined(_IMPDIFF) && !defined(_IMPDIFF_1D)
     dtmax = sqrt(3.)/dti
 #else
     dtmax = min(1.65/12./visc*dlmin**2,sqrt(3.)/dti)

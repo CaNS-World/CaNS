@@ -7,6 +7,10 @@ module mod_mom
   public momx_a,momy_a,momz_a, &
          momx_d,momy_d,momz_d, &
          momx_p,momy_p,momz_p, cmpt_wallshear
+#if defined(_IMPDIFF_1D)
+  public momx_d_xy,momy_d_xy,momz_d_xy, &
+         momx_d_z ,momy_d_z ,momz_d_z
+#endif
   contains
   !
   subroutine momx_a(nx,ny,nz,dxi,dyi,dzci,dzfi,u,v,w,dudt)
@@ -174,8 +178,8 @@ module mod_mom
           dvdzp = (v(i,j,k+1)-v(i,j,k))*dzci(k  )
           dvdzm = (v(i,j,k)-v(i,j,k-1))*dzci(k-1)
           dvdt(i,j,k) = dvdt(i,j,k) + &
-                        (dvdxp-dvdxm)*visc*dxi+ &
-                        (dvdyp-dvdym)*visc*dyi+ &
+                        (dvdxp-dvdxm)*visc*dxi + &
+                        (dvdyp-dvdym)*visc*dyi + &
                         (dvdzp-dvdzm)*visc*dzfi(k)
         end do
       end do
@@ -207,8 +211,8 @@ module mod_mom
           dwdzp = (w(i,j,k+1)-w(i,j,k))*dzfi(k+1)
           dwdzm = (w(i,j,k)-w(i,j,k-1))*dzfi(k  )
           dwdt(i,j,k) = dwdt(i,j,k) + &
-                        (dwdxp-dwdxm)*visc*dxi+ &
-                        (dwdyp-dwdym)*visc*dyi+ &
+                        (dwdxp-dwdxm)*visc*dxi + &
+                        (dwdyp-dwdym)*visc*dyi + &
                         (dwdzp-dwdzm)*visc*dzci(k)
         end do
       end do
@@ -281,6 +285,177 @@ module mod_mom
     end do
     !$OMP END PARALLEL DO
   end subroutine momz_p
+  !
+#if defined(_IMPDIFF_1D)
+  subroutine momx_d_z(nx,ny,nz,dzci,dzfi,visc,u,dudt)
+    implicit none
+    integer , intent(in) :: nx,ny,nz
+    real(rp), intent(in) :: visc
+    real(rp), intent(in), dimension(0:) :: dzci,dzfi
+    real(rp), dimension(0:,0:,0:), intent(in   ) :: u
+    real(rp), dimension( :, :, :), intent(inout) :: dudt
+    real(rp) :: dudzp,dudzm
+    integer :: i,j,k
+    !
+    !$OMP PARALLEL DO DEFAULT(none) &
+    !$OMP PRIVATE(i,j,k) &
+    !$OMP PRIVATE(dudzp,dudzm) &
+    !$OMP SHARED(nx,ny,nz,dzci,dzfi,u,dudt,visc)
+    do k=1,nz
+      do j=1,ny
+        do i=1,nx
+          dudzp = (u(i,j,k+1)-u(i,j,k))*dzci(k  )
+          dudzm = (u(i,j,k)-u(i,j,k-1))*dzci(k-1)
+          dudt(i,j,k) = dudt(i,j,k) + &
+                        (dudzp-dudzm)*visc*dzfi(k)
+        end do
+      end do
+    end do
+    !$OMP END PARALLEL DO
+  end subroutine momx_d_z
+  !
+  subroutine momy_d_z(nx,ny,nz,dzci,dzfi,visc,v,dvdt)
+    implicit none
+    integer , intent(in) :: nx,ny,nz
+    real(rp), intent(in) :: visc
+    real(rp), intent(in), dimension(0:) :: dzci,dzfi
+    real(rp), dimension(0:,0:,0:), intent(in   ) :: v
+    real(rp), dimension( :, :, :), intent(inout) :: dvdt
+    real(rp) :: dvdzp,dvdzm
+    integer :: i,j,k
+    !
+    !$OMP PARALLEL DO DEFAULT(none) &
+    !$OMP PRIVATE(i,j,k) &
+    !$OMP PRIVATE(dvdzp,dvdzm) &
+    !$OMP SHARED(nx,ny,nz,dzci,dzfi,v,dvdt,visc)
+    do k=1,nz
+      do j=1,ny
+        do i=1,nx
+          dvdzp = (v(i,j,k+1)-v(i,j,k))*dzci(k  )
+          dvdzm = (v(i,j,k)-v(i,j,k-1))*dzci(k-1)
+          dvdt(i,j,k) = dvdt(i,j,k) + &
+                        (dvdzp-dvdzm)*visc*dzfi(k)
+        end do
+      end do
+    end do
+    !$OMP END PARALLEL DO
+  end subroutine momy_d_z
+  !
+  subroutine momz_d_z(nx,ny,nz,dzci,dzfi,visc,w,dwdt)
+    implicit none
+    integer , intent(in) :: nx,ny,nz
+    real(rp), intent(in) :: visc
+    real(rp), intent(in), dimension(0:) :: dzci,dzfi
+    real(rp), dimension(0:,0:,0:), intent(in   ) :: w
+    real(rp), dimension( :, :, :), intent(inout) :: dwdt
+    integer :: i,j,k
+    real(rp) :: dwdzp,dwdzm
+    !
+    !$OMP PARALLEL DO DEFAULT(none) &
+    !$OMP PRIVATE(i,j,k) &
+    !$OMP PRIVATE(dwdzp,dwdzm) &
+    !$OMP SHARED(nx,ny,nz,dzci,dzfi,w,dwdt,visc)
+    do k=1,nz
+      do j=1,ny
+        do i=1,nx
+          dwdzp = (w(i,j,k+1)-w(i,j,k))*dzfi(k+1)
+          dwdzm = (w(i,j,k)-w(i,j,k-1))*dzfi(k  )
+          dwdt(i,j,k) = dwdt(i,j,k) + &
+                        (dwdzp-dwdzm)*visc*dzci(k)
+        end do
+      end do
+    end do
+    !$OMP END PARALLEL DO
+  end subroutine momz_d_z
+  !
+  subroutine momx_d_xy(nx,ny,nz,dxi,dyi,visc,u,dudt)
+    implicit none
+    integer , intent(in) :: nx,ny,nz
+    real(rp), intent(in) :: dxi,dyi,visc
+    real(rp), dimension(0:,0:,0:), intent(in   ) :: u
+    real(rp), dimension( :, :, :), intent(inout) :: dudt
+    real(rp) :: dudxp,dudxm,dudyp,dudym
+    integer :: i,j,k
+    !
+    !$OMP PARALLEL DO DEFAULT(none) &
+    !$OMP PRIVATE(i,j,k) &
+    !$OMP PRIVATE(dudxp,dudxm,dudyp,dudym) &
+    !$OMP SHARED(nx,ny,nz,dxi,dyi,u,dudt,visc)
+    do k=1,nz
+      do j=1,ny
+        do i=1,nx
+          dudxp = (u(i+1,j,k)-u(i,j,k))*dxi
+          dudxm = (u(i,j,k)-u(i-1,j,k))*dxi
+          dudyp = (u(i,j+1,k)-u(i,j,k))*dyi
+          dudym = (u(i,j,k)-u(i,j-1,k))*dyi
+          dudt(i,j,k) = dudt(i,j,k) + &
+                        (dudxp-dudxm)*visc*dxi + &
+                        (dudyp-dudym)*visc*dyi
+        end do
+      end do
+    end do
+    !$OMP END PARALLEL DO
+  end subroutine momx_d_xy
+  !
+  subroutine momy_d_xy(nx,ny,nz,dxi,dyi,visc,v,dvdt)
+    implicit none
+    integer , intent(in) :: nx,ny,nz
+    real(rp), intent(in) :: dxi,dyi,visc
+    real(rp), dimension(0:,0:,0:), intent(in   ) :: v
+    real(rp), dimension( :, :, :), intent(inout) :: dvdt
+    real(rp) :: dvdxp,dvdxm,dvdyp,dvdym
+    integer :: i,j,k
+    !
+    !$OMP PARALLEL DO DEFAULT(none) &
+    !$OMP PRIVATE(i,j,k) &
+    !$OMP PRIVATE(dvdxp,dvdxm,dvdyp,dvdym) &
+    !$OMP SHARED(nx,ny,nz,dxi,dyi,v,dvdt,visc)
+    do k=1,nz
+      do j=1,ny
+        do i=1,nx
+          dvdxp = (v(i+1,j,k)-v(i,j,k))*dxi
+          dvdxm = (v(i,j,k)-v(i-1,j,k))*dxi
+          dvdyp = (v(i,j+1,k)-v(i,j,k))*dyi
+          dvdym = (v(i,j,k)-v(i,j-1,k))*dyi
+          dvdt(i,j,k) = dvdt(i,j,k) + &
+                        (dvdxp-dvdxm)*visc*dxi + &
+                        (dvdyp-dvdym)*visc*dyi
+        end do
+      end do
+    end do
+    !$OMP END PARALLEL DO
+  end subroutine momy_d_xy
+  !
+  subroutine momz_d_xy(nx,ny,nz,dxi,dyi,visc,w,dwdt)
+    implicit none
+    integer , intent(in) :: nx,ny,nz
+    real(rp), intent(in) :: dxi,dyi,visc
+    real(rp), dimension(0:,0:,0:), intent(in   ) :: w
+    real(rp), dimension( :, :, :), intent(inout) :: dwdt
+    integer :: i,j,k
+    real(rp) :: dwdxp,dwdxm,dwdyp,dwdym
+    !
+    !$OMP PARALLEL DO DEFAULT(none) &
+    !$OMP PRIVATE(i,j,k) &
+    !$OMP PRIVATE(dwdxp,dwdxm,dwdyp,dwdym) &
+    !$OMP SHARED(nx,ny,nz,dxi,dyi,w,dwdt,visc)
+    do k=1,nz
+      do j=1,ny
+        do i=1,nx
+          dwdxp = (w(i+1,j,k)-w(i,j,k))*dxi
+          dwdxm = (w(i,j,k)-w(i-1,j,k))*dxi
+          dwdyp = (w(i,j+1,k)-w(i,j,k))*dyi
+          dwdym = (w(i,j,k)-w(i,j-1,k))*dyi
+          dwdt(i,j,k) = dwdt(i,j,k) + &
+                        (dwdxp-dwdxm)*visc*dxi + &
+                        (dwdyp-dwdym)*visc*dyi
+        end do
+      end do
+    end do
+    !$OMP END PARALLEL DO
+  end subroutine momz_d_xy
+#endif
+  !
   subroutine cmpt_wallshear(n,is_bound,l,dli,dzci,dzfi,visc,u,v,w,taux,tauy,tauz)
     implicit none
     integer , intent(in ), dimension(3) :: n
