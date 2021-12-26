@@ -54,7 +54,7 @@ program cans
                              read_input
   use mod_sanity     , only: test_sanity
   use mod_solver     , only: solver
-#if defined(_IMPDIFF) && defined(_IMPDIFF_1D)
+#if defined(_IMPDIFF_1D)
   use mod_solver     , only: solver_gaussel_z
 #endif
   use mod_types

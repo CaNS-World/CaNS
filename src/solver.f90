@@ -7,7 +7,7 @@ module mod_solver
   implicit none
   private
   public solver
-#if defined(_IMPDIFF) && defined(_IMPDIFF_1D)
+#if defined(_IMPDIFF_1D)
   public solver_gaussel_z
 #endif
   contains
@@ -205,7 +205,7 @@ module mod_solver
     end do
   end subroutine dgtsv_homebrewed
   !
-#if defined(_IMPDIFF) && defined(_IMPDIFF_1D)
+#if defined(_IMPDIFF_1D)
   subroutine solver_gaussel_z(n,a,b,c,bcz,c_or_f,p)
     implicit none
     integer , intent(in), dimension(3) :: n
