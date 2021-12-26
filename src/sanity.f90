@@ -45,7 +45,7 @@ module mod_sanity
     call chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed); if(.not.passed) call abortit
     call chk_forcing(cbcpre,is_forced,passed);     if(.not.passed) call abortit
 #if defined(_IMPDIFF_1D) && !defined(_IMPDIFF)
-    if(myid == 0)  print*, 'ERROR: `_IMPDIFF_1D` cpp macro requires building `_IMPDIFF` too.'; call abortit
+    if(myid == 0)  print*, 'ERROR: `_IMPDIFF_1D` cpp macro requires building with `_IMPDIFF` too.'; call abortit
 #endif
 #if defined(_DEBUG)
     call chk_solvers(ng,n,n_z,lo,hi,dli,dzci_g,dzfi_g,dzci,dzfi,nb,is_bound,cbcvel,cbcpre,bcvel,bcpre,passed)
