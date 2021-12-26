@@ -17,6 +17,8 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 ## News
 
+[26/12/2021] Implicit temporal discretization of the diffusion term along only one direction (z) is now also supported.
+
 [29/10/2021] **Major update** -- a few neat features have been incorporated in the the most recent version of *CaNS*:
 
 * **x-aligned pencils are now used by default**, which results in improved speed and scalability. This behavior can be changed using the flags `-D_DECOMP_Y`/`-D_DECOMP_Z` for y- or z-aligned pencils;
