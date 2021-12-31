@@ -124,9 +124,9 @@ module mod_initflow
       end do
     end if
     if(is_noise) then
-      call add_noise(ng,lo,123,.5_rp,u(1:n(1),1:n(2),1:n(3)))
-      call add_noise(ng,lo,456,.5_rp,v(1:n(1),1:n(2),1:n(3)))
-      call add_noise(ng,lo,789,.5_rp,w(1:n(1),1:n(2),1:n(3)))
+      call add_noise(ng,lo,123,.05_rp,u(1:n(1),1:n(2),1:n(3)))
+      call add_noise(ng,lo,456,.05_rp,v(1:n(1),1:n(2),1:n(3)))
+      call add_noise(ng,lo,789,.05_rp,w(1:n(1),1:n(2),1:n(3)))
     end if
     if(is_mean) then
       call set_mean(n,ubulk,dzflzi*(dx/lx)*(dy/ly),u(1:n(1),1:n(2),1:n(3)))
