@@ -41,6 +41,9 @@ module mod_initflow
     case('poi')
       call poiseuille(q,n(3),zclzi,ubulk,u1d)
       is_mean=.true.
+    case('iop') ! reversed 'poi'
+      call poiseuille(q,n(3),zclzi,ubulk,u1d)
+      u1d(:) = u1d(:) - ubulk
     case('zer')
       u1d(:) = 0.
     case('uni')
