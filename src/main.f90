@@ -174,7 +174,7 @@ program cans
     close(99)
     open(99,file=trim(datadir)//'grid.out')
     do kk=0,ng(3)+1
-      write(99,'(5E15.7)') 0.,zf_g(kk),zc_g(kk),dzf_g(kk),dzc_g(kk)
+      write(99,'(5E15.7e3)') 0.,zf_g(kk),zc_g(kk),dzf_g(kk),dzc_g(kk)
     end do
     close(99)
     open(99,file=trim(datadir)//'geometry.out')
