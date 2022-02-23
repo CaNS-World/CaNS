@@ -295,11 +295,11 @@ module mod_initflow
     integer :: k
     real(rp) :: z,retau ! z/lz and bulk Reynolds number
     retau = 0.09*reb**(0.88) ! from Pope's book
-    do k=1,n/2
-      z    = zc(k)*2.*retau!1.*((k-1)+q)/(1.*n)*2.*retau
+    do k=1,n
+      z    = zc(k)*2.*retau
+      if(z >= retau) z = 2.*retau-z
       p(k) = 2.5*log(z) + 5.5
       if (z <= 11.6) p(k)=z
-      p(n+1-k) = p(k)
     end do
   end subroutine log_profile
   !
