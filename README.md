@@ -58,7 +58,7 @@ The fluid flow is solved with a second-order finite-volume pressure correction s
 
 ### Input file
 
-The input file `dns.in` sets the physical and computational parameters. In the `examples/` folder are examples of input files for several canonical flows. See `src/INFO_INPUT.md` for a detailed description of the input file.
+The input file `dns.in` sets the physical and computational parameters. In the `examples/` folder are examples of input files for several canonical flows. See [`src/INFO_INPUT.md`](src/INFO_INPUT.md) for a detailed description of the input file.
 
 Files `out1d.h90`, `out2d.h90` and `out3d.h90` in `src/` set which data are written in 1-, 2- and 3-dimensional output files, respectively. *The code should be recompiled after editing out?d.h90 files*.
 
