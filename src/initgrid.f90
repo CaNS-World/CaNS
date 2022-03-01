@@ -111,4 +111,41 @@ module mod_initgrid
       z = z0
     end if
   end subroutine gridpoint_cluster_middle
+  subroutine gridpoint_natural(kg,nzg,z,kb_a,alpha_a,c_eta_a,dyp_a)
+    !
+    ! a physics-based, 'natural' grid stretching function for wall-bounded turbulence
+    ! see Pirozzoli & Orlandi, JCP 439 - 110408 (2021)
+    !
+    ! clustered at the two sides
+    !
+    implicit none
+    real(rp), parameter :: kb_p     = 32._rp,    &
+                           alpha_p  = pi/1.5_rp, &
+                           c_eta_p  = 0.8_rp,    &
+                           dyp_p    = 0.05_rp
+    integer , intent(in ) :: kg,nzg
+    real(rp), intent(out) :: z
+    real(rp), intent(in ), optional :: kb_a,alpha_a,c_eta_a,dyp_a
+    real(rp)                        :: kb  ,alpha  ,c_eta  ,dyp
+    real(rp) :: retau,n,k
+    !
+    ! handle input parameters
+    !
+    kb    = kb_p   ; if(present(kb_a   )) kb    = kb_a
+    alpha = alpha_p; if(present(alpha_a)) alpha = alpha_a
+    c_eta = c_eta_p; if(present(c_eta_a)) c_eta = c_eta_a
+    dyp   = dyp_p  ; if(present(dyp_a  )) dyp   = dyp_a
+    !
+    ! determine retau
+    !
+    n = nzg/2._rp
+    retau = 1._rp/(1._rp+(n/kb)**2)*(dyp*n+(3._rp/4._rp*alpha*c_eta*n)**(4._rp/3._rp)*(n/kb)**2)
+    if(kg==1) print*,'Retau = ',retau
+    k = 1._rp*min(kg,(nzg-kg))
+    !
+    ! dermine z/(2h)
+    !
+    z = 1._rp/(1._rp+(k/kb)**2)*(dyp*k+(3._rp/4._rp*alpha*c_eta*k)**(4._rp/3._rp)*(k/kb)**2)/(2._rp*retau)
+    if( kg > nzg-kg ) z = 1._rp-z
+  end subroutine gridpoint_natural
 end module mod_initgrid
