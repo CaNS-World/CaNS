@@ -54,9 +54,9 @@ module mod_solver
     q = 0
     if(c_or_f(3) == 'f'.and.bcz(1) == 'D') q = 1
     if(bcz(0)//bcz(1) == 'PP') then
-      call gaussel_periodic(n_z(1),n_z(2),n_z(3)-q,a,b,c,pz,lambdaxy)
+      call gaussel_periodic(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,pz,lambdaxy)
     else
-      call gaussel(         n_z(1),n_z(2),n_z(3)-q,a,b,c,pz,lambdaxy)
+      call gaussel(         n_z(1),n_z(2),n_z(3)-q,0,a,b,c,pz,lambdaxy)
     end if
     !
     call transpose_z_to_y(pz,py)
@@ -84,11 +84,11 @@ module mod_solver
 #endif
   end subroutine solver
   !
-  subroutine gaussel(nx,ny,n,a,b,c,p,lambdaxy)
+  subroutine gaussel(nx,ny,n,nh,a,b,c,p,lambdaxy)
     implicit none
-    integer , intent(in) :: nx,ny,n
+    integer , intent(in) :: nx,ny,n,nh
     real(rp), intent(in), dimension(:) :: a,b,c
-    real(rp), intent(inout), dimension(:,:,:) :: p
+    real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
     real(rp), intent(in), dimension(nx,ny), optional :: lambdaxy
     real(rp), dimension(n) :: bb
     integer :: i,j
@@ -123,11 +123,11 @@ module mod_solver
     endif
   end subroutine gaussel
   !
-  subroutine gaussel_periodic(nx,ny,n,a,b,c,p,lambdaxy)
+  subroutine gaussel_periodic(nx,ny,n,nh,a,b,c,p,lambdaxy)
     implicit none
-    integer , intent(in) :: nx,ny,n
+    integer , intent(in) :: nx,ny,n,nh
     real(rp), intent(in), dimension(:) :: a,b,c
-    real(rp), intent(inout), dimension(:,:,:) :: p
+    real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
     real(rp), intent(in), dimension(nx,ny), optional :: lambdaxy
     real(rp), dimension(n) :: bb,p1,p2
     integer :: i,j,info
@@ -215,10 +215,11 @@ module mod_solver
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
 #if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
     real(rp), dimension(xsize(1),xsize(2),xsize(3)) :: px
+    real(rp), dimension(zsize(1),zsize(2),zsize(3)) :: pz
 #elif defined(_DECOMP_Y)
     real(rp), dimension(ysize(1),ysize(2),ysize(3)) :: py
-#endif
     real(rp), dimension(zsize(1),zsize(2),zsize(3)) :: pz
+#endif
     integer :: q
     integer, dimension(3) :: n_z
     !
@@ -235,18 +236,22 @@ module mod_solver
     py(:,:,:) = p(1:n(1),1:n(2),1:n(3))
     !$OMP END WORKSHARE
     call transpose_y_to_z(py,pz)
-#elif defined(_DECOMP_Z)
-    !$OMP WORKSHARE
-    pz(:,:,:) = p(1:n(1),1:n(2),1:n(3))
-    !$OMP END WORKSHARE
 #endif
-   q = 0
+    q = 0
     if(c_or_f(3) == 'f'.and.bcz(1) == 'D') q = 1
+#if !defined(_DECOMP_Z)
     if(bcz(0)//bcz(1) == 'PP') then
-      call gaussel_periodic(n_z(1),n_z(2),n_z(3)-q,a,b,c,pz)
+      call gaussel_periodic(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,pz)
     else
-      call gaussel(         n_z(1),n_z(2),n_z(3)-q,a,b,c,pz)
+      call gaussel(         n_z(1),n_z(2),n_z(3)-q,0,a,b,c,pz)
     end if
+#else
+    if(bcz(0)//bcz(1) == 'PP') then
+      call gaussel_periodic(n_z(1),n_z(2),n_z(3)-q,1,a,b,c,p)
+    else
+      call gaussel(         n_z(1),n_z(2),n_z(3)-q,1,a,b,c,p)
+    end if
+#endif
     !
 #if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
     call transpose_z_to_x(pz,px)
@@ -259,10 +264,6 @@ module mod_solver
     call transpose_z_to_y(pz,py)
     !$OMP WORKSHARE
     p(1:n(1),1:n(2),1:n(3)) = py(:,:,:)
-    !$OMP END WORKSHARE
-#elif defined(_DECOMP_Z)
-    !$OMP WORKSHARE
-    p(1:n(1),1:n(2),1:n(3)) = pz(:,:,:)
     !$OMP END WORKSHARE
 #endif
   end subroutine solver_gaussel_z
