@@ -20,7 +20,7 @@ module mod_initgrid
     select case(inivel)
     case('zer','log','poi','cou')
       gridpoint => gridpoint_cluster_two_end
-    case('hcl','hcp')
+    case('hcl','hcp','tbl')
       gridpoint => gridpoint_cluster_one_end
     case default
       gridpoint => gridpoint_cluster_two_end
