@@ -41,6 +41,8 @@ module mod_initflow
     case('poi')
       call poiseuille(q,n(3),zclzi,ubulk,u1d)
       is_mean=.true.
+    case('tbl')
+      call temporal_bl(n(3),zclzi*lz,1._rp,visc,uref,u1d)
     case('iop') ! reversed 'poi'
       call poiseuille(q,n(3),zclzi,ubulk,u1d)
       u1d(:) = u1d(:) - ubulk
@@ -284,6 +286,24 @@ module mod_initflow
       p(k) = 6.*z*(1.-z)*norm
     end do
   end subroutine poiseuille
+  !
+  subroutine temporal_bl(n,zc,d,nu,norm,p)
+    implicit none
+    integer , intent(in )   :: n
+    real(rp), intent(in ), dimension(0:) :: zc
+    real(rp), intent(in )   :: d,nu,norm
+    real(rp), intent(out), dimension(n) :: p
+    integer  :: k
+    real(rp) :: theta
+    !
+    ! temporal boudary layer profile 
+    ! with thickness d, viscosity nu, and wall velocity norm (at z=0)
+    !
+    theta = 54.*nu/norm
+    do k=1,n
+      p(k)=(0.5+(0.5)*tanh((d/(2.*theta))*(1.-zc(k)/d)))*norm
+    end do
+  end subroutine temporal_bl
   !
   subroutine log_profile(q,n,zc,reb,p)
     implicit none

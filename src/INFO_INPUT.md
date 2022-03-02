@@ -80,6 +80,7 @@ These lines set the initial velocity field.
 * `uni`: uniform velocity field equal to `uref`                                     ; streamwise direction in `x`
 * `cou`: plane Couette flow profile with symmetric wall velocities equal to `uref/2`; streamwise direction in `x`
 * `poi`: plane Poiseuille flow profile with mean velocity `uref`                    ; streamwise direction in `x`
+* `tbl`: temporal boundary layer profile with wall velocity `uref`                  ; streamwise direction in `x`
 * `log`: logarithmic profile with mean velocity `uref`                              ; streamwise direction in `x`
 * `hcp`: half channel with plane Poiseuille profile and mean velocity `uref`        ; streamwise direction in `x`
 * `hcl`: half channel with logarithmic profile and mean velocity `uref`             ; streamwise direction in `x`
