@@ -33,37 +33,36 @@ module mod_initflow
     is_noise = .false.
     is_mean  = .false.
     is_pair  = .false.
-    q = .5
     ubulk = uref
     select case(trim(inivel))
     case('cou')
-      call couette(   q,n(3),zclzi,ubulk,u1d)
+      call couette(   n(3),zclzi,ubulk,u1d)
     case('poi')
-      call poiseuille(q,n(3),zclzi,ubulk,u1d)
+      call poiseuille(n(3),zclzi,ubulk,u1d)
       is_mean=.true.
     case('tbl')
       call temporal_bl(n(3),zclzi*lz,1._rp,visc,uref,u1d)
     case('iop') ! reversed 'poi'
-      call poiseuille(q,n(3),zclzi,ubulk,u1d)
+      call poiseuille(n(3),zclzi,ubulk,u1d)
       u1d(:) = u1d(:) - ubulk
     case('zer')
       u1d(:) = 0.
     case('uni')
       u1d(:) = uref
     case('log')
-      call log_profile(q,n(3),zclzi,ubulk*lref/visc,u1d)
+      call log_profile(n(3),zclzi,ubulk*lref/visc,u1d)
       is_noise = .true.
       is_mean = .true.
     case('hcl')
       deallocate(u1d)
       allocate(u1d(2*n(3)))
-      call log_profile(q,2*n(3),zclzi,ubulk*lref/visc,u1d)
+      call log_profile(2*n(3),zclzi,ubulk*lref/visc,u1d)
       is_noise = .true.
       is_mean=.true.
     case('hcp')
       deallocate(u1d)
       allocate(u1d(2*n(3)))
-      call poiseuille(q,2*n(3),zclzi,ubulk,u1d)
+      call poiseuille(2*n(3),zclzi,ubulk,u1d)
       is_mean = .true.
     case('tgv')
       do k=1,n(3)
@@ -105,7 +104,7 @@ module mod_initflow
       else                 ! laminar flow
         ubulk = (bforce(1)*lref**2/(3.*visc))
       end if
-      call poiseuille(q,n(3),zclzi,ubulk,u1d)
+      call poiseuille(n(3),zclzi,ubulk,u1d)
       is_mean=.true.
     case default
       if(myid == 0) print*, 'ERROR: invalid name for initial velocity field'
@@ -251,12 +250,11 @@ module mod_initflow
   end if
   end subroutine set_mean
   !
-  subroutine couette(q,n,zc,norm,p)
+  subroutine couette(n,zc,norm,p)
     !
     ! plane couette profile normalized by the wall velocity difference
     !
     implicit none
-    real(rp), intent(in)   :: q
     integer , intent(in)   :: n
     real(rp), intent(in), dimension(0:) :: zc
     real(rp), intent(in)   :: norm
@@ -264,14 +262,13 @@ module mod_initflow
     integer :: k
     real(rp) :: z
     do k=1,n
-      z    = zc(k)!1.*((k-1)+q)/(1.*n)
+      z    = zc(k)
       p(k) = .5*(1.-2.*z)*norm
     end do
   end subroutine couette
   !
-  subroutine poiseuille(q,n,zc,norm,p)
+  subroutine poiseuille(n,zc,norm,p)
     implicit none
-    real(rp), intent(in)   :: q
     integer , intent(in)   :: n
     real(rp), intent(in), dimension(0:) :: zc
     real(rp), intent(in)   :: norm
@@ -282,7 +279,7 @@ module mod_initflow
     ! plane poiseuille profile normalized by the bulk velocity
     !
     do k=1,n
-      z    = zc(k)!1.*((k-1)+q)/(1.*n)
+      z    = zc(k)
       p(k) = 6.*z*(1.-z)*norm
     end do
   end subroutine poiseuille
@@ -305,9 +302,8 @@ module mod_initflow
     end do
   end subroutine temporal_bl
   !
-  subroutine log_profile(q,n,zc,reb,p)
+  subroutine log_profile(n,zc,reb,p)
     implicit none
-    real(rp), intent(in)   :: q
     integer , intent(in)   :: n
     real(rp), intent(in), dimension(0:) :: zc
     real(rp), intent(in)   :: reb
