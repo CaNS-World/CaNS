@@ -56,6 +56,7 @@ contains
   implicit none
   integer, intent(in) :: myid
   integer :: iunit,ierr
+    nsaves_max = 0 ! a good default, for backward compatibility
     open(newunit=iunit,file='dns.in',status='old',action='read',iostat=ierr)
       if( ierr == 0 ) then
         read(iunit,*) itot,jtot,ktot
