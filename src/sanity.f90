@@ -222,12 +222,12 @@ module mod_sanity
     !
     ! initialize velocity below with some random noise
     !
-    up(:,:,:) = 0.
-    vp(:,:,:) = 0.
-    wp(:,:,:) = 0.
-    call add_noise(ng,lo,123,.5_rp,up(1:n(1),1:n(2),1:n(3)))
-    call add_noise(ng,lo,456,.5_rp,vp(1:n(1),1:n(2),1:n(3)))
-    call add_noise(ng,lo,789,.5_rp,wp(1:n(1),1:n(2),1:n(3)))
+    u(:,:,:) = 0.
+    v(:,:,:) = 0.
+    w(:,:,:) = 0.
+    call add_noise(ng,lo,123,.5_rp,u(1:n(1),1:n(2),1:n(3)))
+    call add_noise(ng,lo,456,.5_rp,v(1:n(1),1:n(2),1:n(3)))
+    call add_noise(ng,lo,789,.5_rp,w(1:n(1),1:n(2),1:n(3)))
     !
     ! test pressure correction
     !
@@ -238,12 +238,12 @@ module mod_sanity
     dzf = dzfi**(-1)
     dt  = acos(-1.) ! value is irrelevant
     dti = dt**(-1)
-    call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
-    call fillps(n,dli,dzfi,dti,up,vp,wp,p)
+    call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
+    call fillps(n,dli,dzfi,dti,u,v,w,p)
     call updt_rhs_b(['c','c','c'],cbcpre,n,is_bound,rhsbx,rhsby,rhsbz,p)
     call solver(n,arrplan,normfft,lambdaxy,a,b,c,cbcpre(:,3),['c','c','c'],p)
     call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
-    call correc(n,dli,dzci,dt,p,up,vp,wp,u,v,w)
+    call correc(n,dli,dzci,dt,p,u,v,w)
     call bounduvw(cbcvel,n,bcvel,nb,is_bound,.true.,dl,dzc,dzf,u,v,w)
     call chkdiv(lo,hi,dli,dzfi,u,v,w,divtot,divmax)
     passed_loc = divmax < small
