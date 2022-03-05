@@ -41,7 +41,7 @@ program cans
   use mod_param      , only: lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,uref,lref,rey,visc,small, &
                              nb,is_bound,cbcvel,bcvel,cbcpre,bcpre, &
                              icheck,iout0d,iout1d,iout2d,iout3d,isave, &
-                             nstep,time_max,tw_max,stop_type,restart,is_overwrite_save, &
+                             nstep,time_max,tw_max,stop_type,restart,is_overwrite_save,nsaves_max, &
                              rkcoeff,   &
                              datadir,   &
                              cfl,dtmin, &
@@ -95,7 +95,9 @@ program cans
   real(rp) :: dt12,dt12av,dt12min,dt12max
 #endif
   real(rp) :: twi,tw
+  integer  :: savecounter
   character(len=7  ) :: fldnum
+  character(len=4  ) :: chkptnum
   character(len=100) :: filename
   integer :: k,kk
   logical :: is_done,kill
@@ -113,6 +115,7 @@ program cans
   !$call omp_set_num_threads(nthreadsmax)
   call initmpi(ng,dims,cbcpre,n_z,lo,hi,n,nb,is_bound)
   twi = MPI_WTIME()
+  savecounter = 0
   !
   ! allocate variables
   !
@@ -414,6 +417,16 @@ program cans
         filename = 'fld.bin'
       else
         filename = 'fld_'//fldnum//'.bin'
+        if(nsaves_max > 0) then
+          if(savecounter >= nsaves_max) savecounter = 0
+          savecounter = savecounter + 1
+          write(chkptnum,'(i4.4)') savecounter
+          filename = 'fld_'//chkptnum//'.bin'
+          var(1) = 1.*istep
+          var(2) = time
+          var(3) = 1.*savecounter
+          call out0d(trim(datadir)//'log_saves.out',3,var)
+        endif
       end if
       call load('w',trim(datadir)//trim(filename),MPI_COMM_WORLD,ng,[1,1,1],lo,hi,u,v,w,p,time,istep)
       if(.not.is_overwrite_save) then
