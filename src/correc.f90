@@ -4,7 +4,7 @@ module mod_correc
   private
   public correc
   contains
-  subroutine correc(n,dli,dzci,dt,p,up,vp,wp,u,v,w)
+  subroutine correc(n,dli,dzci,dt,p,u,v,w)
     !
     ! corrects the velocity so that it is divergence free
     !
@@ -13,8 +13,8 @@ module mod_correc
     real(rp), intent(in), dimension(3 ) :: dli
     real(rp), intent(in), dimension(0:) :: dzci
     real(rp), intent(in) :: dt
-    real(rp), intent(in) , dimension(0:,0:,0:) :: p,up,vp,wp
-    real(rp), intent(out), dimension(0:,0:,0:) :: u,v,w
+    real(rp), intent(in   ), dimension(0:,0:,0:) :: p
+    real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
     real(rp) :: factori,factorj
     real(rp), dimension(0:n(3)+1) :: factork
     integer :: i,j,k
@@ -25,34 +25,34 @@ module mod_correc
     factorj = dt*dli(2)
     factork = dt*dzci!dli(3)
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP SHARED(n,factori,u,up,p) &
+    !$OMP SHARED(n,factori,u,p) &
     !$OMP PRIVATE(i,j,k)
     do k=0,n(3)+1
       do j=0,n(2)+1
         do i=0,n(1)
-          u(i,j,k) = up(i,j,k) - factori*(   p(i+1,j,k)-p(i,j,k))
+          u(i,j,k) = u(i,j,k) - factori*(   p(i+1,j,k)-p(i,j,k))
         end do
       end do
     end do
     !$OMP END PARALLEL DO
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP SHARED(n,factorj,v,vp,p) &
+    !$OMP SHARED(n,factorj,v,p) &
     !$OMP PRIVATE(i,j,k)
     do k=0,n(3)+1
       do j=0,n(2)
         do i=0,n(1)+1
-          v(i,j,k) = vp(i,j,k) - factorj*(   p(i,j+1,k)-p(i,j,k))
+          v(i,j,k) = v(i,j,k) - factorj*(   p(i,j+1,k)-p(i,j,k))
         end do
       end do
     end do
     !$OMP END PARALLEL DO
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP SHARED(n,factork,w,wp,p) &
+    !$OMP SHARED(n,factork,w,p) &
     !$OMP PRIVATE(i,j,k)
     do k=0,n(3)
       do j=0,n(2)+1
         do i=0,n(1)+1
-          w(i,j,k) = wp(i,j,k) - factork(k)*(p(i,j,k+1)-p(i,j,k))
+          w(i,j,k) = w(i,j,k) - factork(k)*(p(i,j,k+1)-p(i,j,k))
         end do
       end do
     end do

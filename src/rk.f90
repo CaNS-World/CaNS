@@ -13,8 +13,8 @@ module mod_rk
   private
   public rk
   contains
-  subroutine rk(rkpar,n,dli,l,dzci,dzfi,visc,dt,u,v,w,p,is_bound,is_forced,velf,bforce, &
-                dudtrko,dvdtrko,dwdtrko,tauxo,tauyo,tauzo,up,vp,wp,f)
+  subroutine rk(rkpar,n,dli,l,dzci,dzfi,visc,dt,p,is_bound,is_forced,velf,bforce, &
+                dudtrko,dvdtrko,dwdtrko,tauxo,tauyo,tauzo,u,v,w,f)
     !
     ! low-storage 3rd-order Runge-Kutta scheme
     ! for time integration of the momentum equations.
@@ -25,13 +25,13 @@ module mod_rk
     real(rp), intent(in) :: visc,dt
     real(rp), intent(in   ), dimension(3) :: dli,l
     real(rp), intent(in   ), dimension(0:) :: dzci,dzfi
-    real(rp), intent(in   ), dimension(0:,0:,0:) :: u,v,w,p
+    real(rp), intent(in   ), dimension(0:,0:,0:) :: p
     logical , intent(in   ), dimension(0:1,3)    :: is_bound
     logical , intent(in   ), dimension(3)        :: is_forced
     real(rp), intent(in   ), dimension(3)        :: velf,bforce
     real(rp), intent(inout), dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
     real(rp), intent(inout), dimension(3) :: tauxo,tauyo,tauzo
-    real(rp), intent(out), dimension(0:,0:,0:) :: up,vp,wp
+    real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
     real(rp), intent(out), dimension(3) :: f
     real(rp),              dimension(n(1),n(2),n(3)) :: dudtrk ,dvdtrk ,dwdtrk
 #if defined(_IMPDIFF)
@@ -45,6 +45,22 @@ module mod_rk
     factor1 = rkpar(1)*dt
     factor2 = rkpar(2)*dt
     factor12 = factor1 + factor2
+    !
+    ! compute mean wall shear stresses
+    !
+    call cmpt_wallshear(n,is_bound,l,dli,dzci,dzfi,visc,u,v,w,taux,tauy,tauz)
+#if !defined(_IMPDIFF)
+    f(1) = (factor1*sum(taux(:)/l(:)) + factor2*sum(tauxo(:)/l(:)))
+    f(2) = (factor1*sum(tauy(:)/l(:)) + factor2*sum(tauyo(:)/l(:)))
+    f(3) = (factor1*sum(tauz(:)/l(:)) + factor2*sum(tauzo(:)/l(:)))
+    tauxo(:) = taux(:)
+    tauyo(:) = tauy(:)
+    tauzo(:) = tauz(:)
+#else
+    f(:) = factor12*[sum(taux(:)/l(:)), &
+                     sum(tauy(:)/l(:)), &
+                     sum(tauz(:)/l(:))]
+#endif
     !
     !$OMP WORKSHARE
     dudtrk(:,:,:) = 0._rp
@@ -82,17 +98,17 @@ module mod_rk
 #if defined(_IMPDIFF)
     !$OMP SHARED(factor12,dudtrkd,dvdtrkd,dwdtrkd) &
 #endif
-    !$OMP SHARED(n,factor1,factor2,u,v,w,up,vp,wp,dudtrk,dvdtrk,dwdtrk,dudtrko,dvdtrko,dwdtrko)
+    !$OMP SHARED(n,factor1,factor2,u,v,w,dudtrk,dvdtrk,dwdtrk,dudtrko,dvdtrko,dwdtrko)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
-          up(i,j,k) = u(i,j,k) + factor1*dudtrk(i,j,k) + factor2*dudtrko(i,j,k)
-          vp(i,j,k) = v(i,j,k) + factor1*dvdtrk(i,j,k) + factor2*dvdtrko(i,j,k)
-          wp(i,j,k) = w(i,j,k) + factor1*dwdtrk(i,j,k) + factor2*dwdtrko(i,j,k)
+          u(i,j,k) = u(i,j,k) + factor1*dudtrk(i,j,k) + factor2*dudtrko(i,j,k)
+          v(i,j,k) = v(i,j,k) + factor1*dvdtrk(i,j,k) + factor2*dvdtrko(i,j,k)
+          w(i,j,k) = w(i,j,k) + factor1*dwdtrk(i,j,k) + factor2*dwdtrko(i,j,k)
 #if defined(_IMPDIFF)
-          up(i,j,k) = up(i,j,k) + factor12*dudtrkd(i,j,k)
-          vp(i,j,k) = vp(i,j,k) + factor12*dvdtrkd(i,j,k)
-          wp(i,j,k) = wp(i,j,k) + factor12*dwdtrkd(i,j,k)
+          u(i,j,k) = u(i,j,k) + factor12*dudtrkd(i,j,k)
+          v(i,j,k) = v(i,j,k) + factor12*dvdtrkd(i,j,k)
+          w(i,j,k) = w(i,j,k) + factor12*dwdtrkd(i,j,k)
 #endif
           dudtrko(i,j,k) = dudtrk(i,j,k)
           dvdtrko(i,j,k) = dvdtrk(i,j,k)
@@ -112,13 +128,13 @@ module mod_rk
 !    call momz_p(n(1),n(2),n(3),dzci  ,bforce(3),p,dwdtrk)
 !    !$OMP PARALLEL DO DEFAULT(none) &
 !    !$OMP PRIVATE(i,j,k) &
-!    !$OMP SHARED(n,factor12,u,v,w,up,vp,wp,dudtrk,dvdtrk,dwdtrk)
+!    !$OMP SHARED(n,factor12,u,v,w,dudtrk,dvdtrk,dwdtrk)
 !    do k=1,n(3)
 !      do j=1,n(2)
 !        do i=1,n(1)
-!          up(i,j,k) = up(i,j,k) + factor12*dudtrk(i,j,k)
-!          vp(i,j,k) = vp(i,j,k) + factor12*dvdtrk(i,j,k)
-!          wp(i,j,k) = wp(i,j,k) + factor12*dwdtrk(i,j,k)
+!          u(i,j,k) = u(i,j,k) + factor12*dudtrk(i,j,k)
+!          v(i,j,k) = v(i,j,k) + factor12*dvdtrk(i,j,k)
+!          w(i,j,k) = w(i,j,k) + factor12*dwdtrk(i,j,k)
 !        end do
 !      end do
 !    end do
@@ -127,50 +143,34 @@ module mod_rk
     ! pressure gradient term in the loop below
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP PRIVATE(i,j,k) &
-    !$OMP SHARED(n,factor12,dli,dzci,bforce,u,v,w,up,vp,wp,p)
+    !$OMP SHARED(n,factor12,dli,dzci,bforce,u,v,w,p)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
-          up(i,j,k) = up(i,j,k) + factor12*(bforce(1) - dli(1)*( p(i+1,j,k)-p(i,j,k)))
-          vp(i,j,k) = vp(i,j,k) + factor12*(bforce(2) - dli(2)*( p(i,j+1,k)-p(i,j,k)))
-          wp(i,j,k) = wp(i,j,k) + factor12*(bforce(3) - dzci(k)*(p(i,j,k+1)-p(i,j,k)))
+          u(i,j,k) = u(i,j,k) + factor12*(bforce(1) - dli(1)*( p(i+1,j,k)-p(i,j,k)))
+          v(i,j,k) = v(i,j,k) + factor12*(bforce(2) - dli(2)*( p(i,j+1,k)-p(i,j,k)))
+          w(i,j,k) = w(i,j,k) + factor12*(bforce(3) - dzci(k)*(p(i,j,k+1)-p(i,j,k)))
         end do
       end do
     end do
     !$OMP END PARALLEL DO
-    !
-    ! compute mean wall shear stresses
-    !
-    call cmpt_wallshear(n,is_bound,l,dli,dzci,dzfi,visc,u,v,w,taux,tauy,tauz)
-#if !defined(_IMPDIFF)
-    f(1) = (factor1*sum(taux(:)/l(:)) + factor2*sum(tauxo(:)/l(:)))
-    f(2) = (factor1*sum(tauy(:)/l(:)) + factor2*sum(tauyo(:)/l(:)))
-    f(3) = (factor1*sum(tauz(:)/l(:)) + factor2*sum(tauzo(:)/l(:)))
-    tauxo(:) = taux(:)
-    tauyo(:) = tauy(:)
-    tauzo(:) = tauz(:)
-#else
-    f(:) = factor12*[sum(taux(:)/l(:)), &
-                     sum(tauy(:)/l(:)), &
-                     sum(tauz(:)/l(:))]
-#endif
     !
     ! bulk velocity forcing
     !
     f(:) = 0.
     if(is_forced(1)) then
       grid_vol_ratio(:) = 1./(dzfi(:)*dli(1)*dli(2)*l(1)*l(2)*l(3))
-      call chk_mean(n,grid_vol_ratio,up,mean)
+      call chk_mean(n,grid_vol_ratio,u,mean)
       f(1) = velf(1) - mean
     end if
     if(is_forced(2)) then
       grid_vol_ratio(:) = 1./(dzfi(:)*dli(1)*dli(2)*l(1)*l(2)*l(3))
-      call chk_mean(n,grid_vol_ratio,vp,mean)
+      call chk_mean(n,grid_vol_ratio,v,mean)
       f(2) = velf(2) - mean
     end if
     if(is_forced(3)) then
       grid_vol_ratio(:) = 1./(dzci(:)*dli(1)*dli(2)*l(1)*l(2)*l(3))
-      call chk_mean(n,grid_vol_ratio,wp,mean)
+      call chk_mean(n,grid_vol_ratio,w,mean)
       f(3) = velf(3) - mean
     end if
 #if defined(_IMPDIFF)
@@ -179,13 +179,13 @@ module mod_rk
     !
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP PRIVATE(i,j,k) &
-    !$OMP SHARED(n,factor12,factor2,visc,up,vp,wp,dudtrkd,dvdtrkd,dwdtrkd)
+    !$OMP SHARED(n,factor12,factor2,visc,u,v,w,dudtrkd,dvdtrkd,dwdtrkd)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
-          up(i,j,k) = up(i,j,k) - .5_rp*factor12*dudtrkd(i,j,k)
-          vp(i,j,k) = vp(i,j,k) - .5_rp*factor12*dvdtrkd(i,j,k)
-          wp(i,j,k) = wp(i,j,k) - .5_rp*factor12*dwdtrkd(i,j,k)
+          u(i,j,k) = u(i,j,k) - .5_rp*factor12*dudtrkd(i,j,k)
+          v(i,j,k) = v(i,j,k) - .5_rp*factor12*dvdtrkd(i,j,k)
+          w(i,j,k) = w(i,j,k) - .5_rp*factor12*dwdtrkd(i,j,k)
         end do
       end do
     end do

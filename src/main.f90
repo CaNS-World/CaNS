@@ -60,7 +60,7 @@ program cans
   use mod_types
   !$ use omp_lib
   implicit none
-  real(rp), allocatable, dimension(:,:,:) :: u,v,w,p,up,vp,wp,pp
+  real(rp), allocatable, dimension(:,:,:) :: u,v,w,p,pp
   real(rp), allocatable, dimension(:,:,:)    :: dudtrko,dvdtrko,dwdtrko
   real(rp), dimension(3) :: tauxo,tauyo,tauzo
   real(rp), dimension(3) :: f
@@ -120,9 +120,6 @@ program cans
            v( 0:n(1)+1,0:n(2)+1,0:n(3)+1), &
            w( 0:n(1)+1,0:n(2)+1,0:n(3)+1), &
            p( 0:n(1)+1,0:n(2)+1,0:n(3)+1), &
-           up(0:n(1)+1,0:n(2)+1,0:n(3)+1), &
-           vp(0:n(1)+1,0:n(2)+1,0:n(3)+1), &
-           wp(0:n(1)+1,0:n(2)+1,0:n(3)+1), &
            pp(0:n(1)+1,0:n(2)+1,0:n(3)+1))
   allocate(dudtrko(n(1),n(2),n(3)), &
            dvdtrko(n(1),n(2),n(3)), &
@@ -264,51 +261,51 @@ program cans
     do irk=1,3
       dtrk = sum(rkcoeff(:,irk))*dt
       dtrki = dtrk**(-1)
-      call rk(rkcoeff(:,irk),n,dli,l,dzci,dzfi,visc,dt,u,v,w,p,is_bound,is_forced,velf,bforce, &
-              dudtrko,dvdtrko,dwdtrko,tauxo,tauyo,tauzo,up,vp,wp,f)
-      if(is_forced(1)) up(1:n(1),1:n(2),1:n(3)) = up(1:n(1),1:n(2),1:n(3)) + f(1)
-      if(is_forced(2)) vp(1:n(1),1:n(2),1:n(3)) = vp(1:n(1),1:n(2),1:n(3)) + f(2)
-      if(is_forced(3)) wp(1:n(1),1:n(2),1:n(3)) = wp(1:n(1),1:n(2),1:n(3)) + f(3)
+      call rk(rkcoeff(:,irk),n,dli,l,dzci,dzfi,visc,dt,p,is_bound,is_forced,velf,bforce, &
+              dudtrko,dvdtrko,dwdtrko,tauxo,tauyo,tauzo,u,v,w,f)
+      if(is_forced(1)) u(1:n(1),1:n(2),1:n(3)) = u(1:n(1),1:n(2),1:n(3)) + f(1)
+      if(is_forced(2)) v(1:n(1),1:n(2),1:n(3)) = v(1:n(1),1:n(2),1:n(3)) + f(2)
+      if(is_forced(3)) w(1:n(1),1:n(2),1:n(3)) = w(1:n(1),1:n(2),1:n(3)) + f(3)
 #if defined(_IMPDIFF)
       alpha = -1./(.5*visc*dtrk)
       !$OMP WORKSHARE
-      up(1:n(1),1:n(2),1:n(3)) = up(1:n(1),1:n(2),1:n(3))*alpha
+      u(1:n(1),1:n(2),1:n(3)) = u(1:n(1),1:n(2),1:n(3))*alpha
       !$OMP END WORKSHARE
       bb(:) = bu(:) + alpha
-      call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,is_bound,rhsbu%x,rhsbu%y,rhsbu%z,up)
+      call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,is_bound,rhsbu%x,rhsbu%y,rhsbu%z,u)
 #if !defined(_IMPDIFF_1D)
-      call solver(n,arrplanu,normfftu,lambdaxyu,au,bb,cu,cbcvel(:,3,1),['f','c','c'],up)
+      call solver(n,arrplanu,normfftu,lambdaxyu,au,bb,cu,cbcvel(:,3,1),['f','c','c'],u)
 #else
-      call solver_gaussel_z(n                  ,au,bb,cu,cbcvel(:,3,1),['f','c','c'],up)
+      call solver_gaussel_z(n                  ,au,bb,cu,cbcvel(:,3,1),['f','c','c'],u)
 #endif
       !$OMP WORKSHARE
-      vp(1:n(1),1:n(2),1:n(3)) = vp(1:n(1),1:n(2),1:n(3))*alpha
+      v(1:n(1),1:n(2),1:n(3)) = v(1:n(1),1:n(2),1:n(3))*alpha
       !$OMP END WORKSHARE
       bb(:) = bv(:) + alpha
-      call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,is_bound,rhsbv%x,rhsbv%y,rhsbv%z,vp)
+      call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,is_bound,rhsbv%x,rhsbv%y,rhsbv%z,v)
 #if !defined(_IMPDIFF_1D)
-      call solver(n,arrplanv,normfftv,lambdaxyv,av,bb,cv,cbcvel(:,3,2),['c','f','c'],vp)
+      call solver(n,arrplanv,normfftv,lambdaxyv,av,bb,cv,cbcvel(:,3,2),['c','f','c'],v)
 #else
-      call solver_gaussel_z(n                  ,av,bb,cv,cbcvel(:,3,2),['c','f','c'],vp)
+      call solver_gaussel_z(n                  ,av,bb,cv,cbcvel(:,3,2),['c','f','c'],v)
 #endif
       !$OMP WORKSHARE
-      wp(1:n(1),1:n(2),1:n(3)) = wp(1:n(1),1:n(2),1:n(3))*alpha
+      w(1:n(1),1:n(2),1:n(3)) = w(1:n(1),1:n(2),1:n(3))*alpha
       !$OMP END WORKSHARE
       bb(:) = bw(:) + alpha
-      call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,is_bound,rhsbw%x,rhsbw%y,rhsbw%z,wp)
+      call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,is_bound,rhsbw%x,rhsbw%y,rhsbw%z,w)
 #if !defined(_IMPDIFF_1D)
-      call solver(n,arrplanw,normfftw,lambdaxyw,aw,bb,cw,cbcvel(:,3,3),['c','c','f'],wp)
+      call solver(n,arrplanw,normfftw,lambdaxyw,aw,bb,cw,cbcvel(:,3,3),['c','c','f'],w)
 #else
-      call solver_gaussel_z(n                  ,aw,bb,cw,cbcvel(:,3,3),['c','c','f'],wp)
+      call solver_gaussel_z(n                  ,aw,bb,cw,cbcvel(:,3,3),['c','c','f'],w)
 #endif
 #endif
       dpdl(:) = dpdl(:) + f(:)
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
-      call fillps(n,dli,dzfi,dtrki,up,vp,wp,pp)
+      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
+      call fillps(n,dli,dzfi,dtrki,u,v,w,pp)
       call updt_rhs_b(['c','c','c'],cbcpre,n,is_bound,rhsbp%x,rhsbp%y,rhsbp%z,pp)
       call solver(n,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre(:,3),['c','c','c'],pp)
       call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,pp)
-      call correc(n,dli,dzci,dtrk,pp,up,vp,wp,u,v,w)
+      call correc(n,dli,dzci,dtrk,pp,u,v,w)
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.true.,dl,dzc,dzf,u,v,w)
 #if defined(_IMPDIFF)
       alphai = alpha**(-1)
@@ -386,13 +383,13 @@ program cans
         meanvelv = 0.
         meanvelw = 0.
         if(is_forced(1).or.abs(bforce(1)) > 0.) then
-          call chk_mean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),up,meanvelu)
+          call chk_mean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),u,meanvelu)
         end if
         if(is_forced(2).or.abs(bforce(2)) > 0.) then
-          call chk_mean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),vp,meanvelv)
+          call chk_mean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),v,meanvelv)
         end if
         if(is_forced(3).or.abs(bforce(3)) > 0.) then
-          call chk_mean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),wp,meanvelw)
+          call chk_mean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),w,meanvelw)
         end if
         if(.not.any(is_forced(:))) dpdl(:) = -bforce(:) ! constant pressure gradient
         var(1)   = time
@@ -448,7 +445,7 @@ program cans
   !
   ! deallocate variables
   !
-  deallocate(u,v,w,p,up,vp,wp,pp)
+  deallocate(u,v,w,p,pp)
   deallocate(dudtrko,dvdtrko,dwdtrko)
   deallocate(lambdaxyp)
   deallocate(ap,bp,cp)
