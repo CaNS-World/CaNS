@@ -425,7 +425,7 @@ program cans
           var(1) = 1.*istep
           var(2) = time
           var(3) = 1.*savecounter
-          call out0d(trim(datadir)//'log_saves.out',3,var)
+          call out0d(trim(datadir)//'log_checkpoints.out',3,var)
         endif
       end if
       call load('w',trim(datadir)//trim(filename),MPI_COMM_WORLD,ng,[1,1,1],lo,hi,u,v,w,p,time,istep)
