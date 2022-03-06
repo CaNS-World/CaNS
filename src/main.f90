@@ -392,7 +392,7 @@ program cans
           call chk_mean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),v,meanvelv)
         end if
         if(is_forced(3).or.abs(bforce(3)) > 0.) then
-          call chk_mean(n,dl(1)*dl(2)*dzf/(l(1)*l(2)*l(3)),w,meanvelw)
+          call chk_mean(n,dl(1)*dl(2)*dzc/(l(1)*l(2)*l(3)),w,meanvelw)
         end if
         if(.not.any(is_forced(:))) dpdl(:) = -bforce(:) ! constant pressure gradient
         var(1)   = time
