@@ -179,7 +179,7 @@ module mod_rk
     !
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP PRIVATE(i,j,k) &
-    !$OMP SHARED(n,factor12,factor2,visc,u,v,w,dudtrkd,dvdtrkd,dwdtrkd)
+    !$OMP SHARED(n,factor12,u,v,w,dudtrkd,dvdtrkd,dwdtrkd)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
