@@ -23,7 +23,7 @@ module mod_output
     character(len=30) :: cfmt
     integer :: i
     !
-    write(cfmt,'(A,I3,A)') '(',n,'E15.7e3)'
+    write(cfmt,'(A,I3,A)') '(',n,'E16.7e3)'
     if (myid  ==  0) then
       open(newunit=iunit,file=fname,position='append')
       write(iunit,trim(cfmt)) (var(i),i=1,n)
@@ -74,7 +74,7 @@ module mod_output
       if(myid == 0) then
         open(newunit=iunit,file=fname)
         do k=1,ng(3)
-          write(iunit,'(2E15.7e3)') z_g(k),p1d(k)
+          write(iunit,'(2E16.7e3)') z_g(k),p1d(k)
         end do
         close(iunit)
       end if
@@ -92,7 +92,7 @@ module mod_output
       if(myid == 0) then
         open(newunit=iunit,file=fname)
         do j=1,ng(2)
-          write(iunit,'(2E15.7e3)') (j-.5)*dl(2),p1d(j)
+          write(iunit,'(2E16.7e3)') (j-.5)*dl(2),p1d(j)
         end do
         close(iunit)
       end if
@@ -111,7 +111,7 @@ module mod_output
       if(myid == 0) then
         open(newunit=iunit,file=fname)
         do i=1,ng(1)
-          write(iunit,'(2E15.7e3)') (i-.5)*dl(1),p1d(i)
+          write(iunit,'(2E16.7e3)') (i-.5)*dl(1),p1d(i)
         end do
         close(iunit)
       end if
@@ -195,7 +195,7 @@ module mod_output
     character(len=100) :: cfmt
     integer :: iunit
     !
-    write(cfmt, '(A)') '(A,A,A,9i5,E15.7e3,i7)'
+    write(cfmt, '(A)') '(A,A,A,9i5,E16.7e3,i7)'
     if (myid  ==  0) then
       open(newunit=iunit,file=fname,position='append')
       write(iunit,trim(cfmt)) trim(fname_fld),' ',trim(varname),nmin,nmax,nskip,time,istep
@@ -303,7 +303,7 @@ module mod_output
       if(myid == 0) then
         open(newunit=iunit,file=fname)
         do k=1,ng(3)
-          write(iunit,'(8E15.7e3)') z_g(k),um(k),vm(k),wm(k), &
+          write(iunit,'(8E16.7e3)') z_g(k),um(k),vm(k),wm(k), &
                                            u2(k),v2(k),w2(k), &
                                            uw(k)
         end do
@@ -383,7 +383,7 @@ module mod_output
         do k=1,ng(3)
           do i=1,ng(1)
             x_g = (i-.5)*dl(1)
-            write(iunit,'(10E15.7e3)') x_g,z_g(k),um(i,k),vm(i,k),wm(i,k), &
+            write(iunit,'(10E16.7e3)') x_g,z_g(k),um(i,k),vm(i,k),wm(i,k), &
                                                   u2(i,k),v2(i,k),w2(i,k), &
                                                   vw(i,k),uv(i,k)
           end do
@@ -442,7 +442,7 @@ module mod_output
         do k=1,ng(3)
           do j=1,ng(2)
             y_g = (j-.5)*dl(2)
-            write(iunit,'(10E15.7e3)') y_g,z_g(k),um(j,k),vm(j,k),wm(j,k), &
+            write(iunit,'(10E16.7e3)') y_g,z_g(k),um(j,k),vm(j,k),wm(j,k), &
                                                   u2(j,k),v2(j,k),w2(j,k), &
                                                   uv(j,k),uw(j,k)
           end do
