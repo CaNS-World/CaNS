@@ -95,7 +95,7 @@ program cans
   real(rp) :: dt12,dt12av,dt12min,dt12max
 #endif
   real(rp) :: twi,tw
-  integer  :: savecounter,ichkptnum
+  integer  :: savecounter
   character(len=7  ) :: fldnum
   character(len=4  ) :: chkptnum
   character(len=100) :: filename
@@ -418,13 +418,13 @@ program cans
       else
         filename = 'fld_'//fldnum//'.bin'
         if(nsaves_max > 0) then
+          if(savecounter >= nsaves_max) savecounter = 0
           savecounter = savecounter + 1
-          ichkptnum = mod(savecounter,nsaves_max) + 1
-          write(chkptnum,'(i4.4)') ichkptnum
+          write(chkptnum,'(i4.4)') savecounter
           filename = 'fld_'//chkptnum//'.bin'
           var(1) = 1.*istep
           var(2) = time
-          var(3) = 1.*ichkptnum
+          var(3) = 1.*savecounter
           call out0d(trim(datadir)//'log_checkpoints.out',3,var)
         endif
       end if
