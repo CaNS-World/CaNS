@@ -47,6 +47,10 @@ module mod_sanity
 #if defined(_IMPDIFF_1D) && !defined(_IMPDIFF)
     if(myid == 0)  print*, 'ERROR: `_IMPDIFF_1D` cpp macro requires building with `_IMPDIFF` too.'; call abortit
 #endif
+#if defined(_IMPDIFF_1D) && !defined(_DECOMP_Z)
+    if(myid == 0)  print*, 'WARNING: a run with implicit Z diffusion (`_IMPDIFF_1D`) is much more efficient &
+                                     when combined with a Z-pencils parallelization (`_DECOMP_Z`).'
+#endif
 #if defined(_DEBUG)
     call chk_solvers(ng,n,n_z,lo,hi,dli,dzci_g,dzfi_g,dzci,dzfi,nb,is_bound,cbcvel,cbcpre,bcvel,bcpre,passed)
     if(.not.passed) call abortit
