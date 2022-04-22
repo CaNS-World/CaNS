@@ -56,33 +56,32 @@ contains
   implicit none
   integer, intent(in) :: myid
   integer :: iunit,ierr
-    nsaves_max = 0 ! a good default, for backward compatibility
     open(newunit=iunit,file='dns.in',status='old',action='read',iostat=ierr)
       if( ierr == 0 ) then
-        read(iunit,*) itot,jtot,ktot
-        read(iunit,*) lx,ly,lz
-        read(iunit,*) gr
-        read(iunit,*) cfl,dtmin
-        read(iunit,*) uref,lref,rey
-        read(iunit,*) inivel
-        read(iunit,*) is_wallturb
-        read(iunit,*) nstep, time_max,tw_max
-        read(iunit,*) stop_type(1),stop_type(2),stop_type(3)
-        read(iunit,*) restart,is_overwrite_save,nsaves_max
-        read(iunit,*) icheck,iout0d,iout1d,iout2d,iout3d,isave
-        read(iunit,*) cbcvel(0,1,1),cbcvel(1,1,1),cbcvel(0,2,1),cbcvel(1,2,1),cbcvel(0,3,1),cbcvel(1,3,1)
-        read(iunit,*) cbcvel(0,1,2),cbcvel(1,1,2),cbcvel(0,2,2),cbcvel(1,2,2),cbcvel(0,3,2),cbcvel(1,3,2)
-        read(iunit,*) cbcvel(0,1,3),cbcvel(1,1,3),cbcvel(0,2,3),cbcvel(1,2,3),cbcvel(0,3,3),cbcvel(1,3,3)
-        read(iunit,*) cbcpre(0,1  ),cbcpre(1,1  ),cbcpre(0,2  ),cbcpre(1,2  ),cbcpre(0,3  ),cbcpre(1,3  )
-        read(iunit,*)  bcvel(0,1,1), bcvel(1,1,1), bcvel(0,2,1), bcvel(1,2,1), bcvel(0,3,1), bcvel(1,3,1)
-        read(iunit,*)  bcvel(0,1,2), bcvel(1,1,2), bcvel(0,2,2), bcvel(1,2,2), bcvel(0,3,2), bcvel(1,3,2)
-        read(iunit,*)  bcvel(0,1,3), bcvel(1,1,3), bcvel(0,2,3), bcvel(1,2,3), bcvel(0,3,3), bcvel(1,3,3)
-        read(iunit,*)  bcpre(0,1  ), bcpre(1,1  ), bcpre(0,2  ), bcpre(1,2  ), bcpre(0,3  ), bcpre(1,3  )
-        read(iunit,*)  bforce(1),bforce(2),bforce(3)
-        read(iunit,*)  is_forced(1),is_forced(2),is_forced(3)
-        read(iunit,*)  velf(1),velf(2),velf(3)
-        read(iunit,*) dims(1),dims(2)
-        read(iunit,*) nthreadsmax
+        read(iunit,*,iostat=ierr) itot,jtot,ktot
+        read(iunit,*,iostat=ierr) lx,ly,lz
+        read(iunit,*,iostat=ierr) gr
+        read(iunit,*,iostat=ierr) cfl,dtmin
+        read(iunit,*,iostat=ierr) uref,lref,rey
+        read(iunit,*,iostat=ierr) inivel
+        read(iunit,*,iostat=ierr) is_wallturb
+        read(iunit,*,iostat=ierr) nstep, time_max,tw_max
+        read(iunit,*,iostat=ierr) stop_type(1),stop_type(2),stop_type(3)
+        read(iunit,*,iostat=ierr) restart,is_overwrite_save,nsaves_max; if( ierr /= 0 ) nsaves_max = 0 ! a good default, for backward compatibility
+        read(iunit,*,iostat=ierr) icheck,iout0d,iout1d,iout2d,iout3d,isave
+        read(iunit,*,iostat=ierr) cbcvel(0,1,1),cbcvel(1,1,1),cbcvel(0,2,1),cbcvel(1,2,1),cbcvel(0,3,1),cbcvel(1,3,1)
+        read(iunit,*,iostat=ierr) cbcvel(0,1,2),cbcvel(1,1,2),cbcvel(0,2,2),cbcvel(1,2,2),cbcvel(0,3,2),cbcvel(1,3,2)
+        read(iunit,*,iostat=ierr) cbcvel(0,1,3),cbcvel(1,1,3),cbcvel(0,2,3),cbcvel(1,2,3),cbcvel(0,3,3),cbcvel(1,3,3)
+        read(iunit,*,iostat=ierr) cbcpre(0,1  ),cbcpre(1,1  ),cbcpre(0,2  ),cbcpre(1,2  ),cbcpre(0,3  ),cbcpre(1,3  )
+        read(iunit,*,iostat=ierr)  bcvel(0,1,1), bcvel(1,1,1), bcvel(0,2,1), bcvel(1,2,1), bcvel(0,3,1), bcvel(1,3,1)
+        read(iunit,*,iostat=ierr)  bcvel(0,1,2), bcvel(1,1,2), bcvel(0,2,2), bcvel(1,2,2), bcvel(0,3,2), bcvel(1,3,2)
+        read(iunit,*,iostat=ierr)  bcvel(0,1,3), bcvel(1,1,3), bcvel(0,2,3), bcvel(1,2,3), bcvel(0,3,3), bcvel(1,3,3)
+        read(iunit,*,iostat=ierr)  bcpre(0,1  ), bcpre(1,1  ), bcpre(0,2  ), bcpre(1,2  ), bcpre(0,3  ), bcpre(1,3  )
+        read(iunit,*,iostat=ierr)  bforce(1),bforce(2),bforce(3)
+        read(iunit,*,iostat=ierr)  is_forced(1),is_forced(2),is_forced(3)
+        read(iunit,*,iostat=ierr)  velf(1),velf(2),velf(3)
+        read(iunit,*,iostat=ierr) dims(1),dims(2)
+        read(iunit,*,iostat=ierr) nthreadsmax
       else
         if(myid == 0) print*, 'Error reading the input file'
         if(myid == 0) print*, 'Aborting...'
