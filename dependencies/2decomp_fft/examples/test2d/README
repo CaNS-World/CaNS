@@ -1,0 +1,13 @@
+test2d
+------
+
+This program is to validate the 2D pencil decomposition library. It transposes
+a set of data into different storage formats so that all communication routines
+are tested. The test code also demonstrates to use of the I/O library.
+
+To run: use 12 MPI processes.
+
+What to expect: many files are written to disk. Regardless of the pencil-
+orientation of the distributed data, files written collectively by all MPI
+processes should contain identical information. For example, u1.dat, u2.dat,
+u3.dat, u2b.dat and u1b.dat should be all identical.

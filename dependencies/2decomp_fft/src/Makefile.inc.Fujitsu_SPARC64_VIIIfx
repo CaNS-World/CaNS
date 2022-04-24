@@ -1,0 +1,69 @@
+# Configurations for SPARC64 servers using Fujitsu compiler
+#   configutation tested on a SPARC64 VIIIfx machine
+
+# 2DECOMP&FFT options
+#====================
+
+# Choose pre-processing options
+#   -DDOUBLE_PREC - use double-precision (default single)
+#   -DEVEN        - for evenly distributed data, use ALLTOALL
+#   -DOVERWRITE   - allow FFT input to be overwritten (save memory)
+OPTIONS=-DDOUBLE_PREC -DOVERWRITE
+
+# Choose one FFT engine, available options are:
+#   ffte       - FFTE
+#   fftw3      - FFTW version 3.x
+#   fftw3_f03  - FFTW 3.3-beta1 or later (with Fortran 2003 interface)
+#   generic    - A general FFT algorithm (no 3rd-party library needed)
+FFT=generic
+
+# Platform-dependent information - compiler, external library etc
+#================================================================
+
+# Inlcude path if necessary
+# Need to compile a copy of FFTW version 3.x using the same Fujitsu compiler
+FFTW_PATH=
+ifeq ($(FFT),fftw3)
+  INC=-I$(FFTW_PATH)/include
+else ifeq ($(FFT),fftw3_f03)
+  INC=-I$(FFTW_PATH)/include
+else
+  INC=
+endif
+
+#----------------------- Fortran Compiler ----------------------------
+F90=mpifrtpx
+
+# enable preprocessing
+CPPFLAGS=-Cpp
+# enable Cray pointer support if needed
+CRAYPTR=
+# optimisation or debugging flags
+#OPTIM=-g
+OPTIM=-Kfast
+
+F90FLAGS=$(OPTIM) $(CRAYPTR) $(CPPFLAGS) $(INC)
+LDFLAGS=$(OPTIM)
+
+#--------------------------C Compiler---------------------------------
+CC=mpifccpx
+CFLAGS=-Kfast
+
+#-----------------------External Library------------------------------
+
+# For FFTW
+LIB_FFTW3=-L$(FFTW_PATH)/lib -lfftw3f -lfftw3
+
+# For FFTE
+FFTE_PATH=path/to/ffte-4.1  # compile FFTE using the same compiler
+LIB_FFTE=$(FFTE_PATH)/libffte.a
+
+ifeq ($(FFT),generic)
+     LIBFFT=
+else ifeq ($(FFT),ffte)
+     LIBFFT=$(LIB_FFTE)
+else ifeq ($(FFT),fftw3)
+     LIBFFT=$(LIB_FFTW3)
+else ifeq ($(FFT),fftw3_f03)
+     LIBFFT=$(LIB_FFTW3)
+endif	
