@@ -65,7 +65,7 @@ LIB := $(patsubst %, lib%.a, $(NAME))
 TEST_EXE := $(patsubst %.f90, %.exe, $(TEST_SRCS))
 
 # Declare all public targets
-.PHONY: all clean
+.PHONY: all clean library
 #all: $(LIB) $(TEST_EXE) $(EXE)
 all: $(TEST_EXE) $(EXE)
 
@@ -97,3 +97,10 @@ $(foreach dep, $(OBJS) $(TEST_OBJS), $(eval $(dep): $($(dep))))
 # Cleanup, filter to avoid removing source code by accident
 clean:
 	$(RM) $(filter %.o, $(OBJS) $(TEST_OBJS)) $(filter %.d, $(DEPS) $(TEST_DEPS)) $(filter %.exe, $(TEST_EXE)) $(wildcard *.mod) $(EXE)
+allclean:
+	$(RM) $(filter %.o, $(OBJS) $(TEST_OBJS)) $(filter %.d, $(DEPS) $(TEST_DEPS)) $(filter %.exe, $(TEST_EXE)) $(wildcard *.mod) $(EXE)
+	@make libclean
+#
+# rules for building the external libraries (hit 'make libraries'):
+#
+include $(LIBS_DIR)/external.mk
