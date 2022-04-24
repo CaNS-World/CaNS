@@ -10,7 +10,7 @@
 #   -DSHM	        - enable system V shared-memory implementation
 #   -DOVERWRITE     - allow FFT input to be overwritten (save memory)
 #   -DT3PIO         - turn on LUSTRE IO optimisation code using T3PIO
-OPTIONS=
+OPTIONS=-DDOUBLE_PREC
 
 # Choose one FFT engine, available options are:
 #   acml       - AMD Core Math Library
