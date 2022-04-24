@@ -31,10 +31,19 @@ LD := $(FC)
 RM := rm -f
 GD := $(SRC_DIR)/.gen-deps.awk
 
-# edit config/build.conf file desired
+# edit build.conf file desired
 include $(ROOT_DIR)/build.conf
-include $(CONFIG_DIR)/flags.mk
 include $(CONFIG_DIR)/compilers.mk
+include $(CONFIG_DIR)/flags.mk
+#ifeq ($(strip($($(FC) --version))),nvfortran)
+#FCOMP=NVIDIA
+#endif
+#ifeq ($(strip($($(FC) --version))),ifort)
+#FCOMP=INTEL
+#endif
+#ifeq ($(strip($($(FC) --version))),gfortran)
+#FCOMP=GNU
+#endif
 
 override LIBS += -L$(LIBS_DIR)/2decomp_fft/lib -l2decomp_fft -lfftw3
 INCS += -I$(LIBS_DIR)/2decomp_fft/include
