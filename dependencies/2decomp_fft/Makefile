@@ -2,22 +2,15 @@
 
 .PHONY: lib examples clean install_dir
 
-all: lib basic_test
+all: lib
 
 lib:
 	cd lib; $(MAKE) $@
-
-examples:
-	cd $@ ; $(MAKE) $@
-
-basic_test: examples
-	@echo "Basic Test target is examples"
 
 clean:
 	cd src; $(MAKE) $@
 	cd lib; $(MAKE) $@
 	cd include; rm -f *.mod
-	cd examples; $(MAKE) $@
 
 install_dir:
 	mkdir -p $(DESTDIR)$(prefix)

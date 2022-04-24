@@ -1,8 +1,0 @@
-io_test
--------
-
-This folder contains several applications to thoroughly test 2DECOMP&FFT's
-IO library.
-
-To run: If interactive run is possible on your system, adapt the script 
-provided to run all the tests in one go.

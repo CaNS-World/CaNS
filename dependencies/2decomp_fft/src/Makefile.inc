@@ -1,3 +1,9 @@
+#
+# mods to accomodate CaNS
+#
+CANS_DIR=../../..
+include $(CANS_DIR)/build.conf
+
 # Configurations on an ordinary Linux PCs for development
 #   using GNU compiler, OpenMPI and various FFT libraries
 
@@ -10,7 +16,9 @@
 #   -DSHM	        - enable system V shared-memory implementation
 #   -DOVERWRITE     - allow FFT input to be overwritten (save memory)
 #   -DT3PIO         - turn on LUSTRE IO optimisation code using T3PIO
+ifneq ($(strip $(SINGLE_PRECISION)),1)
 OPTIONS=-DDOUBLE_PREC
+endif
 
 # Choose one FFT engine, available options are:
 #   acml       - AMD Core Math Library
@@ -51,15 +59,36 @@ endif
 
 
 #----------------------- Fortran Compiler ----------------------------
-F90=mpif90
+F90 = mpifort
+ifeq ($(strip $(FCOMP)),GNU)
+F90 = mpifort
+endif
+ifeq ($(strip $(FCOMP)),INTEL)
+F90 = mpiifort
+endif
+ifeq ($(strip $(FCOMP)),NVIDIA)
+F90 = mpifort
+endif
 
 # enable preprocessing
 CPPFLAGS=-cpp
 # enable Cray pointer support if needed
+ifeq ($(strip $(FCOMP)),GNU)
 CRAYPTR=-fcray-pointer
+endif
 # optimisation or debugging flags
-#OPTIM=-g -fcheck=all
+ifeq ($(strip $(FFLAGS_DEBUG)),1)
+OPTIM=-g -fcheck=all
+endif
+ifeq ($(strip $(FFLAGS_DEBUG_MAX)),1)
+OPTIM=-g -fcheck=all
+endif
+ifeq ($(strip $(FFLAGS_OPT)),1)
 OPTIM=-O3
+endif
+ifeq ($(strip $(FFLAGS_OPT_MAX)),1)
+OPTIM=-O3
+endif
 
 F90FLAGS=$(OPTIM) $(CRAYPTR) $(CPPFLAGS) $(INC)
 LDFLAGS=$(OPTIM)
