@@ -11,22 +11,22 @@ endif
 ifeq ($(strip $(FFLAGS_DEBUG)),1)
 
 ifeq ($(strip $(FCOMP)),GNU)
-FFLAGS += -O0 -g -fbacktrace -Wall -Wextra -pedantic -fcheck=all -finit-real=snan -ffpe-trap=invalid -std=f2018
+override FFLAGS += -O0 -g -fbacktrace -Wall -Wextra -pedantic -fcheck=all -finit-real=snan -ffpe-trap=invalid -std=f2018
 endif
 
 ifeq ($(strip $(FCOMP)),INTEL)
-FFLAGS += -O0 -g -traceback -fpe0 -stand f18
+override FFLAGS += -O0 -g -traceback -fpe0 -stand f18
 endif
 
 ifeq ($(strip $(FCOMP)),NVIDIA)
-FFLAGS += -O0 -g -traceback -Mstandard -Minform=inform -Mbackslash -Mbounds -Mchkptr -Mchkstk
+override FFLAGS += -O0 -g -traceback -Mstandard -Minform=inform -Mbackslash -Mbounds -Mchkptr -Mchkstk
 endif
   
 endif
 ifeq ($(strip $(FFLAGS_DEBUG_MAX)),1)
 
 ifeq ($(strip $(FCOMP)),GNU)
-FFLAGS += -O0 -Wall -Wextra -Wimplicit-interface -Wno-unused-function -fPIC -g -fcheck=all -fbacktrace -ffpe-trap=invalid,zero,overflow -finit-real=snan -finit-integer=-99999999 -std=f2018
+override FFLAGS += -O0 -Wall -Wextra -Wimplicit-interface -Wno-unused-function -fPIC -g -fcheck=all -fbacktrace -ffpe-trap=invalid,zero,overflow -finit-real=snan -finit-integer=-99999999 -std=f2018
 endif
 
 endif
@@ -34,15 +34,15 @@ endif
 ifeq ($(strip $(FFLAGS_OPT)),1)
 
 ifeq ($(strip $(FCOMP)),GNU)
-FFLAGS += -O3
+override FFLAGS += -O3
 endif
 
 ifeq ($(strip $(FCOMP)),INTEL)
-FFLAGS += -O3
+override FFLAGS += -O3
 endif
 
 ifeq ($(strip $(FCOMP)),NVIDIA)
-FFLAGS += -O3
+override FFLAGS += -O3
 endif
   
 endif
@@ -50,15 +50,15 @@ endif
 ifeq ($(strip $(FFLAGS_OPT_MAX)),1)
 
 ifeq ($(strip $(FCOMP)),GNU)
-FFLAGS += -Ofast -march=native
+override FFLAGS += -Ofast -march=native
 endif
 
 ifeq ($(strip $(FCOMP)),INTEL)
-FFLAGS += -fast -xHost
+override FFLAGS += -fast -xHost
 endif
 
 ifeq ($(strip $(FCOMP)),NVIDIA)
-FFLAGS += -fast
+override FFLAGS += -fast
 endif
   
 endif

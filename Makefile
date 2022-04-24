@@ -36,7 +36,7 @@ include $(ROOT_DIR)/build.conf
 include $(CONFIG_DIR)/flags.mk
 include $(CONFIG_DIR)/compilers.mk
 
-LIBS += -L$(LIBS_DIR)/2decomp_fft/lib -l2decomp_fft -lfftw3
+override LIBS += -L$(LIBS_DIR)/2decomp_fft/lib -l2decomp_fft -lfftw3
 INCS += -I$(LIBS_DIR)/2decomp_fft/include
 
 # List of all source files
