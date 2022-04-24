@@ -66,6 +66,9 @@ endif
 ifeq ($(strip $(DEBUG)),1)
 DEFINES += -D_DEBUG
 endif
+ifeq ($(strip $(TIMING)),1)
+DEFINES += -D_TIMING
+endif
 ifeq ($(strip $(IMPDIFF)),1)
 DEFINES += -D_IMPDIFF
 endif

@@ -69,7 +69,8 @@ $(TEST_EXE): %.exe: %.f90.o $(LIB)
 	$(LD) -o $@ $^
 
 $(EXE): $(OBJS)
-	mkdir -p $(EXE_DIR)/data
+	@mkdir -p $(EXE_DIR)/data
+	@cp $(SRC_DIR)/dns.in $(EXE_DIR)
 	$(FC) $(FFLAGS) $^ $(LIBS) $(INCS) -o $(EXE)
 
 # Create object files from Fortran source

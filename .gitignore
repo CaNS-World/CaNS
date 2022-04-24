@@ -1,4 +1,6 @@
 *.o
+*.d
+*.a
 *.mod
 *.out
 *.bin
