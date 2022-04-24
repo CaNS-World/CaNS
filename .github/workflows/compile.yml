@@ -1,6 +1,6 @@
 name: compilation test
 
-on: [push, pull_request]
+on: []
 
 jobs:
   build:
@@ -13,6 +13,5 @@ jobs:
       run: sudo apt-get update; sudo apt-get install gfortran libopenmpi-dev libfftw3-dev
     - name: test compilation
       run: |
-        cd src/
-        make && make run && make clean
+        make && make clean
         make OMP+=-fopenmp OTH+=-D_IMPDIFF && make run && make clean
