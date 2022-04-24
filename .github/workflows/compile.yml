@@ -13,6 +13,6 @@ jobs:
       run: sudo apt-get update; sudo apt-get install gfortran libopenmpi-dev libfftw3-dev
     - name: test compilation
       run: |
-        cd dependencies/2decomp_fft && make && cd -
+        make library
         make && make clean
-        make FFLAGS+=-fopenmp LIBS+=-lfftw3_threads && make run && make clean
+        make FFLAGS+=-fopenmp LIBS+=-lfftw3_threads && make clean

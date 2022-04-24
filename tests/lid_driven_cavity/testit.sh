@@ -7,7 +7,7 @@ UTILSDIR=$CANSDIR/utils
 rm -rf $RUNDIR
 echo "Compiling ..."
 sleep 2
-cd $CANSDIR && make clean && make -j
+cd $CANSDIR && make allclean && make library && make -j
 cp $TESTDIR/dns.in $RUNDIR && cd $RUNDIR
 echo "Running CaNS..."
 sleep 2
