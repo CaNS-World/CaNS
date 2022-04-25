@@ -64,22 +64,24 @@ Files `out1d.h90`, `out2d.h90` and `out3d.h90` in `src/` set which data are writ
 
 ### Compilation
 
-The code should be compiled in `src/`. The prerequisites are the following:
+*TL;DR*: For most systems, *CaNS* can be compiled with the commands, from the root directory `make library && make -j`.
+
+The prerequisites for compiling *CaNS* are the following:
 
  * MPI
  * FFTW3
  * OpenMP (optional)
- * LAPACK & BLAS (optional)
+ * `awk` (to generate dependencies)
 
-The Makefile in `src/` should be modified in agreement to the installation paths of each library. Also, the following preprocessor options are available:
+The Makefile in root directory is used to compiled the code, and is expected to work out-of-the-box for most systems. The `build.conf` file in the root directory can be used to choose the compiler `FCOMP` (`GNU`, `INTEL`, and `NVIDIA`). Moreover, a few predefined profiles for compiler options are provided and can be selected by choosing one of the `FFLAGS_*` option; finer control of the compiler flags may be achieved by building with `make FFLAGS+=[OTHER_FLAGS]`, or by tweaking the profiles directly under `src/configs/flags.mk`. Finally, the following pre-processing options are available:
 
- * `-D_DEBUG`            : performs some basic checks for debugging purposes
- * `-D_TIMING`           : wall-clock time per timestep is computed
- * `-D_IMPDIFF`          : diffusion term of the N-S equations is integrated in time with an implicit discretization (thereby improving the stability of the numerical algorithm for viscous-dominated flows)
- * `-D_IMPDIFF_1D`       : same as above, but with implicit diffusion *only* along Z; this option needs to be combined with `-D_IMPDIFF` (required) and `-D_DECOMP_Z` (optional, but recommended for best performance)
- * `-D_SINGLE_PRECISION` : calculation will be carried out in single precision (the default precision is double)
+ * `DEBUG`            : performs some basic checks for debugging purposes
+ * `TIMING`           : wall-clock time per timestep is computed
+ * `IMPDIFF`          : diffusion term of the N-S equations is integrated in time with an implicit discretization (thereby improving the stability of the numerical algorithm for viscous-dominated flows)
+ * `IMPDIFF_1D`       : same as above, but with implicit diffusion *only* along Z; this option needs to be combined with `IMPDIFF` (required) and `DECOMP_Z` (optional, but recommended for best performance)
+ * `SINGLE_PRECISION` : calculation will be carried out in single precision (the default precision is double)
 
-Typing `make run` will compile the code and copy the executable `cans` and input file `dns.in` to a `run/` folder.
+Typing `make library` will build the 2DECOMP&FFT library; then typing `make` will compile the code and copy the executable `cans` and input file `dns.in` to a `run/` folder.
 
 ### Running the code
 
