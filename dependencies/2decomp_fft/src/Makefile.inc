@@ -59,16 +59,17 @@ endif
 
 
 #----------------------- Fortran Compiler ----------------------------
-F90 = mpifort
+FC = mpifort
 ifeq ($(strip $(FCOMP)),GNU)
-F90 = mpifort
+FC = mpifort
 endif
 ifeq ($(strip $(FCOMP)),INTEL)
-F90 = mpiifort
+FC = mpiifort
 endif
 ifeq ($(strip $(FCOMP)),NVIDIA)
-F90 = mpifort
+FC = mpifort
 endif
+F90=$(FC)
 
 # enable preprocessing
 CPPFLAGS=-cpp
