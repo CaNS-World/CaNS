@@ -58,7 +58,7 @@ The fluid flow is solved with a second-order finite-volume pressure correction s
 
 ### Input file
 
-The input file `dns.in` sets the physical and computational parameters. In the `examples/` folder are examples of input files for several canonical flows. See [`src/INFO_INPUT.md`](src/INFO_INPUT.md) for a detailed description of the input file.
+The input file `dns.in` sets the physical and computational parameters. In the `examples/` folder are examples of input files for several canonical flows. See [`docs/INFO_INPUT.md`](docs/INFO_INPUT.md) for a detailed description of the input file.
 
 Files `out1d.h90`, `out2d.h90` and `out3d.h90` in `src/` set which data are written in 1-, 2- and 3-dimensional output files, respectively. *The code should be recompiled after editing out?d.h90 files*.
 
@@ -73,33 +73,10 @@ The prerequisites for compiling *CaNS* are the following:
  * `awk` (to generate dependencies)
 
 #### In short
-For most systems, *CaNS* can be compiled from the root directory with the following commands `make library && make -j`.
+For most systems, *CaNS* can be compiled from the root directory with the following commands `make library && make -j`, which will compile the `2DECOMP&FFT` library and *CaNS*.
 
 #### Detailed instructions
-The Makefile in root directory is used to compiled the code, and is expected to work out-of-the-box for most systems. The `build.conf` file in the root directory can be used to choose the Fortran compiler (MPI wrapper), a few pre-defined profiles depending on the nature of the run (e.g., production vs debugging), and pre-processing options:
-
-```
-#
-# compiler and compiling profile
-#
-FCOMP=GNU           # other options: NVIDIA, INTEL
-FFLAGS_OPT=1        # for production runs
-FFLAGS_OPT_MAX=0    # for production runs (more aggressive optimization)
-FFLAGS_DEBUG=0      # for debugging
-FFLAGS_DEBUG_MAX=0  # for thorough debugging
-#
-# defines
-#
-DEBUG=1            # best = 1 (no performance penalty)
-TIMING=1           # best = 1
-IMPDIFF=0          #
-IMPDIFF_1D=0       # = 1 requires IMPDIFF=1 too
-DECOMP_X=1         # best = 1 if IMPDIFF_1D=0, else 1
-DECOMP_Z=0         # best = 0 if IMPDIFF_1D=1, else 0
-SINGLE_PRECISION=0 # not a good idea to change
-```
-
-In this file, `FCOMP` can be one of `GNU` (`gfortran`), `INTEL` (`ifort`), or `NVIDIA` (`nvfortran`); the predefined profiles for compiler options can be selected by choosing one of the `FFLAGS_*` option; finer control of the compiler flags may be achieved by building with, e.g., `make FFLAGS+=[OTHER_FLAGS]`, or by tweaking the profiles directly under `src/configs/flags.mk`. Finally, the following pre-processing options are available:
+The Makefile in root directory is used to compiled the code, and is expected to work out-of-the-box for most systems. The `build.conf` file in the root directory can be used to choose the Fortran compiler (MPI wrapper), a few pre-defined profiles depending on the nature of the run (e.g., production vs debugging), and pre-processing options, see [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details. Concerning the pre-processing options, the following are available:
 
  * `DEBUG`            : performs some basic checks for debugging purposes
  * `TIMING`           : wall-clock time per timestep is computed
@@ -107,17 +84,13 @@ In this file, `FCOMP` can be one of `GNU` (`gfortran`), `INTEL` (`ifort`), or `N
  * `IMPDIFF_1D`       : same as above, but with implicit diffusion *only* along Z; this option needs to be combined with `IMPDIFF` (required) and `DECOMP_Z` (optional, but recommended for best performance)
  * `SINGLE_PRECISION` : calculation will be carried out in single precision (the default precision is double)
 
-Typing `make library` will build the 2DECOMP&FFT library; then typing `make` will compile the code and copy the executable `cans` and input file `dns.in` to a `run/` folder.
-
-Finally, the choice of compiler `FCOMP` (see `src/configs/flags.mk`), and profile flags `FFLAGS_*` (see `src/configs/flags.mk`) can easily be overloaded, for instance, as: `make FC=ftn FFLAGS=-O2`.
-
 ### Running the code
 
 Run the executable with `mpirun` with a number of tasks and (optionally) OpenMP threads complying to what has been set in the input file `dns.in`. Data will be written by default in a folder named `data/`, which must be located where the executable is run.
 
 ### Visualizing field data
 
-See [`src/INFO_VISU.md`](src/INFO_VISU.md).
+See [`docs/INFO_VISU.md`](docs/INFO_VISU.md).
 
 ## Notes
 
