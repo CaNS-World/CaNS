@@ -17,9 +17,11 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 ## News
 
+[02/05/2022] **Major update** -- The building/compilation process of CaNS has changed to become simpler and more robust in different systems; see *Compilation* below.
+
 [26/12/2021] Implicit temporal discretization of the diffusion term along only one direction (z) is now also supported.
 
-[29/10/2021] **Major update** -- a few neat features have been incorporated in the the most recent version of *CaNS*:
+[29/10/2021] **Major update** -- a few neat features have been incorporated in the most recent version of CaNS:
 
 * **x-aligned pencils are now used by default**, which results in improved speed and scalability. This behavior can be changed using the flags `-D_DECOMP_Y`/`-D_DECOMP_Z` for y- or z-aligned pencils;
 * **support uneven partitioning of the computational subdomains**: the total number of grid points along one direction does not have to be divisible by the number of tasks;
@@ -65,7 +67,7 @@ Files `out1d.h90`, `out2d.h90` and `out3d.h90` in `src/` set which data are writ
 ### Compilation
 
 #### Prerequisites
-The prerequisites for compiling *CaNS* are the following:
+The prerequisites for compiling CaNS are the following:
 
  * MPI
  * FFTW3
@@ -73,10 +75,10 @@ The prerequisites for compiling *CaNS* are the following:
  * `awk` (to generate dependencies)
 
 #### In short
-For most systems, *CaNS* can be compiled from the root directory with the following commands `make library && make -j`, which will compile the `2DECOMP&FFT` library and *CaNS*.
+For most systems, CaNS can be compiled from the root directory with the following commands `make library && make -j`, which will compile the `2DECOMP&FFT` library and CaNS.
 
 #### Detailed instructions
-The Makefile in root directory is used to compiled the code, and is expected to work out-of-the-box for most systems. The `build.conf` file in the root directory can be used to choose the Fortran compiler (MPI wrapper), a few pre-defined profiles depending on the nature of the run (e.g., production vs debugging), and pre-processing options, see [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details. Concerning the pre-processing options, the following are available:
+The `Makefile` in root directory is used to compiled the code, and is expected to work out-of-the-box for most systems. The `build.conf` file in the root directory can be used to choose the Fortran compiler (MPI wrapper), a few pre-defined profiles depending on the nature of the run (e.g., production vs debugging), and pre-processing options, see [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details. Concerning the pre-processing options, the following are available:
 
  * `DEBUG`            : performs some basic checks for debugging purposes
  * `TIMING`           : wall-clock time per timestep is computed
