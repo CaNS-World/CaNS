@@ -1,3 +1,0 @@
-[submodule "dependencies/2decomp_fft"]
-	path = dependencies/2decomp_fft
-	url = https://github.com/p-costa/2decomp_fft
