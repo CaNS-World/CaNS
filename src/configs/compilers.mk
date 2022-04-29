@@ -8,3 +8,6 @@ endif
 ifeq ($(strip $(FCOMP)),NVIDIA)
 FC = mpifort
 endif
+ifeq ($(strip $(FCOMP)),CRAY)
+FC = ftn
+endif

@@ -21,7 +21,7 @@ DECOMP_Z=0         # best = 0 if IMPDIFF_1D=1, else 0
 SINGLE_PRECISION=0 # not a good idea to change
 ```
 
-In this file, `FCOMP` can be one of `GNU` (`gfortran`), `INTEL` (`ifort`), or `NVIDIA` (`nvfortran`); the predefined profiles for compiler options can be selected by choosing one of the `FFLAGS_*` option; finer control of the compiler flags may be achieved by building with, e.g., `make FFLAGS+=[OTHER_FLAGS]`, or by tweaking the profiles directly under `src/configs/flags.mk`. Finally, the following pre-processing options are available:
+In this file, `FCOMP` can be one of `GNU` (`gfortran`), `INTEL` (`ifort`), `NVIDIA` (`nvfortran`), or `CRAY` (`ftn`); the predefined profiles for compiler options can be selected by choosing one of the `FFLAGS_*` option; finer control of the compiler flags may be achieved by building with, e.g., `make FFLAGS+=[OTHER_FLAGS]`, or by tweaking the profiles directly under `src/configs/flags.mk`. Finally, the following pre-processing options are available:
 
  * `DEBUG`            : performs some basic checks for debugging purposes
  * `TIMING`           : wall-clock time per timestep is computed

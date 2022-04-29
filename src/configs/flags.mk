@@ -7,6 +7,9 @@ endif
 ifeq ($(strip $(FCOMP)),NVIDIA)
 FFLAGS_MOD_DIR := -module
 endif
+ifeq ($(strip $(FCOMP)),CRAY)
+FFLAGS_MOD_DIR := -J
+endif
 
 ifeq ($(strip $(FFLAGS_DEBUG)),1)
 
@@ -19,8 +22,12 @@ endif
 ifeq ($(strip $(FCOMP)),NVIDIA)
 override FFLAGS += -O0 -g -traceback -Mstandard -Minform=inform -Mbackslash -Mbounds -Mchkptr -Mchkstk
 endif
+ifeq ($(strip $(FCOMP)),CRAY)
+override FFLAGS += -g -G0
+endif
   
 endif
+
 ifeq ($(strip $(FFLAGS_DEBUG_MAX)),1)
 
 ifeq ($(strip $(FCOMP)),GNU)
@@ -31,6 +38,9 @@ override FFLAGS += -O0 -g -traceback -fpe0 -stand f18
 endif
 ifeq ($(strip $(FCOMP)),NVIDIA)
 override FFLAGS += -O0 -g -traceback -Mstandard -Minform=inform -Mbackslash -Mbounds -Mchkptr -Mchkstk
+endif
+ifeq ($(strip $(FCOMP)),CRAY)
+override FFLAGS += -g -G0
 endif
 
 endif
@@ -46,6 +56,9 @@ endif
 ifeq ($(strip $(FCOMP)),NVIDIA)
 override FFLAGS += -O3
 endif
+ifeq ($(strip $(FCOMP)),CRAY)
+override FFLAGS += -O3
+endif
   
 endif
 
@@ -59,6 +72,9 @@ override FFLAGS += -fast -xHost
 endif
 ifeq ($(strip $(FCOMP)),NVIDIA)
 override FFLAGS += -fast
+endif
+ifeq ($(strip $(FCOMP)),CRAY)
+override FFLAGS += -O3 -hfp3
 endif
   
 endif
