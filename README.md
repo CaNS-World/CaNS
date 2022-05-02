@@ -75,7 +75,7 @@ The prerequisites for compiling CaNS are the following:
  * `awk` (to generate dependencies)
 
 #### In short
-For most systems, CaNS can be compiled from the root directory with the following commands `make library && make -j`, which will compile the `2DECOMP&FFT` library and CaNS.
+For most systems, CaNS can be compiled from the root directory with the following commands `make library && make -j`, which will compile the 2DECOMP&FFT library and CaNS.
 
 #### Detailed instructions
 The `Makefile` in root directory is used to compiled the code, and is expected to work out-of-the-box for most systems. The `build.conf` file in the root directory can be used to choose the Fortran compiler (MPI wrapper), a few pre-defined profiles depending on the nature of the run (e.g., production vs debugging), and pre-processing options, see [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details. Concerning the pre-processing options, the following are available:
@@ -88,7 +88,7 @@ The `Makefile` in root directory is used to compiled the code, and is expected t
 
 ### Running the code
 
-Run the executable with `mpirun` with a number of tasks and (optionally) OpenMP threads complying to what has been set in the input file `dns.in`. Data will be written by default in a folder named `data/`, which must be located where the executable is run.
+Run the executable with `mpirun` with a number of tasks and (optionally) OpenMP threads complying to what has been set in the input file `dns.in`. Data will be written by default in a folder named `data/`, which must be located where the executable is run (by default in the `run/` folder).
 
 ### Visualizing field data
 
