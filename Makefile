@@ -87,9 +87,9 @@ $(foreach dep, $(OBJS) $(TEST_OBJS), $(eval $(dep): $($(dep))))
 
 # Cleanup, filter to avoid removing source code by accident
 clean:
-	$(RM) $(filter %.o, $(OBJS) $(TEST_OBJS)) $(filter %.d, $(DEPS) $(TEST_DEPS)) $(filter %.exe, $(TEST_EXE)) $(SRC_DIR)/*.mod $(EXE)
+	$(RM) $(SRC_DIR)/{*.mod,*.d,*.o} $(EXE)
 allclean:
-	$(RM) $(filter %.o, $(OBJS) $(TEST_OBJS)) $(filter %.d, $(DEPS) $(TEST_DEPS)) $(filter %.exe, $(TEST_EXE)) $(SRC_DIR)/*.mod $(EXE)
+	$(RM) $(SRC_DIR)/{*.mod,*.d,*.o} $(EXE)
 	@make libclean
 #
 # rules for building the external libraries (hit 'make libraries'):
