@@ -86,6 +86,8 @@ The `Makefile` in root directory is used to compiled the code, and is expected t
  * `IMPDIFF_1D`       : same as above, but with implicit diffusion *only* along Z; this option needs to be combined with `IMPDIFF` (required) and `DECOMP_Z` (optional, but recommended for best performance)
  * `SINGLE_PRECISION` : calculation will be carried out in single precision (the default precision is double)
 
+Finally, the older `Makefile` with explicit dependencies which was used to compile CaNS in previous versions is still present under `src/` (`makefile`).
+
 ### Running the code
 
 Run the executable with `mpirun` with a number of tasks and (optionally) OpenMP threads complying to what has been set in the input file `dns.in`. Data will be written by default in a folder named `data/`, which must be located where the executable is run (by default in the `run/` folder).
