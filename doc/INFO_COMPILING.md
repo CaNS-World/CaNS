@@ -1,6 +1,6 @@
 # Compiling CaNS
 
-For most systems, CaNS can be compiled from the root directory with the following commands `make library && make -j`, which will compile the 2DECOMP&FFT library and CaNS.
+For most systems, CaNS can be compiled from the root directory with the following commands `make library && make`, which will compile the 2DECOMP&FFT library and CaNS. `make clean` clears the CaNS build files, `make libclean` clears the 2DECOMP build, and `make allclean` clears both.
 
 The `Makefile` in root directory is used to compiled the code, and is expected to work out-of-the-box for most systems. The `build.conf` file in the root directory can be used to choose the Fortran compiler (MPI wrapper), a few pre-defined profiles depending on the nature of the run (e.g., production vs debugging), and pre-processing options:
 
@@ -36,3 +36,5 @@ In this file, `FCOMP` can be one of `GNU` (`gfortran`), `INTEL` (`ifort`), `NVID
 Typing `make library` will build the 2DECOMP&FFT library; then typing `make` will compile the code and copy the executable `cans` and input file `dns.in` to a `run/` folder.
 
 Finally, the choice of compiler `FCOMP` (see `src/configs/flags.mk`), and profile flags `FFLAGS_*` (see `src/configs/flags.mk`) can easily be overloaded, for instance, as: `make FC=ftn FFLAGS=-O2`.
+
+Note: the older Makefile with explicit dependencies which was used in previous versions to compile CaNS is still present under `src/` (`makefile`). The pre-processing options above can be added there by appending `-D_[FEATURE]` to the variable `OTH` in the `makefile`.

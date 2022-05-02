@@ -60,7 +60,7 @@ The fluid flow is solved with a second-order finite-volume pressure correction s
 
 ### Input file
 
-The input file `dns.in` sets the physical and computational parameters. In the `examples/` folder are examples of input files for several canonical flows. See [`docs/INFO_INPUT.md`](docs/INFO_INPUT.md) for a detailed description of the input file.
+The input file `dns.in` sets the physical and computational parameters. In the `examples/` folder are examples of input files for several canonical flows. See [`doc/INFO_INPUT.md`](doc/INFO_INPUT.md) for a detailed description of the input file.
 
 Files `out1d.h90`, `out2d.h90` and `out3d.h90` in `src/` set which data are written in 1-, 2- and 3-dimensional output files, respectively. *The code should be recompiled after editing out?d.h90 files*.
 
@@ -75,10 +75,10 @@ The prerequisites for compiling CaNS are the following:
  * `awk` (to generate dependencies)
 
 #### In short
-For most systems, CaNS can be compiled from the root directory with the following commands `make library && make -j`, which will compile the 2DECOMP&FFT library and CaNS.
+For most systems, CaNS can be compiled from the root directory with the following commands `make library && make`, which will compile the 2DECOMP&FFT library and CaNS.
 
 #### Detailed instructions
-The `Makefile` in root directory is used to compiled the code, and is expected to work out-of-the-box for most systems. The `build.conf` file in the root directory can be used to choose the Fortran compiler (MPI wrapper), a few pre-defined profiles depending on the nature of the run (e.g., production vs debugging), and pre-processing options, see [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details. Concerning the pre-processing options, the following are available:
+The `Makefile` in root directory is used to compiled the code, and is expected to work out-of-the-box for most systems. The `build.conf` file in the root directory can be used to choose the Fortran compiler (MPI wrapper), a few pre-defined profiles depending on the nature of the run (e.g., production vs debugging), and pre-processing options, see [`doc/INFO_COMPILING.md`](doc/INFO_COMPILING.md) for more details. Concerning the pre-processing options, the following are available:
 
  * `DEBUG`            : performs some basic checks for debugging purposes
  * `TIMING`           : wall-clock time per timestep is computed
@@ -86,7 +86,7 @@ The `Makefile` in root directory is used to compiled the code, and is expected t
  * `IMPDIFF_1D`       : same as above, but with implicit diffusion *only* along Z; this option needs to be combined with `IMPDIFF` (required) and `DECOMP_Z` (optional, but recommended for best performance)
  * `SINGLE_PRECISION` : calculation will be carried out in single precision (the default precision is double)
 
-Finally, the older `Makefile` with explicit dependencies which was used to compile CaNS in previous versions is still present under `src/` (`makefile`).
+Finally, the older Makefile with explicit dependencies which was used in previous versions to compile CaNS is still present under `src/` (`makefile`). The pre-processing options above can be added there by appending `-D_[FEATURE]` to the variable `OTH` in the `makefile`.
 
 ### Running the code
 
@@ -94,7 +94,7 @@ Run the executable with `mpirun` with a number of tasks and (optionally) OpenMP 
 
 ### Visualizing field data
 
-See [`docs/INFO_VISU.md`](docs/INFO_VISU.md).
+See [`doc/INFO_VISU.md`](doc/INFO_VISU.md).
 
 ## Notes
 
