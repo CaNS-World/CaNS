@@ -1,0 +1,78 @@
+# Configurations for Cray XT/XE systems
+#   using PGI/PathScale/GNU/Cray compilers
+
+# 2DECOMP&FFT options
+#====================
+
+# Choose pre-processing options
+#   -DDOUBLE_PREC - use double-precision (default single)
+#   -DEVEN        - for evenly distributed data, use ALLTOALL
+#   -DSHM	  - enable shared-memory implementation
+#   -DOVERWRITE   - allow FFT input to be overwritten (save memory)
+OPTIONS=-DDOUBLE_PREC -DOVERWRITE
+
+# Choose one FFT engine, available options are:
+#   acml       - AMD Core Math Library
+#   fftw3      - FFTW version 3.x
+#   fftw3_f03  - FFTW 3.3-beta1 or later (with Fortran 2003 interface)
+#   generic    - A general FFT algorithm (no 3rd-party library needed)
+FFT=fftw3
+
+# Platform-dependent information
+#===============================
+
+# Choose compiler suite - valid options: PGI, PathScale, GNU, Cray, Intel
+COMPILER=PGI
+
+# Inlcude path not set, relying on Cray's modules
+INC=
+
+#----------------------- Fortran Compiler ----------------------------
+F90=ftn
+
+# enable preprocessing
+ifeq ($(COMPILER),PGI)
+   CPPFLAGS=-Mpreprocess
+else ifeq ($(COMPILER),PathScale)
+   CPPFLAGS=-cpp
+else ifeq ($(COMPILER),GNU)
+   CPPFLAGS=-cpp
+else ifeq ($(COMPILER),Cray)
+   CPPFLAGS=-e Fm
+else ifeq ($(COMPILER),Intel)
+   CPPFLAGS=-fpp
+endif
+
+# enable Cray pointer support if needed
+ifeq ($(COMPILER),GNU)
+   CRAYPTR=-fcray-pointer
+else
+   CRAYPTR=
+endif
+
+# optimisation or debugging flags
+ifeq ($(COMPILER),PGI)
+   OPTIM=-O3
+else ifeq ($(COMPILER),PathScale)
+   OPTIM=-O3
+else ifeq ($(COMPILER),GNU)
+   #OPTIM=-g -fbounds-check
+   OPTIM=-O3
+else ifeq ($(COMPILER),Cray)
+   OPTIM=-O3
+else ifeq ($(COMPILER),Intel)
+   OPTIM=-O3     # no -fast as IPA cause problem
+endif
+F90FLAGS=$(OPTIM) $(CRAYPTR) $(CPPFLAGS) $(INC)
+LDFLAGS=$(OPTIM)
+
+#--------------------------C Compiler---------------------------------
+CC=cc
+CFLAGS=-O3
+
+#-----------------------External Library------------------------------
+
+# Do not need any as this is all handled by the 'module' system
+
+LIBFFT=
+

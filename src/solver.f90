@@ -41,9 +41,9 @@ module mod_solver
     !$OMP WORKSHARE
     pz(:,:,:) = p(1:n(1),1:n(2),1:n(3))
     !$OMP END WORKSHARE
-    call transpose_z_to_x(pz,px)
-    !call transpose_z_to_y(pz,py)
-    !call transpose_y_to_x(py,px)
+    !call transpose_z_to_x(pz,px)
+    call transpose_z_to_y(pz,py)
+    call transpose_y_to_x(py,px)
 #endif
     call fft(arrplan(1,1),px) ! fwd transform in x
     !
@@ -75,9 +75,9 @@ module mod_solver
     p(1:n(1),1:n(2),1:n(3)) = py(:,:,:)*normfft
     !$OMP END WORKSHARE
 #elif defined(_DECOMP_Z)
-    call transpose_x_to_z(px,pz)
-    !call transpose_x_to_y(px,py)
-    !call transpose_y_to_z(py,pz)
+    !call transpose_x_to_z(px,pz)
+    call transpose_x_to_y(px,py)
+    call transpose_y_to_z(py,pz)
     !$OMP WORKSHARE
     p(1:n(1),1:n(2),1:n(3)) = pz(:,:,:)*normfft
     !$OMP END WORKSHARE
@@ -215,9 +215,7 @@ module mod_solver
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
 #if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
     real(rp), dimension(xsize(1),xsize(2),xsize(3)) :: px
-    real(rp), dimension(zsize(1),zsize(2),zsize(3)) :: pz
-#elif defined(_DECOMP_Y)
-    real(rp), dimension(ysize(1),ysize(2),ysize(3)) :: py
+    real(rp), dimension(xsize(1),xsize(2),xsize(3)) :: py
     real(rp), dimension(zsize(1),zsize(2),zsize(3)) :: pz
 #endif
     integer :: q
@@ -228,9 +226,9 @@ module mod_solver
     !$OMP WORKSHARE
     px(:,:,:) = p(1:n(1),1:n(2),1:n(3))
     !$OMP END WORKSHARE
-    call transpose_x_to_z(px,pz)
-    !call transpose_x_to_y(px,py)
-    !call transpose_y_to_z(py,pz)
+    !call transpose_x_to_z(px,pz)
+    call transpose_x_to_y(px,py)
+    call transpose_y_to_z(py,pz)
 #elif defined(_DECOMP_Y)
     !$OMP WORKSHARE
     py(:,:,:) = p(1:n(1),1:n(2),1:n(3))
@@ -254,9 +252,9 @@ module mod_solver
 #endif
     !
 #if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
-    call transpose_z_to_x(pz,px)
-    !call transpose_z_to_y(pz,py)
-    !call transpose_y_to_x(py,px)
+    !call transpose_z_to_x(pz,px)
+    call transpose_z_to_y(pz,py)
+    call transpose_y_to_x(py,px)
     !$OMP WORKSHARE
     p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)
     !$OMP END WORKSHARE

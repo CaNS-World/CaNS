@@ -17,9 +17,11 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 ## News
 
+[02/05/2022] **Major update** -- The building/compilation process of CaNS has changed to become simpler and more robust in different systems; see *Compilation* below.
+
 [26/12/2021] Implicit temporal discretization of the diffusion term along only one direction (z) is now also supported.
 
-[29/10/2021] **Major update** -- a few neat features have been incorporated in the the most recent version of *CaNS*:
+[29/10/2021] **Major update** -- a few neat features have been incorporated in the most recent version of CaNS:
 
 * **x-aligned pencils are now used by default**, which results in improved speed and scalability. This behavior can be changed using the flags `-D_DECOMP_Y`/`-D_DECOMP_Z` for y- or z-aligned pencils;
 * **support uneven partitioning of the computational subdomains**: the total number of grid points along one direction does not have to be divisible by the number of tasks;
@@ -58,36 +60,41 @@ The fluid flow is solved with a second-order finite-volume pressure correction s
 
 ### Input file
 
-The input file `dns.in` sets the physical and computational parameters. In the `examples/` folder are examples of input files for several canonical flows. See [`src/INFO_INPUT.md`](src/INFO_INPUT.md) for a detailed description of the input file.
+The input file `dns.in` sets the physical and computational parameters. In the `examples/` folder are examples of input files for several canonical flows. See [`doc/INFO_INPUT.md`](doc/INFO_INPUT.md) for a detailed description of the input file.
 
 Files `out1d.h90`, `out2d.h90` and `out3d.h90` in `src/` set which data are written in 1-, 2- and 3-dimensional output files, respectively. *The code should be recompiled after editing out?d.h90 files*.
 
 ### Compilation
 
-The code should be compiled in `src/`. The prerequisites are the following:
+#### Prerequisites
+The prerequisites for compiling CaNS are the following:
 
  * MPI
  * FFTW3
  * OpenMP (optional)
- * LAPACK & BLAS (optional)
+ * `awk` (to generate dependencies)
 
-The Makefile in `src/` should be modified in agreement to the installation paths of each library. Also, the following preprocessor options are available:
+#### In short
+For most systems, CaNS can be compiled from the root directory with the following commands `make library && make`, which will compile the 2DECOMP&FFT library and CaNS.
 
- * `-D_DEBUG`            : performs some basic checks for debugging purposes
- * `-D_TIMING`           : wall-clock time per timestep is computed
- * `-D_IMPDIFF`          : diffusion term of the N-S equations is integrated in time with an implicit discretization (thereby improving the stability of the numerical algorithm for viscous-dominated flows)
- * `-D_IMPDIFF_1D`       : same as above, but with implicit diffusion *only* along Z; this option needs to be combined with `-D_IMPDIFF` (required) and `-D_DECOMP_Z` (optional, but recommended for best performance)
- * `-D_SINGLE_PRECISION` : calculation will be carried out in single precision (the default precision is double)
+#### Detailed instructions
+The `Makefile` in root directory is used to compiled the code, and is expected to work out-of-the-box for most systems. The `build.conf` file in the root directory can be used to choose the Fortran compiler (MPI wrapper), a few pre-defined profiles depending on the nature of the run (e.g., production vs debugging), and pre-processing options, see [`doc/INFO_COMPILING.md`](doc/INFO_COMPILING.md) for more details. Concerning the pre-processing options, the following are available:
 
-Typing `make run` will compile the code and copy the executable `cans` and input file `dns.in` to a `run/` folder.
+ * `DEBUG`            : performs some basic checks for debugging purposes
+ * `TIMING`           : wall-clock time per timestep is computed
+ * `IMPDIFF`          : diffusion term of the N-S equations is integrated in time with an implicit discretization (thereby improving the stability of the numerical algorithm for viscous-dominated flows)
+ * `IMPDIFF_1D`       : same as above, but with implicit diffusion *only* along Z; this option needs to be combined with `IMPDIFF` (required) and `DECOMP_Z` (optional, but recommended for best performance)
+ * `SINGLE_PRECISION` : calculation will be carried out in single precision (the default precision is double)
+
+Finally, the older Makefile with explicit dependencies which was used in previous versions to compile CaNS is still present under `src/` (`makefile`). The pre-processing options above can be added there by appending `-D_[FEATURE]` to the variable `OTH` in the `makefile`.
 
 ### Running the code
 
-Run the executable with `mpirun` with a number of tasks and shared threads complying to what has been set in the input file `dns.in`. Data will be written by default in a folder named `data/`, which must be located where the executable is run.
+Run the executable with `mpirun` with a number of tasks and (optionally) OpenMP threads complying to what has been set in the input file `dns.in`. Data will be written by default in a folder named `data/`, which must be located where the executable is run (by default in the `run/` folder).
 
 ### Visualizing field data
 
-See [`src/INFO_VISU.md`](src/INFO_VISU.md).
+See [`doc/INFO_VISU.md`](doc/INFO_VISU.md).
 
 ## Notes
 
