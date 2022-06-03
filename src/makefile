@@ -31,7 +31,7 @@ run: $(TARGET)
 #
 .PHONY: clean
 clean:
-	rm -rf *.o *.mod *dSYM $(TARGET)
+	rm -rf *.o *.mod *.d *dSYM $(TARGET)
 # dependencies
 bound.o: bound.f90 common_mpi.o types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
