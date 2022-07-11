@@ -293,7 +293,7 @@ module mod_initflow
     integer  :: k
     real(rp) :: theta
     !
-    ! temporal boudary layer profile 
+    ! temporal boudary layer profile
     ! with thickness d, viscosity nu, and wall velocity norm (at z=0)
     !
     theta = 54.*nu/norm

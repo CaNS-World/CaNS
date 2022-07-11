@@ -12,7 +12,7 @@
   !              to create a vector, append _X _Y and _Z to the variable name, denoting the
   !              three components of the vector field
   ! inorm     -> plane is perpendicular to direction inorm (1, 2, or 3)
-  ! islice    -> plane is of constant index islice in direction inorm 
+  ! islice    -> plane is of constant index islice in direction inorm
   ! ng        -> array with the global number of points in each direction
   ! time      -> physical time
   ! istep     -> time step number

@@ -108,7 +108,7 @@ module mod_solver
       end do
       !$OMP END DO
       !$OMP END PARALLEL
-    else 
+    else
       !$OMP PARALLEL DEFAULT(none) &
       !$OMP PRIVATE(i,j) &
       !$OMP SHARED(nx,ny,n,a,b,c,p)

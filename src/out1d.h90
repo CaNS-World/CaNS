@@ -1,6 +1,6 @@
   !  out1d(fname,n,idir,z,dzlzi,p)
   !
-  ! writes the profile of a variable averaged 
+  ! writes the profile of a variable averaged
   ! over two domain directions (see output.f90)
   !
   ! fname -> name of the file
