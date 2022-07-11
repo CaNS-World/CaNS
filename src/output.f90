@@ -31,7 +31,7 @@ module mod_output
     end if
   end subroutine out0d
   !
-  subroutine out1d(fname,ng,lo,hi,idir,l,dl,z_g,dz_g,p)
+  subroutine out1d(fname,ng,lo,hi,idir,l,dl,z_g,dz,p)
     !
     ! writes the profile of a variable averaged
     ! over two domain directions
@@ -42,7 +42,7 @@ module mod_output
     ! idir  -> direction of the profile
     ! dl,dl -> uniform grid spacing and length arrays
     ! z_g   -> global z coordinate array (grid is non-uniform in z)
-    ! dz_g  -> global z grid spacing array
+    ! dz    -> local z grid spacing array (should work also with the global one)
     ! p     -> 3D input scalar field
     !
     implicit none
@@ -50,7 +50,7 @@ module mod_output
     integer , intent(in), dimension(3) :: ng,lo,hi
     integer , intent(in) :: idir
     real(rp), intent(in), dimension(3) :: l,dl
-    real(rp), intent(in), dimension(0:) :: z_g,dz_g
+    real(rp), intent(in), dimension(0:) :: z_g,dz
     real(rp), intent(in), dimension(lo(1)-1:,lo(2)-1:,lo(3)-1:) :: p
     real(rp), allocatable, dimension(:) :: p1d
     integer :: i,j,k
@@ -83,7 +83,7 @@ module mod_output
       do j=lo(2),hi(2)
         do k=lo(3),hi(3)
           do i=lo(1),hi(1)
-            p1d(j) = p1d(j) + p(i,j,k)*dz_g(k)/l(3)
+            p1d(j) = p1d(j) + p(i,j,k)*dz(k)/l(3)
           end do
         end do
       end do
@@ -102,7 +102,7 @@ module mod_output
         p1d(i) = 0.
         do k=lo(3),hi(3)
           do j=lo(2),hi(2)
-            p1d(i) = p1d(i) + p(i,j,k)*dz_g(k)/l(3)
+            p1d(i) = p1d(i) + p(i,j,k)*dz(k)/l(3)
           end do
         end do
       end do
