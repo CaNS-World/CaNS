@@ -65,8 +65,8 @@ program cans
   real(rp), dimension(3) :: tauxo,tauyo,tauzo
   real(rp), dimension(3) :: f
   type(C_PTR), dimension(2,2) :: arrplanp
-  real(rp), allocatable, dimension(:,:) :: lambdaxyp
-  real(rp), allocatable, dimension(:) :: ap,bp,cp
+  real(gp), allocatable, dimension(:,:) :: lambdaxyp
+  real(gp), allocatable, dimension(:) :: ap,bp,cp
   real(rp) :: normfftp
   type rhs_bound
     real(rp), allocatable, dimension(:,:,:) :: x

@@ -10,20 +10,29 @@ module mod_solver
 #if defined(_IMPDIFF_1D)
   public solver_gaussel_z
 #endif
+  interface gaussel
+    module procedure gaussel_sp,gaussel_dp
+  end interface
+  interface gaussel_periodic
+    module procedure gaussel_periodic_sp,gaussel_periodic_dp
+  end interface
+  interface dgtsv_homebrewed
+    module procedure dgtsv_homebrewed_sp,dgtsv_homebrewed_dp
+  end interface
   contains
   subroutine solver(n,arrplan,normfft,lambdaxy,a,b,c,bcz,c_or_f,p)
     implicit none
     integer , intent(in), dimension(3) :: n
     type(C_PTR), intent(in), dimension(2,2) :: arrplan
     real(rp), intent(in) :: normfft
-    real(rp), intent(in), dimension(:,:) :: lambdaxy
-    real(rp), intent(in), dimension(:) :: a,b,c
+    real(gp), intent(in), dimension(:,:) :: lambdaxy
+    real(gp), intent(in), dimension(:) :: a,b,c
     character(len=1), dimension(0:1), intent(in) :: bcz
     character(len=1), intent(in), dimension(3) :: c_or_f
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
-    real(rp), dimension(xsize(1),xsize(2),xsize(3)) :: px
-    real(rp), dimension(ysize(1),ysize(2),ysize(3)) :: py
-    real(rp), dimension(zsize(1),zsize(2),zsize(3)) :: pz
+    real(gp), dimension(xsize(1),xsize(2),xsize(3)) :: px
+    real(gp), dimension(ysize(1),ysize(2),ysize(3)) :: py
+    real(gp), dimension(zsize(1),zsize(2),zsize(3)) :: pz
     integer :: q
     integer, dimension(3) :: n_z
     !
@@ -84,126 +93,38 @@ module mod_solver
 #endif
   end subroutine solver
   !
-  subroutine gaussel(nx,ny,n,nh,a,b,c,p,lambdaxy)
-    implicit none
-    integer , intent(in) :: nx,ny,n,nh
-    real(rp), intent(in), dimension(:) :: a,b,c
-    real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
-    real(rp), intent(in), dimension(nx,ny), optional :: lambdaxy
-    real(rp), dimension(n) :: bb
-    integer :: i,j
-    !
-    ! solve tridiagonal system
-    !
-    if(present(lambdaxy)) then
-      !$OMP PARALLEL DEFAULT(none) &
-      !$OMP PRIVATE(i,j,bb) &
-      !$OMP SHARED(nx,ny,n,a,b,c,lambdaxy,p)
-      !$OMP DO COLLAPSE(2)
-      do j=1,ny
-        do i=1,nx
-          bb(:) = b(1:n) + lambdaxy(i,j)
-          call dgtsv_homebrewed(n,a,bb,c,p(i,j,1:n))
-        end do
-      end do
-      !$OMP END DO
-      !$OMP END PARALLEL
-    else
-      !$OMP PARALLEL DEFAULT(none) &
-      !$OMP PRIVATE(i,j) &
-      !$OMP SHARED(nx,ny,n,a,b,c,p)
-      !$OMP DO COLLAPSE(2)
-      do j=1,ny
-        do i=1,nx
-          call dgtsv_homebrewed(n,a,b,c,p(i,j,1:n))
-        end do
-      end do
-      !$OMP END DO
-      !$OMP END PARALLEL
-    endif
-  end subroutine gaussel
+#define MYREAL real(sp)
+  subroutine gaussel_sp(nx,ny,n,nh,a,b,c,p,lambdaxy)
+#include "solver_gaussel-inc.f90"
+  end subroutine gaussel_sp
+#undef MYREAL
+#define MYREAL real(dp)
+  subroutine gaussel_dp(nx,ny,n,nh,a,b,c,p,lambdaxy)
+#include "solver_gaussel-inc.f90"
+  end subroutine gaussel_dp
+#undef MYREAL
   !
-  subroutine gaussel_periodic(nx,ny,n,nh,a,b,c,p,lambdaxy)
-    implicit none
-    integer , intent(in) :: nx,ny,n,nh
-    real(rp), intent(in), dimension(:) :: a,b,c
-    real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
-    real(rp), intent(in), dimension(nx,ny), optional :: lambdaxy
-    real(rp), dimension(n) :: bb,p1,p2
-    integer :: i,j,info
-    !
-    ! solve tridiagonal system
-    !
-    if(present(lambdaxy)) then
-      !$OMP PARALLEL DEFAULT(none) &
-      !$OMP PRIVATE(i,j,bb,p1,p2) &
-      !$OMP SHARED(nx,ny,n,a,b,c,lambdaxy,p)
-      !$OMP DO COLLAPSE(2)
-      do j=1,ny
-        do i=1,nx
-          bb(:)  = b(:) + lambdaxy(i,j)
-          p1(1:n-1) = p(i,j,1:n-1)
-          call dgtsv_homebrewed(n-1,a,bb,c,p1)
-          p2(:) = 0.
-          p2(1  ) = -a(1  )
-          p2(n-1) = -c(n-1)
-          call dgtsv_homebrewed(n-1,a,bb,c,p2)
-          p(i,j,n) = (p(i,j,n) - c(n)*p1(1) - a(n)*p1(n-1)) / &
-                     (bb(   n) + c(n)*p2(1) + a(n)*p2(n-1)+eps)
-          p(i,j,1:n-1) = p1(1:n-1) + p2(1:n-1)*p(i,j,n)
-        end do
-      end do
-      !$OMP END DO
-      !$OMP END PARALLEL
-    else
-      !$OMP PARALLEL DEFAULT(none) &
-      !$OMP PRIVATE(i,j,p1,p2) &
-      !$OMP SHARED(nx,ny,n,a,b,c,p)
-      !$OMP DO COLLAPSE(2)
-      do j=1,ny
-        do i=1,nx
-          p1(1:n-1) = p(i,j,1:n-1)
-          call dgtsv_homebrewed(n-1,a,b,c,p1)
-          p2(:) = 0.
-          p2(1  ) = -a(1  )
-          p2(n-1) = -c(n-1)
-          call dgtsv_homebrewed(n-1,a,b,c,p2)
-          p(i,j,n) = (p(i,j,n) - c(n)*p1(1) - a(n)*p1(n-1)) / &
-                     (b(    n) + c(n)*p2(1) + a(n)*p2(n-1)+eps)
-          p(i,j,1:n-1) = p1(1:n-1) + p2(1:n-1)*p(i,j,n)
-        end do
-      end do
-      !$OMP END DO
-      !$OMP END PARALLEL
-    endif
-  end subroutine gaussel_periodic
+#define MYREAL real(sp)
+  subroutine gaussel_periodic_sp(nx,ny,n,nh,a,b,c,p,lambdaxy)
+#include "solver_gaussel_periodic-inc.f90"
+  end subroutine gaussel_periodic_sp
+#undef MYREAL
+#define MYREAL real(dp)
+  subroutine gaussel_periodic_dp(nx,ny,n,nh,a,b,c,p,lambdaxy)
+#include "solver_gaussel_periodic-inc.f90"
+  end subroutine gaussel_periodic_dp
+#undef MYREAL
   !
-  subroutine dgtsv_homebrewed(n,a,b,c,p)
-    implicit none
-    integer , intent(in) :: n
-    real(rp), intent(in   ), dimension(:) :: a,b,c
-    real(rp), intent(inout), dimension(:) :: p
-    real(rp), dimension(n) :: d
-    real(rp) :: z
-    integer :: l
-    !
-    ! Gauss elimination
-    !
-    z = 1./(b(1)+eps)
-    d(1) = c(1)*z
-    p(1) = p(1)*z
-    do l=2,n
-      z    = 1./(b(l)-a(l)*d(l-1)+eps)
-      d(l) = c(l)*z
-      p(l) = (p(l)-a(l)*p(l-1))*z
-    end do
-    !
-    ! backward substitution
-    !
-    do l=n-1,1,-1
-      p(l) = p(l) - d(l)*p(l+1)
-    end do
-  end subroutine dgtsv_homebrewed
+#define MYREAL real(sp)
+  subroutine dgtsv_homebrewed_sp(n,a,b,c,p)
+#include "solver_dgtsv_homebrewed-inc.f90"
+  end subroutine dgtsv_homebrewed_sp
+#undef MYREAL
+#define MYREAL real(dp)
+  subroutine dgtsv_homebrewed_dp(n,a,b,c,p)
+#include "solver_dgtsv_homebrewed-inc.f90"
+  end subroutine dgtsv_homebrewed_dp
+#undef MYREAL
   !
 #if defined(_IMPDIFF_1D)
   subroutine solver_gaussel_z(n,a,b,c,bcz,c_or_f,p)

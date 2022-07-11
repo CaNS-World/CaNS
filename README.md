@@ -17,6 +17,8 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 ## News
 
+[11/07/2022] Mixed precision calculations with the Poisson equation solved in single precision are now possible with explicit diffusion, and with 1D implicit diffusion.
+
 [02/05/2022] **Major update** -- The building/compilation process of CaNS has changed to become simpler and more robust in different systems; see *Compilation* below.
 
 [26/12/2021] Implicit temporal discretization of the diffusion term along only one direction (z) is now also supported.
@@ -80,11 +82,12 @@ For most systems, CaNS can be compiled from the root directory with the followin
 #### Detailed instructions
 The `Makefile` in root directory is used to compiled the code, and is expected to work out-of-the-box for most systems. The `build.conf` file in the root directory can be used to choose the Fortran compiler (MPI wrapper), a few pre-defined profiles depending on the nature of the run (e.g., production vs debugging), and pre-processing options, see [`doc/INFO_COMPILING.md`](doc/INFO_COMPILING.md) for more details. Concerning the pre-processing options, the following are available:
 
- * `DEBUG`            : performs some basic checks for debugging purposes
- * `TIMING`           : wall-clock time per timestep is computed
- * `IMPDIFF`          : diffusion term of the N-S equations is integrated in time with an implicit discretization (thereby improving the stability of the numerical algorithm for viscous-dominated flows)
- * `IMPDIFF_1D`       : same as above, but with implicit diffusion *only* along Z; this option needs to be combined with `IMPDIFF` (required) and `DECOMP_Z` (optional, but recommended for best performance)
- * `SINGLE_PRECISION` : calculation will be carried out in single precision (the default precision is double)
+ * `DEBUG`                    : performs some basic checks for debugging purposes
+ * `TIMING`                   : wall-clock time per timestep is computed
+ * `IMPDIFF`                  : diffusion term of the N-S equations is integrated in time with an implicit discretization (thereby improving the stability of the numerical algorithm for viscous-dominated flows)
+ * `IMPDIFF_1D`               : same as above, but with implicit diffusion *only* along Z; this option needs to be combined with `IMPDIFF` (required) and `DECOMP_Z` (optional, but recommended for best performance)
+ * `SINGLE_PRECISION`         : calculation will be carried out in single precision (the default precision is double)
+ * `SINGLE_PRECISION_POISSON` : only the Poisson equation will be solved in single precision (requires explicit diffusion, or Z implicit diffusion with z-aligned pencils (i.e., `IMPDIFF`, `IMPDIFF_1D`, and `DECOMP_Z`)
 
 Finally, the older Makefile with explicit dependencies which was used in previous versions to compile CaNS is still present under `src/` (`makefile`). The pre-processing options above can be added there by appending `-D_[FEATURE]` to the variable `OTH` in the `makefile`.
 

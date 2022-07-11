@@ -18,7 +18,9 @@ include $(CANS_DIR)/build.conf
 #   -DT3PIO         - turn on LUSTRE IO optimisation code using T3PIO
 OPTIONS=
 ifneq ($(strip $(SINGLE_PRECISION)),1)
+ifneq ($(strip $(SINGLE_PRECISION_POISSON)),1)
 OPTIONS=-DDOUBLE_PREC
+endif
 endif
 
 # Choose one FFT engine, available options are:

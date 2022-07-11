@@ -37,10 +37,16 @@ include $(CONFIG_DIR)/compilers.mk
 include $(CONFIG_DIR)/flags.mk
 
 override LIBS += -L$(LIBS_DIR)/2decomp_fft/lib -l2decomp_fft -lfftw3
+ifeq ($(strip $(SINGLE_PRECISION)),1)
+override LIBS += -lfftw3f
+endif
+ifeq ($(strip $(SINGLE_PRECISION_POISSON)),1)
+override LIBS += -lfftw3f
+endif
 INCS += -I$(LIBS_DIR)/2decomp_fft/include
 
 # List of all source files
-SRCS := $(wildcard $(SRC_DIR)/*.f90) $(wildcard $(APP_DIR)/*.f90)
+SRCS := $(filter-out $(wildcard $(SRC_DIR)/*-inc.f90), $(wildcard $(SRC_DIR)/*.f90) $(wildcard $(APP_DIR)/*.f90))
 TEST_SRCS := 
 
 # Define a map from each file name to its object file
