@@ -46,6 +46,5 @@ module mod_scal
       end do
     end do
     !$OMP END PARALLEL DO
-    return
   end subroutine scal
 end module mod_scal

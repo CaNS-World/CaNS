@@ -451,6 +451,5 @@ module mod_output
       end if
       deallocate(um,vm,wm,u2,v2,w2,vw,uv)
     end select
-    return
   end subroutine out2d_2
 end module mod_output
