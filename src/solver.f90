@@ -136,7 +136,7 @@ module mod_solver
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
 #if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
     real(rp), dimension(xsize(1),xsize(2),xsize(3)) :: px
-    real(rp), dimension(xsize(1),xsize(2),xsize(3)) :: py
+    real(rp), dimension(ysize(1),ysize(2),ysize(3)) :: py
     real(rp), dimension(zsize(1),zsize(2),zsize(3)) :: pz
 #endif
     integer :: q
