@@ -6,7 +6,7 @@ public
 ! parameters
 !
 real(rp), parameter :: pi = acos(-1._rp)
-real(rp), parameter :: small = epsilon(pi)*10**(precision(pi)/2)
+real(gp), parameter :: small = epsilon(1._gp)*10**(precision(1._gp)/2)
 character(len=100), parameter :: datadir = 'data/'
 real(rp), parameter, dimension(2,3) :: rkcoeff = reshape([32._rp/60._rp,  0._rp        , &
                                                           25._rp/60._rp, -17._rp/60._rp, &

@@ -51,6 +51,11 @@ module mod_sanity
     if(myid == 0)  print*, 'WARNING: a run with implicit Z diffusion (`_IMPDIFF_1D`) is much more efficient &
                                      when combined with a Z-pencils parallelization (`_DECOMP_Z`).'
 #endif
+#if defined(_SINGLE_PRECISION_POISSON) && defined(IMPDIFF) && !(defined(IMPDIFF_1D) || defined(_DECOMP_Z))
+    ! note: the code won't even compile as is now
+    if(myid == 0)  print*, 'ERROR: a run with `_SINGLE_PRECISION_POISSON` can only accomodate implicit diffusion along Z,
+                                   and requires building with building with `_IMPDIFF_1D` and `_DECOMP_Z`.'; call abortit
+#endif
 #if defined(_DEBUG)
     call chk_solvers(ng,n,n_z,lo,hi,dli,dzci_g,dzfi_g,dzci,dzfi,nb,is_bound,cbcvel,cbcpre,bcvel,bcpre,passed)
     if(.not.passed) call abortit
@@ -211,9 +216,9 @@ module mod_sanity
     logical , intent(out) :: passed
     real(rp), dimension(0:n(1)+1,0:n(2)+1,0:n(3)+1) :: u,v,w,p,up,vp,wp
     type(C_PTR), dimension(2,2) :: arrplan
-    real(rp), dimension(n_z(1),n_z(2)) :: lambdaxy
+    real(gp), dimension(n_z(1),n_z(2)) :: lambdaxy
     real(rp) :: normfft
-    real(rp), dimension(n_z(3)) :: a,b,c,bb
+    real(gp), dimension(n_z(3)) :: a,b,c,bb
     real(rp), dimension(n(2),n(3),0:1) :: rhsbx
     real(rp), dimension(n(1),n(3),0:1) :: rhsby
     real(rp), dimension(n(1),n(2),0:1) :: rhsbz

@@ -10,7 +10,7 @@ PROF := #-pg
 FFLAGS := $(OPT) $(BIG) $(DBG) $(PROF) $(OMP) $(OTH)
 TARGET = cans
 #
-OBJ = bound.o chkdiv.o chkdt.o common_mpi.o correc.o debug.o fft.o fftw.o fillps.o initflow.o initgrid.o initmpi.o initsolver.o load.o main.o mom.o scal.o output.o param.o post.o rk.o sanity.o solver.o decomp_2d.o io.o types.o
+OBJ = bound.o chkdiv.o chkdt.o common_mpi.o correc.o debug.o fft.o fftw.o fillps.o initflow.o initgrid.o initmpi.o initsolver.o load.o main.o mom.o scal.o output.o param.o post.o rk.o sanity.o solver.o updatep.o decomp_2d.o io.o types.o
 #
 LIBS = -lfftw3 -lfftw3_threads
 #
@@ -57,11 +57,11 @@ initgrid.o: initgrid.f90 param.o types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
 initmpi.o: initmpi.f90 decomp_2d.o common_mpi.o types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
-initsolver.o: initsolver.f90 common_mpi.o fft.o param.o types.o
+initsolver.o: initsolver.f90 common_mpi.o fft.o param.o types.o initsolver_eigenvalues-inc.f90 initsolver_initsolver-inc.f90 initsolver_tridmatrix-inc.f90
 	$(FC) $(FFLAGS) -cpp -c  $<
 load.o: load.f90 common_mpi.o decomp_2d.o io.o types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
-main.o: main.f90 bound.o chkdiv.o chkdt.o debug.o fft.o fillps.o initflow.o initflow.o initgrid.o initmpi.o initsolver.o load.o output.o param.o rk.o sanity.o solver.o types.o out1d.h90 out2d.h90 out3d.h90
+main.o: main.f90 bound.o chkdiv.o chkdt.o debug.o fft.o fillps.o initflow.o initflow.o initgrid.o initmpi.o initsolver.o load.o output.o param.o rk.o sanity.o solver.o updatep.o types.o out1d.h90 out2d.h90 out3d.h90
 	$(FC) $(FFLAGS) -cpp -c  $<
 mom.o: mom.f90 common_mpi.o types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
@@ -77,7 +77,9 @@ rk.o: rk.f90 debug.o mom.o scal.o param.o types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
 sanity.o: sanity.f90 bound.o chkdiv.o common_mpi.o correc.o debug.o decomp_2d.o fft.o fillps.o initflow.o initmpi.o initsolver.o param.o solver.o types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
-solver.o: solver.f90 fft.o param.o types.o
+solver.o: solver.f90 fft.o param.o types.o solver_dgtsv_homebrewed-inc.f90 solver_gaussel-inc.f90 solver_gaussel_periodic-inc.f90
+	$(FC) $(FFLAGS) -cpp -c  $<
+updatep.o: updatep.f90 types.o
 	$(FC) $(FFLAGS) -cpp -c  $<
 types.o: types.f90
 	$(FC) $(FFLAGS) -cpp -c  $<

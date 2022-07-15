@@ -14,8 +14,8 @@ module mod_fft
     character(len=1), intent(in), dimension(2) :: c_or_f
     type(C_PTR), intent(out), dimension(2,2) :: arrplan
     real(rp), intent(out) :: normfft
-    real(rp), dimension(n_x(1),n_x(2),n_x(3))  :: arrx
-    real(rp), dimension(n_y(1),n_y(2),n_y(3))  :: arry
+    real(gp), dimension(n_x(1),n_x(2),n_x(3))  :: arrx
+    real(gp), dimension(n_y(1),n_y(2),n_y(3))  :: arry
     type(C_PTR) :: plan_fwd_x,plan_bwd_x, &
                    plan_fwd_y,plan_bwd_y
     type(fftw_iodim), dimension(1) :: iodim
@@ -25,7 +25,7 @@ module mod_fft
     integer(C_INT) :: nx_x,ny_x,nz_x, &
                       nx_y,ny_y,nz_y
     integer :: ix,iy
-#if defined(_SINGLE_PRECISION)
+#if defined(_SINGLE_PRECISION) || defined(_SINGLE_PRECISION_POISSON)
     !$ call sfftw_init_threads(ierr)
     !$ call sfftw_plan_with_nthreads(omp_get_max_threads())
 #else
@@ -93,7 +93,7 @@ module mod_fft
   subroutine fftend(arrplan)
     implicit none
     type(C_PTR), intent(in), dimension(2,2) :: arrplan
-#if defined(_SINGLE_PRECISION)
+#if defined(_SINGLE_PRECISION) || defined(_SINGLE_PRECISION_POISSON)
     call sfftw_destroy_plan(arrplan(1,1))
     call sfftw_destroy_plan(arrplan(1,2))
     call sfftw_destroy_plan(arrplan(2,1))
@@ -111,8 +111,8 @@ module mod_fft
   subroutine fft(plan,arr)
     implicit none
     type(C_PTR), intent(in) :: plan
-    real(rp), intent(inout), dimension(:,:,:) :: arr
-#if defined(_SINGLE_PRECISION)
+    real(gp), intent(inout), dimension(:,:,:) :: arr
+#if defined(_SINGLE_PRECISION) || defined(_SINGLE_PRECISION_POISSON)
     call sfftw_execute_r2r(plan,arr,arr)
 #else
     call dfftw_execute_r2r(plan,arr,arr)

@@ -57,6 +57,7 @@ program cans
 #if defined(_IMPDIFF_1D)
   use mod_solver     , only: solver_gaussel_z
 #endif
+  use mod_updatep    , only: updatep
   use mod_types
   !$ use omp_lib
   implicit none
@@ -65,8 +66,8 @@ program cans
   real(rp), dimension(3) :: tauxo,tauyo,tauzo
   real(rp), dimension(3) :: f
   type(C_PTR), dimension(2,2) :: arrplanp
-  real(rp), allocatable, dimension(:,:) :: lambdaxyp
-  real(rp), allocatable, dimension(:) :: ap,bp,cp
+  real(gp), allocatable, dimension(:,:) :: lambdaxyp
+  real(gp), allocatable, dimension(:) :: ap,bp,cp
   real(rp) :: normfftp
   type rhs_bound
     real(rp), allocatable, dimension(:,:,:) :: x
@@ -74,12 +75,12 @@ program cans
     real(rp), allocatable, dimension(:,:,:) :: z
   end type rhs_bound
   type(rhs_bound) :: rhsbp
+  real(rp) :: alpha
 #if defined(_IMPDIFF)
   type(C_PTR), dimension(2,2) :: arrplanu,arrplanv,arrplanw
   real(rp), allocatable, dimension(:,:) :: lambdaxyu,lambdaxyv,lambdaxyw
   real(rp), allocatable, dimension(:) :: au,av,aw,bu,bv,bw,bb,cu,cv,cw
   real(rp) :: normfftu,normfftv,normfftw
-  real(rp) :: alpha,alphai
   integer :: i,j
   type(rhs_bound) :: rhsbu,rhsbv,rhsbw
 #endif
@@ -310,30 +311,7 @@ program cans
       call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,pp)
       call correc(n,dli,dzci,dtrk,pp,u,v,w)
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.true.,dl,dzc,dzf,u,v,w)
-#if defined(_IMPDIFF)
-      alphai = alpha**(-1)
-      !$OMP PARALLEL DO DEFAULT(none) &
-      !$OMP PRIVATE(i,j,k) &
-      !$OMP SHARED(n,p,pp,dxi,dyi,dzfi,dzci,alphai)
-      do k=1,n(3)
-        do j=1,n(2)
-          do i=1,n(1)
-            p(i,j,k) = p(i,j,k) + pp(i,j,k) + alphai*( &
-#if !defined(_IMPDIFF_1D)
-                        (pp(i+1,j,k)-2.*pp(i,j,k)+pp(i-1,j,k))*(dxi**2) + &
-                        (pp(i,j+1,k)-2.*pp(i,j,k)+pp(i,j-1,k))*(dyi**2) + &
-#endif
-                        ((pp(i,j,k+1)-pp(i,j,k  ))*dzci(k  ) - &
-                         (pp(i,j,k  )-pp(i,j,k-1))*dzci(k-1))*dzfi(k) )
-          end do
-        end do
-      end do
-      !$OMP END PARALLEL DO
-#else
-      !$OMP WORKSHARE
-      p(1:n(1),1:n(2),1:n(3)) = p(1:n(1),1:n(2),1:n(3)) + pp(1:n(1),1:n(2),1:n(3))
-      !$OMP END WORKSHARE
-#endif
+      call updatep(n,dli,dzci,dzfi,alpha,u,v,w,pp,p)
       call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
     end do
     dpdl(:) = -dpdl(:)*dti

@@ -42,7 +42,7 @@ module mod_debug
     integer , intent(in), dimension(3) :: lo,hi
     real(rp), intent(in), dimension(2) :: dli
     real(rp), intent(in) :: alpha
-    real(rp), intent(in), dimension(lo(3)-1:) :: dzfi,dzci
+    real(rp), intent(in), dimension(lo(3)-1:) :: dzci,dzfi
     real(rp), intent(in), dimension(lo(1)-1:,lo(2)-1:,lo(3)-1:) :: fp,fpp
     character(len=1), intent(in), dimension(0:1,3) :: bc
     character(len=1), intent(in), dimension(3) :: c_or_f
