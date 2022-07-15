@@ -56,7 +56,7 @@ module mod_sanity
     if(myid == 0)  print*, 'ERROR: a run with `_SINGLE_PRECISION_POISSON` can only accomodate implicit diffusion along Z,
                                    and requires building with building with `_IMPDIFF_1D` and `_DECOMP_Z`.'; call abortit
 #endif
-#if defined(_DEBUG)
+#if defined(_DEBUG) && !defined(_SINGLE_PRECISION) && !defined(_SINGLE_PRECISION_POISSON)
     call chk_solvers(ng,n,n_z,lo,hi,dli,dzci_g,dzfi_g,dzci,dzfi,nb,is_bound,cbcvel,cbcpre,bcvel,bcpre,passed)
     if(.not.passed) call abortit
 #endif
