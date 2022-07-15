@@ -16,7 +16,7 @@ module mod_initmpi
     integer, intent(out), dimension(0:1,3) :: nb
     logical, intent(out), dimension(0:1,3) :: is_bound
     logical, dimension(3) :: periods
-    integer :: l1,l2,l
+    integer :: l,ipencil_t(2)
     !
     periods(:) = .false.
     where(bc(0,:)//bc(1,:) == 'PP') periods(:) = .true.
@@ -25,30 +25,25 @@ module mod_initmpi
     n_z(:) = zsize(:)
 #if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
     ipencil=1
-    l1 = 2
-    l2 = 3
     comm_cart = DECOMP_2D_COMM_CART_X
     lo(:) = xstart(:)
     hi(:) = xend(:)
 #elif defined(_DECOMP_Y)
     ipencil=2
-    l1 = 1
-    l2 = 3
     comm_cart = DECOMP_2D_COMM_CART_Y
     lo(:) = ystart(:)
     hi(:) = yend(:)
 #elif defined(_DECOMP_Z)
     ipencil=3
-    l1 = 1
-    l2 = 2
     comm_cart = DECOMP_2D_COMM_CART_Z
     lo(:) = zstart(:)
     hi(:) = zend(:)
 #endif
     n(:) = hi(:) - lo(:) + 1
     nb(:,ipencil) = MPI_PROC_NULL
-    call MPI_CART_SHIFT(comm_cart,0,1,nb(0,l1),nb(1,l1),ierr)
-    call MPI_CART_SHIFT(comm_cart,1,1,nb(0,l2),nb(1,l2),ierr)
+    ipencil_t(:) = pack([1,2,3],[1,2,3] /= ipencil)
+    call MPI_CART_SHIFT(comm_cart,0,1,nb(0,ipencil_t(1)),nb(1,ipencil_t(1)),ierr)
+    call MPI_CART_SHIFT(comm_cart,1,1,nb(0,ipencil_t(2)),nb(1,ipencil_t(2)),ierr)
     is_bound(:,:) = .false.
     where(nb(:,:) == MPI_PROC_NULL) is_bound(:,:) = .true.
     do l=1,3
