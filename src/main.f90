@@ -106,7 +106,7 @@ program cans
   integer :: rlen
   !
   call MPI_INIT(ierr)
-  call MPI_COMM_RANK(MPI_COMM_WORLD, myid, ierr)
+  call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
   !
   ! read parameter file
   !
