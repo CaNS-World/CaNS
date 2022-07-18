@@ -13,8 +13,8 @@ module mod_rk
   private
   public rk
   contains
-  subroutine rk(rkpar,n,dli,l,dzci,dzfi,visc,dt,p,is_bound,is_forced,velf,bforce, &
-                dudtrko,dvdtrko,dwdtrko,tauxo,tauyo,tauzo,u,v,w,f)
+  subroutine rk(rkpar,n,dli,l,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,visc,dt,p, &
+                is_bound,is_forced,velf,bforce,dudtrko,dvdtrko,dwdtrko,tauxo,tauyo,tauzo,u,v,w,f)
     !
     ! low-storage 3rd-order Runge-Kutta scheme
     ! for time integration of the momentum equations.
@@ -25,6 +25,7 @@ module mod_rk
     real(rp), intent(in) :: visc,dt
     real(rp), intent(in   ), dimension(3) :: dli,l
     real(rp), intent(in   ), dimension(0:) :: dzci,dzfi
+    real(rp), intent(in   ), dimension(0:) :: grid_vol_ratio_c,grid_vol_ratio_f
     real(rp), intent(in   ), dimension(0:,0:,0:) :: p
     logical , intent(in   ), dimension(0:1,3)    :: is_bound
     logical , intent(in   ), dimension(3)        :: is_forced
@@ -40,7 +41,7 @@ module mod_rk
     real(rp) :: factor1,factor2,factor12
     real(rp), dimension(3) :: taux,tauy,tauz
     integer :: i,j,k
-    real(rp) :: mean,grid_vol_ratio(0:n(3)+1)
+    real(rp) :: mean
     !
     factor1 = rkpar(1)*dt
     factor2 = rkpar(2)*dt
@@ -159,18 +160,15 @@ module mod_rk
     !
     f(:) = 0.
     if(is_forced(1)) then
-      grid_vol_ratio(:) = 1./(dzfi(:)*dli(1)*dli(2)*l(1)*l(2)*l(3))
-      call chk_mean(n,grid_vol_ratio,u,mean)
+      call chk_mean(n,grid_vol_ratio_f,u,mean)
       f(1) = velf(1) - mean
     end if
     if(is_forced(2)) then
-      grid_vol_ratio(:) = 1./(dzfi(:)*dli(1)*dli(2)*l(1)*l(2)*l(3))
-      call chk_mean(n,grid_vol_ratio,v,mean)
+      call chk_mean(n,grid_vol_ratio_f,v,mean)
       f(2) = velf(2) - mean
     end if
     if(is_forced(3)) then
-      grid_vol_ratio(:) = 1./(dzci(:)*dli(1)*dli(2)*l(1)*l(2)*l(3))
-      call chk_mean(n,grid_vol_ratio,w,mean)
+      call chk_mean(n,grid_vol_ratio_c,w,mean)
       f(3) = velf(3) - mean
     end if
 #if defined(_IMPDIFF)

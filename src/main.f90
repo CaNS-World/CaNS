@@ -62,7 +62,7 @@ program cans
   !$ use omp_lib
   implicit none
   real(rp), allocatable, dimension(:,:,:) :: u,v,w,p,pp
-  real(rp), allocatable, dimension(:,:,:)    :: dudtrko,dvdtrko,dwdtrko
+  real(rp), allocatable, dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
   real(rp), dimension(3) :: tauxo,tauyo,tauzo
   real(rp), dimension(3) :: f
   type(C_PTR), dimension(2,2) :: arrplanp
@@ -87,7 +87,8 @@ program cans
   real(rp) :: dt,dti,dtmax,time,dtrk,dtrki,divtot,divmax
   integer :: irk,istep
   real(rp), allocatable, dimension(:) :: dzc  ,dzf  ,zc  ,zf  ,dzci  ,dzfi, &
-                                         dzc_g,dzf_g,zc_g,zf_g,dzci_g,dzfi_g
+                                         dzc_g,dzf_g,zc_g,zf_g,dzci_g,dzfi_g, &
+                                         grid_vol_ratio_c,grid_vol_ratio_f
   real(rp) :: meanvelu,meanvelv,meanvelw
   real(rp), dimension(3) :: dpdl
   !real(rp), allocatable, dimension(:) :: var
@@ -142,6 +143,8 @@ program cans
            zf_g(  0:ng(3)+1), &
            dzci_g(0:ng(3)+1), &
            dzfi_g(0:ng(3)+1))
+  allocate(grid_vol_ratio_c,mold=dzc)
+  allocate(grid_vol_ratio_f,mold=dzf)
   allocate(rhsbp%x(n(2),n(3),0:1), &
            rhsbp%y(n(1),n(3),0:1), &
            rhsbp%z(n(1),n(2),0:1))
@@ -194,6 +197,8 @@ program cans
   dzfi(:) = dzf(:)**(-1)
   dzci_g(:) = dzc_g(:)**(-1)
   dzfi_g(:) = dzf_g(:)**(-1)
+  grid_vol_ratio_c(:)  = dl(1)*dl(2)*dzc(:)/product(l(:))
+  grid_vol_ratio_f(:)  = dl(1)*dl(2)*dzf(:)/product(l(:))
   !
   ! test input files before proceeding with the calculation
   !
@@ -265,8 +270,8 @@ program cans
     do irk=1,3
       dtrk = sum(rkcoeff(:,irk))*dt
       dtrki = dtrk**(-1)
-      call rk(rkcoeff(:,irk),n,dli,l,dzci,dzfi,visc,dt,p,is_bound,is_forced,velf,bforce, &
-              dudtrko,dvdtrko,dwdtrko,tauxo,tauyo,tauzo,u,v,w,f)
+      call rk(rkcoeff(:,irk),n,dli,l,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,visc,dt,p, &
+              is_bound,is_forced,velf,bforce,dudtrko,dvdtrko,dwdtrko,tauxo,tauyo,tauzo,u,v,w,f)
       if(is_forced(1)) u(1:n(1),1:n(2),1:n(3)) = u(1:n(1),1:n(2),1:n(3)) + f(1)
       if(is_forced(2)) v(1:n(1),1:n(2),1:n(3)) = v(1:n(1),1:n(2),1:n(3)) + f(2)
       if(is_forced(3)) w(1:n(1),1:n(2),1:n(3)) = w(1:n(1),1:n(2),1:n(3)) + f(3)
