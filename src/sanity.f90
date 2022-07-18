@@ -164,7 +164,7 @@ module mod_sanity
   do ivel = 1,3
     do idir=1,2
       bc01v = cbcvel(0,idir,ivel)//cbcvel(1,idir,ivel)
-      passed_loc = passed_loc.and.(bc01v.ne.'NN')
+      passed_loc = passed_loc.and.(bc01v /= 'NN')
     end do
   end do
   if(myid == 0.and.(.not.passed_loc)) &

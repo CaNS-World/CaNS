@@ -347,7 +347,7 @@ program cans
       dti = 1./dt
       call chkdiv(lo,hi,dli,dzfi,u,v,w,divtot,divmax)
       if(myid == 0) print*, 'Total divergence = ', divtot, '| Maximum divergence = ', divmax
-      if(divmax > small.or.divtot.ne.divtot) then
+      if(divmax > small.or.divtot /= divtot) then
         if(myid == 0) print*, 'ERROR: maximum divergence is too large.'
         if(myid == 0) print*, 'Aborting...'
         is_done = .true.

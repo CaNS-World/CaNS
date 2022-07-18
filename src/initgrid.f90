@@ -71,7 +71,7 @@ module mod_initgrid
     implicit none
     real(rp), intent(in) :: alpha,z0
     real(rp), intent(out) :: z
-    if(alpha.ne.0.) then
+    if(alpha /= 0.) then
       z = 0.5*(1.+tanh((z0-0.5)*alpha)/tanh(alpha/2.))
       !z = 0.5*(1.+erf( (z0-0.5)*alpha)/erf( alpha/2.))
     else
@@ -85,7 +85,7 @@ module mod_initgrid
     implicit none
     real(rp), intent(in) :: alpha,z0
     real(rp), intent(out) :: z
-    if(alpha.ne.0.) then
+    if(alpha /= 0.) then
       z = 1.0*(1.+tanh((z0-1.0)*alpha)/tanh(alpha/1.))
       !z = 1.0*(1.+erf( (z0-1.0)*alpha)/erf( alpha/1.))
     else
@@ -99,7 +99,7 @@ module mod_initgrid
     implicit none
     real(rp), intent(in) :: alpha,z0
     real(rp), intent(out) :: z
-    if(alpha.ne.0.) then
+    if(alpha /= 0.) then
       if(     z0 <= 0.5) then
         z = 0.5*(1.-1.+tanh(2.*alpha*(z0-0.))/tanh(alpha))
         !z = 0.5*(1.-1.+erf( 2.*alpha*(z0-0.))/erf( alpha))
