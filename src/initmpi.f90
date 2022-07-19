@@ -39,7 +39,7 @@ module mod_initmpi
     lo(:) = zstart(:)
     hi(:) = zend(:)
 #endif
-    n(:) = hi(:) - lo(:) + 1
+    n(:) = hi(:)-lo(:)+1
     nb(:,ipencil) = MPI_PROC_NULL
     ipencil_t(:) = pack([1,2,3],[1,2,3] /= ipencil)
     call MPI_CART_SHIFT(comm_cart,0,1,nb(0,ipencil_t(1)),nb(1,ipencil_t(1)),ierr)
@@ -47,7 +47,7 @@ module mod_initmpi
     is_bound(:,:) = .false.
     where(nb(:,:) == MPI_PROC_NULL) is_bound(:,:) = .true.
     do l=1,3
-      call makehalo(l,1,hi(:)-lo(:)+1,halo(l))
+      call makehalo(l,1,n(:),halo(l))
     end do
   end subroutine initmpi
   !
