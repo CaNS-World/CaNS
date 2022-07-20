@@ -513,7 +513,7 @@ module mod_mom
       do k=1,nz
         do j=1,ny
           dvdxp = (v(1  ,j,k)-v(0  ,j,k))*dli(1)*visc
-          tauy(1) = tauy(1) + dvdxp/(dli(2)*dzfi(1)*l(2)*l(3))
+          tauy(1) = tauy(1) + dvdxp/(dli(2)*dzfi(k)*l(2)*l(3))
         end do
       end do
     end if
@@ -521,7 +521,7 @@ module mod_mom
       do k=1,nz
         do j=1,ny
           dvdxm = (v(nx,j,k)-v(nx+1,j,k))*dli(1)*visc
-          tauy(1) = tauy(1) + dvdxm/(dli(2)*dzfi(1)*l(2)*l(3))
+          tauy(1) = tauy(1) + dvdxm/(dli(2)*dzfi(k)*l(2)*l(3))
         end do
       end do
     end if
