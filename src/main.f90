@@ -437,26 +437,7 @@ program cans
   call fftend(arrplanv)
   call fftend(arrplanw)
 #endif
-  !
-  ! deallocate variables
-  !
-  deallocate(u,v,w,p,pp)
-  deallocate(dudtrko,dvdtrko,dwdtrko)
-  deallocate(lambdaxyp)
-  deallocate(ap,bp,cp)
-  deallocate(dzc,dzf,zc,zf,dzci,dzfi)
-  deallocate(rhsbp%x,rhsbp%y,rhsbp%z)
-#if defined(_IMPDIFF)
-#if !defined(_IMPDIFF_1D)
-  deallocate(lambdaxyu,lambdaxyv,lambdaxyw)
-#endif
-  deallocate(au,bu,cu,av,bv,cv,aw,bw,cw,bb)
-  deallocate(rhsbu%x,rhsbu%y,rhsbu%z, &
-             rhsbv%x,rhsbv%y,rhsbv%z, &
-             rhsbw%x,rhsbw%y,rhsbw%z)
-#endif
   if(myid == 0.and.(.not.kill)) print*, '*** Fim ***'
   call decomp_2d_finalize
   call MPI_FINALIZE(ierr)
-  stop
 end program cans
