@@ -19,7 +19,6 @@ module mod_scal
     real(rp) :: dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(usip,usim,vsjp,vsjm,wskp,wskm) &
     !$OMP PRIVATE(dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm) &
     !$OMP SHARED(nx,ny,nz,dxi,dyi,dzi,visc,u,v,w,s,dsdt,dzci,dzfi)
@@ -45,6 +44,5 @@ module mod_scal
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
   end subroutine scal
 end module mod_scal

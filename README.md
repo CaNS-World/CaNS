@@ -17,6 +17,8 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 ## News
 
+[21/07/2022] `nthreadsmax` removed from the input file since it is not really needed when running with MPI-OpenMP.
+
 [11/07/2022] Mixed precision calculations with the Poisson equation solved in single precision are now possible with explicit diffusion, and with 1D implicit diffusion.
 
 [02/05/2022] **Major update** -- The building/compilation process of CaNS has changed to become simpler and more robust in different systems; see *Compilation* below.

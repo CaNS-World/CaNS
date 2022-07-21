@@ -18,10 +18,8 @@ module mod_post
     integer :: i,j,k
     dxi = dli(1)
     dyi = dli(2)
-    !$OMP PARALLEL DEFAULT(none) &
-    !$OMP SHARED(n,dxi,dyi,dzci,ux,uy,uz,vox,voy,voz) &
-    !$OMP PRIVATE(i,j,k)
-    !$OMP DO
+    !$OMP PARALLEL DO DEFAULT(none) &
+    !$OMP SHARED(n,dxi,dyi,dzci,ux,uy,uz,vox,voy,voz)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
@@ -55,7 +53,6 @@ module mod_post
         end do
       end do
     end do
-    !$OMP END PARALLEL
   end subroutine vorticity
   !
   subroutine strain_rate(n,dli,dzci,dzfi,ux,uy,uz,str)
@@ -73,10 +70,9 @@ module mod_post
     !
     ! compute sijsij, where sij = (1/2)(du_i/dx_j + du_j/dx_i)
     !
-    !$OMP PARALLEL DEFAULT(none) &
+    !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(n,dxi,dyi,dzci,dzfi,ux,uy,uz,str) &
-    !$OMP PRIVATE(i,j,k,s11,s12,s13,s22,s23,s33)
-    !$OMP DO
+    !$OMP PRIVATE(s11,s12,s13,s22,s23,s33)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
@@ -105,7 +101,6 @@ module mod_post
         end do
       end do
     end do
-    !$OMP END PARALLEL
   end subroutine strain_rate
   !
   subroutine rotation_rate(n,dli,dzci,ux,uy,uz,ens)
@@ -123,10 +118,9 @@ module mod_post
     !
     dxi = dli(1)
     dyi = dli(2)
-    !$OMP PARALLEL DEFAULT(none) &
+    !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(n,dxi,dyi,dzci,ux,uy,uz,ens) &
-    !$OMP PRIVATE(i,j,k,e12,e13,e23)
-    !$OMP DO
+    !$OMP PRIVATE(e12,e13,e23)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
@@ -152,7 +146,6 @@ module mod_post
         end do
       end do
     end do
-    !$OMP END PARALLEL
   end subroutine rotation_rate
   !
   subroutine q_criterion(n,ens,str,qcr)
@@ -161,10 +154,8 @@ module mod_post
     real(rp), intent(in ), dimension(1:,1:,1:) :: ens,str
     real(rp), intent(out), dimension(0:,0:,0:) :: qcr
     integer  :: i,j,k
-    !$OMP PARALLEL DEFAULT(none) &
-    !$OMP SHARED(n,ens,str,qcr) &
-    !$OMP PRIVATE(i,j,k)
-    !$OMP DO
+    !$OMP PARALLEL DO DEFAULT(none) &
+    !$OMP SHARED(n,ens,str,qcr)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
@@ -172,6 +163,5 @@ module mod_post
         end do
       end do
     end do
-    !$OMP END PARALLEL
   end subroutine q_criterion
 end module mod_post

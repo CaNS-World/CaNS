@@ -28,7 +28,6 @@ module mod_chkdt
     dzi = 1./dl(3)
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(n,u,v,w,dxi,dyi,dzi,dzci,dzfi) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(ux,uy,uz,vx,vy,vz,wx,wy,wz,dtix,dtiy,dtiz) &
     !$OMP REDUCTION(max:dti)
     do k=1,n(3)
@@ -50,7 +49,6 @@ module mod_chkdt
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
     call mpi_allreduce(MPI_IN_PLACE,dti,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
     if(dti == 0.) dti = 1.
     dlmin     = minval(dl(1:2))

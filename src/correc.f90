@@ -25,8 +25,7 @@ module mod_correc
     factorj = dt*dli(2)
     factork = dt*dzci!dli(3)
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP SHARED(n,factori,u,p) &
-    !$OMP PRIVATE(i,j,k)
+    !$OMP SHARED(n,factori,u,p)
     do k=0,n(3)+1
       do j=0,n(2)+1
         do i=0,n(1)
@@ -34,10 +33,8 @@ module mod_correc
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP SHARED(n,factorj,v,p) &
-    !$OMP PRIVATE(i,j,k)
+    !$OMP SHARED(n,factorj,v,p)
     do k=0,n(3)+1
       do j=0,n(2)
         do i=0,n(1)+1
@@ -45,10 +42,8 @@ module mod_correc
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP SHARED(n,factork,w,p) &
-    !$OMP PRIVATE(i,j,k)
+    !$OMP SHARED(n,factork,w,p)
     do k=0,n(3)
       do j=0,n(2)+1
         do i=0,n(1)+1
@@ -56,6 +51,5 @@ module mod_correc
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
   end subroutine correc
 end module mod_correc

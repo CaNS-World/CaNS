@@ -26,7 +26,6 @@ P P  P P  N N            ! cbcpre(0:1,1:3  ) [p BC type]
 T F F                    ! is_forced(1:3)
 1. 0. 0.                 ! velf(1:3)
 2 2                      ! dims(1:2)
-4                        ! nthreadsmax
 ~~~
 
 ---
@@ -189,11 +188,8 @@ These lines set the flow forcing.
 
 ~~~
 2 2                      ! dims(1:2)
-4                        ! nthreadsmax
 ~~~
 
-These lines set the grid of computational subdomains and maximum number of threads.
+This line set the grid of computational subdomains.
 
 `dims` is the **number of computational** subdomains in `x` and `y`.
-
-`nthreadsmax ` is the **maximum number OpenMP threads**.
