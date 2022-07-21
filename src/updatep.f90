@@ -22,7 +22,6 @@ module mod_updatep
       alphai = alpha**(-1)
       dxi = dli(1); dyi = dli(2)
       !$OMP PARALLEL DO DEFAULT(none) &
-      !$OMP PRIVATE(i,j,k) &
       !$OMP SHARED(n,p,pp,dxi,dyi,dzfi,dzci,alphai)
       do k=1,n(3)
         do j=1,n(2)
@@ -37,7 +36,6 @@ module mod_updatep
           end do
         end do
       end do
-      !$OMP END PARALLEL DO
 #else
       !$OMP WORKSHARE
       p(1:n(1),1:n(2),1:n(3)) = p(1:n(1),1:n(2),1:n(3)) + pp(1:n(1),1:n(2),1:n(3))

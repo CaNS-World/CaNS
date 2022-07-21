@@ -47,7 +47,6 @@ program cans
                              cfl,dtmin, &
                              inivel,    &
                              dims, &
-                             nthreadsmax, &
                              gr, &
                              is_forced,velf,bforce, &
                              n,n_z,ng,lo,hi,l,dl,dli, &
@@ -59,7 +58,7 @@ program cans
 #endif
   use mod_updatep    , only: updatep
   use mod_types
-  !$ use omp_lib
+  use omp_lib
   implicit none
   real(rp), allocatable, dimension(:,:,:) :: u,v,w,p,pp
   real(rp), allocatable, dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
@@ -114,7 +113,7 @@ program cans
   !
   ! initialize MPI/OpenMP
   !
-  !$call omp_set_num_threads(nthreadsmax)
+  !$ call omp_set_num_threads(omp_get_max_threads())
   call initmpi(ng,dims,cbcpre,n_z,lo,hi,n,nb,is_bound)
   twi = MPI_WTIME()
   savecounter = 0

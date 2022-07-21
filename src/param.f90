@@ -31,7 +31,6 @@ integer :: nsaves_max
 integer :: icheck,iout0d,iout1d,iout2d,iout3d,isave
 !
 integer, dimension(2) :: dims
-integer :: nthreadsmax
 !
 integer, dimension(0:1,3) :: nb
 logical, dimension(0:1,3) :: is_bound
@@ -81,7 +80,6 @@ contains
         read(iunit,*,iostat=ierr)  is_forced(1),is_forced(2),is_forced(3)
         read(iunit,*,iostat=ierr)  velf(1),velf(2),velf(3)
         read(iunit,*,iostat=ierr) dims(1),dims(2)
-        read(iunit,*,iostat=ierr) nthreadsmax
       else
         if(myid == 0) print*, 'Error reading the input file'
         if(myid == 0) print*, 'Aborting...'

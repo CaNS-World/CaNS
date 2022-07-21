@@ -95,7 +95,6 @@ module mod_rk
     call momy_a(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,u,v,w,dvdtrk)
     call momz_a(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,u,v,w,dwdtrk)
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
 #if defined(_IMPDIFF)
     !$OMP SHARED(factor12,dudtrkd,dvdtrkd,dwdtrkd) &
 #endif
@@ -117,7 +116,6 @@ module mod_rk
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
 !#if 0 /*pressure gradient term treated explicitly later */
 !    !$OMP WORKSHARE
 !    dudtrk(:,:,:) = 0._rp
@@ -128,7 +126,6 @@ module mod_rk
 !    call momy_p(n(1),n(2),n(3),dli(2),bforce(2),p,dvdtrk)
 !    call momz_p(n(1),n(2),n(3),dzci  ,bforce(3),p,dwdtrk)
 !    !$OMP PARALLEL DO DEFAULT(none) &
-!    !$OMP PRIVATE(i,j,k) &
 !    !$OMP SHARED(n,factor12,u,v,w,dudtrk,dvdtrk,dwdtrk)
 !    do k=1,n(3)
 !      do j=1,n(2)
@@ -139,11 +136,9 @@ module mod_rk
 !        end do
 !      end do
 !    end do
-!    !$OMP END PARALLEL DO
 !#endif
     ! pressure gradient term in the loop below
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP SHARED(n,factor12,dli,dzci,bforce,u,v,w,p)
     do k=1,n(3)
       do j=1,n(2)
@@ -154,7 +149,6 @@ module mod_rk
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
     !
     ! bulk velocity forcing
     !
@@ -176,7 +170,6 @@ module mod_rk
     ! compute rhs of helmholtz equation
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP SHARED(n,factor12,u,v,w,dudtrkd,dvdtrkd,dwdtrkd)
     do k=1,n(3)
       do j=1,n(2)
@@ -187,7 +180,6 @@ module mod_rk
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
 #endif
   end subroutine rk
   subroutine rk_scal(rkpar,n,dli,dzci,dzfi,visc,dt,u,v,w,dsdtrko,s)
@@ -213,7 +205,6 @@ module mod_rk
     factor12 = factor1 + factor2
     call scal(n(1),n(2),n(3),dli(1),dli(2),dli(3),dzci,dzfi,visc,u,v,w,s,dsdtrk)
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP SHARED(n,factor1,factor2,s,dsdtrk,dsdtrko)
     do k=1,n(3)
       do j=1,n(2)
@@ -223,6 +214,5 @@ module mod_rk
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
   end subroutine rk_scal
 end module mod_rk

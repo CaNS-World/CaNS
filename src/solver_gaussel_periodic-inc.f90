@@ -11,7 +11,7 @@
     !
     if(present(lambdaxy)) then
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP PRIVATE(i,j,bb,p1,p2) &
+      !$OMP PRIVATE(bb,p1,p2) &
       !$OMP SHARED(nx,ny,n,a,b,c,lambdaxy,p)
       !$OMP DO COLLAPSE(2)
       do j=1,ny
@@ -28,11 +28,10 @@
           p(i,j,1:n-1) = p1(1:n-1) + p2(1:n-1)*p(i,j,n)
         end do
       end do
-      !$OMP END DO
       !$OMP END PARALLEL
     else
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP PRIVATE(i,j,p1,p2) &
+      !$OMP PRIVATE(p1,p2) &
       !$OMP SHARED(nx,ny,n,a,b,c,p)
       !$OMP DO COLLAPSE(2)
       do j=1,ny
@@ -48,7 +47,6 @@
           p(i,j,1:n-1) = p1(1:n-1) + p2(1:n-1)*p(i,j,n)
         end do
       end do
-      !$OMP END DO
       !$OMP END PARALLEL
     endif
 !  end subroutine gaussel_periodic

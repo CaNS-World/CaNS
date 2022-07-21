@@ -21,4 +21,3 @@ P P  P P  P P            ! cbcpre(0:1,1:3  ) [p BC type]
 F F F                    ! is_forced(1:3)
 0. 0. 0.                 ! velf(1:3)
 2 2                      ! dims(1:2)
-4                        ! nthreadsmax

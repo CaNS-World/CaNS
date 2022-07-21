@@ -24,7 +24,6 @@ module mod_mom
     real(rp) :: uuip,uuim,uvjp,uvjm,uwkp,uwkm
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(uuip,uuim,uvjp,uvjm,uwkp,uwkm) &
     !$OMP SHARED(nx,ny,nz,dxi,dyi,u,v,w,dudt,dzci,dzfi)
     do k=1,nz
@@ -46,7 +45,6 @@ module mod_mom
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
   end subroutine momx_a
   !
   subroutine momy_a(nx,ny,nz,dxi,dyi,dzci,dzfi,u,v,w,dvdt)
@@ -60,7 +58,6 @@ module mod_mom
     real(rp) :: uvip,uvim,vvjp,vvjm,wvkp,wvkm
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(uvip,uvim,vvjp,vvjm,wvkp,wvkm) &
     !$OMP SHARED(nx,ny,nz,dxi,dyi,dzci,dzfi,u,v,w,dvdt)
     do k=1,nz
@@ -82,7 +79,6 @@ module mod_mom
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
   end subroutine momy_a
   !
   subroutine momz_a(nx,ny,nz,dxi,dyi,dzci,dzfi,u,v,w,dwdt)
@@ -96,7 +92,6 @@ module mod_mom
     real(rp) :: uwip,uwim,vwjp,vwjm,wwkp,wwkm
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(uwip,uwim,vwjp,vwjm,wwkp,wwkm) &
     !$OMP SHARED(nx,ny,nz,dxi,dyi,dzci,dzfi,u,v,w,dwdt)
     do k=1,nz
@@ -118,7 +113,6 @@ module mod_mom
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
   end subroutine momz_a
   !
   subroutine momx_d(nx,ny,nz,dxi,dyi,dzci,dzfi,visc,u,dudt)
@@ -132,7 +126,6 @@ module mod_mom
     integer :: i,j,k
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(dudxp,dudxm,dudyp,dudym,dudzp,dudzm) &
     !$OMP SHARED(nx,ny,nz,dxi,dyi,dzci,dzfi,u,dudt,visc)
     do k=1,nz
@@ -151,7 +144,6 @@ module mod_mom
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
   end subroutine momx_d
   !
   subroutine momy_d(nx,ny,nz,dxi,dyi,dzci,dzfi,visc,v,dvdt)
@@ -165,7 +157,6 @@ module mod_mom
     integer :: i,j,k
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(dvdxp,dvdxm,dvdyp,dvdym,dvdzp,dvdzm) &
     !$OMP SHARED(nx,ny,nz,dxi,dyi,dzci,dzfi,v,dvdt,visc)
     do k=1,nz
@@ -184,7 +175,6 @@ module mod_mom
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
   end subroutine momy_d
   !
   subroutine momz_d(nx,ny,nz,dxi,dyi,dzci,dzfi,visc,w,dwdt)
@@ -198,7 +188,6 @@ module mod_mom
     real(rp) :: dwdxp,dwdxm,dwdyp,dwdym,dwdzp,dwdzm
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(dwdxp,dwdxm,dwdyp,dwdym,dwdzp,dwdzm) &
     !$OMP SHARED(nx,ny,nz,dxi,dyi,dzci,dzfi,w,dwdt,visc)
     do k=1,nz
@@ -217,7 +206,6 @@ module mod_mom
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
   end subroutine momz_d
   !
   subroutine momx_p(nx,ny,nz,dxi,bforce,p,dudt)
@@ -230,7 +218,6 @@ module mod_mom
     integer :: i,j,k
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP SHARED(nx,ny,nz,dxi,bforce,p,dudt)
     do k=1,nz
       do j=1,ny
@@ -239,7 +226,6 @@ module mod_mom
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
   end subroutine momx_p
   !
   subroutine momy_p(nx,ny,nz,dyi,bforce,p,dvdt)
@@ -252,7 +238,6 @@ module mod_mom
     integer :: i,j,k
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP SHARED(nx,ny,nz,dyi,bforce,p,dvdt)
     do k=1,nz
       do j=1,ny
@@ -261,7 +246,6 @@ module mod_mom
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
   end subroutine momy_p
   !
   subroutine momz_p(nx,ny,nz,dzci,bforce,p,dwdt)
@@ -274,7 +258,6 @@ module mod_mom
     integer :: i,j,k
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP SHARED(nx,ny,nz,dzci,bforce,p,dwdt)
     do k=1,nz
       do j=1,ny
@@ -283,7 +266,6 @@ module mod_mom
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
   end subroutine momz_p
   !
 #if defined(_IMPDIFF_1D)
@@ -298,7 +280,6 @@ module mod_mom
     integer :: i,j,k
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(dudzp,dudzm) &
     !$OMP SHARED(nx,ny,nz,dzci,dzfi,u,dudt,visc)
     do k=1,nz
@@ -311,7 +292,6 @@ module mod_mom
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
   end subroutine momx_d_z
   !
   subroutine momy_d_z(nx,ny,nz,dzci,dzfi,visc,v,dvdt)
@@ -325,7 +305,6 @@ module mod_mom
     integer :: i,j,k
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(dvdzp,dvdzm) &
     !$OMP SHARED(nx,ny,nz,dzci,dzfi,v,dvdt,visc)
     do k=1,nz
@@ -338,7 +317,6 @@ module mod_mom
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
   end subroutine momy_d_z
   !
   subroutine momz_d_z(nx,ny,nz,dzci,dzfi,visc,w,dwdt)
@@ -352,7 +330,6 @@ module mod_mom
     real(rp) :: dwdzp,dwdzm
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(dwdzp,dwdzm) &
     !$OMP SHARED(nx,ny,nz,dzci,dzfi,w,dwdt,visc)
     do k=1,nz
@@ -365,7 +342,6 @@ module mod_mom
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
   end subroutine momz_d_z
   !
   subroutine momx_d_xy(nx,ny,nz,dxi,dyi,visc,u,dudt)
@@ -378,7 +354,6 @@ module mod_mom
     integer :: i,j,k
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(dudxp,dudxm,dudyp,dudym) &
     !$OMP SHARED(nx,ny,nz,dxi,dyi,u,dudt,visc)
     do k=1,nz
@@ -394,7 +369,6 @@ module mod_mom
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
   end subroutine momx_d_xy
   !
   subroutine momy_d_xy(nx,ny,nz,dxi,dyi,visc,v,dvdt)
@@ -407,7 +381,6 @@ module mod_mom
     integer :: i,j,k
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(dvdxp,dvdxm,dvdyp,dvdym) &
     !$OMP SHARED(nx,ny,nz,dxi,dyi,v,dvdt,visc)
     do k=1,nz
@@ -423,7 +396,6 @@ module mod_mom
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
   end subroutine momy_d_xy
   !
   subroutine momz_d_xy(nx,ny,nz,dxi,dyi,visc,w,dwdt)
@@ -436,7 +408,6 @@ module mod_mom
     real(rp) :: dwdxp,dwdxm,dwdyp,dwdym
     !
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP PRIVATE(i,j,k) &
     !$OMP PRIVATE(dwdxp,dwdxm,dwdyp,dwdym) &
     !$OMP SHARED(nx,ny,nz,dxi,dyi,w,dwdt,visc)
     do k=1,nz
@@ -452,7 +423,6 @@ module mod_mom
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
   end subroutine momz_d_xy
 #endif
   !

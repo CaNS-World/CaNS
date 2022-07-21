@@ -231,7 +231,6 @@ module mod_initflow
   meanold = 0.
   !$OMP PARALLEL DO DEFAULT(none) &
   !$OMP SHARED(n,p,grid_vol_ratio) &
-  !$OMP PRIVATE(i,j,k) &
   !$OMP REDUCTION(+:meanold)
   do k=1,n(3)
     do j=1,n(2)
@@ -240,7 +239,6 @@ module mod_initflow
       end do
     end do
   end do
-  !$OMP END PARALLEL DO
   call mpi_allreduce(MPI_IN_PLACE,meanold,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
   !
   if(meanold /= 0.) then

@@ -30,8 +30,7 @@ module mod_fillps
     !dtidzi = dti*dli(3)
     dtidzfi(:) = dti*dzfi(:)
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP SHARED(n,p,u,v,w,dtidzfi,dtidyi,dtidxi) &
-    !$OMP PRIVATE(i,j,k)
+    !$OMP SHARED(n,p,u,v,w,dtidzfi,dtidyi,dtidxi)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
@@ -42,7 +41,5 @@ module mod_fillps
         end do
       end do
     end do
-    !$OMP END PARALLEL DO
-    !
   end subroutine fillps
 end module mod_fillps
