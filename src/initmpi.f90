@@ -39,7 +39,7 @@ module mod_initmpi
     lo(:) = zstart(:)
     hi(:) = zend(:)
 #endif
-    n(:) = hi(:)-lo(:)+1
+    n(:)       = hi(:)-lo(:)+1
     n_x_fft(:) = xsize(:)
     n_y_fft(:) = ysize(:)
     lo_z(:)    = zstart(:)
