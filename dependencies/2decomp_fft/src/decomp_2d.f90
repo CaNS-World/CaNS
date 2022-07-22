@@ -37,6 +37,11 @@ module decomp_2d
   integer, save, public :: nrank  ! local MPI rank 
   integer, save, public :: nproc  ! total number of processors
 
+#define _SAVE_AUTOTUNE
+#if defined(_SAVE_AUTOTUNE)
+  integer, public :: dims_auto(2)
+#endif
+
   ! parameters for 2D Cartesian topology 
   integer, save, dimension(2) :: dims, coord
   logical, save, dimension(2) :: periodic
@@ -1190,6 +1195,7 @@ contains
           write(*,*) 'the best processor grid is probably ', &
                best_p_row, ' by ', best_p_col
        end if
+       dims_auto(:) = [best_p_row,best_p_col]
     else
        errorcode = 9
        call decomp_2d_abort(errorcode, &

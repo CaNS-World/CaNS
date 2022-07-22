@@ -21,6 +21,7 @@ module mod_initmpi
     periods(:) = .false.
     where(bc(0,:)//bc(1,:) == 'PP') periods(:) = .true.
     call decomp_2d_init(ng(1),ng(2),ng(3),dims(1),dims(2),periods)
+    if(any(dims(:) == 0)) dims(:) = dims_auto(:)
     myid = nrank
     n_z(:) = zsize(:)
 #if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
