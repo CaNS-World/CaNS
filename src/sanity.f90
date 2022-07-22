@@ -1,7 +1,6 @@
 module mod_sanity
   use iso_c_binding, only: C_PTR
   use mpi
-  use decomp_2d
   use mod_bound     , only: boundp,bounduvw,updt_rhs_b
   use mod_chkdiv    , only: chkdiv
   use mod_common_mpi, only: myid,ierr
@@ -19,7 +18,8 @@ module mod_sanity
   private
   public test_sanity
   contains
-  subroutine test_sanity(ng,dims,n,n_z,lo,hi,stop_type,cbcvel,cbcpre,bcvel,bcpre,is_forced, &
+  subroutine test_sanity(ng,dims,lo,hi,n_x_fft,n_y_fft,lo_z,hi_z, &
+                         stop_type,cbcvel,cbcpre,bcvel,bcpre,is_forced, &
                          nb,is_bound,dli,dzci_g,dzfi_g,dzci,dzfi)
     !
     ! performs some a priori checks of the input files before the calculation starts
@@ -27,7 +27,7 @@ module mod_sanity
     implicit none
     integer , intent(in), dimension(3) :: ng
     integer , intent(in), dimension(2) :: dims
-    integer , intent(in), dimension(3) :: n,n_z,lo,hi
+    integer , intent(in), dimension(3) :: lo,hi,n_x_fft,n_y_fft,lo_z,hi_z
     logical , intent(in), dimension(3) :: stop_type
     character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
     character(len=1), intent(in), dimension(0:1,3)   :: cbcpre
@@ -57,7 +57,8 @@ module mod_sanity
                                    and requires building with building with `_IMPDIFF_1D` and `_DECOMP_Z`.'; call abortit
 #endif
 #if defined(_DEBUG) && !defined(_SINGLE_PRECISION) && !defined(_SINGLE_PRECISION_POISSON)
-    call chk_solvers(ng,n,n_z,lo,hi,dli,dzci_g,dzfi_g,dzci,dzfi,nb,is_bound,cbcvel,cbcpre,bcvel,bcpre,passed)
+    call chk_solvers(ng,lo,hi,hi-lo+1,n_x_fft,n_y_fft,lo_z,hi_z,hi_z-lo_z+1,dli,dzci_g,dzfi_g,dzci,dzfi, &
+                     nb,is_bound,cbcvel,cbcpre,bcvel,bcpre,passed)
     if(.not.passed) call abortit
 #endif
   end subroutine test_sanity
@@ -202,9 +203,10 @@ module mod_sanity
   print*, 'ERROR: Flow cannot be forced in a non-periodic direction; check the BCs and is_forced in dns.in.'
   end subroutine chk_forcing
   !
-  subroutine chk_solvers(ng,n,n_z,lo,hi,dli,dzci_g,dzfi_g,dzci,dzfi,nb,is_bound,cbcvel,cbcpre,bcvel,bcpre,passed)
+  subroutine chk_solvers(ng,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,dli,dzci_g,dzfi_g,dzci,dzfi, &
+                         nb,is_bound,cbcvel,cbcpre,bcvel,bcpre,passed)
     implicit none
-    integer , intent(in), dimension(3) :: ng,n,n_z,lo,hi
+    integer , intent(in), dimension(3) :: ng,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z
     real(rp), intent(in), dimension(3) :: dli
     real(rp), intent(in), dimension(0:) :: dzci_g,dzfi_g,dzci,dzfi
     integer , intent(in), dimension(0:1,3) :: nb
@@ -240,8 +242,8 @@ module mod_sanity
     !
     ! test pressure correction
     !
-    call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:),lambdaxy,['c','c','c'],a,b,c,arrplan,normfft, &
-                    rhsbx,rhsby,rhsbz)
+    call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:), &
+                    lambdaxy,['c','c','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
     dl  = dli**(-1)
     dzc = dzci**(-1)
     dzf = dzfi**(-1)
@@ -268,8 +270,8 @@ module mod_sanity
     call add_noise(ng,lo,123,.5_rp,up(1:n(1),1:n(2),1:n(3)))
     call add_noise(ng,lo,456,.5_rp,vp(1:n(1),1:n(2),1:n(3)))
     call add_noise(ng,lo,789,.5_rp,wp(1:n(1),1:n(2),1:n(3)))
-    call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1),lambdaxy,['f','c','c'],a,b,c,arrplan,normfft, &
-                    rhsbx,rhsby,rhsbz)
+    call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1), &
+                    lambdaxy,['f','c','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
     call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
     up(:,:,:) = up(:,:,:)*alpha
     u( :,:,:) = up(:,:,:)
@@ -284,8 +286,8 @@ module mod_sanity
     print*, 'ERROR: wrong solution of Helmholtz equation in x direction.'
     passed = passed.and.passed_loc
     !
-    call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2),lambdaxy,['c','f','c'],a,b,c,arrplan,normfft, &
-                    rhsbx,rhsby,rhsbz)
+    call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2), &
+                    lambdaxy,['c','f','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
     call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
     vp(:,:,:) = vp(:,:,:)*alpha
     v( :,:,:) = vp(:,:,:)
@@ -300,8 +302,8 @@ module mod_sanity
     print*, 'ERROR: wrong solution of Helmholtz equation in y direction.'
     passed = passed.and.passed_loc
     !
-    call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3),lambdaxy,['c','c','f'],a,b,c,arrplan,normfft, &
-                    rhsbx,rhsby,rhsbz)
+    call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3), &
+                    lambdaxy,['c','c','f'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
     call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,up,vp,wp)
     wp(:,:,:) = wp(:,:,:)*alpha
     w( :,:,:) = wp(:,:,:)
@@ -323,7 +325,6 @@ module mod_sanity
     if(myid == 0) print*, ''
     if(myid == 0) print*, '*** Simulation aborted due to errors in the input file ***'
     if(myid == 0) print*, '    check dns.in'
-    call decomp_2d_finalize
     call MPI_FINALIZE(ierr)
     error stop
   end subroutine abortit

@@ -7,12 +7,12 @@ module mod_initmpi
   private
   public initmpi
   contains
-  subroutine initmpi(ng,dims,bc,n_z,lo,hi,n,nb,is_bound)
+  subroutine initmpi(ng,dims,bc,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,nb,is_bound)
     implicit none
     integer, intent(in   ), dimension(3) :: ng
     integer, intent(inout), dimension(2) :: dims
     character(len=1), intent(in), dimension(0:1,3) :: bc
-    integer, intent(out), dimension(3    ) :: n_z,lo,hi,n
+    integer, intent(out), dimension(3    ) :: lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z
     integer, intent(out), dimension(0:1,3) :: nb
     logical, intent(out), dimension(0:1,3) :: is_bound
     logical, dimension(3) :: periods
@@ -40,6 +40,11 @@ module mod_initmpi
     hi(:) = zend(:)
 #endif
     n(:) = hi(:)-lo(:)+1
+    n_x_fft(:) = xsize(:)
+    n_y_fft(:) = ysize(:)
+    lo_z(:)    = zstart(:)
+    hi_z(:)    = zend(:)
+    n_z(:)     = zsize(:)
     nb(:,ipencil) = MPI_PROC_NULL
     ipencil_t(:) = pack([1,2,3],[1,2,3] /= ipencil)
     call MPI_CART_SHIFT(comm_cart,0,1,nb(0,ipencil_t(1)),nb(1,ipencil_t(1)),ierr)

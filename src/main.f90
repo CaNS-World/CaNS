@@ -49,7 +49,7 @@ program cans
                              dims, &
                              gr, &
                              is_forced,velf,bforce, &
-                             n,n_z,ng,lo,hi,l,dl,dli, &
+                             ng,l,dl,dli, &
                              read_input
   use mod_sanity     , only: test_sanity
   use mod_solver     , only: solver
@@ -60,6 +60,7 @@ program cans
   use mod_types
   use omp_lib
   implicit none
+  integer , dimension(3) :: lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z
   real(rp), allocatable, dimension(:,:,:) :: u,v,w,p,pp
   real(rp), allocatable, dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
   real(rp), dimension(3) :: tauxo,tauyo,tauzo
@@ -114,7 +115,7 @@ program cans
   ! initialize MPI/OpenMP
   !
   !$ call omp_set_num_threads(omp_get_max_threads())
-  call initmpi(ng,dims,cbcpre,n_z,lo,hi,n,nb,is_bound)
+  call initmpi(ng,dims,cbcpre,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,nb,is_bound)
   twi = MPI_WTIME()
   savecounter = 0
   !
@@ -201,7 +202,8 @@ program cans
   !
   ! test input files before proceeding with the calculation
   !
-  call test_sanity(ng,dims,n,n_z,lo,hi,stop_type,cbcvel,cbcpre,bcvel,bcpre,is_forced, &
+  call test_sanity(ng,dims,lo,hi,n_x_fft,n_y_fft,lo_z,hi_z, &
+                   stop_type,cbcvel,cbcpre,bcvel,bcpre,is_forced, &
                    nb,is_bound,dli,dzci_g,dzfi_g,dzci,dzfi)
   !
   if(.not.restart) then
@@ -234,15 +236,15 @@ program cans
   !
   ! initialize Poisson solver
   !
-  call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:),lambdaxyp,['c','c','c'],ap,bp,cp,arrplanp,normfftp, &
-                  rhsbp%x,rhsbp%y,rhsbp%z)
+  call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:), &
+                  lambdaxyp,['c','c','c'],ap,bp,cp,arrplanp,normfftp,rhsbp%x,rhsbp%y,rhsbp%z)
 #if defined(_IMPDIFF)
-  call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1),lambdaxyu,['f','c','c'],au,bu,cu,arrplanu,normfftu, &
-                  rhsbu%x,rhsbu%y,rhsbu%z)
-  call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2),lambdaxyv,['c','f','c'],av,bv,cv,arrplanv,normfftv, &
-                  rhsbv%x,rhsbv%y,rhsbv%z)
-  call initsolver(ng,zstart,zend,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3),lambdaxyw,['c','c','f'],aw,bw,cw,arrplanw,normfftw, &
-                  rhsbw%x,rhsbw%y,rhsbw%z)
+  call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1), &
+                  lambdaxyu,['f','c','c'],au,bu,cu,arrplanu,normfftu,rhsbu%x,rhsbu%y,rhsbu%z)
+  call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2), &
+                  lambdaxyv,['c','f','c'],av,bv,cv,arrplanv,normfftv,rhsbv%x,rhsbv%y,rhsbv%z)
+  call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3), &
+                  lambdaxyw,['c','c','f'],aw,bw,cw,arrplanw,normfftw,rhsbw%x,rhsbw%y,rhsbw%z)
 #if defined(_IMPDIFF_1D)
   deallocate(lambdaxyu,lambdaxyv,lambdaxyw)
   call fftend(arrplanu)

@@ -1,6 +1,5 @@
 module mod_initflow
   use mpi
-  use decomp_2d
   use mod_common_mpi, only: ierr,myid
   use mod_param     , only: dims,pi,dx,dy,dz,lx,ly,lz,uref,lref,is_wallturb,bforce
   use mod_types
@@ -111,7 +110,6 @@ module mod_initflow
       if(myid == 0) print*, ''
       if(myid == 0) print*, '*** Simulation aborted due to errors in the case file ***'
       if(myid == 0) print*, '    check INFO_INPUT.md'
-      call decomp_2d_finalize
       call MPI_FINALIZE(ierr)
       error stop
     end select

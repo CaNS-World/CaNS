@@ -44,7 +44,6 @@ logical , dimension(3) :: is_forced
 real(rp), dimension(3) :: velf
 !
 integer , dimension(3) :: ng
-integer , dimension(3) :: n,n_z,lo,hi
 real(rp), dimension(3) :: l
 real(rp), dimension(3) :: dl
 real(rp), dimension(3) :: dli

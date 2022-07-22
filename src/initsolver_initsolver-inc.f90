@@ -1,10 +1,10 @@
-!  subroutine initsolver(ng,lo_z,hi_z,dli,dzci,dzfi,cbc,bc,lambdaxy,c_or_f,a,b,c,arrplan,normfft, &
+!  subroutine initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci,dzfi,cbc,bc,lambdaxy,c_or_f,a,b,c,arrplan,normfft, &
 !                        rhsbx,rhsby,rhsbz)
     !
     ! initializes the Poisson/Helmholtz solver
     !
     implicit none
-    integer , intent(in), dimension(3) :: ng,lo_z,hi_z
+    integer , intent(in), dimension(3) :: ng,n_x_fft,n_y_fft,lo_z,hi_z
     real(rp), intent(in), dimension(3 ) :: dli
     real(rp), intent(in), dimension(0:) :: dzci,dzfi
     character(len=1), intent(in), dimension(0:1,3) :: cbc
@@ -57,5 +57,5 @@
     !
     ! prepare ffts
     !
-    call fftini(xsize,ysize,cbc(:,1:2),c_or_f(1:2),arrplan,normfft)
+    call fftini(n_x_fft,n_y_fft,cbc(:,1:2),c_or_f(1:2),arrplan,normfft)
 !  end subroutine initsolver

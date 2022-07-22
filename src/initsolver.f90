@@ -1,6 +1,5 @@
 module mod_initsolver
   use iso_c_binding, only: C_PTR
-  use decomp_2d    , only: xsize,ysize
   use mod_fft      , only: fftini
   use mod_param    , only: pi
   use mod_types
@@ -19,13 +18,13 @@ module mod_initsolver
   contains
   !
 #define MYREAL real(sp)
-  subroutine initsolver_sp(ng,lo_z,hi_z,dli,dzci,dzfi,cbc,bc,lambdaxy,c_or_f,a,b,c,arrplan,normfft, &
+  subroutine initsolver_sp(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci,dzfi,cbc,bc,lambdaxy,c_or_f,a,b,c,arrplan,normfft, &
                            rhsbx,rhsby,rhsbz)
 #include "initsolver_initsolver-inc.f90"
   end subroutine initsolver_sp
 #undef MYREAL
 #define MYREAL real(dp)
-  subroutine initsolver_dp(ng,lo_z,hi_z,dli,dzci,dzfi,cbc,bc,lambdaxy,c_or_f,a,b,c,arrplan,normfft, &
+  subroutine initsolver_dp(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci,dzfi,cbc,bc,lambdaxy,c_or_f,a,b,c,arrplan,normfft, &
                            rhsbx,rhsby,rhsbz)
 #include "initsolver_initsolver-inc.f90"
   end subroutine initsolver_dp
