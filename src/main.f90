@@ -247,9 +247,9 @@ program cans
                   lambdaxyw,['c','c','f'],aw,bw,cw,arrplanw,normfftw,rhsbw%x,rhsbw%y,rhsbw%z)
 #if defined(_IMPDIFF_1D)
   deallocate(lambdaxyu,lambdaxyv,lambdaxyw)
-  call fftend(pack(arrplanu,.true.))
-  call fftend(pack(arrplanv,.true.))
-  call fftend(pack(arrplanw,.true.))
+  call fftend(arrplanu)
+  call fftend(arrplanv)
+  call fftend(arrplanw)
 #endif
 #endif
   !
@@ -433,11 +433,11 @@ program cans
   !
   ! clear ffts
   !
-  call fftend(pack(arrplanp,.true.))
+  call fftend(arrplanp)
 #if defined(_IMPDIFF) && !defined(_IMPDIFF_1D)
-  call fftend(pack(arrplanu,.true.))
-  call fftend(pack(arrplanv,.true.))
-  call fftend(pack(arrplanw,.true.))
+  call fftend(arrplanu)
+  call fftend(arrplanv)
+  call fftend(arrplanw)
 #endif
   if(myid == 0.and.(.not.kill)) print*, '*** Fim ***'
   call decomp_2d_finalize

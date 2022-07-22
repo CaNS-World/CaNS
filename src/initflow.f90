@@ -1,7 +1,7 @@
 module mod_initflow
   use mpi
   use mod_common_mpi, only: ierr,myid
-  use mod_param     , only: dims,pi,dx,dy,dz,lx,ly,lz,uref,lref,is_wallturb,bforce
+  use mod_param     , only: pi,dx,dy,dz,lx,ly,lz,uref,lref,is_wallturb,bforce
   use mod_types
   implicit none
   private
