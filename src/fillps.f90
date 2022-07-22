@@ -35,9 +35,10 @@ module mod_fillps
       do j=1,n(2)
         do i=1,n(1)
           p(i,j,k) = ( &
-                      (w(i,j,k)-w(i,j,k-1))*dtidzfi(k)+ &
-                      (v(i,j,k)-v(i,j-1,k))*dtidyi    + &
-                      (u(i,j,k)-u(i-1,j,k))*dtidxi    )
+                      (w(i,j,k)-w(i,j,k-1))*dtidzfi(k) + &
+                      (v(i,j,k)-v(i,j-1,k))*dtidyi     + &
+                      (u(i,j,k)-u(i-1,j,k))*dtidxi       &
+                     )
         end do
       end do
     end do
