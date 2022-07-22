@@ -94,19 +94,18 @@ module mod_fft
   !
   subroutine fftend(arrplan)
     implicit none
-    type(C_PTR), intent(in), dimension(2,2) :: arrplan
+    type(C_PTR), intent(in), dimension(:) :: arrplan
+    integer :: i
 #if defined(_SINGLE_PRECISION) || defined(_SINGLE_PRECISION_POISSON)
-    call sfftw_destroy_plan(arrplan(1,1))
-    call sfftw_destroy_plan(arrplan(1,2))
-    call sfftw_destroy_plan(arrplan(2,1))
-    call sfftw_destroy_plan(arrplan(2,2))
-    !$call sfftw_cleanup_threads(ierr)
+    do i=1,size(arrplan)
+      call sfftw_destroy_plan(arrplan(i))
+    end do
+    !$ call sfftw_cleanup_threads(ierr)
 #else
-    call dfftw_destroy_plan(arrplan(1,1))
-    call dfftw_destroy_plan(arrplan(1,2))
-    call dfftw_destroy_plan(arrplan(2,1))
-    call dfftw_destroy_plan(arrplan(2,2))
-    !$call dfftw_cleanup_threads(ierr)
+    do i=1,size(arrplan)
+      call dfftw_destroy_plan(arrplan(i))
+    end do
+    !$ call dfftw_cleanup_threads(ierr)
 #endif
   end subroutine fftend
   !
