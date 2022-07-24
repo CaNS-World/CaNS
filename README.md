@@ -17,6 +17,8 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 ## News
 
+[24/07/2022] Important fix in the boundary conditions subroutine which can provide incorrect periodic boundary conditions, tagged in release `v1.3.1`.
+
 [21/07/2022] `nthreadsmax` removed from the input file since it is not really needed when running with MPI-OpenMP.
 
 [11/07/2022] Mixed precision calculations with the Poisson equation solved in single precision are now possible with explicit diffusion, and with 1D implicit diffusion.
