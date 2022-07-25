@@ -20,6 +20,7 @@
 ! Pedro Costa (p.simoes.costa@gmail.com)
 !-------------------------------------------------------------------------------------
 program cans
+  use iso_fortran_env
   use iso_c_binding  , only: C_PTR
   use mpi
   use decomp_2d
@@ -165,6 +166,11 @@ program cans
            rhsbw%x(n(2),n(3),0:1), &
            rhsbw%y(n(1),n(3),0:1), &
            rhsbw%z(n(1),n(2),0:1))
+#endif
+#if defined(_DEBUG)
+  if(myid == 0) print*, 'This executable of CaNS was built with compiler: ', compiler_version()
+  if(myid == 0) print*, 'Using the options: ', compiler_options()
+  if(myid == 0) print*, ''
 #endif
   if(myid == 0) print*, '*******************************'
   if(myid == 0) print*, '*** Beginning of simulation ***'
