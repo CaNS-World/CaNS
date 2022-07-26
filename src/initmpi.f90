@@ -1,7 +1,7 @@
 module mod_initmpi
   use mpi
   use decomp_2d
-  use mod_common_mpi, only: comm_cart,myid,ierr,halo,ipencil
+  use mod_common_mpi, only: comm_cart,ierr,halo,ipencil
   use mod_types
   implicit none
   private
@@ -22,7 +22,6 @@ module mod_initmpi
     where(bc(0,:)//bc(1,:) == 'PP') periods(:) = .true.
     call decomp_2d_init(ng(1),ng(2),ng(3),dims(1),dims(2),periods)
     if(any(dims(:) == 0)) dims(:) = dims_auto(:)
-    myid = nrank
     n_z(:) = zsize(:)
 #if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
     ipencil=1
