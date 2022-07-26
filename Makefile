@@ -1,6 +1,8 @@
 #
 # adapted from: https://fortran-lang.org/learn/building_programs/project_make
 #
+SHELL=/usr/bin/bash
+
 # Disable the default rules
 MAKEFLAGS += --no-builtin-rules --no-builtin-variables
 
