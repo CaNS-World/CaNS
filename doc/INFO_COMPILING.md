@@ -35,7 +35,7 @@ In this file, `FCOMP` can be one of `GNU` (`gfortran`), `INTEL` (`ifort`), `NVID
  * `SINGLE_PRECISION`         : calculation will be carried out in single precision (the default precision is double)
  * `SINGLE_PRECISION_POISSON` : downcast/upcast correction pressure precision to solve Poisson equation in single precision; this option is compatible with explicit diffusion, or with `IMPDIFF=1 IMPDIFF_1D=1 DECOMP_Z=1`); note that `2DECOMP` needs to be built for single-precision transposes
 
-Typing `make library` will build the 2DECOMP&FFT library; then typing `make` will compile the code and copy the executable `cans` and input file `dns.in` to a `run/` folder.
+Typing `make library` will build the 2DECOMP&FFT library; then typing `make` will compile the code and copy the executable `cans` to a `run/` folder; `make run` will also copy the default input file `dns.in` under `src/` to the same `run/` folder.
 
 Finally, the choice of compiler `FCOMP` (see `src/configs/flags.mk`), and profile flags `FFLAGS_*` (see `src/configs/flags.mk`) can easily be overloaded, for instance, as: `make FC=ftn FFLAGS=-O2`.
 

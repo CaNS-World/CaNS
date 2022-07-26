@@ -62,7 +62,7 @@ LIB := $(patsubst %, lib%.a, $(NAME))
 TEST_EXE := $(patsubst %.f90, %.exe, $(TEST_SRCS))
 
 # Declare all public targets
-.PHONY: all clean library
+.PHONY: all clean allclean library libclean run
 #all: $(LIB) $(TEST_EXE) $(EXE)
 all: $(TEST_EXE) $(EXE)
 
@@ -76,8 +76,11 @@ $(TEST_EXE): %.exe: %.f90.o $(LIB)
 
 $(EXE): $(OBJS)
 	@mkdir -p $(EXE_DIR)/data
-	@cp $(SRC_DIR)/dns.in $(EXE_DIR)
 	$(FC) $(FFLAGS) $^ $(LIBS) $(INCS) -o $(EXE)
+
+run: $(EXE)
+	@cp $(SRC_DIR)/dns.in $(EXE_DIR)
+	@printf "\nDefault input file dns.in copied to run folder $(EXE_DIR)\n"
 
 # Create object files from Fortran source
 $(OBJS) $(TEST_OBJS): %.o: % | %.d
