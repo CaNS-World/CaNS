@@ -51,7 +51,7 @@ module mod_sanity
     if(myid == 0)  print*, 'WARNING: a run with implicit Z diffusion (`_IMPDIFF_1D`) is much more efficient &
                                      when combined with a Z-pencils parallelization (`_DECOMP_Z`).'
 #endif
-#if defined(_SINGLE_PRECISION_POISSON) && defined(IMPDIFF) && !(defined(IMPDIFF_1D) || defined(_DECOMP_Z))
+#if defined(_SINGLE_PRECISION_POISSON) && defined(_IMPDIFF) && !(defined(_IMPDIFF_1D) || defined(_DECOMP_Z))
     ! note: the code won't even compile as is now
     if(myid == 0)  print*, 'ERROR: a run with `_SINGLE_PRECISION_POISSON` can only accomodate implicit diffusion along Z,
                                    and requires building with building with `_IMPDIFF_1D` and `_DECOMP_Z`.'; call abortit
