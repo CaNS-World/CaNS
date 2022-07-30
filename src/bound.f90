@@ -1,6 +1,6 @@
 module mod_bound
   use mpi
-  use mod_common_mpi, only: ierr,comm_cart,halo
+  use mod_common_mpi, only: ierr,halo
   use mod_types
   implicit none
   private

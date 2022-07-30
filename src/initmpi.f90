@@ -1,7 +1,7 @@
 module mod_initmpi
   use mpi
   use decomp_2d
-  use mod_common_mpi, only: comm_cart,ierr,halo,ipencil
+  use mod_common_mpi, only: ierr,halo,ipencil
   use mod_types
   implicit none
   private
@@ -17,6 +17,7 @@ module mod_initmpi
     logical, intent(out), dimension(0:1,3) :: is_bound
     logical, dimension(3) :: periods
     integer :: l,ipencil_t(2)
+    integer :: comm_cart
     !
     periods(:) = .false.
     where(bc(0,:)//bc(1,:) == 'PP') periods(:) = .true.
