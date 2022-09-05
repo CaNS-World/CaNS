@@ -1,22 +1,33 @@
 #
 # adapted from: https://fortran-lang.org/learn/building_programs/project_make
 #
-SHELL=/usr/bin/bash
-
 # Disable the default rules
+.SUFFIXES:
 MAKEFLAGS += --no-builtin-rules --no-builtin-variables
+SHELL=/bin/bash
+
+#
+# in case one wants to keep track of the current version and compilation date
+# one can use the variables below and append
+# `-D_VERSION=\"$(CURRENT_REVISION)\" -D_DATE=\"$(NOW)\"
+#
+#GIT_VERSION := $(shell git describe --tags)
+#CURRENT_REVISION := $(shell git rev-parse --short HEAD)
+#NOW := $(shell date +"%FT%T%z")
 
 # Project name
 NAME := cans
 
 TARGET := $(NAME)
 
-PWD=$(shell pwd)
-ROOT_DIR := $(PWD)
-SRC_DIR := $(ROOT_DIR)/src
+#PWD=$(shell pwd)
+#ROOT_DIR := $(PWD)
+#ROOT_DIR := $(shell realpath .)
+ROOT_DIR := .
+SRCS_DIR := $(ROOT_DIR)/src
 APP_DIR := $(ROOT_DIR)/app
 EXE_DIR := $(ROOT_DIR)/run
-CONFIG_DIR := $(SRC_DIR)/configs
+CONFIG_DIR := $(ROOT_DIR)/configs
 LIBS_DIR := $(ROOT_DIR)/dependencies
 LIBS :=
 INCS :=
@@ -31,78 +42,66 @@ FFLAGS :=
 AR := ar rcs
 LD := $(FC)
 RM := rm -f
-GD := $(SRC_DIR)/.gen-deps.awk
+GD := $(SRCS_DIR)/.gen-deps.awk
+CPP := -cpp
 
 # edit build.conf file desired
 include $(ROOT_DIR)/build.conf
 include $(CONFIG_DIR)/compilers.mk
 include $(CONFIG_DIR)/flags.mk
-
-override LIBS += -L$(LIBS_DIR)/2decomp_fft/lib -l2decomp_fft -lfftw3
-ifeq ($(strip $(SINGLE_PRECISION)),1)
-override LIBS += -lfftw3f
-endif
-ifeq ($(strip $(SINGLE_PRECISION_POISSON)),1)
-override LIBS += -lfftw3f
-endif
-INCS += -I$(LIBS_DIR)/2decomp_fft/include
+include $(CONFIG_DIR)/libs.mk
 
 # List of all source files
-SRCS := $(filter-out $(wildcard $(SRC_DIR)/*-inc.f90), $(wildcard $(SRC_DIR)/*.f90) $(wildcard $(APP_DIR)/*.f90))
-TEST_SRCS := 
+SRCS_INC := $(wildcard $(SRCS_DIR)/*-inc.f90 $(SRCS_DIR)/*.h90)
+SRCS := $(filter-out $(SRCS_INC), $(wildcard $(SRCS_DIR)/*.f90) $(wildcard $(APP_DIR)/*.f90))
+
+# Add source directory to search paths
+vpath % .:$(SRCS_DIR)
+vpath % $(patsubst -I%,%,$(filter -I%,$(INCS)))
 
 # Define a map from each file name to its object file
 obj = $(src).o
-$(foreach src, $(SRCS) $(TEST_SRCS), $(eval $(src) := $(obj)))
+$(foreach src, $(SRCS), $(eval $(src) := $(obj)))
 
 # Create lists of the build artefacts in this project
 OBJS := $(addsuffix .o, $(SRCS))
-DEPS := $(addsuffix .d, $(SRCS))
-TEST_OBJS := $(addsuffix .o, $(TEST_SRCS))
-TEST_DEPS := $(addsuffix .d, $(TEST_SRCS))
 LIB := $(patsubst %, lib%.a, $(NAME))
-TEST_EXE := $(patsubst %.f90, %.exe, $(TEST_SRCS))
+DEPS := $(SRCS_DIR)/.depend.mk
 
 # Declare all public targets
-.PHONY: all clean allclean library libclean run
-#all: $(LIB) $(TEST_EXE) $(EXE)
-all: $(TEST_EXE) $(EXE)
-
-# Create the static library from the object files
-#$(LIB): #$(OBJS)
-#	$(AR) $@ $^
-
-# Link the test executables
-$(TEST_EXE): %.exe: %.f90.o $(LIB)
-	$(LD) -o $@ $^
+.PHONY: all clean allclean libs libsclean run
+all: $(EXE)
 
 $(EXE): $(OBJS)
 	@mkdir -p $(EXE_DIR)/data
 	$(FC) $(FFLAGS) $^ $(LIBS) $(INCS) -o $(EXE)
 
 run: $(EXE)
-	@cp $(SRC_DIR)/dns.in $(EXE_DIR)
-	@printf "\nDefault input file dns.in copied to run folder $(EXE_DIR)\n"
+	@cp $(SRCS_DIR)/dns.in $(EXE_DIR)
+	@cp $(SRCS_DIR)/cudecomp.in $(EXE_DIR)
+	@printf "\nDefault input files *.in copied to run folder $(EXE_DIR)\n"
 
 # Create object files from Fortran source
-$(OBJS) $(TEST_OBJS): %.o: % | %.d
-	$(FC) $(FFLAGS) -cpp $(DEFINES) $(INCS) $(FFLAGS_MOD_DIR) $(SRC_DIR) -c -o $@ $<
+$(OBJS): %.o: %
+	$(FC) $(FFLAGS) $(CPP) $(DEFINES) $(INCS) $(FFLAGS_MOD_DIR) $(SRCS_DIR) -c -o $@ $<
 
 # Process the Fortran source for module dependencies
-$(DEPS) $(TEST_DEPS): %.d: %
-	$(GD) $< > $@
+$(DEPS):
+	@echo '# This file contains the module dependencies' > $(DEPS)
+	@$(foreach file, $(SRCS), $(GD) $(file) >> $(DEPS))
 
 # Define all module interdependencies
-include $(DEPS) $(TEST_DEPS)
-$(foreach dep, $(OBJS) $(TEST_OBJS), $(eval $(dep): $($(dep))))
+-include $(DEPS)
+$(foreach dep, $(OBJS), $(eval $(dep): $($(dep))))
 
 # Cleanup, filter to avoid removing source code by accident
 clean:
-	$(RM) $(SRC_DIR)/*.{mod,d,o} $(EXE)
+	$(RM) $(SRCS_DIR)/*.{i,mod,smod,d,o} $(EXE) $(DEPS)
+
 allclean:
-	@make libclean
+	@make libsclean
 	@make clean
 #
-# rules for building the external libraries (hit 'make libraries'):
+# rules for building the external libraries (compile with 'make libs'):
 #
 include $(LIBS_DIR)/external.mk

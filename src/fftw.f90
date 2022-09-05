@@ -1,5 +1,13 @@
+! -
+!
+! SPDX-FileCopyrightText: Copyright (c) 2017-2022 Pedro Costa and the CaNS contributors. All rights reserved.
+! SPDX-License-Identifier: MIT
+!
+! -
 module mod_fftw_param
-  use iso_c_binding
+  use, intrinsic :: iso_c_binding
+  !@acc use cufft
+  implicit none
   !
   type, bind(C) :: fftw_iodim
      integer(C_INT) n, is, os
@@ -36,7 +44,7 @@ module mod_fftw_param
   integer FFTW_HC2R
   parameter (FFTW_HC2R=1)
   !
-  integer REDFT00
+  integer FFTW_REDFT00
   parameter (FFTW_REDFT00=3)
   integer FFTW_REDFT01
   parameter (FFTW_REDFT01=4)
@@ -56,4 +64,13 @@ module mod_fftw_param
   type(C_PTR) :: fwd_guruplan_y,bwd_guruplan_y
   type(C_PTR) :: fwd_guruplan_z,bwd_guruplan_z
   logical :: planned=.false.
+#if defined(_OPENACC)
+#if defined(_SINGLE_PRECISION) || defined(_SINGLE_PRECISION_POISSON)
+    integer, parameter :: CUFFT_FWD_TYPE = CUFFT_R2C
+    integer, parameter :: CUFFT_BWD_TYPE = CUFFT_C2R
+#else
+    integer, parameter :: CUFFT_FWD_TYPE = CUFFT_D2Z
+    integer, parameter :: CUFFT_BWD_TYPE = CUFFT_Z2D
+#endif
+#endif
 end module mod_fftw_param

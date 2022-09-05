@@ -1,7 +1,12 @@
+! -
+!
+! SPDX-FileCopyrightText: Copyright (c) 2017-2022 Pedro Costa and the CaNS contributors. All rights reserved.
+! SPDX-License-Identifier: MIT
+!
+! -
 module mod_initsolver
-  use iso_c_binding, only: C_PTR
-  use mod_fft      , only: fftini
-  use mod_param    , only: pi
+  use, intrinsic :: iso_c_binding, only: C_PTR
+  use mod_fft  , only: fftini
   use mod_types
   implicit none
   private
@@ -17,40 +22,34 @@ module mod_initsolver
   end interface
   contains
   !
-#define MYREAL real(sp)
   subroutine initsolver_sp(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci,dzfi,cbc,bc,lambdaxy,c_or_f,a,b,c,arrplan,normfft, &
                            rhsbx,rhsby,rhsbz)
+    use mod_types, only: wp => sp
 #include "initsolver_initsolver-inc.f90"
   end subroutine initsolver_sp
-#undef MYREAL
-#define MYREAL real(dp)
   subroutine initsolver_dp(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci,dzfi,cbc,bc,lambdaxy,c_or_f,a,b,c,arrplan,normfft, &
                            rhsbx,rhsby,rhsbz)
+    use mod_types, only: wp => dp
 #include "initsolver_initsolver-inc.f90"
   end subroutine initsolver_dp
-#undef MYREAL
   !
-#define MYREAL real(sp)
   subroutine eigenvalues_sp(n,bc,c_or_f,lambda)
+    use mod_types, only: wp => sp
 #include "initsolver_eigenvalues-inc.f90"
   end subroutine eigenvalues_sp
-#undef MYREAL
-#define MYREAL real(dp)
   subroutine eigenvalues_dp(n,bc,c_or_f,lambda)
+    use mod_types, only: wp => dp
 #include "initsolver_eigenvalues-inc.f90"
   end subroutine eigenvalues_dp
-#undef MYREAL
   !
-#define MYREAL real(sp)
   subroutine tridmatrix_sp(bc,n,dzi,dzci,dzfi,c_or_f,a,b,c)
+    use mod_types, only: wp => sp
 #include "initsolver_tridmatrix-inc.f90"
   end subroutine tridmatrix_sp
-#undef MYREAL
-#define MYREAL real(dp)
   subroutine tridmatrix_dp(bc,n,dzi,dzci,dzfi,c_or_f,a,b,c)
+    use mod_types, only: wp => dp
 #include "initsolver_tridmatrix-inc.f90"
   end subroutine tridmatrix_dp
-#undef MYREAL
   !
   subroutine bc_rhs(cbc,bc,dlc,dlf,c_or_f,rhs)
     implicit none

@@ -1,3 +1,9 @@
+! -
+!
+! SPDX-FileCopyrightText: Copyright (c) 2017-2022 Pedro Costa and the CaNS contributors. All rights reserved.
+! SPDX-License-Identifier: MIT
+!
+! -
 program gen_grid
 !
 ! this program generates a the grid files to be read by the xdmf file

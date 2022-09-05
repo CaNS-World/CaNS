@@ -1,3 +1,9 @@
+! -
+!
+! SPDX-FileCopyrightText: Copyright (c) 2017-2022 Pedro Costa and the CaNS contributors. All rights reserved.
+! SPDX-License-Identifier: MIT
+!
+! -
 module mod_chkdiv
   use mpi
   use mod_common_mpi, only: ierr
@@ -24,6 +30,8 @@ module mod_chkdiv
     !dzi = dli(3)
     divtot = 0.
     divmax = 0.
+    !$acc data copy(divtot,divmax) async(1)
+    !$acc parallel loop collapse(3) default(present) private(div) reduction(+:divtot) reduction(max:divmax) async(1)
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(lo,hi,u,v,w,dxi,dyi,dzfi) &
     !$OMP PRIVATE(div) &
@@ -41,7 +49,9 @@ module mod_chkdiv
         end do
       end do
     end do
-    call mpi_allreduce(MPI_IN_PLACE,divtot,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-    call mpi_allreduce(MPI_IN_PLACE,divmax,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
+    !$acc end data
+    !$acc wait(1)
+    call MPI_ALLREDUCE(MPI_IN_PLACE,divtot,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+    call MPI_ALLREDUCE(MPI_IN_PLACE,divmax,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
   end subroutine chkdiv
 end module mod_chkdiv

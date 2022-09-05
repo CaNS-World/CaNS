@@ -25,7 +25,7 @@ $2 ~ /^[a-zA-Z][a-zA-Z0-9_]*$/ {
 # Match a use statement
 # - the first argument ($1) should be the whole word use
 # - the second argument ($2) should be a valid module name
-$1 ~ /^use$/ &&
+$1 ~ /^(!@[a-zA-Z0-9_]+[\s]+)?use$/ &&
 $2 ~ /^[a-zA-Z][a-zA-Z0-9_]*,?$/ {
     # Remove a trailing comma from an optional only statement
     gsub(/,/, "", $2)
@@ -47,7 +47,7 @@ $2 ~ /^["'].+["']$/ {
     # count included files per file to avoid having duplicates in our list
     if (incc[FILENAME,$2]++ == 0) {
         # Add the included file to our list, this might be case-sensitive
-        inc[++ii] = sprintf("$(%s) += $(%s)", FILENAME, $2)
+        inc[++ii] = sprintf("$(%s) += %s", FILENAME, $2)
     }
 }
 

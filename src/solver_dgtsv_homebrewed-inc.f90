@@ -1,10 +1,16 @@
+! -
+!
+! SPDX-FileCopyrightText: Copyright (c) 2017-2022 Pedro Costa and the CaNS contributors. All rights reserved.
+! SPDX-License-Identifier: MIT
+!
+! -
 !  subroutine dgtsv_homebrewed(n,a,b,c,p)
     implicit none
     integer , intent(in) :: n
-    MYREAL, intent(in   ), dimension(:) :: a,b,c
-    MYREAL, intent(inout), dimension(:) :: p
-    MYREAL, dimension(n) :: d
-    MYREAL :: z
+    real(wp), intent(in   ), dimension(:) :: a,b,c
+    real(wp), intent(inout), dimension(:) :: p
+    real(wp), dimension(n) :: d
+    real(wp) :: z
     integer :: l
     !
     ! Gauss elimination

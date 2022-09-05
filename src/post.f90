@@ -1,3 +1,9 @@
+! -
+!
+! SPDX-FileCopyrightText: Copyright (c) 2017-2022 Pedro Costa and the CaNS contributors. All rights reserved.
+! SPDX-License-Identifier: MIT
+!
+! -
 module mod_post
   use mod_types
   implicit none
@@ -18,6 +24,7 @@ module mod_post
     integer :: i,j,k
     dxi = dli(1)
     dyi = dli(2)
+    !$acc parallel loop collapse(3) default(present)
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(n,dxi,dyi,dzci,ux,uy,uz,vox,voy,voz)
     do k=1,n(3)
@@ -70,6 +77,7 @@ module mod_post
     !
     ! compute sijsij, where sij = (1/2)(du_i/dx_j + du_j/dx_i)
     !
+    !$acc parallel loop collapse(3) default(present) private(s11,s12,s13,s22,s23,s33)
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(n,dxi,dyi,dzci,dzfi,ux,uy,uz,str) &
     !$OMP PRIVATE(s11,s12,s13,s22,s23,s33)
@@ -118,6 +126,7 @@ module mod_post
     !
     dxi = dli(1)
     dyi = dli(2)
+    !$acc parallel loop collapse(3) default(present) private(e12,e13,e23)
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(n,dxi,dyi,dzci,ux,uy,uz,ens) &
     !$OMP PRIVATE(e12,e13,e23)
@@ -154,6 +163,8 @@ module mod_post
     real(rp), intent(in ), dimension(1:,1:,1:) :: ens,str
     real(rp), intent(out), dimension(0:,0:,0:) :: qcr
     integer  :: i,j,k
+    !
+    !$acc parallel loop collapse(3) default(present)
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(n,ens,str,qcr)
     do k=1,n(3)

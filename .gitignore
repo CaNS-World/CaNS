@@ -1,7 +1,10 @@
 *.o
 *.d
+src/.depend.mk
 *.a
 *.mod
+*.smod
+*.i
 *.out
 *.bin
 *.MOD

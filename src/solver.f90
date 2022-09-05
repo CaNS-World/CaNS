@@ -1,9 +1,14 @@
+! -
+!
+! SPDX-FileCopyrightText: Copyright (c) 2017-2022 Pedro Costa and the CaNS contributors. All rights reserved.
+! SPDX-License-Identifier: MIT
+!
+! -
 module mod_solver
-  use iso_c_binding, only: C_PTR
+  use, intrinsic :: iso_c_binding, only: C_PTR
   use decomp_2d
   use mod_fft   , only: fft
   use mod_types
-  use mod_param , only: eps => small
   implicit none
   private
   public solver
@@ -20,14 +25,14 @@ module mod_solver
     module procedure dgtsv_homebrewed_sp,dgtsv_homebrewed_dp
   end interface
   contains
-  subroutine solver(n,arrplan,normfft,lambdaxy,a,b,c,bcz,c_or_f,p)
+  subroutine solver(n,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p)
     implicit none
-    integer , intent(in), dimension(3) :: n
+    integer , intent(in), dimension(3) :: n,ng ! ng is here just for compatibility with the argument list of solver_gpu
     type(C_PTR), intent(in), dimension(2,2) :: arrplan
     real(rp), intent(in) :: normfft
     real(gp), intent(in), dimension(:,:) :: lambdaxy
     real(gp), intent(in), dimension(:) :: a,b,c
-    character(len=1), dimension(0:1), intent(in) :: bcz
+    character(len=1), dimension(0:1,3), intent(in) :: bc
     character(len=1), intent(in), dimension(3) :: c_or_f
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
     real(gp), dimension(xsize(1),xsize(2),xsize(3)) :: px
@@ -61,8 +66,8 @@ module mod_solver
     !
     call transpose_y_to_z(py,pz)
     q = 0
-    if(c_or_f(3) == 'f'.and.bcz(1) == 'D') q = 1
-    if(bcz(0)//bcz(1) == 'PP') then
+    if(c_or_f(3) == 'f'.and.bc(1,3) == 'D') q = 1
+    if(bc(0,3)//bc(1,3) == 'PP') then
       call gaussel_periodic(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,pz,lambdaxy)
     else
       call gaussel(         n_z(1),n_z(2),n_z(3)-q,0,a,b,c,pz,lambdaxy)
@@ -93,41 +98,42 @@ module mod_solver
 #endif
   end subroutine solver
   !
-#define MYREAL real(sp)
   subroutine gaussel_sp(nx,ny,n,nh,a,b,c,p,lambdaxy)
+    use mod_types, only: wp => sp
+    use mod_param, only: eps => eps_sp
 #include "solver_gaussel-inc.f90"
   end subroutine gaussel_sp
-#undef MYREAL
-#define MYREAL real(dp)
   subroutine gaussel_dp(nx,ny,n,nh,a,b,c,p,lambdaxy)
+    use mod_types, only: wp => dp
+    use mod_param, only: eps => eps_dp
 #include "solver_gaussel-inc.f90"
   end subroutine gaussel_dp
-#undef MYREAL
   !
-#define MYREAL real(sp)
   subroutine gaussel_periodic_sp(nx,ny,n,nh,a,b,c,p,lambdaxy)
+    use mod_types, only: wp => sp
+    use mod_param, only: eps => eps_sp
 #include "solver_gaussel_periodic-inc.f90"
   end subroutine gaussel_periodic_sp
-#undef MYREAL
-#define MYREAL real(dp)
   subroutine gaussel_periodic_dp(nx,ny,n,nh,a,b,c,p,lambdaxy)
+    use mod_types, only: wp => dp
+    use mod_param, only: eps => eps_dp
 #include "solver_gaussel_periodic-inc.f90"
   end subroutine gaussel_periodic_dp
-#undef MYREAL
   !
-#define MYREAL real(sp)
   subroutine dgtsv_homebrewed_sp(n,a,b,c,p)
+    use mod_types, only: wp => sp
+    use mod_param, only: eps => eps_sp
 #include "solver_dgtsv_homebrewed-inc.f90"
   end subroutine dgtsv_homebrewed_sp
-#undef MYREAL
-#define MYREAL real(dp)
   subroutine dgtsv_homebrewed_dp(n,a,b,c,p)
+    use mod_types, only: wp => dp
+    use mod_param, only: eps => eps_dp
 #include "solver_dgtsv_homebrewed-inc.f90"
   end subroutine dgtsv_homebrewed_dp
-#undef MYREAL
   !
 #if defined(_IMPDIFF_1D)
   subroutine solver_gaussel_z(n,a,b,c,bcz,c_or_f,p)
+    use mod_param, only: eps => eps_rp
     implicit none
     integer , intent(in), dimension(3) :: n
     real(rp), intent(in), dimension(:) :: a,b,c

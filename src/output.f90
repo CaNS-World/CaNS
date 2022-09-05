@@ -1,3 +1,9 @@
+! -
+!
+! SPDX-FileCopyrightText: Copyright (c) 2017-2022 Pedro Costa and the CaNS contributors. All rights reserved.
+! SPDX-License-Identifier: MIT
+!
+! -
 module mod_output
   use mpi
   use decomp_2d_io
@@ -5,7 +11,7 @@ module mod_output
   use mod_types
   implicit none
   private
-  public out0d,out1d,out1d_2,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
+  public out0d,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
   contains
   subroutine out0d(fname,n,var)
     !
@@ -20,13 +26,10 @@ module mod_output
     integer , intent(in) :: n
     real(rp), intent(in), dimension(:) :: var
     integer :: iunit
-    character(len=30) :: cfmt
-    integer :: i
     !
-    write(cfmt,'(A,I3,A)') '(',n,'E16.7e3)'
     if (myid  ==  0) then
       open(newunit=iunit,file=fname,position='append')
-      write(iunit,trim(cfmt)) (var(i),i=1,n)
+      write(iunit,'(*(E16.7e3))') var(1:n)
       close(iunit)
     end if
   end subroutine out0d
@@ -55,22 +58,29 @@ module mod_output
     real(rp), allocatable, dimension(:) :: p1d
     integer :: i,j,k
     integer :: iunit
-    real(rp) :: grid_area_ratio
+    real(rp) :: grid_area_ratio,p1d_s
     !
     allocate(p1d(ng(idir)))
-    p1d(:) = 0.
+    !$acc enter data create(p1d)
+    !$acc kernels default(present)
+    p1d(:) = 0._rp
+    !$acc end kernels
     select case(idir)
     case(3)
       grid_area_ratio = dl(1)*dl(2)/(l(1)*l(2))
+      !$acc parallel loop gang default(present) private(p1d_s)
       do k=lo(3),hi(3)
+        p1d_s = 0._rp
+        !$acc loop collapse(2) reduction(+:p1d_s)
         do j=lo(2),hi(2)
           do i=lo(1),hi(1)
-            p1d(k) = p1d(k) + p(i,j,k)
+            p1d_s = p1d_s + p(i,j,k)*grid_area_ratio
           end do
         end do
+        p1d(k) = p1d_s
       end do
-      call mpi_allreduce(MPI_IN_PLACE,p1d(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      p1d(:) = p1d(:)*grid_area_ratio
+      !$acc exit data copyout(p1d)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,p1d(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       if(myid == 0) then
         open(newunit=iunit,file=fname)
         do k=1,ng(3)
@@ -79,16 +89,20 @@ module mod_output
         close(iunit)
       end if
     case(2)
-      grid_area_ratio = dl(1)/l(1)
+      grid_area_ratio = dl(1)/(l(1)*l(3))
+      !$acc parallel loop gang default(present) private(p1d_s)
       do j=lo(2),hi(2)
+        p1d_s = 0._rp
+        !$acc loop collapse(2) reduction(+:p1d_s)
         do k=lo(3),hi(3)
           do i=lo(1),hi(1)
-            p1d(j) = p1d(j) + p(i,j,k)*dz(k)/l(3)
+            p1d_s = p1d_s + p(i,j,k)*dz(k)*grid_area_ratio
           end do
         end do
+        p1d(j) = p1d_s
       end do
-      call mpi_allreduce(MPI_IN_PLACE,p1d(1),ng(2),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      p1d(:) = p1d(:)*grid_area_ratio
+      !$acc exit data copyout(p1d)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,p1d(1),ng(2),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       if(myid == 0) then
         open(newunit=iunit,file=fname)
         do j=1,ng(2)
@@ -97,17 +111,20 @@ module mod_output
         close(iunit)
       end if
     case(1)
-      grid_area_ratio = dl(2)/l(2)
+      grid_area_ratio = dl(2)/(l(2)*l(3))
+      !$acc parallel loop gang default(present) private(p1d_s)
       do i=lo(1),hi(1)
-        p1d(i) = 0.
+        p1d_s = 0._rp
+        !$acc loop collapse(2) reduction(+:p1d_s)
         do k=lo(3),hi(3)
           do j=lo(2),hi(2)
-            p1d(i) = p1d(i) + p(i,j,k)*dz(k)/l(3)
+            p1d_s = p1d_s + p(i,j,k)*dz(k)*grid_area_ratio
           end do
         end do
+        p1d(i) = p1d_s
       end do
-      call mpi_allreduce(MPI_IN_PLACE,p1d(1),ng(1),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      p1d(:) = p1d(:)*grid_area_ratio
+      !$acc exit data copyout(p1d)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,p1d(1),ng(1),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       if(myid == 0) then
         open(newunit=iunit,file=fname)
         do i=1,ng(1)
@@ -116,11 +133,10 @@ module mod_output
         close(iunit)
       end if
     end select
-    deallocate(p1d)
   end subroutine out1d
   !
   subroutine out2d(fname,inorm,islice,p)
-    use mod_common_mpi, only: ipencil
+    use mod_common_mpi, only: ipencil => ipencil_axis
     !
     ! saves a planar slice of a scalar field into a binary file
     !
@@ -151,7 +167,7 @@ module mod_output
   end subroutine out2d
   !
   subroutine out3d(fname,nskip,p)
-    use mod_common_mpi, only: ipencil
+    use mod_common_mpi, only: ipencil => ipencil_axis
     !
     ! saves a 3D scalar field into a binary file
     !
@@ -170,15 +186,39 @@ module mod_output
     !
     ! masked in case of _SINGLE_PRECISION_POISSON since 2DECOMP does not yet support two precisions
     !
-#if !defined(_SINGLE_PRECISION_POISSON)
     call MPI_FILE_OPEN(MPI_COMM_WORLD, fname, &
          MPI_MODE_CREATE+MPI_MODE_WRONLY, MPI_INFO_NULL,fh, ierr)
     filesize = 0_MPI_OFFSET_KIND
     call MPI_FILE_SET_SIZE(fh,filesize,ierr)
     disp = 0_MPI_OFFSET_KIND
+#if !defined(_SINGLE_PRECISION_POISSON)
     call decomp_2d_write_every(ipencil,p,nskip(1),nskip(2),nskip(3),fname,.true.)
-    call MPI_FILE_CLOSE(fh,ierr)
+#else
+    !
+    ! temporary workaround due to 2DECOMP's lack of support for different real kinds in a single build
+    !
+    block
+      use decomp_2d
+      use mod_load, only: io_field
+      integer, dimension(3) :: ng,lo,hi
+      ng(:) = [nx_global,ny_global,nz_global]
+      select case(ipencil)
+      case(1)
+        lo(:) = xstart(:)
+        hi(:) = xend(:)
+      case(2)
+        lo(:) = ystart(:)
+        hi(:) = yend(:)
+      case(3)
+        lo(:) = zstart(:)
+        hi(:) = zend(:)
+      end select
+      if(any(nskip /= 1) .and. myid == 0) &
+        print*, 'Warning: `nskip` should be `[1,1,1]` if `io_field()` is used to output 3D field data'
+      call io_field('w',fh,ng,[0,0,0],lo,hi,disp,p)
+    end block
 #endif
+    call MPI_FILE_CLOSE(fh,ierr)
   end subroutine out3d
   !
   subroutine write_log_output(fname,fname_fld,varname,nmin,nmax,nskip,time,istep)
@@ -254,7 +294,7 @@ module mod_output
     call write_log_output(trim(datadir)//trim(fname_log),trim(fname_bin),trim(varname),nmin_2d,nmax_2d,[1,1,1],time,istep)
   end subroutine write_visu_2d
   !
-  subroutine out1d_2(fname,ng,lo,hi,idir,l,dl,z_g,u,v,w) ! e.g. for a channel with streamwise dir in x
+  subroutine out1d_chan(fname,ng,lo,hi,idir,l,dl,z_g,u,v,w) ! e.g. for a channel with streamwise dir in x
     implicit none
     character(len=*), intent(in) :: fname
     integer , intent(in), dimension(3) :: ng,lo,hi
@@ -294,13 +334,13 @@ module mod_output
           end do
         end do
       end do
-      call mpi_allreduce(MPI_IN_PLACE,um(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,vm(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,wm(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,u2(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,v2(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,w2(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,uw(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,um(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,vm(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,wm(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,u2(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,v2(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,w2(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,uw(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       um(:) = um(:)*grid_area_ratio
       vm(:) = vm(:)*grid_area_ratio
       wm(:) = wm(:)*grid_area_ratio
@@ -317,13 +357,12 @@ module mod_output
         end do
         close(iunit)
       end if
-      deallocate(um,vm,wm,u2,v2,w2,uw)
     case(2)
     case(1)
     end select
-  end subroutine out1d_2
+  end subroutine out1d_chan
   !
-  subroutine out2d_2(fname,ng,lo,hi,idir,l,dl,z_g,u,v,w) ! e.g. for a duct
+  subroutine out2d_duct(fname,ng,lo,hi,idir,l,dl,z_g,u,v,w) ! e.g. for a duct
     !
     implicit none
     character(len=*), intent(in) :: fname
@@ -370,14 +409,14 @@ module mod_output
           end do
         end do
       end do
-      call mpi_allreduce(MPI_IN_PLACE,um(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,vm(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,wm(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,u2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,v2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,w2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,vw(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,uv(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,um(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,vm(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,wm(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,u2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,v2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,w2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,vw(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,uv(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       um(:,:) =      um(:,:)*grid_area_ratio
       vm(:,:) =      vm(:,:)*grid_area_ratio
       wm(:,:) =      wm(:,:)*grid_area_ratio
@@ -398,7 +437,6 @@ module mod_output
         end do
         close(iunit)
       end if
-      deallocate(um,vm,wm,u2,v2,w2,vw,uv)
     case(1)
       grid_area_ratio = dl(1)/l(1)
       p = ng(2)
@@ -425,18 +463,18 @@ module mod_output
             uv(j,k) = uv(j,k) + 0.25*(u(i-1,j,k) + u(i,j,k))* &
                                      (v(i,j-1,k) + v(i,j,k))
             uw(j,k) = uw(j,k) + 0.25*(u(i-1,j,k) + u(i,j,k))* &
-                                         (w(i,j,k-1) + w(i,j,k))
+                                     (w(i,j,k-1) + w(i,j,k))
           end do
         end do
       end do
-      call mpi_allreduce(MPI_IN_PLACE,um(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,vm(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,wm(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,u2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,v2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,w2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,uv(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call mpi_allreduce(MPI_IN_PLACE,uw(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,um(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,vm(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,wm(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,u2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,v2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,w2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,uv(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,uw(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       um(:,:) =      um(:,:)*grid_area_ratio
       vm(:,:) =      vm(:,:)*grid_area_ratio
       wm(:,:) =      wm(:,:)*grid_area_ratio
@@ -457,7 +495,6 @@ module mod_output
         end do
         close(iunit)
       end if
-      deallocate(um,vm,wm,u2,v2,w2,vw,uv)
     end select
-  end subroutine out2d_2
+  end subroutine out2d_duct
 end module mod_output

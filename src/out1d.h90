@@ -1,3 +1,10 @@
+! -
+!
+! SPDX-FileCopyrightText: Copyright (c) 2017-2022 Pedro Costa and the CaNS contributors. All rights reserved.
+! SPDX-License-Identifier: MIT
+!
+! -
+  !
   !  out1d(fname,n,idir,z,dzlzi,p)
   !
   ! writes the profile of a variable averaged
@@ -23,4 +30,4 @@
   !call out1d(trim(datadir)//'umean_x_fld_'   //fldnum//'.out',ng,lo,hi,1,l,dl,zc_g,dzf,u)
   !call out1d(trim(datadir)//'vmean_x_fld_'   //fldnum//'.out',ng,lo,hi,1,l,dl,zc_g,dzf,v)
   !call out1d(trim(datadir)//'wmean_x_fld_'   //fldnum//'.out',ng,lo,hi,1,l,dl,zc_g,dzf,w)
-  !call out1d_2(trim(datadir)//'velstats_fld_'//fldnum//'.out',ng,lo,hi,3,l,dl,zc_g,u,v,w)
+  !call out1d_chan(trim(datadir)//'velstats_fld_'//fldnum//'.out',ng,lo,hi,3,l,dl,zc_g,u,v,w)
