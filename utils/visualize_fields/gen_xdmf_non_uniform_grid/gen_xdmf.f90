@@ -1,3 +1,9 @@
+! -
+!
+! SPDX-FileCopyrightText: Copyright (c) 2017-2022 Pedro Costa and the CaNS contributors. All rights reserved.
+! SPDX-License-Identifier: MIT
+!
+! -
 program gen_xdmf
 !
 ! this program generates a XDMF file for visualizing a time series 3D fields.

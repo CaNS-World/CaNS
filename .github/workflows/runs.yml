@@ -3,12 +3,14 @@ name: test against benchmark data
 on: [push, pull_request]
 
 jobs:
-  build:
+  build-and-run:
 
     runs-on: ubuntu-latest
     
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
     - name: install software to compile CaNS
       run: sudo apt-get update; sudo apt-get install gfortran libopenmpi-dev libfftw3-dev
     - name: install python dependencies for performing the tests
@@ -21,6 +23,6 @@ jobs:
         pip install numpy flake8 pytest
     - name: run all tests
       run: |
-        make library
+        make libs
         cd tests/
         for i in */; do cd $i && sh testit.sh && cd -; done

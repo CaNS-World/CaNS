@@ -1,3 +1,9 @@
+! -
+!
+! SPDX-FileCopyrightText: Copyright (c) 2017-2022 Pedro Costa and the CaNS contributors. All rights reserved.
+! SPDX-License-Identifier: MIT
+!
+! -
 module mod_initflow
   use mpi
   use mod_common_mpi, only: ierr,myid
@@ -20,7 +26,6 @@ module mod_initflow
     real(rp), allocatable, dimension(:) :: u1d
     !real(rp), allocatable, dimension(:,:) :: u2d
     integer :: i,j,k
-    real(rp) :: q
     logical :: is_noise,is_mean,is_pair
     real(rp) :: xc,yc,zc,xf,yf,zf
     real(rp) :: reb,retau
@@ -237,7 +242,7 @@ module mod_initflow
       end do
     end do
   end do
-  call mpi_allreduce(MPI_IN_PLACE,meanold,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE,meanold,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
   !
   if(meanold /= 0.) then
     !$OMP WORKSHARE

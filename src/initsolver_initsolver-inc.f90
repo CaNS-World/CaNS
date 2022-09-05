@@ -1,3 +1,9 @@
+! -
+!
+! SPDX-FileCopyrightText: Copyright (c) 2017-2022 Pedro Costa and the CaNS contributors. All rights reserved.
+! SPDX-License-Identifier: MIT
+!
+! -
 !  subroutine initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci,dzfi,cbc,bc,lambdaxy,c_or_f,a,b,c,arrplan,normfft, &
 !                        rhsbx,rhsby,rhsbz)
     !
@@ -9,10 +15,14 @@
     real(rp), intent(in), dimension(0:) :: dzci,dzfi
     character(len=1), intent(in), dimension(0:1,3) :: cbc
     real(rp)        , intent(in), dimension(0:1,3) :: bc
-    MYREAL, intent(out), dimension(lo_z(1):,lo_z(2):) :: lambdaxy
+    real(wp), intent(out), dimension(lo_z(1):,lo_z(2):) :: lambdaxy
     character(len=1), intent(in), dimension(3) :: c_or_f
-    MYREAL, intent(out), dimension(:) :: a,b,c
+    real(wp), intent(out), dimension(:) :: a,b,c
+#if !defined(_OPENACC)
     type(C_PTR), intent(out), dimension(2,2) :: arrplan
+#else
+    integer    , intent(out), dimension(2,2) :: arrplan
+#endif
     real(rp), intent(out), dimension(:,:,0:) :: rhsbx
     real(rp), intent(out), dimension(:,:,0:) :: rhsby
     real(rp), intent(out), dimension(:,:,0:) :: rhsbz
@@ -57,5 +67,5 @@
     !
     ! prepare ffts
     !
-    call fftini(n_x_fft,n_y_fft,cbc(:,1:2),c_or_f(1:2),arrplan,normfft)
+    call fftini(ng,n_x_fft,n_y_fft,cbc(:,1:2),c_or_f(1:2),arrplan,normfft)
 !  end subroutine initsolver

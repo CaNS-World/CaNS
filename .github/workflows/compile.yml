@@ -9,10 +9,12 @@ jobs:
     
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
     - name: install software
       run: sudo apt-get update; sudo apt-get install gfortran libopenmpi-dev libfftw3-dev
     - name: test compilation
       run: |
-        make library
+        make libs
         make && make clean
         make FFLAGS+=-fopenmp LIBS+=-lfftw3_threads && make clean

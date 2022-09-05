@@ -1,10 +1,16 @@
+! -
+!
+! SPDX-FileCopyrightText: Copyright (c) 2017-2022 Pedro Costa and the CaNS contributors. All rights reserved.
+! SPDX-License-Identifier: MIT
+!
+! -
 !  subroutine gaussel(nx,ny,n,nh,a,b,c,p,lambdaxy)
     implicit none
     integer , intent(in) :: nx,ny,n,nh
-    MYREAL, intent(in), dimension(:) :: a,b,c
-    MYREAL, intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
-    MYREAL, intent(in), dimension(nx,ny), optional :: lambdaxy
-    MYREAL, dimension(n) :: bb
+    real(wp), intent(in), dimension(:) :: a,b,c
+    real(wp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
+    real(wp), intent(in), dimension(nx,ny), optional :: lambdaxy
+    real(wp), dimension(n) :: bb
     integer :: i,j
     !
     ! solve tridiagonal system
@@ -31,5 +37,5 @@
         end do
       end do
       !$OMP END PARALLEL
-    endif
+    end if
 !  end subroutine gaussel

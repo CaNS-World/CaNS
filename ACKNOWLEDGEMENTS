@@ -1,6 +1,19 @@
-I would like to acknowledge Wim-Paul Breugem and Bendiks Jan Boersma from the TU 
-Delft for fruitful discussions that motivated the development of this code. 
-Although written from scratch, this code was deeply influenced by an in-house 
+I would like to thank all the great feedback from those who have tried/used/studied CaNS.
+My original intent was to write a useful and fast base Navier-Stokes solver for research,
+but looking back it is clear that my expectations have been exceeded.
+Also, your inputs have led to many important extensions, improvements, and bug fixes.
+
+The list of people to thank is too large to place here, as I risk being being unfair
+and missing names. If you feel you deserve a special token of appreciation, please
+write and I am happy to send out a few Portuguese Pasteis de Nata.
+
+								Pedro Costa (2022)
+
+---
+
+I would like to acknowledge Wim-Paul Breugem and Bendiks Jan Boersma from the TU
+Delft for fruitful discussions that motivated the development of this code.
+Although written from scratch, this code was deeply influenced by an in-house
 FORTRAN code for turbulent channel flow developed by WPB.
 
 The routines for performing global transpositions are based on the 2decomp&fft
@@ -11,4 +24,4 @@ routines have been performed in the CFD code AFiD
 Moreover, the initialization of Multi-Threaded FFTs with the FFTW guru interface
 was inspired by AFiD's implementation.
 
-								Pedro Costa
+								Pedro Costa (2017)

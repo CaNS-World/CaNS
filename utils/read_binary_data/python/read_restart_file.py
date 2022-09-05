@@ -1,3 +1,9 @@
+# -
+#
+# SPDX-FileCopyrightText: Copyright (c) 2017-2022 Pedro Costa and the CaNS contributors. All rights reserved.
+# SPDX-License-Identifier: MIT
+#
+# -
 #!/usr/bin/env python
 def read_restart_file(filenamei):
     import numpy as np

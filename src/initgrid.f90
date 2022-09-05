@@ -1,3 +1,9 @@
+! -
+!
+! SPDX-FileCopyrightText: Copyright (c) 2017-2022 Pedro Costa and the CaNS contributors. All rights reserved.
+! SPDX-License-Identifier: MIT
+!
+! -
 module mod_initgrid
   use mod_param, only:pi
   use mod_types
@@ -28,12 +34,16 @@ module mod_initgrid
     !
     ! step 1) determine coordinates of cell faces zf
     !
+    zf(0) = 0.
     do k=1,n
       z0  = (k-0.)/(1.*n)
+#if !defined(_GRIDPOINT_NATURAL_CHANNEL)
       call gridpoint(gr,z0,zf(k))
+#else
+      call gridpoint_natural(k,n,zf(k))
+#endif
       zf(k) = zf(k)*lz
     end do
-    zf(0) = 0.
     !
     ! step 2) determine grid spacing between faces dzf
     !
@@ -140,7 +150,7 @@ module mod_initgrid
     !
     n = nzg/2._rp
     retau = 1._rp/(1._rp+(n/kb)**2)*(dyp*n+(3._rp/4._rp*alpha*c_eta*n)**(4._rp/3._rp)*(n/kb)**2)
-    if(kg==1) print*,'Retau = ',retau
+    if(kg==1) print*,'Grid targeting Retau = ',retau
     k = 1._rp*min(kg,(nzg-kg))
     !
     ! dermine z/(2h)

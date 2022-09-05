@@ -1,3 +1,9 @@
+# -
+#
+# SPDX-FileCopyrightText: Copyright (c) 2017-2022 Pedro Costa and the CaNS contributors. All rights reserved.
+# SPDX-License-Identifier: MIT
+#
+# -
 #
 # this python script can be used to visualize directly field from the checkpoint files of CaNS
 #
