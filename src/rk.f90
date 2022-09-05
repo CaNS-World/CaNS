@@ -17,7 +17,6 @@ module mod_rk
   use mod_mom  , only: mom_xyz_ad
 #endif
   use mod_scal , only: scal
-  use mod_timer, only: timer_tic,timer_toc
   use mod_utils, only: bulk_mean,swap
   use mod_types
   implicit none
@@ -105,11 +104,8 @@ module mod_rk
     end if
     !
 #if defined(_FAST_MOM_KERNELS)
-    call timer_tic('fast mom kernel',1)
     call mom_xyz_ad(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,u,v,w,dudtrk,dvdtrk,dwdtrk,dudtrkd,dvdtrkd,dwdtrkd)
-    call timer_toc('fast mom kernel')
 #else
-    call timer_tic('mom?_d()',1)
     !$acc kernels default(present) async(1)
     !$OMP WORKSHARE
     dudtrk(:,:,:) = 0._rp
@@ -142,15 +138,11 @@ module mod_rk
     call momz_d_z( n(1),n(2),n(3),dzci  ,dzfi  ,visc,w,dwdtrkd)
 #endif
 #endif
-    call timer_toc('mom?_d()')
-    call timer_tic('mom?_a()',2)
     call momx_a(n(1),n(2),n(3),dli(1),dli(2),dzfi,u,v,w,dudtrk)
     call momy_a(n(1),n(2),n(3),dli(1),dli(2),dzfi,u,v,w,dvdtrk)
     call momz_a(n(1),n(2),n(3),dli(1),dli(2),dzci,u,v,w,dwdtrk)
-    call timer_toc('mom?_a()')
 #endif
     !
-    call timer_tic('update dudtrk',3)
     !$acc parallel loop collapse(3) default(present) async(1)
     !$OMP PARALLEL DO DEFAULT(shared) &
     !$OMP SHARED(n,factor1,factor2,u,v,w,dudtrk,dvdtrk,dwdtrk,dudtrko,dvdtrko,dwdtrko)
@@ -185,7 +177,6 @@ module mod_rk
     call swap(dudtrk,dudtrko)
     call swap(dvdtrk,dvdtrko)
     call swap(dwdtrk,dwdtrko)
-    call timer_toc('update dudtrk')
 !#if 0 /*pressure gradient term treated explicitly later */
 !    !$acc kernels
 !    !$OMP WORKSHARE
@@ -211,7 +202,6 @@ module mod_rk
 !    end do
 !#endif
 #if !defined(_FAST_MOM_KERNELS)
-    call timer_tic('add dpdx',4)
     !$acc parallel loop collapse(3) default(present) async(1)
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(bforce,dxi,dyi,dzci) &
@@ -225,9 +215,7 @@ module mod_rk
         end do
       end do
     end do
-    call timer_toc('add dpdx')
 #endif
-    call timer_tic('cmpt bulk means',5)
     !
     ! bulk velocity forcing
     !
@@ -244,9 +232,7 @@ module mod_rk
       call bulk_mean(n,grid_vol_ratio_c,w,mean)
       f(3) = velf(3) - mean
     end if
-    call timer_toc('cmpt bulk means')
 #if defined(_IMPDIFF)
-    call timer_tic('updt dudtrkd',6)
     !
     ! compute rhs of helmholtz equation
     !
@@ -262,7 +248,6 @@ module mod_rk
         end do
       end do
     end do
-    call timer_toc('updt dudtrkd')
 #endif
   end subroutine rk
   subroutine rk_scal(rkpar,n,dli,dzci,dzfi,visc,dt,u,v,w,dsdtrko,s)

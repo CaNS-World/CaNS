@@ -141,13 +141,10 @@ program cans
   !
   ! initialize MPI/OpenMP
   !
-  call timer_tic('initmpi()',0)
   !$ call omp_set_num_threads(omp_get_max_threads())
   call initmpi(ng,dims,cbcpre,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,nb,is_bound)
-  call timer_toc('initmpi()')
   twi = MPI_WTIME()
   savecounter = 0
-  call timer_tic('allocations',0)
   !
   ! allocate variables
   !
@@ -197,7 +194,6 @@ program cans
            rhsby(  n(1),n(3),0:1), &
            rhsbz(  n(1),n(2),0:1))
 #endif
-  call timer_toc('allocations')
 #if defined(_DEBUG)
   if(myid == 0) print*, 'This executable of CaNS was built with compiler: ', compiler_version()
   if(myid == 0) print*, 'Using the options: ', compiler_options()
@@ -213,7 +209,6 @@ program cans
   if(myid == 0) print*, '*** Beginning of simulation ***'
   if(myid == 0) print*, '*******************************'
   if(myid == 0) print*, ''
-  call timer_tic('initgrid()',0)
   call initgrid(inivel,ng(3),gr,lz,dzc_g,dzf_g,zc_g,zf_g)
   if(myid == 0) then
     inquire(iolength=rlen) 1._rp
@@ -257,7 +252,6 @@ program cans
   !$acc update self(dzci,dzfi) async
   !$acc exit data copyout(zc_g,zf_g,dzc_g,dzf_g,dzci_g,dzfi_g) async ! not needed on the device
   !$acc wait
-  call timer_toc('initgrid()')
   !
   ! test input files before proceeding with the calculation
   !
@@ -265,7 +259,6 @@ program cans
   !
   ! initialize Poisson solver
   !
-  call timer_tic('initsolver()',0)
   call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:), &
                   lambdaxyp,['c','c','c'],ap,bp,cp,arrplanp,normfftp,rhsbp%x,rhsbp%y,rhsbp%z)
   !$acc enter data copyin(lambdaxyp,ap,bp,cp) async
@@ -293,12 +286,10 @@ program cans
   !$acc enter data create(rhsbx,rhsby,rhsbz) async
   !$acc wait
 #endif
-  call timer_toc('initsolver()')
 #if defined(_OPENACC)
   !
   ! determine workspace sizes and allocate the memory
   !
-  call timer_tic('wspace allocations',0)
   call init_wspace_arrays()
   call set_cufft_wspace(pack(arrplanp,.true.),istream_acc_queue_1)
 #if defined(_IMPDIFF) && !defined(_IMPDIFF_1D)
@@ -309,15 +300,11 @@ program cans
   if(myid == 0) print*,'*** Device memory footprint (Gb): ', &
                   device_memory_footprint(n,n_z)/(1._sp*1024**3), ' ***'
 #endif
-  call timer_toc('wspace allocations')
 #if defined(_DEBUG_SOLVER)
-  call timer_tic('solver sanity test',0)
   call test_sanity_solver(ng,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,dli,dzc,dzf,dzci,dzfi,dzci_g,dzfi_g, &
                           nb,is_bound,cbcvel,cbcpre,bcvel,bcpre)
-  call timer_toc('solver sanity test')
 #endif
   !
-  call timer_tic('initial condition',0)
   if(.not.restart) then
     istep = 0
     time = 0.
@@ -331,25 +318,20 @@ program cans
   !$acc enter data copyin(u,v,w,p) create(pp)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
   call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
-  call timer_toc('initial condition')
   !
   ! post-process and write initial condition
   !
-  call timer_tic('post-processing',0)
   write(fldnum,'(i7.7)') istep
   !$acc update self(u,v,w,p)
   include 'out1d.h90'
   include 'out2d.h90'
   include 'out3d.h90'
-  call timer_toc('post-processing')
   !
-  call timer_tic('chkdt()',0)
   call chkdt(n,dl,dzci,dzfi,visc,u,v,w,dtmax)
   dt = min(cfl*dtmax,dtmin)
   if(myid == 0) print*, 'dtmax = ', dtmax, 'dt = ',dt
   dti = 1./dt
   kill = .false.
-  call timer_toc('chkdt()')
   !
   ! main loop
   !
@@ -367,16 +349,11 @@ program cans
     tauxo(:) = 0.
     tauyo(:) = 0.
     tauzo(:) = 0.
-    call timer_tic('time step',istep)
     do irk=1,3
-      call timer_tic('rk iteration',nvtx_color='w')
       dtrk = sum(rkcoeff(:,irk))*dt
       dtrki = dtrk**(-1)
-      call timer_tic('rk()',nvtx_color='r')
       call rk(rkcoeff(:,irk),n,dli,l,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,visc,dt,p, &
               is_bound,is_forced,velf,bforce,tauxo,tauyo,tauzo,u,v,w,f)
-      call timer_toc('rk()')
-      call timer_tic('bulk vel. forcing',nvtx_color='c')
       block
         real(rp) :: ff
         if(is_forced(1)) then
@@ -398,10 +375,8 @@ program cans
           !$acc end kernels
         end if
       end block
-      call timer_toc('bulk vel. forcing')
 #if defined(_IMPDIFF)
       alpha = -.5*visc*dtrk
-      call timer_tic('updt_rhs_b()',nvtx_color='y')
       !$OMP WORKSHARE
       !$acc kernels present(rhsbx,rhsby,rhsbz,rhsbu) async(1)
 #if !defined(_IMPDIFF_1D)
@@ -412,8 +387,6 @@ program cans
       !$acc end kernels
       !$OMP END WORKSHARE
       call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,is_bound,rhsbx,rhsby,rhsbz,u)
-      call timer_toc('updt_rhs_b()')
-      call timer_tic('solver()',nvtx_color='g')
       !$acc kernels default(present) async(1)
       !$OMP WORKSHARE
       aa(:) = au(:)*alpha
@@ -429,8 +402,6 @@ program cans
 #else
       call solver_gaussel_z(n                    ,aa,bb,cc,cbcvel(:,3,1),['f','c','c'],u)
 #endif
-      call timer_toc('solver()')
-      call timer_tic('updt_rhs_b()',nvtx_color='y')
       !$OMP WORKSHARE
       !$acc kernels present(rhsbx,rhsby,rhsbz,rhsbv) async(1)
 #if !defined(_IMPDIFF_1D)
@@ -441,8 +412,6 @@ program cans
       !$acc end kernels
       !$OMP END WORKSHARE
       call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,is_bound,rhsbx,rhsby,rhsbz,v)
-      call timer_toc('updt_rhs_b()')
-      call timer_tic('solver()',nvtx_color='g')
       !$acc kernels default(present) async(1)
       !$OMP WORKSHARE
       aa(:) = av(:)*alpha
@@ -458,8 +427,6 @@ program cans
 #else
       call solver_gaussel_z(n                    ,aa,bb,cc,cbcvel(:,3,2),['c','f','c'],v)
 #endif
-      call timer_toc('solver()')
-      call timer_tic('updt_rhs_b()',nvtx_color='y')
       !$OMP WORKSHARE
       !$acc kernels present(rhsbx,rhsby,rhsbz,rhsbw) async(1)
 #if !defined(_IMPDIFF_1D)
@@ -470,8 +437,6 @@ program cans
       !$acc end kernels
       !$OMP END WORKSHARE
       call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,is_bound,rhsbx,rhsby,rhsbz,w)
-      call timer_toc('updt_rhs_b()')
-      call timer_tic('solver()',nvtx_color='g')
       !$acc kernels default(present) async(1)
       !$OMP WORKSHARE
       aa(:) = aw(:)*alpha
@@ -487,39 +452,18 @@ program cans
 #else
       call solver_gaussel_z(n                    ,aa,bb,cc,cbcvel(:,3,3),['c','c','f'],w)
 #endif
-      call timer_toc('solver()')
 #endif
       dpdl(:) = dpdl(:) + f(:)
-      call timer_tic('bounduvw()',nvtx_color='g')
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
-      call timer_toc('bounduvw()')
-      call timer_tic('fillps()',nvtx_color='y')
       call fillps(n,dli,dzfi,dtrki,u,v,w,pp)
-      call timer_toc('fillps()')
-      call timer_tic('updt_rhs_b()',nvtx_color='y')
       call updt_rhs_b(['c','c','c'],cbcpre,n,is_bound,rhsbp%x,rhsbp%y,rhsbp%z,pp)
-      call timer_toc('updt_rhs_b()')
-      call timer_tic('solver()',nvtx_color='r')
       call solver(n,ng,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre,['c','c','c'],pp)
-      call timer_toc('solver()')
-      call timer_tic('boundp()',nvtx_color='g')
       call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,pp)
-      call timer_toc('boundp()')
-      call timer_tic('correc()',nvtx_color='y')
       call correc(n,dli,dzci,dtrk,pp,u,v,w)
-      call timer_toc('correc()')
-      call timer_tic('bounduvw()',nvtx_color='g')
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.true.,dl,dzc,dzf,u,v,w)
-      call timer_toc('bounduvw()')
-      call timer_tic('updatep()',nvtx_color='y')
       call updatep(n,dli,dzci,dzfi,alpha,pp,p)
-      call timer_toc('updatep()')
-      call timer_tic('boundp()',nvtx_color='g')
       call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
-      call timer_toc('boundp()')
-      call timer_toc('rk iteration')
     end do
-    call timer_toc('time step')
     dpdl(:) = -dpdl(:)*dti
     !
     ! check simulation stopping criteria
