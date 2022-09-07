@@ -52,11 +52,16 @@ The fluid flow is solved with a second-order finite difference pressure correcti
 
 ## Usage
 
-### Input file
+### Downloading *CaNS*
 
-The input file `dns.in` sets the physical and computational parameters. In the `examples/` folder are examples of input files for several canonical flows. See [`INFO_INPUT.md`](docs/INFO_INPUT.md) for a detailed description of the input file.
-
-Files `out1d.h90`, `out2d.h90` and `out3d.h90` in `src/` set which data are written in 1-, 2- and 3-dimensional output files, respectively. *The code should be recompiled after editing out?d.h90 files*.
+Since *CaNS* loads the external pencil decomposition libraries as Git Submodules, the repository should be cloned as follows:
+```bash
+git clone --recursive https://github.com/CaNS-World/CaNS
+```
+so the libraries are downloaded too. Alternatively, in case the repository has already been cloned without the Submodules (i.e., folders `cuDecomp` and `2decomp-fft` under `dependencies/` are empty), the following command can be used to update them:
+```bash
+git submodule update --init --recursive
+```
 
 ### Compilation
 
@@ -84,6 +89,12 @@ The `Makefile` in root directory is used to compile the code, and is expected to
  * `SINGLE_PRECISION_POISSON` : only the Poisson equation will be solved in single precision (requires explicit diffusion, or Z implicit diffusion with Z-aligned pencils (i.e., `IMPDIFF_1D`, and `PENCIL_AXIS=3`)
  * `GPU`                      : enable GPU-accelerated runs
  * `USE_NVTX`                 : enable [NVTX](https://s.nvidia.com/nsight-visual-studio-edition/nvtx) tags for profiling
+
+### Input file
+
+The input file `dns.in` sets the physical and computational parameters. In the `examples/` folder are examples of input files for several canonical flows. See [`INFO_INPUT.md`](docs/INFO_INPUT.md) for a detailed description of the input file.
+
+Files `out1d.h90`, `out2d.h90` and `out3d.h90` in `src/` set which data are written in 1-, 2- and 3-dimensional output files, respectively. *The code should be recompiled after editing out?d.h90 files*.
 
 ### Running the code
 
