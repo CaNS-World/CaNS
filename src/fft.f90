@@ -610,12 +610,11 @@ module mod_fft
   end subroutine swap_order
   subroutine remap(ib,n,n2,n3,arr)
     !
-    ! the maps a signal x to v (ib = 0) v to x (ib = 1)
+    ! maps a signal x to v (ib = 0), or v to x (ib = 1)
     ! where:
     ! v(n) = x(2n       ),              0 <= n <= floor((N-1)/2)
     !      = x(2N -2n -1), floor((N+1)/2) <= n <= N-1
-    ! with n = 0,...,N-1 and N is the total number of elements
-    ! of the signal.
+    ! with n = 0,...,N-1; N = size(v) = size(x)
     !
     use mod_common_cudecomp, only: buf => work
     implicit none
