@@ -204,13 +204,13 @@ module mod_load
       select case(io)
       case('r')
         call transpose_x_to_y(var_x,var_y)
-        !$OMP WORKSHARE
+        !$OMP PARALLEL WORKSHARE
         var(1:n(1),1:n(2),1:n(3)) = var_y(:,:,:)
-        !$OMP END WORKSHARE
+        !$OMP END PARALLEL WORKSHARE
       case('w')
-        !$OMP WORKSHARE
+        !$OMP PARALLEL WORKSHARE
         var_y(:,:,:) = var(1:n(1),1:n(2),1:n(3))
-        !$OMP END WORKSHARE
+        !$OMP END PARALLEL WORKSHARE
         call transpose_y_to_x(var_y,var_x)
       end select
     case(3)
@@ -218,13 +218,13 @@ module mod_load
       case('r')
         call transpose_x_to_y(var_x,var_y)
         call transpose_y_to_z(var_y,var_z)
-        !$OMP WORKSHARE
+        !$OMP PARALLEL WORKSHARE
         var(1:n(1),1:n(2),1:n(3)) = var_z(:,:,:)
-        !$OMP END WORKSHARE
+        !$OMP END PARALLEL WORKSHARE
       case('w')
-        !$OMP WORKSHARE
+        !$OMP PARALLEL WORKSHARE
         var_z(:,:,:) = var(1:n(1),1:n(2),1:n(3))
-        !$OMP END WORKSHARE
+        !$OMP END PARALLEL WORKSHARE
         call transpose_z_to_y(var_z,var_y)
         call transpose_y_to_x(var_y,var_x)
       end select

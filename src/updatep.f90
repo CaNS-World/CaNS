@@ -44,9 +44,9 @@ module mod_updatep
     end do
 #else
     !$acc kernels default(present) async(1)
-    !$OMP WORKSHARE
+    !$OMP PARALLEL WORKSHARE
     p(1:n(1),1:n(2),1:n(3)) = p(1:n(1),1:n(2),1:n(3)) + pp(1:n(1),1:n(2),1:n(3))
-    !$OMP END WORKSHARE
+    !$OMP END PARALLEL WORKSHARE
     !$acc end kernels
 #endif
   end subroutine updatep

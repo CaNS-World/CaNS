@@ -43,18 +43,18 @@ module mod_solver
     !
     n_z(:) = zsize(:)
 #if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
-    !$OMP WORKSHARE
+    !$OMP PARALLEL WORKSHARE
     px(:,:,:) = p(1:n(1),1:n(2),1:n(3))
-    !$OMP END WORKSHARE
+    !$OMP END PARALLEL WORKSHARE
 #elif defined(_DECOMP_Y)
-    !$OMP WORKSHARE
+    !$OMP PARALLEL WORKSHARE
     py(:,:,:) = p(1:n(1),1:n(2),1:n(3))
-    !$OMP END WORKSHARE
+    !$OMP END PARALLEL WORKSHARE
     call transpose_y_to_x(py,px)
 #elif defined(_DECOMP_Z)
-    !$OMP WORKSHARE
+    !$OMP PARALLEL WORKSHARE
     pz(:,:,:) = p(1:n(1),1:n(2),1:n(3))
-    !$OMP END WORKSHARE
+    !$OMP END PARALLEL WORKSHARE
     !call transpose_z_to_x(pz,px)
     call transpose_z_to_y(pz,py)
     call transpose_y_to_x(py,px)
@@ -80,21 +80,21 @@ module mod_solver
     call fft(arrplan(2,1),px) ! bwd transform in x
     !
 #if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
-    !$OMP WORKSHARE
+    !$OMP PARALLEL WORKSHARE
     p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)*normfft
-    !$OMP END WORKSHARE
+    !$OMP END PARALLEL WORKSHARE
 #elif defined(_DECOMP_Y)
     call transpose_x_to_y(px,py)
-    !$OMP WORKSHARE
+    !$OMP PARALLEL WORKSHARE
     p(1:n(1),1:n(2),1:n(3)) = py(:,:,:)*normfft
-    !$OMP END WORKSHARE
+    !$OMP END PARALLEL WORKSHARE
 #elif defined(_DECOMP_Z)
     !call transpose_x_to_z(px,pz)
     call transpose_x_to_y(px,py)
     call transpose_y_to_z(py,pz)
-    !$OMP WORKSHARE
+    !$OMP PARALLEL WORKSHARE
     p(1:n(1),1:n(2),1:n(3)) = pz(:,:,:)*normfft
-    !$OMP END WORKSHARE
+    !$OMP END PARALLEL WORKSHARE
 #endif
   end subroutine solver
   !
@@ -150,16 +150,16 @@ module mod_solver
     !
     n_z(:) = zsize(:)
 #if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
-    !$OMP WORKSHARE
+    !$OMP PARALLEL WORKSHARE
     px(:,:,:) = p(1:n(1),1:n(2),1:n(3))
-    !$OMP END WORKSHARE
+    !$OMP END PARALLEL WORKSHARE
     !call transpose_x_to_z(px,pz)
     call transpose_x_to_y(px,py)
     call transpose_y_to_z(py,pz)
 #elif defined(_DECOMP_Y)
-    !$OMP WORKSHARE
+    !$OMP PARALLEL WORKSHARE
     py(:,:,:) = p(1:n(1),1:n(2),1:n(3))
-    !$OMP END WORKSHARE
+    !$OMP END PARALLEL WORKSHARE
     call transpose_y_to_z(py,pz)
 #endif
     q = 0
@@ -182,14 +182,14 @@ module mod_solver
     !call transpose_z_to_x(pz,px)
     call transpose_z_to_y(pz,py)
     call transpose_y_to_x(py,px)
-    !$OMP WORKSHARE
+    !$OMP PARALLEL WORKSHARE
     p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)
-    !$OMP END WORKSHARE
+    !$OMP END PARALLEL WORKSHARE
 #elif defined(_DECOMP_Y)
     call transpose_z_to_y(pz,py)
-    !$OMP WORKSHARE
+    !$OMP PARALLEL WORKSHARE
     p(1:n(1),1:n(2),1:n(3)) = py(:,:,:)
-    !$OMP END WORKSHARE
+    !$OMP END PARALLEL WORKSHARE
 #endif
   end subroutine solver_gaussel_z
   !

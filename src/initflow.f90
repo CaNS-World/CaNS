@@ -245,9 +245,9 @@ module mod_initflow
   call MPI_ALLREDUCE(MPI_IN_PLACE,meanold,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
   !
   if(meanold /= 0.) then
-    !$OMP WORKSHARE
+    !$OMP PARALLEL WORKSHARE
     p(:,:,:) = p(:,:,:)/meanold*mean
-    !$OMP END WORKSHARE
+    !$OMP END PARALLEL WORKSHARE
   end if
   end subroutine set_mean
   !

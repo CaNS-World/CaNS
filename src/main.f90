@@ -377,7 +377,7 @@ program cans
       end block
 #if defined(_IMPDIFF)
       alpha = -.5*visc*dtrk
-      !$OMP WORKSHARE
+      !$OMP PARALLEL WORKSHARE
       !$acc kernels present(rhsbx,rhsby,rhsbz,rhsbu) async(1)
 #if !defined(_IMPDIFF_1D)
       rhsbx(:,:,0:1) = rhsbu%x(:,:,0:1)*alpha
@@ -385,24 +385,24 @@ program cans
 #endif
       rhsbz(:,:,0:1) = rhsbu%z(:,:,0:1)*alpha
       !$acc end kernels
-      !$OMP END WORKSHARE
+      !$OMP END PARALLEL WORKSHARE
       call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,is_bound,rhsbx,rhsby,rhsbz,u)
       !$acc kernels default(present) async(1)
-      !$OMP WORKSHARE
+      !$OMP PARALLEL WORKSHARE
       aa(:) = au(:)*alpha
       bb(:) = bu(:)*alpha + 1.
       cc(:) = cu(:)*alpha
 #if !defined(_IMPDIFF_1D)
       lambdaxy(:,:) = lambdaxyu(:,:)*alpha
 #endif
-      !$OMP END WORKSHARE
+      !$OMP END PARALLEL WORKSHARE
       !$acc end kernels
 #if !defined(_IMPDIFF_1D)
       call solver(n,ng,arrplanu,normfftu,lambdaxy,aa,bb,cc,cbcvel(:,:,1),['f','c','c'],u)
 #else
       call solver_gaussel_z(n                    ,aa,bb,cc,cbcvel(:,3,1),['f','c','c'],u)
 #endif
-      !$OMP WORKSHARE
+      !$OMP PARALLEL WORKSHARE
       !$acc kernels present(rhsbx,rhsby,rhsbz,rhsbv) async(1)
 #if !defined(_IMPDIFF_1D)
       rhsbx(:,:,0:1) = rhsbv%x(:,:,0:1)*alpha
@@ -410,24 +410,24 @@ program cans
 #endif
       rhsbz(:,:,0:1) = rhsbv%z(:,:,0:1)*alpha
       !$acc end kernels
-      !$OMP END WORKSHARE
+      !$OMP END PARALLEL WORKSHARE
       call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,is_bound,rhsbx,rhsby,rhsbz,v)
       !$acc kernels default(present) async(1)
-      !$OMP WORKSHARE
+      !$OMP PARALLEL WORKSHARE
       aa(:) = av(:)*alpha
       bb(:) = bv(:)*alpha + 1.
       cc(:) = cv(:)*alpha
 #if !defined(_IMPDIFF_1D)
       lambdaxy(:,:) = lambdaxyv(:,:)*alpha
 #endif
-      !$OMP END WORKSHARE
+      !$OMP END PARALLEL WORKSHARE
       !$acc end kernels
 #if !defined(_IMPDIFF_1D)
       call solver(n,ng,arrplanv,normfftv,lambdaxy,aa,bb,cc,cbcvel(:,:,2),['c','f','c'],v)
 #else
       call solver_gaussel_z(n                    ,aa,bb,cc,cbcvel(:,3,2),['c','f','c'],v)
 #endif
-      !$OMP WORKSHARE
+      !$OMP PARALLEL WORKSHARE
       !$acc kernels present(rhsbx,rhsby,rhsbz,rhsbw) async(1)
 #if !defined(_IMPDIFF_1D)
       rhsbx(:,:,0:1) = rhsbw%x(:,:,0:1)*alpha
@@ -435,17 +435,17 @@ program cans
 #endif
       rhsbz(:,:,0:1) = rhsbw%z(:,:,0:1)*alpha
       !$acc end kernels
-      !$OMP END WORKSHARE
+      !$OMP END PARALLEL WORKSHARE
       call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,is_bound,rhsbx,rhsby,rhsbz,w)
       !$acc kernels default(present) async(1)
-      !$OMP WORKSHARE
+      !$OMP PARALLEL WORKSHARE
       aa(:) = aw(:)*alpha
       bb(:) = bw(:)*alpha + 1.
       cc(:) = cw(:)*alpha
 #if !defined(_IMPDIFF_1D)
       lambdaxy(:,:) = lambdaxyw(:,:)*alpha
 #endif
-      !$OMP END WORKSHARE
+      !$OMP END PARALLEL WORKSHARE
       !$acc end kernels
 #if !defined(_IMPDIFF_1D)
       call solver(n,ng,arrplanw,normfftw,lambdaxy,aa,bb,cc,cbcvel(:,:,3),['c','c','f'],w)
