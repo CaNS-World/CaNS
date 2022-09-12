@@ -116,8 +116,6 @@ module mod_initmpi
     end if
     istat = cudecompGridDescCreate(ch,gd,conf,atune_conf)
 #endif
-    nrank = myid                                  ! not done internally in 2decomp anymore
-    call MPI_COMM_SIZE(MPI_COMM_WORLD,nproc,ierr) ! not done internally in 2decomp anymore
     call decomp_2d_init(ng(1),ng(2),ng(3),dims(1),dims(2),periods)
     if(any(dims(:) == 0)) dims(:) = dims_auto(:)
 #if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
