@@ -44,4 +44,9 @@ In this file, `FCOMP` can be one of `GNU` (`gfortran`), `INTEL` (`ifort`), `NVID
 
 Typing `make libs` will build the 2DECOMP&FFT/cuDecomp libraries; then typing `make` will compile the code and copy the executable `cans` to a `run/` folder; `make run` will also copy the default input files `*.in` under `src/` to the same `run/` folder.
 
+Note that cuDecomp needs to be dynamically linked before performing a GPU run. To do this, one should update the `LD_LIBRARY_PATH` environment variable as follows (from the root directory):
+```
+export LD_LIBRARY_PATH=$PWD/dependencies/cuDecomp/build/lib:$LD_LIBRARY_PATH
+```
+
 Finally, the choice of compiler `FCOMP` (see `configs/flags.mk`), and profile flags `FFLAGS_*` (see `configs/flags.mk`) can easily be overloaded, for instance, as: `make FC=ftn FFLAGS=-O2`. Linking and Include options can be changed in `configs/libs.mk`.
