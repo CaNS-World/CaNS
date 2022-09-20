@@ -106,7 +106,7 @@ See [`INFO_VISU.md`](docs/INFO_VISU.md).
 
 ## Contributing
 
-We appreciate any contributions and feedback that can improve CaNS. If you wish to contribute to the tool, please get in touch with the maintainers or open an Issue in the repository / a thread in Discussions. Pull Requests are welcome, but kindly propose/discuss the changes in an linked Issue first.
+We appreciate any contributions and feedback that can improve CaNS. If you wish to contribute to the tool, please get in touch with the maintainers or open an Issue in the repository / a thread in Discussions. Pull Requests are welcome, but please propose/discuss the changes in an linked Issue first.
 
 ## Final notes
 
