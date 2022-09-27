@@ -50,7 +50,6 @@ module mod_initmpi
     !
 #if defined(_OPENACC)
     dev_type = acc_get_device_type()
-    call acc_init(dev_type)
     call MPI_COMM_SPLIT_TYPE(MPI_COMM_WORLD,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,local_comm,ierr)
     call MPI_COMM_RANK(local_comm,mydev,ierr)
 #if 1
@@ -63,6 +62,7 @@ module mod_initmpi
     mydev = mod(mydev,ndev)
 #endif
     call acc_set_device_num(mydev,dev_type)
+    call acc_init(dev_type)
     !
     istat = cudecompInit(ch,MPI_COMM_WORLD)
     !
