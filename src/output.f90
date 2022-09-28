@@ -157,11 +157,11 @@ module mod_output
 #if !defined(_SINGLE_PRECISION_POISSON)
     select case(inorm)
     case(1) !normal to x --> yz plane
-       call decomp_2d_write_plane(ipencil,p,inorm,islice,fname)
+       call decomp_2d_write_plane(ipencil,p,inorm,islice,'.',fname,'dummy')
     case(2) !normal to y --> zx plane
-       call decomp_2d_write_plane(ipencil,p,inorm,islice,fname)
+       call decomp_2d_write_plane(ipencil,p,inorm,islice,'.',fname,'dummy')
     case(3) !normal to z --> xy plane
-       call decomp_2d_write_plane(ipencil,p,inorm,islice,fname)
+       call decomp_2d_write_plane(ipencil,p,inorm,islice,'.',fname,'dummy')
     end select
 #endif
   end subroutine out2d
