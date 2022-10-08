@@ -10,7 +10,7 @@
         mem_free = acc_get_property(mydev,dev_type,acc_property_free_memory)/(1.*1024**3)
         mem_use  = mem_tot-mem_free
         if(myid == 0) print*,'Device memory usage (Gb): ', mem_use, ' / ', mem_tot
-#if defined(_PGI) && 0
+#if defined(__NVCOMPILER) && 0
         block
           use accel_lib
           !
