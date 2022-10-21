@@ -21,7 +21,7 @@ TIMING=1                   # best = 1
 IMPDIFF=0                  #
 IMPDIFF_1D=0               #
 PENCIL_AXIS=1              # = 1/2/3 for X/Y/Z-aligned pencils
-SINGLE_PRECISION=0         # not a good idea to change
+SINGLE_PRECISION=0         # perform the whole calculation in single precision
 SINGLE_PRECISION_POISSON=0 # downcast/upcast correction pressure precision to solve Poisson equation in single precision
 #
 # GPU-related

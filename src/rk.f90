@@ -234,7 +234,7 @@ module mod_rk
     end if
 #if defined(_IMPDIFF)
     !
-    ! compute rhs of helmholtz equation
+    ! compute rhs of Helmholtz equation
     !
     !$acc parallel loop collapse(3) default(present) async(1)
     !$OMP PARALLEL DO DEFAULT(none) &
