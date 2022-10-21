@@ -16,9 +16,4 @@ module mod_types
   integer, parameter, public :: rp = dp
   integer, parameter, public :: MPI_REAL_RP = MPI_DOUBLE_PRECISION
 #endif
-#if defined(_SINGLE_PRECISION_POISSON)
-  integer, parameter, public :: gp = sp
-#else
-  integer, parameter, public :: gp = rp
-#endif
 end module mod_types

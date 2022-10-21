@@ -14,15 +14,11 @@ public
 !
 real(rp), parameter :: pi = acos(-1._rp)
 #if !defined(_EPS_EXACT_ZERO) /* recommended */
-real(sp), parameter :: eps_sp = epsilon(1._sp)
-real(dp), parameter :: eps_dp = epsilon(1._dp)
-real(rp), parameter :: eps_rp = epsilon(1._rp)
+real(rp), parameter :: eps = epsilon(1._rp)
 #else
-real(sp), parameter :: eps_sp = 0._sp
-real(dp), parameter :: eps_dp = 0._dp
-real(rp), parameter :: eps_rp = 0._rp
+real(rp), parameter :: eps = 0._rp
 #endif
-real(gp), parameter :: small = epsilon(1._gp)*10**(precision(1._gp)/2)
+real(rp), parameter :: small = epsilon(1._rp)*10**(precision(1._rp)/2)
 character(len=100), parameter :: datadir = 'data/'
 real(rp), parameter, dimension(2,3) :: rkcoeff = reshape([32._rp/60._rp,  0._rp        , &
                                                           25._rp/60._rp, -17._rp/60._rp, &

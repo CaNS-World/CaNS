@@ -15,29 +15,20 @@ module mod_solver
 #if defined(_IMPDIFF_1D)
   public solver_gaussel_z
 #endif
-  interface gaussel
-    module procedure gaussel_sp,gaussel_dp
-  end interface
-  interface gaussel_periodic
-    module procedure gaussel_periodic_sp,gaussel_periodic_dp
-  end interface
-  interface dgtsv_homebrewed
-    module procedure dgtsv_homebrewed_sp,dgtsv_homebrewed_dp
-  end interface
   contains
   subroutine solver(n,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p)
     implicit none
     integer , intent(in), dimension(3) :: n,ng ! ng is here just for compatibility with the argument list of solver_gpu
     type(C_PTR), intent(in), dimension(2,2) :: arrplan
     real(rp), intent(in) :: normfft
-    real(gp), intent(in), dimension(:,:) :: lambdaxy
-    real(gp), intent(in), dimension(:) :: a,b,c
+    real(rp), intent(in), dimension(:,:) :: lambdaxy
+    real(rp), intent(in), dimension(:) :: a,b,c
     character(len=1), dimension(0:1,3), intent(in) :: bc
     character(len=1), intent(in), dimension(3) :: c_or_f
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
-    real(gp), dimension(xsize(1),xsize(2),xsize(3)) :: px
-    real(gp), dimension(ysize(1),ysize(2),ysize(3)) :: py
-    real(gp), dimension(zsize(1),zsize(2),zsize(3)) :: pz
+    real(rp), dimension(xsize(1),xsize(2),xsize(3)) :: px
+    real(rp), dimension(ysize(1),ysize(2),ysize(3)) :: py
+    real(rp), dimension(zsize(1),zsize(2),zsize(3)) :: pz
     integer :: q
     integer, dimension(3) :: n_z
     !
@@ -98,42 +89,127 @@ module mod_solver
 #endif
   end subroutine solver
   !
-  subroutine gaussel_sp(nx,ny,n,nh,a,b,c,p,lambdaxy)
-    use mod_types, only: wp => sp
-    use mod_param, only: eps => eps_sp
-#include "solver_gaussel-inc.f90"
-  end subroutine gaussel_sp
-  subroutine gaussel_dp(nx,ny,n,nh,a,b,c,p,lambdaxy)
-    use mod_types, only: wp => dp
-    use mod_param, only: eps => eps_dp
-#include "solver_gaussel-inc.f90"
-  end subroutine gaussel_dp
+  subroutine gaussel(nx,ny,n,nh,a,b,c,p,lambdaxy)
+    implicit none
+    integer , intent(in) :: nx,ny,n,nh
+    real(rp), intent(in), dimension(:) :: a,b,c
+    real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
+    real(rp), intent(in), dimension(nx,ny), optional :: lambdaxy
+    real(rp), dimension(n) :: bb
+    integer :: i,j
+    !
+    ! solve tridiagonal system
+    !
+    if(present(lambdaxy)) then
+      !$OMP PARALLEL DEFAULT(none) &
+      !$OMP PRIVATE(bb) &
+      !$OMP SHARED(nx,ny,n,a,b,c,lambdaxy,p)
+      !$OMP DO COLLAPSE(2)
+      do j=1,ny
+        do i=1,nx
+          bb(:) = b(1:n) + lambdaxy(i,j)
+          call dgtsv_homebrewed(n,a,bb,c,p(i,j,1:n))
+        end do
+      end do
+      !$OMP END PARALLEL
+    else
+      !$OMP PARALLEL DEFAULT(none) &
+      !$OMP SHARED(nx,ny,n,a,b,c,p)
+      !$OMP DO COLLAPSE(2)
+      do j=1,ny
+        do i=1,nx
+          call dgtsv_homebrewed(n,a,b,c,p(i,j,1:n))
+        end do
+      end do
+      !$OMP END PARALLEL
+    end if
+  end subroutine gaussel
   !
-  subroutine gaussel_periodic_sp(nx,ny,n,nh,a,b,c,p,lambdaxy)
-    use mod_types, only: wp => sp
-    use mod_param, only: eps => eps_sp
-#include "solver_gaussel_periodic-inc.f90"
-  end subroutine gaussel_periodic_sp
-  subroutine gaussel_periodic_dp(nx,ny,n,nh,a,b,c,p,lambdaxy)
-    use mod_types, only: wp => dp
-    use mod_param, only: eps => eps_dp
-#include "solver_gaussel_periodic-inc.f90"
-  end subroutine gaussel_periodic_dp
+  subroutine gaussel_periodic(nx,ny,n,nh,a,b,c,p,lambdaxy)
+    use mod_param, only: eps
+    implicit none
+    integer , intent(in) :: nx,ny,n,nh
+    real(rp), intent(in), dimension(:) :: a,b,c
+    real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
+    real(rp), intent(in), dimension(nx,ny), optional :: lambdaxy
+    real(rp), dimension(n) :: bb,p1,p2
+    integer :: i,j
+    !
+    ! solve tridiagonal system
+    !
+    if(present(lambdaxy)) then
+      !$OMP PARALLEL DEFAULT(none) &
+      !$OMP PRIVATE(bb,p1,p2) &
+      !$OMP SHARED(nx,ny,n,a,b,c,lambdaxy,p)
+      !$OMP DO COLLAPSE(2)
+      do j=1,ny
+        do i=1,nx
+          bb(:)  = b(:) + lambdaxy(i,j)
+          p1(1:n-1) = p(i,j,1:n-1)
+          call dgtsv_homebrewed(n-1,a,bb,c,p1)
+          p2(:) = 0.
+          p2(1  ) = -a(1  )
+          p2(n-1) = -c(n-1)
+          call dgtsv_homebrewed(n-1,a,bb,c,p2)
+          p(i,j,n) = (p(i,j,n) - c(n)*p1(1) - a(n)*p1(n-1)) / &
+                     (bb(   n) + c(n)*p2(1) + a(n)*p2(n-1)+eps)
+          p(i,j,1:n-1) = p1(1:n-1) + p2(1:n-1)*p(i,j,n)
+        end do
+      end do
+      !$OMP END PARALLEL
+    else
+      !$OMP PARALLEL DEFAULT(none) &
+      !$OMP PRIVATE(p1,p2) &
+      !$OMP SHARED(nx,ny,n,a,b,c,p)
+      !$OMP DO COLLAPSE(2)
+      do j=1,ny
+        do i=1,nx
+          p1(1:n-1) = p(i,j,1:n-1)
+          call dgtsv_homebrewed(n-1,a,b,c,p1)
+          p2(:) = 0.
+          p2(1  ) = -a(1  )
+          p2(n-1) = -c(n-1)
+          call dgtsv_homebrewed(n-1,a,b,c,p2)
+          p(i,j,n) = (p(i,j,n) - c(n)*p1(1) - a(n)*p1(n-1)) / &
+                     (b(    n) + c(n)*p2(1) + a(n)*p2(n-1)+eps)
+          p(i,j,1:n-1) = p1(1:n-1) + p2(1:n-1)*p(i,j,n)
+        end do
+      end do
+      !$OMP END PARALLEL
+    end if
+  end subroutine gaussel_periodic
   !
-  subroutine dgtsv_homebrewed_sp(n,a,b,c,p)
-    use mod_types, only: wp => sp
-    use mod_param, only: eps => eps_sp
-#include "solver_dgtsv_homebrewed-inc.f90"
-  end subroutine dgtsv_homebrewed_sp
-  subroutine dgtsv_homebrewed_dp(n,a,b,c,p)
-    use mod_types, only: wp => dp
-    use mod_param, only: eps => eps_dp
-#include "solver_dgtsv_homebrewed-inc.f90"
-  end subroutine dgtsv_homebrewed_dp
+  subroutine dgtsv_homebrewed(n,a,b,c,p)
+    use mod_param, only: eps
+    implicit none
+    integer , intent(in) :: n
+    real(rp), intent(in   ), dimension(:) :: a,b,c
+    real(rp), intent(inout), dimension(:) :: p
+    real(rp), dimension(n) :: d
+    real(rp) :: z
+    integer :: l
+    !
+    ! Gauss elimination
+    !
+    z = 1./(b(1)+eps)
+    d(1) = c(1)*z
+    p(1) = p(1)*z
+    do l=2,n
+      z    = 1./(b(l)-a(l)*d(l-1)+eps)
+      d(l) = c(l)*z
+      p(l) = (p(l)-a(l)*p(l-1))*z
+    end do
+    !
+    ! backward substitution
+    !
+    do l=n-1,1,-1
+      p(l) = p(l) - d(l)*p(l+1)
+    end do
+  end subroutine dgtsv_homebrewed
   !
 #if defined(_IMPDIFF_1D)
   subroutine solver_gaussel_z(n,a,b,c,bcz,c_or_f,p)
-    use mod_param, only: eps => eps_rp
+    use mod_param, only: eps
     implicit none
     integer , intent(in), dimension(3) :: n
     real(rp), intent(in), dimension(:) :: a,b,c
