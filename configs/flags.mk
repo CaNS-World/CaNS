@@ -40,7 +40,7 @@ ifeq ($(strip $(FCOMP)),INTEL)
 override FFLAGS += -O0 -warn all -g -traceback -fpe0 -stand f18
 endif
 ifeq ($(strip $(FCOMP)),NVIDIA)
-override FFLAGS += -O0 -g -traceback -Mstandard -Minform=inform -Mbackslash -Mbounds -Mchkptr -Mchkstk
+override FFLAGS += -O0 -g -traceback -Ktrap=fp -Mstandard -Minform=inform -Mbackslash -Mbounds -Mchkptr -Mchkstk
 endif
 ifeq ($(strip $(FCOMP)),CRAY)
 override FFLAGS += -g -G0
