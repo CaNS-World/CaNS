@@ -16,7 +16,7 @@ module mod_fftw_param
   interface
      type(C_PTR) function fftw_plan_guru_r2r(rank,dims, &
        howmany_rank,howmany_dims,in,out,kind,flags)  &
-#if defined(_SINGLE_PRECISION) || defined(_SINGLE_PRECISION_POISSON)
+#if defined(_SINGLE_PRECISION)
        bind(C, name='fftwf_plan_guru_r2r')
 #else
        bind(C, name='fftw_plan_guru_r2r')
@@ -26,7 +26,7 @@ module mod_fftw_param
        type(fftw_iodim), dimension(*), intent(in) :: dims
        integer(C_INT), value :: howmany_rank
        type(fftw_iodim), dimension(*), intent(in) :: howmany_dims
-#if defined(_SINGLE_PRECISION) || defined(_SINGLE_PRECISION_POISSON)
+#if defined(_SINGLE_PRECISION)
        real(C_FLOAT ), dimension(*), intent(out) :: in,out
 #else
        real(C_DOUBLE), dimension(*), intent(out) :: in,out
@@ -65,7 +65,7 @@ module mod_fftw_param
   type(C_PTR) :: fwd_guruplan_z,bwd_guruplan_z
   logical :: planned=.false.
 #if defined(_OPENACC)
-#if defined(_SINGLE_PRECISION) || defined(_SINGLE_PRECISION_POISSON)
+#if defined(_SINGLE_PRECISION)
     integer, parameter :: CUFFT_FWD_TYPE = CUFFT_R2C
     integer, parameter :: CUFFT_BWD_TYPE = CUFFT_C2R
 #else

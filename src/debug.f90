@@ -87,13 +87,13 @@ module mod_debug
     !
     implicit none
     integer , intent(in), dimension(3) :: lo,hi
-    real(gp), intent(in), dimension(2) :: dli
-    real(gp), intent(in), dimension(lo(3)-1:) :: dzci,dzfi
-    real(gp), intent(in), dimension(lo(1)-1:,lo(2)-1:,lo(3)-1:) :: fp,fpp
-    real(gp), intent(out) :: diffmax
-    real(gp) :: val
+    real(rp), intent(in), dimension(2) :: dli
+    real(rp), intent(in), dimension(lo(3)-1:) :: dzci,dzfi
+    real(rp), intent(in), dimension(lo(1)-1:,lo(2)-1:,lo(3)-1:) :: fp,fpp
+    real(rp), intent(out) :: diffmax
+    real(rp) :: val
     integer :: i,j,k
-    real(gp) :: dxi,dyi
+    real(rp) :: dxi,dyi
     dxi = dli(1); dyi = dli(2)
     diffmax = 0.
     !$acc wait

@@ -22,7 +22,6 @@ IMPDIFF=0                  #
 IMPDIFF_1D=0               #
 PENCIL_AXIS=1              # = 1/2/3 for X/Y/Z-aligned pencils
 SINGLE_PRECISION=0         # perform the whole calculation in single precision
-SINGLE_PRECISION_POISSON=0 # downcast/upcast correction pressure precision to solve Poisson equation in single precision
 #
 # GPU-related
 #
@@ -38,7 +37,6 @@ In this file, `FCOMP` can be one of `GNU` (`gfortran`), `INTEL` (`ifort`), `NVID
  * `IMPDIFF_1D`               : same as above, but with implicit diffusion *only* along Z; *for optimal parallel performance this option should be combined with* `PENCIL_AXIS=3`
  * `PENCIL_AXIS`              : sets the default pencil direction, one of [1,2,3] for [X,Y,Z]-aligned pencils; X-aligned is the default and should be optimal for all cases except for Z implicit diffusion, where using Z-pencils is recommended
  * `SINGLE_PRECISION`         : calculation will be carried out in single precision (the default precision is double)
- * `SINGLE_PRECISION_POISSON` : downcast/upcast correction pressure precision to solve Poisson equation in single precision; this option is compatible with explicit diffusion, or with `IMPDIFF_1D=1 PENCIL_AXIS=3`; note that `2DECOMP` may need to be rebuilt too, to support single-precision transposes
  * `GPU`                      : enable GPU accelerated runs (requires the `FCOMP=NVIDIA`)
  * `USE_NVTX`                 : enable [NVTX](https://docs.nvidia.com/nsight-visual-studio-edition/nvtx) markers to tag certain code regions and assist with profiling
 

@@ -152,9 +152,6 @@ module mod_output
     integer , intent(in) :: inorm,islice
     real(rp), intent(in), dimension(:,:,:) :: p
     !
-    ! masked in case of _SINGLE_PRECISION_POISSON since 2DECOMP does not yet support two precisions
-    !
-#if !defined(_SINGLE_PRECISION_POISSON)
     select case(inorm)
     case(1) !normal to x --> yz plane
        call decomp_2d_write_plane(ipencil,p,inorm,islice,'.',fname,'dummy')
@@ -163,7 +160,6 @@ module mod_output
     case(3) !normal to z --> xy plane
        call decomp_2d_write_plane(ipencil,p,inorm,islice,'.',fname,'dummy')
     end select
-#endif
   end subroutine out2d
   !
   subroutine out3d(fname,nskip,p)
@@ -184,18 +180,16 @@ module mod_output
     integer :: fh
     integer(kind=MPI_OFFSET_KIND) :: filesize,disp
     !
-    ! masked in case of _SINGLE_PRECISION_POISSON since 2DECOMP does not yet support two precisions
-    !
     call MPI_FILE_OPEN(MPI_COMM_WORLD, fname, &
          MPI_MODE_CREATE+MPI_MODE_WRONLY, MPI_INFO_NULL,fh, ierr)
     filesize = 0_MPI_OFFSET_KIND
     call MPI_FILE_SET_SIZE(fh,filesize,ierr)
     disp = 0_MPI_OFFSET_KIND
-#if !defined(_SINGLE_PRECISION_POISSON)
+#if 1
     call decomp_2d_write_every(ipencil,p,nskip(1),nskip(2),nskip(3),fname,.true.)
 #else
     !
-    ! temporary workaround due to 2DECOMP's lack of support for different real kinds in a single build
+    ! alternative way of writing a full 3D field that was needed in the past
     !
     block
       use decomp_2d

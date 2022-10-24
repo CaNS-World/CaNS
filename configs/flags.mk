@@ -114,9 +114,6 @@ endif
 ifeq ($(strip $(SINGLE_PRECISION)),1)
 DEFINES += -D_SINGLE_PRECISION
 endif
-ifeq ($(strip $(SINGLE_PRECISION_POISSON)),1)
-DEFINES += -D_SINGLE_PRECISION_POISSON
-endif
 
 ifeq      ($(strip $(DECOMP_X_IO)),1)
 DEFINES += -D_DECOMP_X_IO

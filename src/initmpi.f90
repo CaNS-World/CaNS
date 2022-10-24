@@ -12,7 +12,7 @@ module mod_initmpi
   !@acc use openacc
   !@acc use cudecomp
 #if defined(_OPENACC)
-  use mod_common_cudecomp, only: cudecomp_real_rp,cudecomp_real_gp, &
+  use mod_common_cudecomp, only: cudecomp_real_rp, &
                                  ch => handle,gd => gd_halo,gd_poi, &
                                  ap_x,ap_y,ap_z,ap_x_poi,ap_y_poi,ap_z_poi
   use mod_param, only: cudecomp_t_comm_backend     ,cudecomp_h_comm_backend    , &
@@ -75,12 +75,12 @@ module mod_initmpi
     conf%pdims(:)      = dims(1:2)
     conf%gdims_dist(:) = ng(:)
     istat = cudecompGridDescAutotuneOptionsSetDefaults(atune_conf)
-    if(gp == dp) then
-      cudecomp_real_gp = CUDECOMP_DOUBLE
+    if(rp == dp) then
+      cudecomp_real_rp = CUDECOMP_DOUBLE
     else
-      cudecomp_real_gp = CUDECOMP_FLOAT
+      cudecomp_real_rp = CUDECOMP_FLOAT
     end if
-    atune_conf%dtype = cudecomp_real_gp
+    atune_conf%dtype = cudecomp_real_rp
     atune_conf%grid_mode = CUDECOMP_AUTOTUNE_GRID_TRANSPOSE
     atune_conf%autotune_transpose_backend = cudecomp_is_t_comm_autotune
     atune_conf%disable_nccl_backends    = .not.cudecomp_is_t_enable_nccl

@@ -13,7 +13,7 @@ module mod_common_cudecomp
   use mod_param, only: cudecomp_is_t_in_place
   implicit none
   public
-  integer :: cudecomp_real_rp,cudecomp_real_gp
+  integer :: cudecomp_real_rp
   type(cudecompHandle)     :: handle
   type(cudecompGridDesc)   :: gd_halo,gd_poi
   type(cudecompPencilInfo) :: ap_x,ap_y,ap_z,ap_x_poi,ap_y_poi,ap_z_poi
@@ -21,12 +21,12 @@ module mod_common_cudecomp
   ! workspace stuff
   !
   integer(i8) :: wsize_fft
-  real(gp), pointer, contiguous, dimension(:) :: work     ,work_cuda
+  real(rp), pointer, contiguous, dimension(:) :: work     ,work_cuda
   real(rp), pointer, contiguous, dimension(:) :: work_halo,work_halo_cuda
   !@cuf attributes(device) :: work_cuda,work_halo_cuda
-  real(gp), target, allocatable, dimension(:) :: solver_buf_0,solver_buf_1
+  real(rp), target, allocatable, dimension(:) :: solver_buf_0,solver_buf_1
 #if !defined(_IMPDIFF_1D)
-  real(gp), allocatable, dimension(:,:,:) :: pz_aux_1,pz_aux_2
+  real(rp), allocatable, dimension(:,:,:) :: pz_aux_1,pz_aux_2
 #else
   real(rp), allocatable, dimension(:,:,:) :: pz_aux_1,pz_aux_2
 #endif

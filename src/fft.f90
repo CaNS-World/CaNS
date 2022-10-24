@@ -29,8 +29,8 @@ module mod_fft
     integer    , intent(out), dimension(2,2) :: arrplan
 #endif
     real(rp), intent(out) :: normfft
-    real(gp), dimension(n_x(1),n_x(2),n_x(3))  :: arrx
-    real(gp), dimension(n_y(1),n_y(2),n_y(3))  :: arry
+    real(rp), dimension(n_x(1),n_x(2),n_x(3))  :: arrx
+    real(rp), dimension(n_y(1),n_y(2),n_y(3))  :: arry
 #if !defined(_OPENACC)
     type(C_PTR) :: plan_fwd_x,plan_bwd_x, &
                    plan_fwd_y,plan_bwd_y
@@ -49,7 +49,7 @@ module mod_fft
     integer :: istat,batch
     integer(int_ptr_kind()) :: wsize,max_wsize
 #endif
-#if defined(_SINGLE_PRECISION) || defined(_SINGLE_PRECISION_POISSON)
+#if defined(_SINGLE_PRECISION)
     !$ call sfftw_init_threads(ierr)
     !$ call sfftw_plan_with_nthreads(omp_get_max_threads())
 #else
@@ -136,7 +136,7 @@ module mod_fft
     istat = cufftSetAutoAllocation(plan_bwd_y,0)
     istat = cufftMakePlanMany(plan_bwd_y,1,ng(2),null(),1,ng(2)/2+1,null(),1,ny_y,CUFFT_BWD_TYPE,batch,wsize)
     max_wsize = max(wsize,max_wsize)
-    wsize_fft = max_wsize/f_sizeof(1._gp)
+    wsize_fft = max_wsize/f_sizeof(1._rp)
 #endif
     normfft = normfft*norm(1)*(ng(2)+norm(2)-iy)
     !
@@ -157,7 +157,7 @@ module mod_fft
     integer :: i,j
     !@acc integer :: istat
 #if !defined(_OPENACC)
-#if defined(_SINGLE_PRECISION) || defined(_SINGLE_PRECISION_POISSON)
+#if defined(_SINGLE_PRECISION)
     do j=1,size(arrplan,2)
       do i=1,size(arrplan,1)
         call sfftw_destroy_plan(arrplan(i,j))
@@ -184,9 +184,9 @@ module mod_fft
   subroutine fft(plan,arr)
     implicit none
     type(C_PTR), intent(in) :: plan
-    real(gp), intent(inout), dimension(:,:,:) :: arr
+    real(rp), intent(inout), dimension(:,:,:) :: arr
 #if !defined(_OPENACC)
-#if defined(_SINGLE_PRECISION) || defined(_SINGLE_PRECISION_POISSON)
+#if defined(_SINGLE_PRECISION)
     call sfftw_execute_r2r(plan,arr,arr)
 #else
     call dfftw_execute_r2r(plan,arr,arr)
@@ -252,10 +252,10 @@ module mod_fft
   subroutine fftf_gpu(plan,arr)
     implicit none
     integer , intent(in) :: plan
-    real(gp), intent(inout), dimension(:,:,:) :: arr
+    real(rp), intent(inout), dimension(:,:,:) :: arr
     integer :: istat
     !$acc host_data use_device(arr)
-#if defined(_SINGLE_PRECISION) || defined(_SINGLE_PRECISION_POISSON)
+#if defined(_SINGLE_PRECISION)
     istat = cufftExecR2C(plan,arr,arr)
 #else
     istat = cufftExecD2Z(plan,arr,arr)
@@ -265,10 +265,10 @@ module mod_fft
   subroutine fftb_gpu(plan,arr)
     implicit none
     integer , intent(in) :: plan
-    real(gp), intent(inout), dimension(:,:,:) :: arr
+    real(rp), intent(inout), dimension(:,:,:) :: arr
     integer :: istat
     !$acc host_data use_device(arr)
-#if defined(_SINGLE_PRECISION) || defined(_SINGLE_PRECISION_POISSON)
+#if defined(_SINGLE_PRECISION)
     istat = cufftExecC2R(plan,arr,arr)
 #else
     istat = cufftExecZ2D(plan,arr,arr)
@@ -285,7 +285,7 @@ module mod_fft
     integer , intent(in   ) :: nn
     integer , intent(in   ), dimension(3) :: n       ! dimensions of input/output array
     integer , intent(in   ) :: idir                  ! direction where the transform is taken
-    real(gp), intent(inout), dimension(:,:,:) :: arr ! input/output array
+    real(rp), intent(inout), dimension(:,:,:) :: arr ! input/output array
     integer :: j,k,n_2,n_3
     !
     select case(idir)
@@ -310,7 +310,7 @@ module mod_fft
     integer , intent(in   ) :: nn
     integer , intent(in   ), dimension(3) :: n       ! dimensions of input/output array
     integer , intent(in   ) :: idir                  ! direction where the transform is taken
-    real(gp), intent(inout), dimension(:,:,:) :: arr ! input/output array
+    real(rp), intent(inout), dimension(:,:,:) :: arr ! input/output array
     integer :: j,k,n_2,n_3
     !
     select case(idir)
@@ -346,7 +346,7 @@ module mod_fft
     integer , intent(in   ) :: nn
     integer , intent(in   ), dimension(3) :: n       ! dimensions of input/output array
     integer , intent(in   ) :: idir                  ! array direction where the transform is taken
-    real(gp), intent(inout), dimension(:,:,:) :: arr ! input/output array
+    real(rp), intent(inout), dimension(:,:,:) :: arr ! input/output array
     logical, intent(in) :: is_swap_order  ! swap order of the elements of the input array? (for DST)
     logical, intent(in) :: is_negate_even ! negate every other element of the input array?
     integer :: i,j,k
@@ -373,14 +373,14 @@ module mod_fft
     integer , intent(in   ) :: nn
     integer , intent(in   ), dimension(3) :: n
     integer , intent(in   ) :: idir
-    real(gp), intent(inout), dimension(:,:,:) :: arr
+    real(rp), intent(inout), dimension(:,:,:) :: arr
     logical, intent(in) :: is_swap_order  ! swap order of the elements of the input array? (for DST)
     logical, intent(in) :: is_negate_even ! negate every other element of the input array?
-    real(gp), pointer, contiguous, dimension(:,:,:) :: arr_tmp
+    real(rp), pointer, contiguous, dimension(:,:,:) :: arr_tmp
     integer :: i,j,k,ii
-    real(gp) :: arg
+    real(rp) :: arg
     integer :: n_2,n_3
-    real(gp) :: pi
+    real(rp) :: pi
     pi = pi_rp ! converts double to single if needed
     !
     select case(idir)
@@ -393,10 +393,10 @@ module mod_fft
           do ii=0,nn/2
             i = 2*ii+1
             !arr_tmp(ii   ,j,k) =    real( &
-            !                         2.*exp(-ri_unit*pi*ii/(2.*nn))*cmplx(arr(i,j,k),arr(i+1,j,k),gp) &
+            !                         2.*exp(-ri_unit*pi*ii/(2.*nn))*cmplx(arr(i,j,k),arr(i+1,j,k),rp) &
             !                        )
             !arr_tmp(nn-ii,j,k) = - aimag( &
-            !                         2.*exp(-ri_unit*pi*ii/(2.*nn))*cmplx(arr(i,j,k),arr(i+1,j,k),gp) &
+            !                         2.*exp(-ri_unit*pi*ii/(2.*nn))*cmplx(arr(i,j,k),arr(i+1,j,k),rp) &
             !                        ) ! = 0 for ii=0
             arg = -pi*ii/(2.*nn)
             arr_tmp(ii   ,j,k) =  2.*(cos(arg)*arr(i,j,k) - sin(arg)*arr(i+1,j,k))
@@ -426,14 +426,14 @@ module mod_fft
     integer , intent(in   ) :: nn
     integer , intent(in   ), dimension(3) :: n
     integer , intent(in   ) :: idir
-    real(gp), intent(inout), dimension(:,:,:) :: arr
+    real(rp), intent(inout), dimension(:,:,:) :: arr
     logical, intent(in) :: is_swap_order  ! swap order of the elements of the input array? (for DST)
     logical, intent(in) :: is_negate_even ! negate every other element of the input array?
-    real(gp), pointer, contiguous, dimension(:,:,:) :: arr_tmp
+    real(rp), pointer, contiguous, dimension(:,:,:) :: arr_tmp
     integer :: i,j,k,ii
-    real(gp) :: arg
+    real(rp) :: arg
     integer :: n_2,n_3
-    real(gp) :: pi
+    real(rp) :: pi
     pi = pi_rp ! converts double to single if needed
     !
     select case(idir)
@@ -454,8 +454,8 @@ module mod_fft
       do k=1,n_3
         do j=1,n_2
           do ii=0,nn/2
-            !arr_tmp(2*ii  ,j,k)  = real( 1.*exp(ri_unit*pi*ii/(2.*nn))*(arr(ii+1,j,k)-ri_unit*arr(nn-ii+1,j,k)),gp)
-            !arr_tmp(2*ii+1,j,k)  = aimag(1.*exp(ri_unit*pi*ii/(2.*nn))*(arr(ii+1,j,k)-ri_unit*arr(nn-ii+1,j,k)),gp)
+            !arr_tmp(2*ii  ,j,k)  = real( 1.*exp(ri_unit*pi*ii/(2.*nn))*(arr(ii+1,j,k)-ri_unit*arr(nn-ii+1,j,k)),rp)
+            !arr_tmp(2*ii+1,j,k)  = aimag(1.*exp(ri_unit*pi*ii/(2.*nn))*(arr(ii+1,j,k)-ri_unit*arr(nn-ii+1,j,k)),rp)
             arg = pi*ii/(2.*nn)
             arr_tmp(2*ii  ,j,k) = 1.*(cos(arg)*arr(ii+1,j,k) + sin(arg)*arr(nn-ii+1,j,k))
             arr_tmp(2*ii+1,j,k) = 1.*(sin(arg)*arr(ii+1,j,k) - cos(arg)*arr(nn-ii+1,j,k))
@@ -488,7 +488,7 @@ module mod_fft
     integer , intent(in   ) :: nn
     integer , intent(in   ), dimension(3) :: n       ! dimensions of input/output array
     integer , intent(in   ) :: idir                  ! array direction where the transform is taken
-    real(gp), intent(inout), dimension(:,:,:) :: arr ! input/output array
+    real(rp), intent(inout), dimension(:,:,:) :: arr ! input/output array
     logical, intent(in) :: is_swap_order  ! swap order of the elements of the input array? (for DST)
     logical, intent(in) :: is_negate_even ! negate every other element of the input array?
     integer :: i,j,k
@@ -513,7 +513,7 @@ module mod_fft
     integer, intent(in)                       :: nn ! number of points in the signal
     integer, intent(in), dimension(3)         :: n
     integer, intent(in)                       :: idir
-    real(gp), intent(inout), dimension(:,:,:) :: arr
+    real(rp), intent(inout), dimension(:,:,:) :: arr
     integer :: istat
     select case(cbc)
     case('PP')
@@ -580,7 +580,7 @@ module mod_fft
   subroutine negate_even(n,n2,n3,arr)
     implicit none
     integer , intent(in   ) :: n,n2,n3
-    real(gp), intent(inout) :: arr(:,:,:)
+    real(rp), intent(inout) :: arr(:,:,:)
     integer :: i,j,k
     !$acc parallel loop collapse(3) default(present) async(1)
     do k=1,n3
@@ -594,8 +594,8 @@ module mod_fft
   subroutine swap_order(n,n2,n3,arr)
     implicit none
     integer , intent(in   ) :: n,n2,n3
-    real(gp), intent(inout) :: arr(:,:,:)
-    real(gp) :: tmp
+    real(rp), intent(inout) :: arr(:,:,:)
+    real(rp) :: tmp
     integer  :: i,j,k
     !$acc parallel loop collapse(3) default(present) private(tmp) async(1)
     do k=1,n3
@@ -619,8 +619,8 @@ module mod_fft
     use mod_common_cudecomp, only: buf => work
     implicit none
     integer , intent(in   ) :: ib,n,n2,n3
-    real(gp), intent(inout) :: arr(:,:,:)
-    real(gp), pointer, contiguous :: arr_tmp(:,:,:)
+    real(rp), intent(inout) :: arr(:,:,:)
+    real(rp), pointer, contiguous :: arr_tmp(:,:,:)
     integer :: i,j,k
     integer :: nh
     arr_tmp(1:n,1:n2,1:n3) => buf(1:n*n2*n3)

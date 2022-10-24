@@ -62,13 +62,10 @@ contains
     !
     ! estimate GPU memory footprint, assuming one MPI task <-> one GPU
     !
-    use mod_types, only: i8,rp,gp
+    use mod_types, only: i8,rp
     integer, intent(in), dimension(3) :: n,n_z
     integer :: nh(3)
-    integer(i8) :: itotal
-    integer(i8) :: itemp
-    integer(i8) :: gp_size,rp_size
-    gp_size = f_sizeof(1._gp)
+    integer(i8) :: itotal,itemp,rp_size
     rp_size = f_sizeof(1._rp)
     itotal = 0
     !
@@ -95,17 +92,17 @@ contains
       !
       ! rhsbp, lambdaxyp, ap,bp,cp
       !
-      itotal = itotal + itemp1*rp_size                + itemp2*gp_size             + itemp3*gp_size
+      itotal = itotal + itemp1*rp_size                + itemp2*rp_size   + itemp3*rp_size
 #elif  defined(_IMPDIFF_1D)
       !
       ! rhsbp,rhsb[u,v,w,buf]%z, lambdaxyp, a?,b?,c? [p,u,v,w,buf]
       !
-      itotal = itotal + (itemp1+itemp1_(3)*4)*rp_size + itemp2*gp_size             + itemp3*(gp_size + rp_size*4)
+      itotal = itotal + (itemp1+itemp1_(3)*4)*rp_size + itemp2*rp_size   + itemp3*rp_size*5
 #else
       !
       ! rhsbp,rhsb[u,v,w,buf]%[x,y,z], lambdaxy[p,u,v,w], (a?,b?,c?)[p,u,v,w,buf]
       !
-      itotal = itotal + itemp1*rp_size*(1+4)          + itemp2*(gp_size+rp_size*4) + itemp3*(gp_size + rp_size*4)
+      itotal = itotal + itemp1*rp_size*(1+4)          + itemp2*rp_size*5 + itemp3*rp_size*5
 #endif
     end block
     !

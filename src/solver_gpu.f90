@@ -11,8 +11,7 @@ module mod_solver_gpu
   use mod_fft  ,  only: signal_processing,fftf_gpu,fftb_gpu
   use mod_types
   use mod_common_mpi     , only: ipencil_axis
-  use mod_common_cudecomp, only: dtype_gp => cudecomp_real_gp, &
-                                 dtype_rp => cudecomp_real_rp, &
+  use mod_common_cudecomp, only: dtype_rp => cudecomp_real_rp, &
                                  cudecomp_is_t_in_place, &
                                  solver_buf_0,solver_buf_1, &
                                  pz_aux_1,pz_aux_2,work, &
@@ -28,24 +27,18 @@ module mod_solver_gpu
 #if defined(_IMPDIFF_1D)
   public solver_gaussel_z_gpu
 #endif
-  interface gaussel_gpu
-    module procedure gaussel_sp,gaussel_dp
-  end interface
-  interface gaussel_periodic_gpu
-    module procedure gaussel_periodic_sp,gaussel_periodic_dp
-  end interface
   contains
   subroutine solver_gpu(n,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p)
     implicit none
     integer , intent(in), dimension(3) :: n,ng
     integer , intent(in), dimension(2,2) :: arrplan
     real(rp), intent(in) :: normfft
-    real(gp), intent(in), dimension(:,:) :: lambdaxy
-    real(gp), intent(in), dimension(:) :: a,b,c
+    real(rp), intent(in), dimension(:,:) :: lambdaxy
+    real(rp), intent(in), dimension(:) :: a,b,c
     character(len=1), dimension(0:1,3), intent(in) :: bc
     character(len=1), intent(in), dimension(3) :: c_or_f
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
-    real(gp), pointer, contiguous, dimension(:,:,:) :: px,py,pz
+    real(rp), pointer, contiguous, dimension(:,:,:) :: px,py,pz
     integer :: q
     integer, dimension(3) :: n_x,n_y,n_z,n_z_0
     integer :: istat
@@ -87,7 +80,7 @@ module mod_solver_gpu
         end do
       end block
       !$acc host_data use_device(py,px,work)
-      istat = cudecompTransposeYtoX(ch,gd,py,px,work,dtype_gp,stream=istream)
+      istat = cudecompTransposeYtoX(ch,gd,py,px,work,dtype_rp,stream=istream)
       !$acc end host_data
     case(3)
       !$acc kernels default(present) async(1)
@@ -96,8 +89,8 @@ module mod_solver_gpu
       !$OMP END PARALLEL WORKSHARE
       !$acc end kernels
       !$acc host_data use_device(pz,py,px,work)
-      istat = cudecompTransposeZtoY(ch,gd,pz,py,work,dtype_gp,stream=istream)
-      istat = cudecompTransposeYtoX(ch,gd,py,px,work,dtype_gp,stream=istream)
+      istat = cudecompTransposeZtoY(ch,gd,pz,py,work,dtype_rp,stream=istream)
+      istat = cudecompTransposeYtoX(ch,gd,py,px,work,dtype_rp,stream=istream)
       !$acc end host_data
     end select
     !
@@ -106,7 +99,7 @@ module mod_solver_gpu
     call signal_processing(1,'F',bc(0,1)//bc(1,1),c_or_f(1),ng(1),n_x,1,px)
     !
     !$acc host_data use_device(px,py,work)
-    istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_gp,stream=istream)
+    istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_rp,stream=istream)
     !$acc end host_data
     !
     call signal_processing(0,'F',bc(0,2)//bc(1,2),c_or_f(2),ng(2),n_y,1,py)
@@ -114,7 +107,7 @@ module mod_solver_gpu
     call signal_processing(1,'F',bc(0,2)//bc(1,2),c_or_f(2),ng(2),n_y,1,py)
     !
     !$acc host_data use_device(py,pz,work)
-    istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_gp,stream=istream)
+    istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
     !$acc end host_data
     !
     q = 0
@@ -126,7 +119,7 @@ module mod_solver_gpu
     end if
     !
     !$acc host_data use_device(pz,py,work)
-    istat = cudecompTransposeZtoY(ch,gd,pz,py,work,dtype_gp,stream=istream)
+    istat = cudecompTransposeZtoY(ch,gd,pz,py,work,dtype_rp,stream=istream)
     !$acc end host_data
     !
     call signal_processing(0,'B',bc(0,2)//bc(1,2),c_or_f(2),ng(2),n_y,1,py)
@@ -134,7 +127,7 @@ module mod_solver_gpu
     call signal_processing(1,'B',bc(0,2)//bc(1,2),c_or_f(2),ng(2),n_y,1,py)
     !
     !$acc host_data use_device(py,px,work)
-    istat = cudecompTransposeYtoX(ch,gd,py,px,work,dtype_gp,stream=istream)
+    istat = cudecompTransposeYtoX(ch,gd,py,px,work,dtype_rp,stream=istream)
     !$acc end host_data
     !
     call signal_processing(0,'B',bc(0,1)//bc(1,1),c_or_f(1),ng(1),n_x,1,px)
@@ -150,7 +143,7 @@ module mod_solver_gpu
       !$acc end kernels
     case(2)
       !$acc host_data use_device(px,py,work)
-      istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_gp,stream=istream)
+      istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_rp,stream=istream)
       !$acc end host_data
       block
         integer :: i,j,k
@@ -170,8 +163,8 @@ module mod_solver_gpu
       end block
     case(3)
       !$acc host_data use_device(px,py,pz,work)
-      istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_gp,stream=istream)
-      istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_gp,stream=istream)
+      istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_rp,stream=istream)
+      istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
       !$acc end host_data
       !$acc kernels default(present) async(1)
       !$OMP PARALLEL WORKSHARE
@@ -181,31 +174,216 @@ module mod_solver_gpu
     end select
   end subroutine solver_gpu
   !
-  subroutine gaussel_sp(nx,ny,n,nh,a,b,c,p,d,lambdaxy)
-    use mod_types, only: wp => sp
-    use mod_param, only: eps => eps_sp
-#include "solver_gpu_gaussel-inc.f90"
-  end subroutine gaussel_sp
-  subroutine gaussel_dp(nx,ny,n,nh,a,b,c,p,d,lambdaxy)
-    use mod_types, only: wp => dp
-    use mod_param, only: eps => eps_dp
-#include "solver_gpu_gaussel-inc.f90"
-  end subroutine gaussel_dp
+  subroutine gaussel_gpu(nx,ny,n,nh,a,b,c,p,d,lambdaxy)
+    use mod_param, only: eps
+    implicit none
+    integer , intent(in) :: nx,ny,n,nh
+    real(rp), intent(in), dimension(:) :: a,b,c
+    real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
+    real(rp),                dimension(nx,ny,n) :: d
+    real(rp), intent(in), dimension(:,:), optional :: lambdaxy
+    real(rp) :: z,lxy
+    integer :: i,j,k
+    !
+    !solve tridiagonal system
+    !
+    if(present(lambdaxy)) then
+      !$acc parallel loop gang vector collapse(2) default(present) private(lxy,z) async(1)
+      do j=1,ny
+        do i=1,nx
+          lxy = lambdaxy(i,j)
+          !
+          ! call dgtsv_homebrewed(n,a,bb,c,p)
+          !
+          z = 1./(b(1)+lxy+eps)
+          d(i,j,1) = c(1)*z
+          p(i,j,1) = p(i,j,1)*z
+          !$acc loop seq
+          do k=2,n
+            z = 1./(b(k)+lxy-a(k)*d(i,j,k-1)+eps)
+            d(i,j,k) = c(k)*z
+            p(i,j,k) = (p(i,j,k)-a(k)*p(i,j,k-1))*z
+          end do
+          !
+          ! backward substitution
+          !
+          !$acc loop seq
+          do k=n-1,1,-1
+            p(i,j,k) = p(i,j,k) - d(i,j,k)*p(i,j,k+1)
+          end do
+        end do
+      end do
+    else
+      !$acc parallel loop gang vector collapse(2) default(present) private(z) async(1)
+      do j=1,ny
+        do i=1,nx
+          !
+          ! call dgtsv_homebrewed(n,a,b,c,p)
+          !
+          z = 1./(b(1)+eps)
+          d(i,j,1) = c(1)*z
+          p(i,j,1) = p(i,j,1)*z
+          !$acc loop seq
+          do k=2,n
+            z = 1./(b(k)-a(k)*d(i,j,k-1)+eps)
+            d(i,j,k) = c(k)*z
+            p(i,j,k) = (p(i,j,k)-a(k)*p(i,j,k-1))*z
+          end do
+          !
+          ! backward substitution
+          !
+          !$acc loop seq
+          do k=n-1,1,-1
+            p(i,j,k) = p(i,j,k) - d(i,j,k)*p(i,j,k+1)
+          end do
+        end do
+      end do
+    end if
+  end subroutine gaussel_gpu
   !
-  subroutine gaussel_periodic_sp(nx,ny,n,nh,a,b,c,p,d,p1,p2,lambdaxy)
-    use mod_types, only: wp => sp
-    use mod_param, only: eps => eps_sp
-#include "solver_gpu_gaussel_periodic-inc.f90"
-  end subroutine gaussel_periodic_sp
-  subroutine gaussel_periodic_dp(nx,ny,n,nh,a,b,c,p,d,p1,p2,lambdaxy)
-    use mod_types, only: wp => dp
-    use mod_param, only: eps => eps_dp
-#include "solver_gpu_gaussel_periodic-inc.f90"
-  end subroutine gaussel_periodic_dp
+  subroutine gaussel_periodic_gpu(nx,ny,n,nh,a,b,c,p,d,p1,p2,lambdaxy)
+    use mod_param, only: eps
+    implicit none
+    integer , intent(in) :: nx,ny,n,nh
+    real(rp), intent(in), dimension(:) :: a,b,c
+    real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
+    real(rp),                dimension(nx,ny,n) :: d,p1,p2
+    real(rp), intent(in), dimension(:,:), optional :: lambdaxy
+    real(rp) :: z,lxy
+    integer :: i,j,k
+    !
+    ! solve tridiagonal system
+    !
+    if(present(lambdaxy)) then
+      !$acc parallel loop gang vector collapse(2) default(present) private(lxy,z) async(1)
+      do j=1,ny
+        do i=1,nx
+          lxy = lambdaxy(i,j)
+          !$acc loop seq
+          do k=1,n-1
+            p1(i,j,k) = p(i,j,k)
+          end do
+          !
+          ! call dgtsv_homebrewed(n-1,a,bb,c,p1)
+          !
+          z = 1./(b(1)+lxy+eps)
+          d(i,j,1)  = c(1)*z
+          p1(i,j,1) = p1(i,j,1)*z
+          !$acc loop seq
+          do k=2,n-1
+            z         = 1./(b(k)+lxy-a(k)*d(i,j,k-1)+eps)
+            d(i,j,k)  = c(k)*z
+            p1(i,j,k) = (p1(i,j,k)-a(k)*p1(i,j,k-1))*z
+          end do
+          !
+          ! backward substitution
+          !
+          !$acc loop seq
+          do k=n-2,1,-1
+            p1(i,j,k) = p1(i,j,k) - d(i,j,k)*p1(i,j,k+1)
+          end do
+          !
+          !$acc loop seq
+          do k=1,n
+            p2(i,j,k) = 0.
+          end do
+          p2(i,j,1  ) = -a(1  )
+          p2(i,j,n-1) = -c(n-1)
+          !
+          ! call dgtsv_homebrewed(n-1,a,bb,c,p2)
+          !
+          z = 1./(b(1)+lxy+eps)
+          d( i,j,1) = c(1)*z
+          p2(i,j,1) = p2(i,j,1)*z
+          !$acc loop seq
+          do k=2,n-1
+            z        = 1./(b(k)+lxy-a(k)*d(i,j,k-1)+eps)
+            d(i,j,k) = c(k)*z
+            p2(i,j,k) = (p2(i,j,k)-a(k)*p2(i,j,k-1))*z
+          end do
+          !
+          ! backward substitution
+          !
+          !$acc loop seq
+          do k=n-2,1,-1
+            p2(i,j,k) = p2(i,j,k) - d(i,j,k)*p2(i,j,k+1)
+          end do
+          p(i,j,n) = (p(i,j,n)       - c(n)*p1(i,j,1) - a(n)*p1(i,j,n-1)) / &
+                     (b(    n) + lxy + c(n)*p2(i,j,1) + a(n)*p2(i,j,n-1)+eps)
+          !$acc loop seq
+          do k=1,n-1
+            p(i,j,k) = p1(i,j,k) + p2(i,j,k)*p(i,j,n)
+          end do
+        end do
+      end do
+    else
+      !$acc parallel loop gang vector collapse(2) default(present) private(z) async(1)
+      do j=1,ny
+        do i=1,nx
+          !$acc loop seq
+          do k=1,n-1
+            p1(i,j,k) = p(i,j,k)
+          end do
+          !
+          ! call dgtsv_homebrewed(n-1,a,b,c,p1)
+          !
+          z = 1./(b(1)+eps)
+          d(i,j,1)  = c(1)*z
+          p1(i,j,1) = p1(i,j,1)*z
+          !$acc loop seq
+          do k=2,n-1
+            z         = 1./(b(k)-a(k)*d(i,j,k-1)+eps)
+            d(i,j,k)  = c(k)*z
+            p1(i,j,k) = (p1(i,j,k)-a(k)*p1(i,j,k-1))*z
+          end do
+          !
+          ! backward substitution
+          !
+          !$acc loop seq
+          do k=n-2,1,-1
+            p1(i,j,k) = p1(i,j,k) - d(i,j,k)*p1(i,j,k+1)
+          end do
+          !
+          !!$acc loop seq
+          !do k=1,n
+          !  p2(i,j,k) = 0.
+          !end do
+          p2(i,j,1  ) = -a(1  )
+          p2(i,j,n-1) = -c(n-1)
+          !
+          ! call dgtsv_homebrewed(n-1,a,b,c,p2)
+          !
+          z = 1./(b(1)+eps)
+          d( i,j,1) = c(1)*z
+          p2(i,j,1) = p2(i,j,1)*z
+          !$acc loop seq
+          do k=2,n-1
+            z        = 1./(b(k)-a(k)*d(i,j,k-1)+eps)
+            d(i,j,k) = c(k)*z
+           !p2(i,j,k) = (p2(i,j,k)-a(k)*p2(i,j,k-1))*z
+            p2(i,j,k) = (         -a(k)*p2(i,j,k-1))*z
+          end do
+          !
+          ! backward substitution
+          !
+          !$acc loop seq
+          do k=n-2,1,-1
+            p2(i,j,k) = p2(i,j,k) - d(i,j,k)*p2(i,j,k+1)
+          end do
+          p(i,j,n) = (p(i,j,n) - c(n)*p1(i,j,1) - a(n)*p1(i,j,n-1)) / &
+                     (b(    n) + c(n)*p2(i,j,1) + a(n)*p2(i,j,n-1)+eps)
+          !$acc loop seq
+          do k=1,n-1
+            p(i,j,k) = p1(i,j,k) + p2(i,j,k)*p(i,j,n)
+          end do
+        end do
+      end do
+    end if
+  end subroutine gaussel_periodic_gpu
   !
 #if defined(_IMPDIFF_1D)
   subroutine solver_gaussel_z_gpu(n,a,b,c,bcz,c_or_f,p)
-    use mod_param, only: eps => eps_rp
+    use mod_param, only: eps
     implicit none
     integer , intent(in), dimension(3) :: n
     real(rp), intent(in), dimension(:) :: a,b,c

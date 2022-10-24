@@ -89,8 +89,8 @@ program cans
 #else
   integer    , dimension(2,2) :: arrplanp
 #endif
-  real(gp), allocatable, dimension(:,:) :: lambdaxyp
-  real(gp), allocatable, dimension(:) :: ap,bp,cp
+  real(rp), allocatable, dimension(:,:) :: lambdaxyp
+  real(rp), allocatable, dimension(:) :: ap,bp,cp
   real(rp) :: normfftp
   type rhs_bound
     real(rp), allocatable, dimension(:,:,:) :: x

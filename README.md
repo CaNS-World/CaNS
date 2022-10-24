@@ -20,6 +20,8 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 ## News
 
+**[24/10/2022]:** Option `SINGLE_PRECISION_POISSON` has been removed. While solving only the Poisson equation yields excellent results for many benchmarks, it remains unclear which cases benefit from solving only the Poisson equation in lower precision, instead of performing the whole calculation in lower precision (see https://github.com/CaNS-World/CaNS/pull/42). Since this mode introduces significant complexity, it will be removed from the main branch for now in favor of a more readable code, a decision that can be reconsidered in the future if a worthy use case if found. This option can still be explored in [v2.0.1](https://github.com/CaNS-World/CaNS/tree/v2.0.1), and may be valuable for very high Reynolds numbers or other setups with extremely fine grids.
+
 ### _Major Update:_ [`CaNS 2.0`](docs/CaNS-2.0.md) _is finally out!_ :tada:
 **`CaNS 2.0` has many new features, being the result of the most significant revision effort undertaken so far.** It includes major improvements in performance and robustness, and a fresh hardware-adaptive many-GPU parallelization using the [*cuDecomp*](https://github.com/NVIDIA/cuDecomp) library. See [`docs/CaNS-2.0.md`](docs/CaNS-2.0.md) for a detailed description of all new features. CaNS 2.0 has been tested and observed to run efficiently on some major GPU-accelerated clusters such as Perlmutter, Summit, and Marconi 100.
 
@@ -86,7 +88,6 @@ The `Makefile` in root directory is used to compile the code, and is expected to
  * `IMPDIFF_1D`               : same as above, but with implicit diffusion *only* along Z; *for optimal parallel performance this option should be combined with* `PENCIL_AXIS=3`
  * `PENCIL_AXIS`              : sets the default pencil direction, one of [1,2,3] for [X,Y,Z]-aligned pencils; X-aligned is the default and should be optimal for all cases except for Z implicit diffusion, where using Z-pencils is recommended
  * `SINGLE_PRECISION`         : calculation will be carried out in single precision (the default precision is double)
- * `SINGLE_PRECISION_POISSON` : only the Poisson equation will be solved in single precision (requires explicit diffusion, or Z implicit diffusion with Z-aligned pencils (i.e., `IMPDIFF_1D`, and `PENCIL_AXIS=3`)
  * `GPU`                      : enable GPU-accelerated runs
  * `USE_NVTX`                 : enable [NVTX](https://s.nvidia.com/nsight-visual-studio-edition/nvtx) tags for profiling
 

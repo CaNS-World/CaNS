@@ -25,11 +25,4 @@ override LIBS += -lfftw3f_threads
 endif
 endif
 
-ifeq ($(strip $(SINGLE_PRECISION_POISSON)),1)
-override LIBS += -lfftw3f
-ifeq ($(strip $(OPENMP)),1)
-override LIBS += -lfftw3f_threads
-endif
-endif
-
 endif
