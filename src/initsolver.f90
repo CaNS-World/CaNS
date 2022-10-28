@@ -89,7 +89,7 @@ module mod_initsolver
     select case(bc(0)//bc(1))
     case('PP')
       do l=1,n
-        lambda(l  )   = -4.*sin((1.*(l-1))*pi/(1.*n))**2
+        lambda(l  )   = -2.*(1.-cos((2*(l-1))*pi/(1.*n)))
       end do
 #if defined(_OPENACC)
       block
@@ -114,26 +114,26 @@ module mod_initsolver
     case('NN')
       if(     c_or_f == 'c') then
         do l=1,n
-          lambda(l)   = -4.*sin((1.*(l-1))*pi/(2.*n))**2
+          lambda(l)   = -2.*(1.-cos((l-1  )*pi/(1.*n)))
         end do
       else if(c_or_f == 'f') then
         do l=1,n
-          lambda(l)   = -4.*sin((1.*(l-1))*pi/(2.*(n-1+1)))**2
+          lambda(l)   = -2.*(1.-cos((l-1  )*pi/(1.*(n-1+1))))
         end do
       end if
     case('DD')
       if(     c_or_f == 'c') then
         do l=1,n
-          lambda(l)   = -4.*sin((1.*(l-0))*pi/(2.*n))**2
+          lambda(l)   = -2.*(1.-cos((l    )*pi/(1.*n)))
         end do
       else if(c_or_f == 'f') then
         do l=1,n-1 ! point at n is a boundary and is excluded here
-          lambda(l)   = -4.*sin((1.*(l-0))*pi/(2.*(n+1-1)))**2
+          lambda(l)   = -2.*(1.-cos((l    )*pi/(1.*(n+1-1))))
         end do
       end if
     case('ND','DN')
       do l=1,n
-        lambda(l)   = -4.*sin((1.*(2*l-1))*pi/(4.*n))**2
+        lambda(l)     = -2.*(1.-cos((2*l-1)*pi/(2.*n)))
       end do
     end select
   end subroutine eigenvalues
