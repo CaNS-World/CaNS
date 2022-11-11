@@ -117,7 +117,6 @@ module mod_initmpi
     istat = cudecompGridDescCreate(ch,gd,conf,atune_conf)
 #endif
     call decomp_2d_init(ng(1),ng(2),ng(3),dims(1),dims(2),periods)
-    if(any(dims(:) == 0)) dims(:) = dims_auto(:)
 #if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
     ipencil=1
 #elif defined(_DECOMP_Y)
