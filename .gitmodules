@@ -1,6 +1,6 @@
 [submodule "dependencies/cuDecomp"]
 	path = dependencies/cuDecomp
-	url = git@github.com:NVIDIA/cuDecomp.git
+	url = https://github.com/NVIDIA/cuDecomp
 [submodule "dependencies/2decomp-fft"]
 	path = dependencies/2decomp-fft
-	url = git@github.com:CaNS-World/2decomp-fft.git
+	url = https://github.com/CaNS-World/2decomp-fft
