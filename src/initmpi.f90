@@ -49,9 +49,9 @@ module mod_initmpi
     where(bc(0,:)//bc(1,:) == 'PP') periods(:) = .true.
     !
 #if defined(_OPENACC)
-    dev_type = acc_get_device_type()
     call MPI_COMM_SPLIT_TYPE(MPI_COMM_WORLD,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,local_comm,ierr)
     call MPI_COMM_RANK(local_comm,mydev,ierr)
+    dev_type = acc_get_device_type()
 #if 1
     istat = cudaGetDeviceCount(ndev)      ! may be tweaked with environment variable CUDA_VISIBLE_DEVICES
     mydev = mod(mydev,ndev)
