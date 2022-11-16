@@ -250,38 +250,70 @@ module mod_rk
     end do
 #endif
   end subroutine rk
-  subroutine rk_scal(rkpar,n,dli,dzci,dzfi,visc,dt,u,v,w,dsdtrko,s)
+  subroutine rk_scal(rkpar,n,dli,dzci,dzfi,grid_vol_ratio_f,visc,dt,u,v,w, &
+                     is_forced,scalf,ssource,s,f)
     !
     ! low-storage 3rd-order Runge-Kutta scheme
     ! for time integration of the scalar field.
+    !
+    ! n.b.: since we leverage the `save` attribute for dsdtrk*, this subroutine only supports
+    !       transport of a single scalar; extension to n arbtritrary scalars could be done,
+    !       e.g., using a loop through an array of scalar derived types, with an ASSOCIATE
+    !       statement to keep the same piece of code to for each scalar
     !
     implicit none
     real(rp), intent(in   ), dimension(2) :: rkpar
     integer , intent(in   ), dimension(3) :: n
     real(rp), intent(in   ), dimension(3) :: dli
     real(rp), intent(in   ), dimension(0:) :: dzci,dzfi
+    real(rp), intent(in   ), dimension(0:) :: grid_vol_ratio_f
     real(rp), intent(in   ) :: visc,dt
     real(rp), intent(in   ), dimension(0:,0:,0:) :: u,v,w
-    real(rp), intent(inout), dimension(:,:,:) :: dsdtrko
+    logical , intent(in   ) :: is_forced
+    real(rp), intent(in   ) :: scalf,ssource
     real(rp), intent(inout), dimension(0:,0:,0:) :: s
-    real(rp),              dimension(n(1),n(2),n(3)) :: dsdtrk
+    real(rp), intent(out  ) :: f
+    real(rp), target     , allocatable, dimension(:,:,:), save :: dsdtrk_t,dsdtrko_t
+    real(rp), pointer    , contiguous , dimension(:,:,:), save :: dsdtrk  ,dsdtrko
+    logical, save :: is_first = .true.
     real(rp) :: factor1,factor2,factor12
     integer :: i,j,k
+    real(rp) :: mean
     !
     factor1 = rkpar(1)*dt
     factor2 = rkpar(2)*dt
     factor12 = factor1 + factor2
+    if(is_first) then ! leverage save attribute to allocate these arrays on the device only once
+      is_first = .false.
+      allocate(dsdtrk_t(n(1),n(2),n(3)),dsdtrko_t(n(1),n(2),n(3)))
+      !$acc enter data create(dsdtrk_t,dsdtrko_t) async(1)
+      !$acc kernels default(present) async(1) ! not really necessary
+      dsdtrko_t(:,:,:) = 0._rp
+      !$acc end kernels
+      dsdtrk  => dsdtrk_t
+      dsdtrko => dsdtrko_t
+    end if
     call scal(n(1),n(2),n(3),dli(1),dli(2),dli(3),dzci,dzfi,visc,u,v,w,s,dsdtrk)
     !$acc parallel loop collapse(3) default(present) async(1)
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP SHARED(n,factor1,factor2,s,dsdtrk,dsdtrko)
+    !$OMP SHARED(n,factor1,factor2,factor12,ssource,s,dsdtrk,dsdtrko)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
-          s(i,j,k) = s(i,j,k) + factor1*dsdtrk(i,j,k) + factor2*dsdtrko(i,j,k)
-          dsdtrko(i,j,k) = dsdtrk(i,j,k)
+          s(i,j,k) = s(i,j,k) + factor1*dsdtrk(i,j,k) + factor2*dsdtrko(i,j,k) + factor12*ssource
         end do
       end do
     end do
+    !
+    ! swap d?dtrk <-> d?dtrko
+    !
+    call swap(dsdtrk,dsdtrko)
+    !
+    ! bulk scalar forcing
+    !
+    if(is_forced) then
+      call bulk_mean(n,grid_vol_ratio_f,s,mean)
+      f = scalf - mean
+    end if
   end subroutine rk_scal
 end module mod_rk
