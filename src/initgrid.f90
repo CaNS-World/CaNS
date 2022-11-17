@@ -150,7 +150,9 @@ module mod_initgrid
     !
     n = nzg/2._rp
     retau = 1._rp/(1._rp+(n/kb)**2)*(dyp*n+(3._rp/4._rp*alpha*c_eta*n)**(4._rp/3._rp)*(n/kb)**2)
+#if defined(_DEBUG)
     if(kg==1) print*,'Grid targeting Retau = ',retau
+#endif
     k = 1._rp*min(kg,(nzg-kg))
     !
     ! dermine z/(2h)
