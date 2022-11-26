@@ -31,3 +31,4 @@
   !call out1d(trim(datadir)//'vmean_x_fld_'//fldnum//'.out',ng,lo,hi,1,l,dl,zc_g,dzf,v)
   !call out1d(trim(datadir)//'wmean_x_fld_'//fldnum//'.out',ng,lo,hi,1,l,dl,zc_g,dzf,w)
   !call out1d_chan(trim(datadir)//'velstats_fld_'//fldnum//'.out',ng,lo,hi,3,l,dl,zc_g,u,v,w)
+  !call gen_alias(myid,trim(datadir),'umean_z_fld_'//fldnum//'.out','umean_z_now.out')

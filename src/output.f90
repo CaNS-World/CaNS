@@ -11,7 +11,7 @@ module mod_output
   use mod_types
   implicit none
   private
-  public out0d,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
+  public out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
   contains
   subroutine out0d(fname,n,var)
     !
@@ -33,6 +33,17 @@ module mod_output
       close(iunit)
     end if
   end subroutine out0d
+  !
+  subroutine gen_alias(myid,datadir,fname,fname_alias)
+    !
+    ! this subroutine generates a symlink with name `fname_alias`, pointing to
+    ! file `datadir//fname` using the `execute_command_line` intrinsic;
+    ! it is called by task `myid`
+    !
+    integer, intent(in) :: myid
+    character(len=*), intent(in) :: datadir,fname,fname_alias
+    if(myid == 0) call execute_command_line('ln -sf '//trim(fname)//' '//trim(datadir)//fname_alias)
+  end subroutine gen_alias
   !
   subroutine out1d(fname,ng,lo,hi,idir,l,dl,z_g,dz,p)
     !
