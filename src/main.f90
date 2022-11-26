@@ -45,7 +45,7 @@ program cans
   use mod_initsolver     , only: initsolver
   use mod_load           , only: load
   use mod_rk             , only: rk
-  use mod_output         , only: out0d,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
+  use mod_output         , only: out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
   use mod_param          , only: lz,uref,lref,rey,visc,small, &
                                  nb,is_bound,cbcvel,bcvel,cbcpre,bcpre, &
                                  icheck,iout0d,iout1d,iout2d,iout3d,isave, &
@@ -566,7 +566,7 @@ program cans
         !
         ! fld.bin -> last checkpoint file (symbolic link)
         !
-        if(myid == 0) call execute_command_line('ln -sf '//trim(filename)//' '//trim(datadir)//'fld.bin')
+        call gen_alias(myid,trim(datadir),trim(filename),'fld.bin')
       end if
       if(myid == 0) print*, '*** Checkpoint saved at time = ', time, 'time step = ', istep, '. ***'
     end if
