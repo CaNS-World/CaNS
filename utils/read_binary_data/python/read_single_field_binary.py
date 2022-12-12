@@ -55,7 +55,8 @@ def read_single_field_binary(filenamei,iskip):
     xu = xu[0:ng[0]:iskip[0]]
     yv = yv[0:ng[1]:iskip[1]]
     zw = zw[0:ng[2]:iskip[2]]
-    return data,xp,yp,zp,xu,yv,zw
+    return data, xp, yp, zp, xu, yv, zw
+
 if __name__ == "__main__":
     import numpy as np
     filenamei   = input("Name of the binary file written by CaNS (e.g. vex_fld_0000000.bin)]: ")
@@ -63,4 +64,4 @@ if __name__ == "__main__":
     iskipy      = input("Data saved every (ix, iy, iz) points. Value of iy? [1]: ") or "1"
     iskipz      = input("Data saved every (ix, iy, iz) points. Value of iz? [1]: ") or "1"
     iskip       = np.array([iskipx,iskipy,iskipz]).astype(int)
-    read_single_field_binary(filenamei,iskip)
+    data, xp, yp, zp, xu, yv, zw = read_single_field_binary(filenamei,iskip)
