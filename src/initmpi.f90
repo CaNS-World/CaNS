@@ -11,6 +11,7 @@ module mod_initmpi
   use mod_types
   !@acc use openacc
   !@acc use cudecomp
+  !@cuf use cudafor, only: cudaGetDeviceCount,cudaSetDevice
 #if defined(_OPENACC)
   use mod_common_cudecomp, only: cudecomp_real_rp, &
                                  ch => handle,gd => gd_halo,gd_poi, &
