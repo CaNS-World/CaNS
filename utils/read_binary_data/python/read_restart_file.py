@@ -64,7 +64,8 @@ def read_restart_file(filenamei):
     p = data[:,:,:,3]
     time  =     fldinfo[0]
     istep = int(fldinfo[1])
-    return u,v,w,p,time,istep
+    return u, v, w, p, time, istep
+
 if __name__ == "__main__":
     filenamei = input("Name of the binary restart file written by CaNS [fld.bin]: ") or "fld.bin"
-    read_restart_file(filenamei)
+    u, v, w, p, time, istep = read_restart_file(filenamei)
