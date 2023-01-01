@@ -97,11 +97,6 @@ module mod_initmpi
     conf%pdims(:)      = dims(1:2)
     conf%halo_comm_backend = cudecomp_h_comm_backend
     conf%transpose_axis_contiguous(:) = .false.
-    if(rp == dp) then
-      cudecomp_real_rp = CUDECOMP_DOUBLE
-    else
-      cudecomp_real_rp = CUDECOMP_FLOAT
-    end if
     istat = cudecompGridDescAutotuneOptionsSetDefaults(atune_conf)
     atune_conf%halo_extents(:) = 1
     atune_conf%halo_periods(:) = periods(:)
