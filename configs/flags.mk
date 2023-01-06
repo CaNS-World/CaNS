@@ -143,3 +143,9 @@ else
 override FFLAGS += -fopenmp
 endif
 endif
+
+ifeq ($(strip $(FCOMP)),INTEL)
+ifeq ($(strip $(INTEL_IFX)),1)
+override FFLAGS += -fc=ifx
+endif
+endif
