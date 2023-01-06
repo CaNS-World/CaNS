@@ -7,7 +7,7 @@ Consider the following input file as example (corresponds to a turbulent plane c
 6. 3. 1.                 ! lx, ly, lz
 0.                       ! gr
 .95 1.0e5                ! cfl, dtmin
-1. 1. 5640.              ! uref, lref, rey
+5640.                    ! visci
 poi                      ! inivel
 T                        ! is_wallturb
 100000 100. 0.1          ! nstep, time_max, tw_max
@@ -57,12 +57,10 @@ The time step is set to be equal to `min(cfl*dtmax,dtmin)`, i.e. the minimum val
 ---
 
 ~~~
-1. 1. 5640.              ! uref, lref, rey
+5640.                    ! visci
 ~~~
 
-This line defines the flow governing parameters.
-
-`uref`, `lref` and `rey` are a reference **velocity scale**, **length scale**, and **Reynolds number** defining the problem. The fluid kinematic viscosity is computed form these quantities.
+This line defines the inverse of the fluid viscosity, `visci`, meaning that the viscosity is `visc = visci**(-1)`. Note that, for a setup defined with unit reference length and velocity scales, `visci` has the same value as the flow Reynolds number.
 
 ---
 
