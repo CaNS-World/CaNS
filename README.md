@@ -20,6 +20,8 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 ## News
 
+**[03/02/2023]:** The input file `dns.in` has been simplified to avoid a common source of confusion. Instead of prescribing `uref`, `lref`, and `rey` (reference velocity and length scales, and Reynolds number) to calculate the fluid viscosity as `visc = uref*lref/rey`, we directly prescrive the inverse of the viscosity, `visci` (`visc = visci**(-1)`), so all inputs are dimensional (see the updated [`docs/INFO_INPUT.md`](docs/INFO_INPUT.md) file). Note that `visci` has the same value as the flow Reynolds number for all files under `examples`, as `uref` and `lref` were always equal to `1`. *This change is backwards-incompatible - former input files should be updated from [v2.2.0](https://github.com/CaNS-World/CaNS/tree/v2.2.0) onward!*
+
 **[24/10/2022]:** Option `SINGLE_PRECISION_POISSON` has been removed from the `main` branch. While solving the Poisson in lower precision equation yields excellent results for many benchmarks, several of these cases also perform well when the whole calculation is performed in lower precision (see https://github.com/CaNS-World/CaNS/pull/42). Since this mode introduces significant complexity, it will be removed from the main branch for now in favor of a more readable code, a decision that can be reconsidered in the future. This option can still be explored in [v2.0.1](https://github.com/CaNS-World/CaNS/tree/v2.0.1), and is valuable for, e.g., setups with high Reynolds numbers and/or with extremely fine grids.
 
 ### _Major Update:_ [`CaNS 2.0`](docs/CaNS-2.0.md) _is finally out!_ :tada:
