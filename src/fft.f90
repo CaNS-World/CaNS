@@ -436,6 +436,7 @@ module mod_fft
     case(1)
       if(is_swap_order ) call swap_order( nn,n(2),n(3),arr)
       if(is_negate_even) call negate_even(nn,n(2),n(3),arr)
+      n_2 = n(2); n_3 = n(3)
       !$acc parallel loop collapse(2) default(present) async(1)
       do k=1,n_3
         do j=1,n_2
@@ -445,7 +446,6 @@ module mod_fft
         end do
       end do
       arr_tmp(0:n(idir)-1,1:n(2),1:n(3)) => buf(1:product(n(:)))
-      n_2 = n(2); n_3 = n(3)
       !$acc parallel loop collapse(3) default(present) private(ii,arg) async(1)
       do k=1,n_3
         do j=1,n_2
