@@ -30,7 +30,7 @@ real(rp), parameter, dimension(3)   :: rkcoeff12 = rkcoeff(1,:)+rkcoeff(2,:)
 integer , protected :: itot,jtot,ktot
 real(rp), protected :: lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,gr
 real(rp), protected :: cfl,dtmin
-real(rp), protected :: uref,lref,rey,visc
+real(rp), protected :: visci
 !
 character(len=100), protected :: inivel
 logical, protected :: is_wallturb
@@ -59,6 +59,7 @@ integer , protected, dimension(3) :: ng
 real(rp), protected, dimension(3) :: l
 real(rp), protected, dimension(3) :: dl
 real(rp), protected, dimension(3) :: dli
+real(rp), protected :: visc
 #if defined(_OPENACC)
 !
 ! cuDecomp input parameters
@@ -82,7 +83,7 @@ contains
         read(iunit,*,iostat=ierr) lx,ly,lz
         read(iunit,*,iostat=ierr) gr
         read(iunit,*,iostat=ierr) cfl,dtmin
-        read(iunit,*,iostat=ierr) uref,lref,rey
+        read(iunit,*,iostat=ierr) visci
         read(iunit,*,iostat=ierr) inivel
         read(iunit,*,iostat=ierr) is_wallturb
         read(iunit,*,iostat=ierr) nstep, time_max,tw_max
@@ -115,7 +116,7 @@ contains
     dyi = dy**(-1)
     dzi = dz**(-1)
     !
-    visc = uref*lref/rey
+    visc = visci**(-1)
     ng  = [itot,jtot,ktot]
     l   = [lx,ly,lz]
     dl  = [dx,dy,dz]

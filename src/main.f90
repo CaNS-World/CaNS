@@ -46,7 +46,7 @@ program cans
   use mod_load           , only: load
   use mod_rk             , only: rk
   use mod_output         , only: out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
-  use mod_param          , only: lz,uref,lref,rey,visc,small, &
+  use mod_param          , only: lz,visc,small, &
                                  nb,is_bound,cbcvel,bcvel,cbcpre,bcpre, &
                                  icheck,iout0d,iout1d,iout2d,iout3d,isave, &
                                  nstep,time_max,tw_max,stop_type,restart,is_overwrite_save,nsaves_max, &
@@ -309,7 +309,7 @@ program cans
     istep = 0
     time = 0.
     !$acc update self(zc,dzc,dzf)
-    call initflow(inivel,ng,lo,zc/lz,dzc/lz,dzf/lz,visc,u,v,w,p)
+    call initflow(inivel,ng,lo,zc,dzc,dzf,visc,u,v,w,p)
     if(myid == 0) print*, '*** Initial condition succesfully set ***'
   else
     call load('r',trim(datadir)//'fld.bin',MPI_COMM_WORLD,ng,[1,1,1],lo,hi,u,v,w,p,time,istep)

@@ -2,7 +2,7 @@
 6.2831853071795 6.283185307179586 0.125 ! lx, ly, lz
 0.                      ! gr
 .95 0.1                 ! cfl, dtmin
-1. 1. 100.              ! uref, lref, rey
+100.                    ! visci
 tgw                     ! inivel
 F                       ! is_wallturb
 100000 100. 0.1         ! nstep,time_max,tw_max
