@@ -190,7 +190,7 @@ These lines set the flow forcing.
 
 This line set the grid of computational subdomains.
 
-`dims` is the **number of computational** subdomains in `x` and `y`.
+`dims` is the **processor grid**, the number of domain partitions along the first and second decomposed directions (which depend on the selected default pencil orientation). `dims(1)*dims(2)` corresponds therefore to the total number of computational subdomains. Setting `dims(:) = [0,0]` will trigger a runtime autotuning step to find the processor grid that minimizes transpose times. Note, however, that other components of the algorithm (e.g., collective I/O) may also be affected by the choice of processor grid.
 
 # about `cudecomp.in`
 
