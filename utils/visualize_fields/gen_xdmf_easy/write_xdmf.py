@@ -112,16 +112,21 @@ for ii in range(nsaves):
         #
         # if vector, skip second and third components from the loop, and write the three files at once
         #
-        if( (saves['variable'][index-1+0].endswith('_X') and saves['variable'][index-1+1].endswith('_Y') and saves['variable'][index-1+2].endswith('_Z') and \
-             saves['variable'][index-1+0][0:-2] ==           saves['variable'][index-1+1][0:-2] ==           saves['variable'][index-1+2][0:-2]) or \
-            (saves['variable'][index-2+0].endswith('_X') and saves['variable'][index-2+1].endswith('_Y') and saves['variable'][index-2+2].endswith('_Z') and \
-             saves['variable'][index-2+0][0:-2] ==           saves['variable'][index-2+1][0:-2] ==           saves['variable'][index-2+2][0:-2]) \
-          ): continue
+        is_vector_skip = False
+        try: is_vector_skip = (saves['variable'][index-1+0].endswith('_X') and saves['variable'][index-1+1].endswith('_Y') and saves['variable'][index-1+2].endswith('_Z') and \
+                               saves['variable'][index-1+0][0:-2] ==           saves['variable'][index-1+1][0:-2] ==           saves['variable'][index-1+2][0:-2]) or \
+                              (saves['variable'][index-2+0].endswith('_X') and saves['variable'][index-2+1].endswith('_Y') and saves['variable'][index-2+2].endswith('_Z') and \
+                               saves['variable'][index-2+0][0:-2] ==           saves['variable'][index-2+1][0:-2] ==           saves['variable'][index-2+2][0:-2])
+        except IndexError: pass
+        if(is_vector_skip): continue
         #
         # vector
         #
-        if(saves['variable'][index+0].endswith('_X') and saves['variable'][index+1].endswith('_Y') and saves['variable'][index+2].endswith('_Z') and \
-           saves['variable'][index+0][0:-2] ==           saves['variable'][index+1][0:-2] ==           saves['variable'][index+2][0:-2]):
+        is_vector = False
+        try: is_vector = saves['variable'][index+0].endswith('_X') and saves['variable'][index+1].endswith('_Y') and saves['variable'][index+2].endswith('_Z') and \
+                         saves['variable'][index+0][0:-2] ==           saves['variable'][index+1][0:-2] ==           saves['variable'][index+2][0:-2]
+        except IndexError: pass
+        if(is_vector):
            attribute = SubElement(grid_fld, "Attribute", attrib = {"AttributeType": "Vector", "Name": "{}".format(saves['variable'][index][:-2]), "Center": "Node"})
            attribute = SubElement(attribute, "DataItem", attrib = {"Function": "JOIN($0, $1, $2)", "ItemType": "Function", "Dimensions": "{} {} {} {}".format(n[2], n[1], n[0], 3)})
            for q in range(3):
