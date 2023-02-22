@@ -16,7 +16,7 @@ module mod_rk
 #if defined(_FAST_MOM_KERNELS)
   use mod_mom  , only: mom_xyz_ad
 #endif
-  use mod_scal , only: scal
+  use mod_scal , only: scal,cmpt_scalflux
   use mod_utils, only: bulk_mean,swap
   use mod_types
   implicit none
@@ -250,8 +250,8 @@ module mod_rk
     end do
 #endif
   end subroutine rk
-  subroutine rk_scal(rkpar,n,dli,dzci,dzfi,grid_vol_ratio_f,visc,dt,u,v,w, &
-                     is_forced,scalf,ssource,s,f)
+  subroutine rk_scal(rkpar,n,dli,l,dzci,dzfi,grid_vol_ratio_f,alpha,dt,is_bound,u,v,w, &
+                     is_forced,scalf,ssource,fluxo,s,f)
     !
     ! low-storage 3rd-order Runge-Kutta scheme
     ! for time integration of the scalar field.
@@ -262,21 +262,25 @@ module mod_rk
     !       statement to keep the same piece of code to for each scalar
     !
     implicit none
+    logical , parameter :: is_cmpt_wallflux = .false.
     real(rp), intent(in   ), dimension(2) :: rkpar
     integer , intent(in   ), dimension(3) :: n
-    real(rp), intent(in   ), dimension(3) :: dli
+    real(rp), intent(in   ), dimension(3) :: dli,l
     real(rp), intent(in   ), dimension(0:) :: dzci,dzfi
     real(rp), intent(in   ), dimension(0:) :: grid_vol_ratio_f
-    real(rp), intent(in   ) :: visc,dt
+    real(rp), intent(in   ) :: alpha,dt
+    logical , intent(in   ), dimension(0:1,3)    :: is_bound
     real(rp), intent(in   ), dimension(0:,0:,0:) :: u,v,w
     logical , intent(in   ) :: is_forced
     real(rp), intent(in   ) :: scalf,ssource
+    real(rp), intent(inout), dimension(3) :: fluxo
     real(rp), intent(inout), dimension(0:,0:,0:) :: s
     real(rp), intent(out  ) :: f
     real(rp), target     , allocatable, dimension(:,:,:), save :: dsdtrk_t,dsdtrko_t
     real(rp), pointer    , contiguous , dimension(:,:,:), save :: dsdtrk  ,dsdtrko
     logical, save :: is_first = .true.
     real(rp) :: factor1,factor2,factor12
+    real(rp), dimension(3) :: flux
     integer :: i,j,k
     real(rp) :: mean
     !
@@ -293,7 +297,12 @@ module mod_rk
       dsdtrk  => dsdtrk_t
       dsdtrko => dsdtrko_t
     end if
-    call scal(n(1),n(2),n(3),dli(1),dli(2),dli(3),dzci,dzfi,visc,u,v,w,s,dsdtrk)
+    if(is_cmpt_wallflux) then
+      call cmpt_wallflux(n,is_bound,l,dli,dzci,dzfi,alpha,flux)
+      f = (factor1*sum(flux(:)/l(:)) + factor2*sum(fluxo(:)/l(:)))
+      fluxo(:) = flux(:)
+    end if
+    call scal(n(1),n(2),n(3),dli(1),dli(2),dli(3),dzci,dzfi,alpha,u,v,w,s,dsdtrk)
     !$acc parallel loop collapse(3) default(present) async(1)
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP SHARED(n,factor1,factor2,factor12,ssource,s,dsdtrk,dsdtrko)
