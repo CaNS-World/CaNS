@@ -59,6 +59,7 @@ module mod_initflow
       ubulk = 0.5*abs(bcvel(0,3,1)+bcvel(1,3,1))
       call poiseuille(n(3),zc/lz,ubulk,u1d)
       u1d(:) = u1d(:) - ubulk
+      is_mean = .true.
     case('zer')
       u1d(:) = 0.
     case('uni')
@@ -79,7 +80,7 @@ module mod_initflow
       reb = ubulk*(2*lz)/visc
       call log_profile(2*n(3),zc2/(2*lz),reb,u1d)
       is_noise = .true.
-      is_mean=.true.
+      is_mean = .true.
     case('hcp')
       deallocate(u1d)
       allocate(u1d(2*n(3)))
@@ -144,7 +145,7 @@ module mod_initflow
         zc2(2*n(3)+1) = 2*lz + zc(0)
         call poiseuille(2*n(3),zc2/(2*lz),ubulk,u1d)
       end if
-      is_mean=.true.
+      is_mean = .true.
     case default
       if(myid == 0) print*, 'ERROR: invalid name for initial velocity field'
       if(myid == 0) print*, ''
@@ -171,7 +172,11 @@ module mod_initflow
       call add_noise(ng,lo,789,.05_rp,w(1:n(1),1:n(2),1:n(3)))
     end if
     if(is_mean) then
-      call set_mean(n,ubulk,dzf/lz*(dx/lx)*(dy/ly),u(1:n(1),1:n(2),1:n(3)))
+      if(trim(inivel) /= 'iop') then
+        call set_mean(n,ubulk,dzf/lz*(dx/lx)*(dy/ly),u(1:n(1),1:n(2),1:n(3)))
+      else
+        call set_mean(n,0._rp,dzf/lz*(dx/lx)*(dy/ly),u(1:n(1),1:n(2),1:n(3)))
+      end if
     end if
     if(is_wallturb) is_pair = .true.
     if(is_pair) then
