@@ -29,7 +29,7 @@ module mod_initflow
     logical :: is_noise,is_mean,is_pair
     real(rp) :: xc,yc,zcc,xf,yf,zff
     real(rp), allocatable, dimension(:) :: zc2
-    real(rp) :: uref
+    real(rp) :: uref,lref
     real(rp) :: ubulk,reb,retau
     integer, dimension(3) :: n
     !
@@ -121,16 +121,29 @@ module mod_initflow
           end do
         end do
       end do
-    case('pdc')
+    case('pdc','hdc')
+      lref  = lz/2.
+      if(trim(inivel) /= 'pdc') lref = 2.*lref
       if(is_wallturb) then ! turbulent flow
-        uref  = (bforce(1)/(lz/2.))**(0.5)
-        retau = uref*(lz/2.)/visc
+        uref  = (bforce(1)*lref)**(0.5) ! utau = sqrt(-dpdx*h)
+        retau = uref*lref/visc
         reb   = (retau/.09)**(1./.88)
-        ubulk = (reb/2.)/retau*uref
+        ubulk = reb*visc/(2*lref)
       else                 ! laminar flow
-        ubulk = (bforce(1)*(lz/2.)**2/(3.*visc))
+        ubulk = (bforce(1)*lref**2/(3.*visc))
       end if
-      call poiseuille(n(3),zc/lz,ubulk,u1d)
+      if(trim(inivel) == 'pdc') then
+        call poiseuille(n(3),zc/lz,ubulk,u1d)
+      else
+        deallocate(u1d)
+        allocate(u1d(2*n(3)))
+        allocate(zc2(0:2*n(3)+1))
+        zc2(1     :  n(3)) =        zc(1   :n(3): 1)
+        zc2(n(3)+1:2*n(3)) = 2*lz - zc(n(3):1   :-1)
+        zc2(0)        = -zc(0)
+        zc2(2*n(3)+1) = 2*lz + zc(0)
+        call poiseuille(2*n(3),zc2/(2*lz),ubulk,u1d)
+      end if
       is_mean=.true.
     case default
       if(myid == 0) print*, 'ERROR: invalid name for initial velocity field'
