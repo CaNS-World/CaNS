@@ -97,9 +97,18 @@ module mod_rk
       tauyo(:) = tauy(:)
       tauzo(:) = tauz(:)
 #else
+#if defined(_IMPDIFF_1D)
+      f(1) = factor1*taux(2)/l(2) + factor2*tauxo(2)/l(2) + factor12*taux(3)/l(3)
+      f(2) = factor1*tauy(1)/l(1) + factor2*tauyo(1)/l(1) + factor12*tauy(3)/l(3)
+      f(3) = factor1*sum(tauz(1:2)/l(1:2)) + factor2*sum(tauzo(1:2)/l(1:2))
+      tauxo(1:2) = taux(1:2)
+      tauyo(1:2) = tauy(1:2)
+      tauzo(1:2) = tauz(1:2)
+#else
       f(:) = factor12*[sum(taux(:)/l(:)), &
                        sum(tauy(:)/l(:)), &
                        sum(tauz(:)/l(:))]
+#endif
 #endif
     end if
     !
