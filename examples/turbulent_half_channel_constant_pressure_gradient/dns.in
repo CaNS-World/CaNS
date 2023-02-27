@@ -1,0 +1,23 @@
+512 256 72               ! itot, jtot, ktot
+12. 6. 1.                ! lx, ly, lz
+0.                       ! gr
+.95 1.e5                 ! cfl, dtmin
+180.                     ! visci
+hdc                      ! inivel
+T                        ! is_wallturb
+100000 100. 0.1          ! nstep,time_max,tw_max
+T F F                    ! stop_type(1:3)
+F T 0                    ! restart,is_overwrite_save,nsaves_max
+10 10 100 500 10000 5000 ! icheck, iout0d, iout1d, iout2d, iout3d, isave
+P P  P P  D D            ! cbcvel(0:1,1:3,1) [u BC type]
+P P  P P  D D            ! cbcvel(0:1,1:3,2) [v BC type]
+P P  P P  D D            ! cbcvel(0:1,1:3,3) [w BC type]
+P P  P P  N N            ! cbcpre(0:1,1:3  ) [p BC type]
+0. 0.  0. 0.  0. 0.      !  bcvel(0:1,1:3,1) [u BC value]
+0. 0.  0. 0.  0. 0.      !  bcvel(0:1,1:3,2) [v BC value]
+0. 0.  0. 0.  0. 0.      !  bcvel(0:1,1:3,3) [w BC value]
+0. 0.  0. 0.  0. 0.      !  bcpre(0:1,1:3  ) [p BC value]
+1. 0. 0.                 ! bforce(1:3)
+F F F                    ! is_forced(1:3)
+0. 0. 0.                 ! velf(1:3)
+2 2                      ! dims(1:2)

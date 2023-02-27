@@ -349,9 +349,9 @@ module mod_output
       um(:) = um(:)*grid_area_ratio
       vm(:) = vm(:)*grid_area_ratio
       wm(:) = wm(:)*grid_area_ratio
-      u2(:) = sqrt(u2(:)*grid_area_ratio - um(:)**2)
-      v2(:) = sqrt(v2(:)*grid_area_ratio - vm(:)**2)
-      w2(:) = sqrt(w2(:)*grid_area_ratio - wm(:)**2)
+      u2(:) = u2(:)*grid_area_ratio - um(:)**2
+      v2(:) = v2(:)*grid_area_ratio - vm(:)**2
+      w2(:) = w2(:)*grid_area_ratio - wm(:)**2
       uw(:) = uw(:)*grid_area_ratio - um(:)*wm(:)
       if(myid == 0) then
         open(newunit=iunit,file=fname)
