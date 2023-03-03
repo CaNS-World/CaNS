@@ -12,7 +12,7 @@ module mod_mom
   private
   public momx_a,momy_a,momz_a, &
          momx_d,momy_d,momz_d, &
-         momx_p,momy_p,momz_p, cmpt_wallshear
+         momx_p,momy_p,momz_p, cmpt_wallshear, bulk_forcing
 #if defined(_IMPDIFF_1D)
   public momx_d_xy,momy_d_xy,momz_d_xy, &
          momx_d_z ,momy_d_z ,momz_d_z
@@ -421,10 +421,11 @@ module mod_mom
   end subroutine momz_d_xy
 #endif
   !
-  subroutine cmpt_wallshear(n,is_bound,l,dli,dzci,dzfi,visc,u,v,w,taux,tauy,tauz)
+  subroutine cmpt_wallshear(n,is_cmpt,is_bound,l,dli,dzci,dzfi,visc,u,v,w,taux,tauy,tauz)
     use mod_param, only: cbcpre
     implicit none
     integer , intent(in ), dimension(3) :: n
+    logical , intent(in ), dimension(    3) :: is_cmpt
     logical , intent(in ), dimension(0:1,3) :: is_bound
     real(rp), intent(in ), dimension(3)     :: l,dli
     real(rp), intent(in ), dimension(0:)    :: dzci,dzfi
@@ -448,145 +449,151 @@ module mod_mom
     dxi = dli(1); dyi = dli(2)
     lx = l(1); ly = l(2); lz = l(3)
     tau21 = 0._rp
-    !$acc data copy(tau21) async(1)
-    if(is_bound(0,2).and.cbcpre(0,2)//cbcpre(1,2) /= 'PP') then
-      !$acc parallel loop collapse(2) default(present) private(dudyp) reduction(+:tau21) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(2) DEFAULT(shared)  PRIVATE(dudyp) reduction(+:tau21)
-      do k=1,nz
-        do i=1,nx
-          dudyp = (u(i,1 ,k)-u(i,0   ,k))*dyi*visc
-          tau21 = tau21 + dudyp/(dxi*dzfi(k)*lx*lz)
-        end do
-      end do
-    end if
-    if(is_bound(1,2).and.cbcpre(0,2)//cbcpre(1,2) /= 'PP') then
-      !$acc parallel loop collapse(2) default(present) private(dudym) reduction(+:tau21) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(2) DEFAULT(shared)  PRIVATE(dudym) reduction(+:tau21)
-      do k=1,nz
-        do i=1,nx
-          dudym = (u(i,ny,k)-u(i,ny+1,k))*dyi*visc
-          tau21 = tau21 + dudym/(dxi*dzfi(k)*lx*lz)
-        end do
-      end do
-    end if
-    !$acc end data
     tau31 = 0._rp
-    !$acc data copy(tau31) async(1)
-    if(is_bound(0,3).and.cbcpre(0,3)//cbcpre(1,3) /= 'PP') then
-      !$acc parallel loop collapse(2) default(present) private(dudzp) reduction(+:tau31) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(2) DEFAULT(shared)  PRIVATE(dudzp) reduction(+:tau31)
-      do j=1,ny
-        do i=1,nx
-          dudzp = (u(i,j,1 )-u(i,j,0   ))*dzci(0)*visc
-          tau31 = tau31 + dudzp/(dxi*dyi*lx*ly)
+    if(is_cmpt(1)) then
+      !$acc data copy(tau21) async(1)
+      if(is_bound(0,2).and.cbcpre(0,2)//cbcpre(1,2) /= 'PP') then
+        !$acc parallel loop collapse(2) default(present) private(dudyp) reduction(+:tau21) async(1)
+        !$OMP PARALLEL DO DEFAULT(shared) private(dudyp) reduction(+:tau21)
+        do k=1,nz
+          do i=1,nx
+            dudyp = (u(i,1 ,k)-u(i,0   ,k))*dyi*visc
+            tau21 = tau21 + dudyp/(dxi*dzfi(k)*lx*lz)
+          end do
         end do
-      end do
-    end if
-    if(is_bound(1,3).and.cbcpre(0,3)//cbcpre(1,3) /= 'PP') then
-      !$acc parallel loop collapse(2) default(present) private(dudzm) reduction(+:tau31) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(2) DEFAULT(shared)  PRIVATE(dudzm) reduction(+:tau31)
-      do j=1,ny
-        do i=1,nx
-          dudzm = (u(i,j,nz)-u(i,j,nz+1))*dzci(nz)*visc
-          tau31 = tau31 + dudzm/(dxi*dyi*lx*ly)
+      end if
+      if(is_bound(1,2).and.cbcpre(0,2)//cbcpre(1,2) /= 'PP') then
+        !$acc parallel loop collapse(2) default(present) private(dudym) reduction(+:tau21) async(1)
+        !$OMP PARALLEL DO DEFAULT(shared) private(dudym) reduction(+:tau21)
+        do k=1,nz
+          do i=1,nx
+            dudym = (u(i,ny,k)-u(i,ny+1,k))*dyi*visc
+            tau21 = tau21 + dudym/(dxi*dzfi(k)*lx*lz)
+          end do
         end do
-      end do
+      end if
+      !$acc end data
+      !$acc data copy(tau31) async(1)
+      if(is_bound(0,3).and.cbcpre(0,3)//cbcpre(1,3) /= 'PP') then
+        !$acc parallel loop collapse(2) default(present) private(dudzp) reduction(+:tau31) async(1)
+        !$OMP PARALLEL DO DEFAULT(shared) private(dudzp) reduction(+:tau31)
+        do j=1,ny
+          do i=1,nx
+            dudzp = (u(i,j,1 )-u(i,j,0   ))*dzci(0)*visc
+            tau31 = tau31 + dudzp/(dxi*dyi*lx*ly)
+          end do
+        end do
+      end if
+      if(is_bound(1,3).and.cbcpre(0,3)//cbcpre(1,3) /= 'PP') then
+        !$acc parallel loop collapse(2) default(present) private(dudzm) reduction(+:tau31) async(1)
+        !$OMP PARALLEL DO DEFAULT(shared) private(dudzm) reduction(+:tau31)
+        do j=1,ny
+          do i=1,nx
+            dudzm = (u(i,j,nz)-u(i,j,nz+1))*dzci(nz)*visc
+            tau31 = tau31 + dudzm/(dxi*dyi*lx*ly)
+          end do
+        end do
+      end if
+      !$acc end data
     end if
-    !$acc end data
     !
     tau12 = 0._rp
-    !$acc data copy(tau12) async(1)
-    if(is_bound(0,1).and.cbcpre(0,1)//cbcpre(1,1) /= 'PP') then
-      !$acc parallel loop collapse(2) default(present) private(dvdxp) reduction(+:tau12) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(2) DEFAULT(shared)  PRIVATE(dvdxp) reduction(+:tau12)
-      do k=1,nz
-        do j=1,ny
-          dvdxp = (v(1  ,j,k)-v(0  ,j,k))*dxi*visc
-          tau12 = tau12 + dvdxp/(dyi*dzfi(k)*ly*lz)
-        end do
-      end do
-    end if
-    if(is_bound(1,1).and.cbcpre(0,1)//cbcpre(1,1) /= 'PP') then
-      !$acc parallel loop collapse(2) default(present) private(dvdxm) reduction(+:tau12) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(2) DEFAULT(shared)  PRIVATE(dvdxm) reduction(+:tau12)
-      do k=1,nz
-        do j=1,ny
-          dvdxm = (v(nx,j,k)-v(nx+1,j,k))*dxi*visc
-          tau12 = tau12 + dvdxm/(dyi*dzfi(k)*ly*lz)
-        end do
-      end do
-    end if
-    !$acc end data
     tau32 = 0._rp
-    !$acc data copy(tau32) async(1)
-    if(is_bound(0,3).and.cbcpre(0,3)//cbcpre(1,3) /= 'PP') then
-      !$acc parallel loop collapse(2) default(present) private(dvdzp) reduction(+:tau32) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(2) DEFAULT(shared)  PRIVATE(dvdzp) reduction(+:tau32)
-      do j=1,ny
-        do i=1,nx
-          dvdzp = (v(i,j,1 )-v(i,j,0   ))*dzci(0)*visc
-          tau32 = tau32 + dvdzp/(dxi*dyi*lx*ly)
+    if(is_cmpt(2)) then
+      !$acc data copy(tau12) async(1)
+      if(is_bound(0,1).and.cbcpre(0,1)//cbcpre(1,1) /= 'PP') then
+        !$acc parallel loop collapse(2) default(present) private(dvdxp) reduction(+:tau12) async(1)
+        !$OMP PARALLEL DO DEFAULT(shared) private(dvdxp) reduction(+:tau12)
+        do k=1,nz
+          do j=1,ny
+            dvdxp = (v(1  ,j,k)-v(0  ,j,k))*dxi*visc
+            tau12 = tau12 + dvdxp/(dyi*dzfi(k)*ly*lz)
+          end do
         end do
-      end do
-    end if
-    if(is_bound(1,3).and.cbcpre(0,3)//cbcpre(1,3) /= 'PP') then
-      !$acc parallel loop collapse(2) default(present) private(dvdzm) reduction(+:tau32) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(2) DEFAULT(shared)  PRIVATE(dvdzm) reduction(+:tau32)
-      do j=1,ny
-        do i=1,nx
-          dvdzm = (v(i,j,nz)-v(i,j,nz+1))*dzci(nz)*visc
-          tau32 = tau32 + dvdzm/(dxi*dyi*lx*ly)
+      end if
+      if(is_bound(1,1).and.cbcpre(0,1)//cbcpre(1,1) /= 'PP') then
+        !$acc parallel loop collapse(2) default(present) private(dvdxm) reduction(+:tau12) async(1)
+        !$OMP PARALLEL DO DEFAULT(shared) private(dvdxm) reduction(+:tau12)
+        do k=1,nz
+          do j=1,ny
+            dvdxm = (v(nx,j,k)-v(nx+1,j,k))*dxi*visc
+            tau12 = tau12 + dvdxm/(dyi*dzfi(k)*ly*lz)
+          end do
         end do
-      end do
+      end if
+      !$acc end data
+      !$acc data copy(tau32) async(1)
+      if(is_bound(0,3).and.cbcpre(0,3)//cbcpre(1,3) /= 'PP') then
+        !$acc parallel loop collapse(2) default(present) private(dvdzp) reduction(+:tau32) async(1)
+        !$OMP PARALLEL DO DEFAULT(shared) private(dvdzp) reduction(+:tau32)
+        do j=1,ny
+          do i=1,nx
+            dvdzp = (v(i,j,1 )-v(i,j,0   ))*dzci(0)*visc
+            tau32 = tau32 + dvdzp/(dxi*dyi*lx*ly)
+          end do
+        end do
+      end if
+      if(is_bound(1,3).and.cbcpre(0,3)//cbcpre(1,3) /= 'PP') then
+        !$acc parallel loop collapse(2) default(present) private(dvdzm) reduction(+:tau32) async(1)
+        !$OMP PARALLEL DO DEFAULT(shared) private(dvdzm) reduction(+:tau32)
+        do j=1,ny
+          do i=1,nx
+            dvdzm = (v(i,j,nz)-v(i,j,nz+1))*dzci(nz)*visc
+            tau32 = tau32 + dvdzm/(dxi*dyi*lx*ly)
+          end do
+        end do
+      end if
+      !$acc end data
     end if
-    !$acc end data
     !
     tau13 = 0._rp
-    !$acc data copy(tau13) async(1)
-    if(is_bound(0,1).and.cbcpre(0,1)//cbcpre(1,1) /= 'PP') then
-      !$acc parallel loop collapse(2) default(present) private(dwdxp) reduction(+:tau13) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(2) DEFAULT(shared)  PRIVATE(dwdxp) reduction(+:tau13)
-      do k=1,nz
-        do j=1,ny
-          dwdxp = (w(1 ,j,k)-w(0   ,j,k))*dxi*visc
-          tau13 = tau13 + dwdxp/(dyi*dzfi(k)*ly*lz)
-        end do
-      end do
-    end if
-    if(is_bound(1,1).and.cbcpre(0,1)//cbcpre(1,1) /= 'PP') then
-      !$acc parallel loop collapse(2) default(present) private(dwdxm) reduction(+:tau13) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(2) DEFAULT(shared)  PRIVATE(dwdxm) reduction(+:tau13)
-      do k=1,nz
-        do j=1,ny
-          dwdxm = (w(nx,j,k)-w(nx+1,j,k))*dxi*visc
-          tau13 = tau13 + dwdxm/(dyi*dzfi(k)*ly*lz)
-        end do
-      end do
-    end if
-    !$acc end data
     tau23 = 0._rp
-    !$acc data copy(tau23) async(1)
-    if(is_bound(0,2).and.cbcpre(0,2)//cbcpre(1,2) /= 'PP') then
-      !$acc parallel loop collapse(2) default(present) private(dwdyp) reduction(+:tau23) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(2) DEFAULT(shared)  PRIVATE(dwdyp) reduction(+:tau23)
-      do k=1,nz
-        do i=1,nx
-          dwdyp = (w(i,1,k )-w(i,0   ,k))*dyi*visc
-          tau23 = tau23 + dwdyp/(dxi*dzfi(k)*lx*lz)
+    if(is_cmpt(3)) then
+      !$acc data copy(tau13) async(1)
+      if(is_bound(0,1).and.cbcpre(0,1)//cbcpre(1,1) /= 'PP') then
+        !$acc parallel loop collapse(2) default(present) private(dwdxp) reduction(+:tau13) async(1)
+        !$OMP PARALLEL DO DEFAULT(shared) private(dwdxp) reduction(+:tau13)
+        do k=1,nz
+          do j=1,ny
+            dwdxp = (w(1 ,j,k)-w(0   ,j,k))*dxi*visc
+            tau13 = tau13 + dwdxp/(dyi*dzfi(k)*ly*lz)
+          end do
         end do
-      end do
-    end if
-    if(is_bound(1,2).and.cbcpre(0,2)//cbcpre(1,2) /= 'PP') then
-      !$acc parallel loop collapse(2) default(present) private(dwdym) reduction(+:tau23) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(2) DEFAULT(shared)  PRIVATE(dwdym) reduction(+:tau23)
-      do k=1,nz
-        do i=1,nx
-          dwdym = (w(i,ny,k)-w(i,ny+1,k))*dyi*visc
-          tau23 = tau23 + dwdym/(dxi*dzfi(k)*lx*lz)
+      end if
+      if(is_bound(1,1).and.cbcpre(0,1)//cbcpre(1,1) /= 'PP') then
+        !$acc parallel loop collapse(2) default(present) private(dwdxm) reduction(+:tau13) async(1)
+        !$OMP PARALLEL DO DEFAULT(shared) private(dwdxm) reduction(+:tau13)
+        do k=1,nz
+          do j=1,ny
+            dwdxm = (w(nx,j,k)-w(nx+1,j,k))*dxi*visc
+            tau13 = tau13 + dwdxm/(dyi*dzfi(k)*ly*lz)
+          end do
         end do
-      end do
+      end if
+      !$acc end data
+      !$acc data copy(tau23) async(1)
+      if(is_bound(0,2).and.cbcpre(0,2)//cbcpre(1,2) /= 'PP') then
+        !$acc parallel loop collapse(2) default(present) private(dwdyp) reduction(+:tau23) async(1)
+        !$OMP PARALLEL DO DEFAULT(shared) private(dwdyp) reduction(+:tau23)
+        do k=1,nz
+          do i=1,nx
+            dwdyp = (w(i,1,k )-w(i,0   ,k))*dyi*visc
+            tau23 = tau23 + dwdyp/(dxi*dzfi(k)*lx*lz)
+          end do
+        end do
+      end if
+      if(is_bound(1,2).and.cbcpre(0,2)//cbcpre(1,2) /= 'PP') then
+        !$acc parallel loop collapse(2) default(present) private(dwdym) reduction(+:tau23) async(1)
+        !$OMP PARALLEL DO DEFAULT(shared) private(dwdym) reduction(+:tau23)
+        do k=1,nz
+          do i=1,nx
+            dwdym = (w(i,ny,k)-w(i,ny+1,k))*dyi*visc
+            tau23 = tau23 + dwdym/(dxi*dzfi(k)*lx*lz)
+          end do
+        end do
+      end if
+      !$acc end data
     end if
-    !$acc end data
     !$acc wait(1)
     tau(:,:) = 0._rp
     tau(2,1) = tau21
@@ -600,6 +607,32 @@ module mod_mom
     tauy(:) = tau(:,2)
     tauz(:) = tau(:,3)
   end subroutine cmpt_wallshear
+  !
+  subroutine bulk_forcing(n,is_forced,f,u,v,w)
+    integer , intent(in   ), dimension(3) :: n
+    logical , intent(in   ), dimension(3) :: is_forced
+    real(rp), intent(in   ), dimension(3) :: f
+    real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
+    real(rp) :: ff
+    if(is_forced(1)) then
+      ff = f(1)
+      !$acc kernels default(present) async(1)
+      u(1:n(1),1:n(2),1:n(3)) = u(1:n(1),1:n(2),1:n(3)) + ff
+      !$acc end kernels
+    end if
+    if(is_forced(2)) then
+      ff = f(2)
+      !$acc kernels default(present) async(1)
+      v(1:n(1),1:n(2),1:n(3)) = v(1:n(1),1:n(2),1:n(3)) + ff
+      !$acc end kernels
+    end if
+    if(is_forced(3)) then
+      ff = f(3)
+      !$acc kernels default(present) async(1)
+      w(1:n(1),1:n(2),1:n(3)) = w(1:n(1),1:n(2),1:n(3)) + ff
+      !$acc end kernels
+    end if
+  end subroutine bulk_forcing
   !
   subroutine mom_xyz_ad(nx,ny,nz,dxi,dyi,dzci,dzfi,visc,u,v,w,dudt,dvdt,dwdt,dudtd,dvdtd,dwdtd)
     !

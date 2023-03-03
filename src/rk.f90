@@ -21,29 +21,22 @@ module mod_rk
   use mod_types
   implicit none
   private
-  public rk
+  public rk,rk_cmpt_bulk_forcing
   contains
-  subroutine rk(rkpar,n,dli,l,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,visc,dt,p, &
-                is_bound,is_forced,velf,bforce,tauxo,tauyo,tauzo,u,v,w,f)
+  subroutine rk(rkpar,n,dli,dzci,dzfi,visc,dt,p,bforce,u,v,w)
     !
     ! low-storage 3rd-order Runge-Kutta scheme
     ! for time integration of the momentum equations.
     !
     implicit none
-    logical , parameter :: is_cmpt_wallshear = .false.
     real(rp), intent(in), dimension(2) :: rkpar
     integer , intent(in), dimension(3) :: n
     real(rp), intent(in) :: visc,dt
-    real(rp), intent(in   ), dimension(3) :: dli,l
+    real(rp), intent(in   ), dimension(3) :: dli
     real(rp), intent(in   ), dimension(0:) :: dzci,dzfi
-    real(rp), intent(in   ), dimension(0:) :: grid_vol_ratio_c,grid_vol_ratio_f
     real(rp), intent(in   ), dimension(0:,0:,0:) :: p
-    logical , intent(in   ), dimension(0:1,3)    :: is_bound
-    logical , intent(in   ), dimension(3)        :: is_forced
-    real(rp), intent(in   ), dimension(3)        :: velf,bforce
-    real(rp), intent(inout), dimension(3) :: tauxo,tauyo,tauzo
+    real(rp), intent(in   ), dimension(3)        :: bforce
     real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
-    real(rp), intent(out), dimension(3) :: f
     real(rp), target     , allocatable, dimension(:,:,:), save :: dudtrk_t ,dvdtrk_t ,dwdtrk_t , &
                                                                   dudtrko_t,dvdtrko_t,dwdtrko_t
     real(rp), pointer    , contiguous , dimension(:,:,:), save :: dudtrk   ,dvdtrk   ,dwdtrk   , &
@@ -51,9 +44,7 @@ module mod_rk
     real(rp),              allocatable, dimension(:,:,:), save :: dudtrkd  ,dvdtrkd  ,dwdtrkd
     logical, save :: is_first = .true.
     real(rp) :: factor1,factor2,factor12
-    real(rp), dimension(3) :: taux,tauy,tauz
     integer :: i,j,k
-    real(rp) :: mean
     !
     factor1 = rkpar(1)*dt
     factor2 = rkpar(2)*dt
@@ -82,34 +73,6 @@ module mod_rk
       dudtrko => dudtrko_t
       dvdtrko => dvdtrko_t
       dwdtrko => dwdtrko_t
-    end if
-    !
-    ! compute mean wall shear stresses
-    ! (useful to check global momentum balance for certain wall flows, can be (de)activated above)
-    !
-    if(is_cmpt_wallshear) then
-      call cmpt_wallshear(n,is_bound,l,dli,dzci,dzfi,visc,u,v,w,taux,tauy,tauz)
-#if !defined(_IMPDIFF)
-      f(1) = (factor1*sum(taux(:)/l(:)) + factor2*sum(tauxo(:)/l(:)))
-      f(2) = (factor1*sum(tauy(:)/l(:)) + factor2*sum(tauyo(:)/l(:)))
-      f(3) = (factor1*sum(tauz(:)/l(:)) + factor2*sum(tauzo(:)/l(:)))
-      tauxo(:) = taux(:)
-      tauyo(:) = tauy(:)
-      tauzo(:) = tauz(:)
-#else
-#if defined(_IMPDIFF_1D)
-      f(1) = factor1*taux(2)/l(2) + factor2*tauxo(2)/l(2) + factor12*taux(3)/l(3)
-      f(2) = factor1*tauy(1)/l(1) + factor2*tauyo(1)/l(1) + factor12*tauy(3)/l(3)
-      f(3) = factor1*sum(tauz(1:2)/l(1:2)) + factor2*sum(tauzo(1:2)/l(1:2))
-      tauxo(1:2) = taux(1:2)
-      tauyo(1:2) = tauy(1:2)
-      tauzo(1:2) = tauz(1:2)
-#else
-      f(:) = factor12*[sum(taux(:)/l(:)), &
-                       sum(tauy(:)/l(:)), &
-                       sum(tauz(:)/l(:))]
-#endif
-#endif
     end if
     !
 #if defined(_FAST_MOM_KERNELS)
@@ -146,10 +109,10 @@ module mod_rk
     call momy_d_z( n(1),n(2),n(3),dzci  ,dzfi  ,visc,v,dvdtrkd)
     call momz_d_z( n(1),n(2),n(3),dzci  ,dzfi  ,visc,w,dwdtrkd)
 #endif
-#endif
     call momx_a(n(1),n(2),n(3),dli(1),dli(2),dzfi,u,v,w,dudtrk)
     call momy_a(n(1),n(2),n(3),dli(1),dli(2),dzfi,u,v,w,dvdtrk)
     call momz_a(n(1),n(2),n(3),dli(1),dli(2),dzci,u,v,w,dwdtrk)
+#endif
 #endif
     !
     !$acc parallel loop collapse(3) default(present) async(1)
@@ -222,21 +185,6 @@ module mod_rk
     end do
 #endif
     !
-    ! bulk velocity forcing
-    !
-    f(:) = 0.
-    if(is_forced(1)) then
-      call bulk_mean(n,grid_vol_ratio_f,u,mean)
-      f(1) = velf(1) - mean
-    end if
-    if(is_forced(2)) then
-      call bulk_mean(n,grid_vol_ratio_f,v,mean)
-      f(2) = velf(2) - mean
-    end if
-    if(is_forced(3)) then
-      call bulk_mean(n,grid_vol_ratio_c,w,mean)
-      f(3) = velf(3) - mean
-    end if
 #if defined(_IMPDIFF)
     !
     ! compute rhs of Helmholtz equation
@@ -328,4 +276,97 @@ module mod_rk
       f = scalf - mean
     end if
   end subroutine rk_scal
+  !
+  subroutine rk_cmpt_bulk_forcing(rkpar,n,dli,l,dzci,dzfi,visc,dt,is_bound,is_forced,u,v,w,tauxo,tauyo,tauzo,f,is_first)
+    !
+    ! computes the pressure gradient to be added to the flow that perfectly balances the wall shear stresses
+    ! this effectively prescribes zero net acceleration, which allows to sustain a constant mass flux
+    !
+    implicit none
+    real(rp), intent(in), dimension(2) :: rkpar
+    integer , intent(in), dimension(3) :: n
+    real(rp), intent(in) :: visc,dt
+    real(rp), intent(in   ), dimension(3) :: dli,l
+    real(rp), intent(in   ), dimension(0:) :: dzci,dzfi
+    logical , intent(in   ), dimension(0:1,3)    :: is_bound
+    logical , intent(in   ), dimension(3) :: is_forced
+    real(rp), intent(in   ), dimension(0:,0:,0:) :: u,v,w
+    real(rp), intent(inout), dimension(3) :: tauxo,tauyo,tauzo
+    real(rp), intent(inout), dimension(3) :: f
+    real(rp), dimension(3) :: f_aux
+    logical , intent(in   ) :: is_first
+    real(rp), dimension(3) :: taux,tauy,tauz
+    real(rp) :: factor1,factor2,factor12
+    !
+    factor1 = rkpar(1)*dt
+    factor2 = rkpar(2)*dt
+    factor12 = (factor1 + factor2)/2.
+    !
+    taux(:) = 0._rp
+    tauy(:) = 0._rp
+    tauz(:) = 0._rp
+    call cmpt_wallshear(n,is_forced,is_bound,l,dli,dzci,dzfi,visc,u,v,w,taux,tauy,tauz)
+#if !defined(_IMPDIFF)
+    if(is_first) then
+      f(1) = (factor1*sum(taux(:)/l(:)) + factor2*sum(tauxo(:)/l(:)))
+      f(2) = (factor1*sum(tauy(:)/l(:)) + factor2*sum(tauyo(:)/l(:)))
+      f(3) = (factor1*sum(tauz(:)/l(:)) + factor2*sum(tauzo(:)/l(:)))
+      tauxo(:) = taux(:)
+      tauyo(:) = tauy(:)
+      tauzo(:) = tauz(:)
+    end if
+#else
+#if defined(_IMPDIFF_1D)
+    f_aux(1) = factor12*taux(3)/l(3)
+    f_aux(2) = factor12*tauy(3)/l(3)
+    if(is_first) then
+      f(1) = factor1*taux(2)/l(2) + factor2*tauxo(2)/l(2) + f_aux(1)
+      f(2) = factor1*tauy(1)/l(1) + factor2*tauyo(1)/l(1) + f_aux(2)
+      f(3) = factor1*sum(tauz(1:2)/l(1:2)) + factor2*sum(tauzo(1:2)/l(1:2))
+      tauxo(1:2) = taux(1:2)
+      tauyo(1:2) = tauy(1:2)
+      tauzo(1:2) = tauz(1:2)
+    else
+      f(1) = f(1) + f_aux(1)
+      f(2) = f(2) + f_aux(2)
+    end if
+#else
+    f_aux(:) = factor12*[sum(taux(:)/l(:)), &
+                         sum(tauy(:)/l(:)), &
+                         sum(tauz(:)/l(:))]
+    if(is_first) then
+       f(:) = f_aux(:)
+    else
+       f(:) = f(:) + f_aux(:)
+    endif
+#endif
+#endif
+  end subroutine rk_cmpt_bulk_forcing
+  !
+  subroutine cmpt_bulk_forcing_alternative(n,is_forced,velf,grid_vol_ratio_c,grid_vol_ratio_f,u,v,w,f)
+    implicit none
+    integer , intent(in   ), dimension(3) :: n
+    logical , intent(in   ), dimension(3) :: is_forced
+    real(rp), intent(in   ), dimension(3) :: velf
+    real(rp), intent(in   ), dimension(0:) :: grid_vol_ratio_c,grid_vol_ratio_f
+    real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
+    real(rp), intent(out  ), dimension(3) :: f
+    real(rp) :: mean
+    !
+    ! bulk velocity forcing
+    !
+    f(:) = 0.
+    if(is_forced(1)) then
+      call bulk_mean(n,grid_vol_ratio_f,u,mean)
+      f(1) = velf(1) - mean
+    end if
+    if(is_forced(2)) then
+      call bulk_mean(n,grid_vol_ratio_f,v,mean)
+      f(2) = velf(2) - mean
+    end if
+    if(is_forced(3)) then
+      call bulk_mean(n,grid_vol_ratio_c,w,mean)
+      f(3) = velf(3) - mean
+    end if
+  end subroutine
 end module mod_rk
