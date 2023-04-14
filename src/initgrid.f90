@@ -24,9 +24,9 @@ module mod_initgrid
     integer :: k
     procedure (), pointer :: gridpoint => null()
     select case(inivel)
-    case('zer','log','poi','cou')
+    case('zer','log','poi','cou','iop','pdc')
       gridpoint => gridpoint_cluster_two_end
-    case('hcl','hcp','tbl')
+    case('hcl','hcp','hdc','tbl')
       gridpoint => gridpoint_cluster_one_end
     case default
       gridpoint => gridpoint_cluster_two_end
