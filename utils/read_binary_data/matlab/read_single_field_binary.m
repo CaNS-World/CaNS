@@ -54,7 +54,7 @@ if isempty(iskipz)
 end
 iskip       = [iskipx,iskipy,iskipz]
 n           = round(ng./iskip)
-data        = zeros([n[0],n[1],n[2]])
+data        = zeros([n(1),n(2),n(3)])
 f = fopen(filenamei);
 data(:,:,:) = reshape(fread(f,ng(1)*ng(2)*ng(3),precision),[ng(1),ng(2),ng(3)]);
 fclose(f);
