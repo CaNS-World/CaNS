@@ -58,14 +58,14 @@ module mod_sanity
   end subroutine test_sanity_input
   !
   subroutine chk_stop_type(stop_type,passed)
-  implicit none
-  logical, intent(in), dimension(3) :: stop_type
-  logical, intent(out) :: passed
-  passed = .true.
-  if(.not.any(stop_type(:))) then
-    if(myid == 0) print*, 'ERROR: stopping criterion not chosen.'
-    passed = .false.
-  end if
+    implicit none
+    logical, intent(in), dimension(3) :: stop_type
+    logical, intent(out) :: passed
+    passed = .true.
+    if(.not.any(stop_type(:))) then
+      if(myid == 0) print*, 'ERROR: stopping criterion not chosen.'
+      passed = .false.
+    end if
   end subroutine chk_stop_type
   !
   subroutine chk_dims(ng,dims,passed)
@@ -84,116 +84,116 @@ module mod_sanity
   end subroutine chk_dims
   !
   subroutine chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed)
-  implicit none
-  character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
-  character(len=1), intent(in), dimension(0:1,3  ) :: cbcpre
-  real(rp)        , intent(in), dimension(0:1,3,3) :: bcvel
-  real(rp)        , intent(in), dimension(0:1,3  ) :: bcpre
-  logical         , intent(out) :: passed
-  character(len=2) :: bc01v,bc01p
-  integer :: ivel,idir
-  logical :: passed_loc
-  passed = .true.
-  !
-  ! check validity of pressure and velocity BCs
-  !
-  passed_loc = .true.
-  do ivel = 1,3
+    implicit none
+    character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
+    character(len=1), intent(in), dimension(0:1,3  ) :: cbcpre
+    real(rp)        , intent(in), dimension(0:1,3,3) :: bcvel
+    real(rp)        , intent(in), dimension(0:1,3  ) :: bcpre
+    logical         , intent(out) :: passed
+    character(len=2) :: bc01v,bc01p
+    integer :: ivel,idir
+    logical :: passed_loc
+    passed = .true.
+    !
+    ! check validity of pressure and velocity BCs
+    !
+    passed_loc = .true.
+    do ivel = 1,3
+      do idir=1,3
+        bc01v = cbcvel(0,idir,ivel)//cbcvel(1,idir,ivel)
+        passed_loc = passed_loc.and.( (bc01v == 'PP').or. &
+                                      (bc01v == 'ND').or. &
+                                      (bc01v == 'DN').or. &
+                                      (bc01v == 'NN').or. &
+                                      (bc01v == 'DD') )
+      end do
+    end do
+    if(myid == 0.and.(.not.passed_loc)) print*, 'ERROR: velocity BCs not valid.'
+    passed = passed.and.passed_loc
+    !
+    passed_loc = .true.
     do idir=1,3
-      bc01v = cbcvel(0,idir,ivel)//cbcvel(1,idir,ivel)
-      passed_loc = passed_loc.and.( (bc01v == 'PP').or. &
-                                    (bc01v == 'ND').or. &
-                                    (bc01v == 'DN').or. &
-                                    (bc01v == 'NN').or. &
-                                    (bc01v == 'DD') )
+      bc01p = cbcpre(0,idir)//cbcpre(1,idir)
+      passed_loc = passed_loc.and.( (bc01p == 'PP').or. &
+                                    (bc01p == 'ND').or. &
+                                    (bc01p == 'DN').or. &
+                                    (bc01p == 'NN').or. &
+                                    (bc01p == 'DD') )
     end do
-  end do
-  if(myid == 0.and.(.not.passed_loc)) print*, 'ERROR: velocity BCs not valid.'
-  passed = passed.and.passed_loc
-  !
-  passed_loc = .true.
-  do idir=1,3
-    bc01p = cbcpre(0,idir)//cbcpre(1,idir)
-    passed_loc = passed_loc.and.( (bc01p == 'PP').or. &
-                                  (bc01p == 'ND').or. &
-                                  (bc01p == 'DN').or. &
-                                  (bc01p == 'NN').or. &
-                                  (bc01p == 'DD') )
-  end do
-  if(myid == 0.and.(.not.passed_loc)) print*, 'ERROR: pressure BCs not valid.'
-  passed = passed.and.passed_loc
-  !
-  passed_loc = .true.
-  do idir=1,3
-    ivel = idir
-    bc01v = cbcvel(0,idir,ivel)//cbcvel(1,idir,ivel)
-    bc01p = cbcpre(0,idir)//cbcpre(1,idir)
-    passed_loc = passed_loc.and.( (bc01v == 'PP'.and.bc01p == 'PP').or. &
-                                  (bc01v == 'ND'.and.bc01p == 'DN').or. &
-                                  (bc01v == 'DN'.and.bc01p == 'ND').or. &
-                                  (bc01v == 'DD'.and.bc01p == 'NN').or. &
-                                  (bc01v == 'NN'.and.bc01p == 'DD') )
-  end do
-  if(myid == 0.and.(.not.passed_loc)) print*, 'ERROR: velocity and pressure BCs not compatible.'
-  passed = passed.and.passed_loc
-  !
-  passed_loc = .true.
-  do idir=1,2
-    passed_loc = passed_loc.and.((bcpre(0,idir) == 0.).and.(bcpre(1,idir) == 0.))
-  end do
-  if(myid == 0.and.(.not.passed_loc)) &
-    print*, 'ERROR: pressure BCs in directions x and y must be homogeneous (value = 0.).'
-  passed = passed.and.passed_loc
+    if(myid == 0.and.(.not.passed_loc)) print*, 'ERROR: pressure BCs not valid.'
+    passed = passed.and.passed_loc
+    !
+    passed_loc = .true.
+    do idir=1,3
+      ivel = idir
+      bc01v = cbcvel(0,idir,ivel)//cbcvel(1,idir,ivel)
+      bc01p = cbcpre(0,idir)//cbcpre(1,idir)
+      passed_loc = passed_loc.and.( (bc01v == 'PP'.and.bc01p == 'PP').or. &
+                                    (bc01v == 'ND'.and.bc01p == 'DN').or. &
+                                    (bc01v == 'DN'.and.bc01p == 'ND').or. &
+                                    (bc01v == 'DD'.and.bc01p == 'NN').or. &
+                                    (bc01v == 'NN'.and.bc01p == 'DD') )
+    end do
+    if(myid == 0.and.(.not.passed_loc)) print*, 'ERROR: velocity and pressure BCs not compatible.'
+    passed = passed.and.passed_loc
+    !
+    passed_loc = .true.
+    do idir=1,2
+      passed_loc = passed_loc.and.((bcpre(0,idir) == 0.).and.(bcpre(1,idir) == 0.))
+    end do
+    if(myid == 0.and.(.not.passed_loc)) &
+      print*, 'ERROR: pressure BCs in directions x and y must be homogeneous (value = 0.).'
+    passed = passed.and.passed_loc
 #if defined(_IMPDIFF)
-  passed_loc = .true.
-  do ivel = 1,3
-    do idir=1,2
-      bc01v = cbcvel(0,idir,ivel)//cbcvel(1,idir,ivel)
-      passed_loc = passed_loc.and.(bc01v /= 'NN')
+    passed_loc = .true.
+    do ivel = 1,3
+      do idir=1,2
+        bc01v = cbcvel(0,idir,ivel)//cbcvel(1,idir,ivel)
+        passed_loc = passed_loc.and.(bc01v /= 'NN')
+      end do
     end do
-  end do
-  if(myid == 0.and.(.not.passed_loc)) &
-    print*, 'ERROR: Neumann-Neumann velocity BCs with implicit diffusion currently not supported in x and y; only in z.'
-  passed = passed.and.passed_loc
-  !
-  passed_loc = .true.
-  do ivel = 1,3
-    do idir=1,2
-      passed_loc = passed_loc.and.((bcvel(0,idir,ivel) == 0.).and.(bcvel(1,idir,ivel) == 0.))
+    if(myid == 0.and.(.not.passed_loc)) &
+      print*, 'ERROR: Neumann-Neumann velocity BCs with implicit diffusion currently not supported in x and y; only in z.'
+    passed = passed.and.passed_loc
+    !
+    passed_loc = .true.
+    do ivel = 1,3
+      do idir=1,2
+        passed_loc = passed_loc.and.((bcvel(0,idir,ivel) == 0.).and.(bcvel(1,idir,ivel) == 0.))
+      end do
     end do
-  end do
-  if(myid == 0.and.(.not.passed_loc)) &
-    print*, 'ERROR: velocity BCs with implicit diffusion in directions x and y must be homogeneous (value = 0.).'
-  passed = passed.and.passed_loc
+    if(myid == 0.and.(.not.passed_loc)) &
+      print*, 'ERROR: velocity BCs with implicit diffusion in directions x and y must be homogeneous (value = 0.).'
+    passed = passed.and.passed_loc
 #endif
 #if defined(_OPENACC)
-  do idir=1,2
-    bc01p = cbcpre(0,idir)//cbcpre(1,idir)
-    passed_loc = passed_loc.and..not.( (bc01p == 'DN').or. &
-                                       (bc01p == 'ND') )
-  end do
-  if(myid == 0.and.(.not.passed_loc)) &
-    print*, 'ERROR: pressure BCs "ND" or "DN" along x or y not implemented on GPUs yet.'
+    do idir=1,2
+      bc01p = cbcpre(0,idir)//cbcpre(1,idir)
+      passed_loc = passed_loc.and..not.( (bc01p == 'DN').or. &
+                                         (bc01p == 'ND') )
+    end do
+    if(myid == 0.and.(.not.passed_loc)) &
+      print*, 'ERROR: pressure BCs "ND" or "DN" along x or y not implemented on GPUs yet.'
 #endif
   end subroutine chk_bc
   !
   subroutine chk_forcing(cbcpre,is_forced,passed)
-  implicit none
-  character(len=1), intent(in), dimension(0:1,3) :: cbcpre
-  logical         , intent(in), dimension(3) :: is_forced
-  logical         , intent(out) :: passed
-  integer :: idir
-  passed = .true.
-  !
-  ! 1) check for compatibility between pressure BCs and flow forcing
-  !
-  do idir=1,3
-    if(is_forced(idir)) then
-      passed = passed.and.(cbcpre(0,idir)//cbcpre(1,idir) == 'PP')
-    end if
-  end do
-  if(myid == 0.and.(.not.passed)) &
-  print*, 'ERROR: Flow cannot be forced in a non-periodic direction; check the BCs and is_forced in dns.in.'
+    implicit none
+    character(len=1), intent(in), dimension(0:1,3) :: cbcpre
+    logical         , intent(in), dimension(3) :: is_forced
+    logical         , intent(out) :: passed
+    integer :: idir
+    passed = .true.
+    !
+    ! 1) check for compatibility between pressure BCs and flow forcing
+    !
+    do idir=1,3
+      if(is_forced(idir)) then
+        passed = passed.and.(cbcpre(0,idir)//cbcpre(1,idir) == 'PP')
+      end if
+    end do
+    if(myid == 0.and.(.not.passed)) &
+    print*, 'ERROR: Flow cannot be forced in a non-periodic direction; check the BCs and is_forced in dns.in.'
   end subroutine chk_forcing
   !
   subroutine test_sanity_solver(ng,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,dli,dzc,dzf,dzci,dzfi,dzci_g,dzfi_g, &
@@ -346,12 +346,12 @@ module mod_sanity
     passed = passed.and.passed_loc
     !$acc exit data delete(bb)
 #endif
-  !$acc exit data delete(u,v,w,p,lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
-  if(.not.passed) then
-    call decomp_2d_finalize
-    call MPI_FINALIZE(ierr)
-    error stop
-  end if
+    !$acc exit data delete(u,v,w,p,lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
+    if(.not.passed) then
+      call decomp_2d_finalize
+      call MPI_FINALIZE(ierr)
+      error stop
+    end if
   end subroutine test_sanity_solver
   !
   subroutine abortit
