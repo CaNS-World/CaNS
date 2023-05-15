@@ -69,8 +69,7 @@ module mod_solver_gpu
         ! transpose p -> py to axis-contiguous layout
         !
         !$acc parallel loop collapse(3) default(present) async(1)
-        !$OMP PARALLEL DO COLLAPSE(3) DEFAULT(NONE) &
-        !$OMP SHARED(n,p,py)
+        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
         do k=1,n(3)
           do j=1,n(2)
             do i=1,n(1)
@@ -151,8 +150,7 @@ module mod_solver_gpu
         ! transpose py -> p to default layout
         !
         !$acc parallel loop collapse(3) default(present) async(1)
-        !$OMP PARALLEL DO COLLAPSE(3) DEFAULT(NONE) &
-        !$OMP SHARED(n,p,py)
+        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
         do k=1,n(3)
           do j=1,n(2)
             do i=1,n(1)
@@ -426,8 +424,7 @@ module mod_solver_gpu
         ! transpose p -> py to axis-contiguous layout
         !
         !$acc parallel loop collapse(3) default(present) async(1)
-        !$OMP PARALLEL DO COLLAPSE(3) DEFAULT(NONE) &
-        !$OMP SHARED(n,p,py)
+        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
         do k=1,n(3)
           do j=1,n(2)
             do i=1,n(1)
@@ -481,8 +478,7 @@ module mod_solver_gpu
         ! transpose py -> p to default layout
         !
         !$acc parallel loop collapse(3) default(present) async(1)
-        !$OMP PARALLEL DO COLLAPSE(3) DEFAULT(NONE) &
-        !$OMP SHARED(n,p,py)
+        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
         do k=1,n(3)
           do j=1,n(2)
             do i=1,n(1)

@@ -101,9 +101,7 @@ module mod_solver
     ! solve tridiagonal system
     !
     if(present(lambdaxy)) then
-      !$OMP PARALLEL DEFAULT(none) &
-      !$OMP PRIVATE(bb) &
-      !$OMP SHARED(nx,ny,n,a,b,c,lambdaxy,p)
+      !$OMP PARALLEL DEFAULT(shared) PRIVATE(bb)
       !$OMP DO COLLAPSE(2)
       do j=1,ny
         do i=1,nx
@@ -113,8 +111,7 @@ module mod_solver
       end do
       !$OMP END PARALLEL
     else
-      !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(nx,ny,n,a,b,c,p)
+      !$OMP PARALLEL DEFAULT(shared)
       !$OMP DO COLLAPSE(2)
       do j=1,ny
         do i=1,nx
@@ -138,9 +135,7 @@ module mod_solver
     ! solve tridiagonal system
     !
     if(present(lambdaxy)) then
-      !$OMP PARALLEL DEFAULT(none) &
-      !$OMP PRIVATE(bb,p1,p2) &
-      !$OMP SHARED(nx,ny,n,a,b,c,lambdaxy,p)
+      !$OMP PARALLEL DEFAULT(shared) PRIVATE(bb,p1,p2)
       !$OMP DO COLLAPSE(2)
       do j=1,ny
         do i=1,nx
@@ -158,9 +153,7 @@ module mod_solver
       end do
       !$OMP END PARALLEL
     else
-      !$OMP PARALLEL DEFAULT(none) &
-      !$OMP PRIVATE(p1,p2) &
-      !$OMP SHARED(nx,ny,n,a,b,c,p)
+      !$OMP PARALLEL DEFAULT(shared) PRIVATE(p1,p2)
       !$OMP DO COLLAPSE(2)
       do j=1,ny
         do i=1,nx

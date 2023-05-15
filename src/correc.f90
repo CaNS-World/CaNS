@@ -31,8 +31,7 @@ module mod_correc
     factorj = dt*dli(2)
     !factork = dt*dzci!dli(3)
     !$acc parallel loop collapse(3) default(present) async(1)
-    !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP SHARED(n,factori,u,p)
+    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
     do k=0,n(3)+1
       do j=0,n(2)+1
         do i=0,n(1)
@@ -41,8 +40,7 @@ module mod_correc
       end do
     end do
     !$acc parallel loop collapse(3) default(present) async(1)
-    !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP SHARED(n,factorj,v,p)
+    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
     do k=0,n(3)+1
       do j=0,n(2)
         do i=0,n(1)+1
@@ -51,8 +49,7 @@ module mod_correc
       end do
     end do
     !$acc parallel loop collapse(3) default(present) async(1)
-    !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP SHARED(n,dt,dzci,w,p)
+    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
     do k=0,n(3)
       do j=0,n(2)+1
         do i=0,n(1)+1

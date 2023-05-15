@@ -27,8 +27,7 @@ module mod_updatep
 #if defined(_IMPDIFF)
     dxi = dli(1); dyi = dli(2)
     !$acc parallel loop collapse(3) default(present) async(1)
-    !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP SHARED(n,p,pp,dxi,dyi,dzfi,dzci,alpha)
+    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
