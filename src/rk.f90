@@ -153,8 +153,7 @@ module mod_rk
 #endif
     !
     !$acc parallel loop collapse(3) default(present) async(1)
-    !$OMP PARALLEL DO DEFAULT(shared) &
-    !$OMP SHARED(n,factor1,factor2,u,v,w,dudtrk,dvdtrk,dwdtrk,dudtrko,dvdtrko,dwdtrko)
+    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
@@ -198,8 +197,7 @@ module mod_rk
 !    call momy_p(n(1),n(2),n(3),dli(2),bforce(2),p,dvdtrk)
 !    call momz_p(n(1),n(2),n(3),dzci  ,bforce(3),p,dwdtrk)
 !    !$acc parallel loop collapse(3)
-!    !$OMP PARALLEL DO DEFAULT(none) &
-!    !$OMP SHARED(n,factor12,u,v,w,dudtrk,dvdtrk,dwdtrk)
+!    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
 !    do k=1,n(3)
 !      do j=1,n(2)
 !        do i=1,n(1)
@@ -212,9 +210,7 @@ module mod_rk
 !#endif
 #if !defined(_FAST_MOM_KERNELS)
     !$acc parallel loop collapse(3) default(present) async(1)
-    !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP SHARED(bforce,dxi,dyi,dzci) &
-    !$OMP SHARED(n,factor12,u,v,w,p)
+    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
@@ -246,8 +242,7 @@ module mod_rk
     ! compute rhs of Helmholtz equation
     !
     !$acc parallel loop collapse(3) default(present) async(1)
-    !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP SHARED(n,factor12,u,v,w,dudtrkd,dvdtrkd,dwdtrkd)
+    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
@@ -313,8 +308,7 @@ module mod_rk
     end if
     call scal(n(1),n(2),n(3),dli(1),dli(2),dli(3),dzci,dzfi,alpha,u,v,w,s,dsdtrk)
     !$acc parallel loop collapse(3) default(present) async(1)
-    !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP SHARED(n,factor1,factor2,factor12,ssource,s,dsdtrk,dsdtrko)
+    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)

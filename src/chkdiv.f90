@@ -32,11 +32,7 @@ module mod_chkdiv
     divmax = 0.
     !$acc data copy(divtot,divmax) async(1)
     !$acc parallel loop collapse(3) default(present) private(div) reduction(+:divtot) reduction(max:divmax) async(1)
-    !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP SHARED(lo,hi,u,v,w,dxi,dyi,dzfi) &
-    !$OMP PRIVATE(div) &
-    !$OMP REDUCTION(+:divtot) &
-    !$OMP REDUCTION(max:divmax)
+    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)  PRIVATE(div) REDUCTION(+:divtot) REDUCTION(max:divmax)
     do k=lo(3),hi(3)
       do j=lo(2),hi(2)
         do i=lo(1),hi(1)

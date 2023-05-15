@@ -45,10 +45,7 @@ module mod_chkdt
     dti = 0.
     !$acc data copy(dti) async(1)
     !$acc parallel loop collapse(3) default(present) private(ux,uy,uz,vx,vy,vz,wx,wy,wz,dtix,dtiy,dtiz) reduction(max:dti) async(1)
-    !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP SHARED(n,u,v,w,dxi,dyi,dzi,dzci,dzfi) &
-    !$OMP PRIVATE(ux,uy,uz,vx,vy,vz,wx,wy,wz,dtix,dtiy,dtiz) &
-    !$OMP REDUCTION(max:dti)
+    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)  PRIVATE(ux,uy,uz,vx,vy,vz,wx,wy,wz,dtix,dtiy,dtiz) REDUCTION(max:dti)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)

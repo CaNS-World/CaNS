@@ -271,9 +271,7 @@ module mod_initflow
   real(rp) :: meanold
   integer :: i,j,k
   meanold = 0.
-  !$OMP PARALLEL DO DEFAULT(none) &
-  !$OMP SHARED(n,p,grid_vol_ratio) &
-  !$OMP REDUCTION(+:meanold)
+  !$OMP PARALLEL DO COLLAPSE(3) DEFAULT(shared) REDUCTION(+:meanold)
   do k=1,n(3)
     do j=1,n(2)
       do i=1,n(1)
