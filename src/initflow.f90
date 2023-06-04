@@ -174,8 +174,6 @@ module mod_initflow
     if(is_mean) then
       if(trim(inivel) /= 'iop') then
         call set_mean(n,ubulk,dzf/lz*(dx/lx)*(dy/ly),u(1:n(1),1:n(2),1:n(3)))
-      else
-        call set_mean(n,0._rp,dzf/lz*(dx/lx)*(dy/ly),u(1:n(1),1:n(2),1:n(3)))
       end if
     end if
     if(is_wallturb) is_pair = .true.
