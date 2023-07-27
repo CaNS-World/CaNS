@@ -68,12 +68,12 @@ module mod_mom
     do k=1,nz
       do j=1,ny
         do i=1,nx
-          uvip  = 0.25*( u(i  ,j,k  )+u(i  ,j+1,k  ) )*( v(i,j,k)+v(i+1,j,k) )
-          uvim  = 0.25*( u(i-1,j,k  )+u(i-1,j+1,k  ) )*( v(i,j,k)+v(i-1,j,k) )
-          vvjp  = 0.25*( v(i  ,j,k  )+v(i  ,j+1,k  ) )*( v(i,j,k)+v(i,j+1,k) )
-          vvjm  = 0.25*( v(i  ,j,k  )+v(i  ,j-1,k  ) )*( v(i,j,k)+v(i,j-1,k) )
-          wvkp  = 0.25*( w(i  ,j,k  )+w(i  ,j+1,k  ) )*( v(i,j,k+1)+v(i,j,k) )
-          wvkm  = 0.25*( w(i  ,j,k-1)+w(i  ,j+1,k-1) )*( v(i,j,k-1)+v(i,j,k) )
+          uvip  = 0.25*( v(i,j,k)+v(i+1,j,k) )*( u(i  ,j,k  )+u(i  ,j+1,k  ) )
+          uvim  = 0.25*( v(i,j,k)+v(i-1,j,k) )*( u(i-1,j,k  )+u(i-1,j+1,k  ) )
+          vvjp  = 0.25*( v(i,j,k)+v(i,j+1,k) )*( v(i  ,j,k  )+v(i  ,j+1,k  ) )
+          vvjm  = 0.25*( v(i,j,k)+v(i,j-1,k) )*( v(i  ,j,k  )+v(i  ,j-1,k  ) )
+          wvkp  = 0.25*( v(i,j,k)+v(i,j,k+1) )*( w(i  ,j,k  )+w(i  ,j+1,k  ) )
+          wvkm  = 0.25*( v(i,j,k)+v(i,j,k-1) )*( w(i  ,j,k-1)+w(i  ,j+1,k-1) )
           !
           ! Momentum balance
           !
@@ -744,12 +744,12 @@ module mod_mom
           !
           ! y advection
           !
-          uvip  = 0.25*(u_ccc+u_cpc)*(v_ccc+v_pcc)
-          uvim  = 0.25*(u_mcc+u_mpc)*(v_ccc+v_mcc)
+          uvip  = 0.25*(v_ccc+v_pcc)*(u_ccc+u_cpc)
+          uvim  = 0.25*(v_ccc+v_mcc)*(u_mcc+u_mpc)
           vvjp  = 0.25*(v_ccc+v_cpc)*(v_ccc+v_cpc)
           vvjm  = 0.25*(v_ccc+v_cmc)*(v_ccc+v_cmc)
-          wvkp  = 0.25*(w_ccc+w_cpc)*(v_ccp+v_ccc)
-          wvkm  = 0.25*(w_ccm+w_cpm)*(v_ccm+v_ccc)
+          wvkp  = 0.25*(v_ccc+v_ccp)*(w_ccc+w_cpc)
+          wvkm  = 0.25*(v_ccc+v_ccm)*(w_ccm+w_cpm)
           !
           dvdtd_xy_s = &
                          visc*(dvdxp-dvdxm)*dxi + &
