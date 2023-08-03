@@ -1,6 +1,6 @@
 512 128 128              ! itot, jtot, ktot
 10. 1. 1.                ! lx, ly, lz
-0.                       ! gr
+0 0.                     ! gtype, gr
 .95 1.e5                 ! cfl, dtmin
 4410.                    ! visci
 poi                      ! inivel

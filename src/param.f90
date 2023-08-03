@@ -28,7 +28,9 @@ real(rp), parameter, dimension(3)   :: rkcoeff12 = rkcoeff(1,:)+rkcoeff(2,:)
 ! variables to be determined from the input file 'dns.in'
 !
 integer , protected :: itot,jtot,ktot
-real(rp), protected :: lx,ly,lz,dx,dy,dz,dxi,dyi,dzi,gr
+real(rp), protected :: lx,ly,lz,dx,dy,dz,dxi,dyi,dzi
+integer , protected :: gtype
+real(rp), protected :: gr
 real(rp), protected :: cfl,dtmin
 real(rp), protected :: visci
 !
@@ -81,7 +83,7 @@ contains
       if( ierr == 0 ) then
         read(iunit,*,iostat=ierr) itot,jtot,ktot
         read(iunit,*,iostat=ierr) lx,ly,lz
-        read(iunit,*,iostat=ierr) gr
+        read(iunit,*,iostat=ierr) gtype,gr
         read(iunit,*,iostat=ierr) cfl,dtmin
         read(iunit,*,iostat=ierr) visci
         read(iunit,*,iostat=ierr) inivel

@@ -55,7 +55,7 @@ program cans
                                  cfl,dtmin, &
                                  inivel,    &
                                  dims, &
-                                 gr, &
+                                 gtype,gr, &
                                  is_forced,velf,bforce, &
                                  ng,l,dl,dli, &
                                  read_input
@@ -209,7 +209,7 @@ program cans
   if(myid == 0) print*, '*** Beginning of simulation ***'
   if(myid == 0) print*, '*******************************'
   if(myid == 0) print*, ''
-  call initgrid(inivel,ng(3),gr,lz,dzc_g,dzf_g,zc_g,zf_g)
+  call initgrid(gtype,ng(3),gr,lz,dzc_g,dzf_g,zc_g,zf_g)
   if(myid == 0) then
     inquire(iolength=rlen) 1._rp
     open(99,file=trim(datadir)//'grid.bin',access='direct',recl=4*ng(3)*rlen)

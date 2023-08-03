@@ -1,6 +1,6 @@
 32 32 4                 ! itot, jtot, ktot
 6.2831853071795 6.283185307179586 0.125 ! lx, ly, lz
-0.                      ! gr
+0 0.                    ! gtype, gr
 .95 0.1                 ! cfl, dtmin
 100.                    ! visci
 tgw                     ! inivel

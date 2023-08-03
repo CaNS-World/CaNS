@@ -11,23 +11,30 @@ module mod_initgrid
   private
   public initgrid
   contains
-  subroutine initgrid(inivel,n,gr,lz,dzc,dzf,zc,zf)
+  subroutine initgrid(gtype,n,gr,lz,dzc,dzf,zc,zf)
     !
     ! initializes the non-uniform grid along z
     !
     implicit none
-    character(len=3), intent(in) :: inivel
-    integer , intent(in ) :: n
+    integer, parameter :: CLUSTER_TWO_END              = 0, &
+                          CLUSTER_ONE_END              = 1, &
+                          CLUSTER_ONE_END_R            = 2, &
+                          CLUSTER_MIDDLE               = 3
+    integer , intent(in ) :: gtype,n
     real(rp), intent(in ) :: gr,lz
     real(rp), intent(out), dimension(0:n+1) :: dzc,dzf,zc,zf
     real(rp) :: z0
     integer :: k
     procedure (), pointer :: gridpoint => null()
-    select case(inivel)
-    case('zer','log','poi','cou','iop','pdc')
+    select case(gtype)
+    case(CLUSTER_TWO_END)
       gridpoint => gridpoint_cluster_two_end
-    case('hcl','hcp','hdc','tbl')
+    case(CLUSTER_ONE_END)
       gridpoint => gridpoint_cluster_one_end
+    case(CLUSTER_ONE_END_R)
+      gridpoint => gridpoint_cluster_one_end_r
+    case(CLUSTER_MIDDLE)
+      gridpoint => gridpoint_cluster_middle
     case default
       gridpoint => gridpoint_cluster_two_end
     end select
@@ -102,6 +109,20 @@ module mod_initgrid
       z = z0
     end if
   end subroutine gridpoint_cluster_one_end
+  subroutine gridpoint_cluster_one_end_r(alpha,r0,r)
+    !
+    ! clustered at the upper side
+    !
+    implicit none
+    real(rp), intent(in ) :: alpha,r0
+    real(rp), intent(out) :: r
+    if(alpha /= 0._rp) then
+      r = 1._rp-1.0_rp*(1._rp+tanh((1._rp-r0-1.0_rp)*alpha)/tanh(alpha/1._rp))
+      !r = 1._rp-1.0_rp*(1._rp+erf( (1._rp-r0-1.0_rp)*alpha)/erf( alpha/1._rp))
+    else
+      r = r0
+    end if
+  end subroutine gridpoint_cluster_one_end_r
   subroutine gridpoint_cluster_middle(alpha,z0,z)
     !
     ! clustered in the middle

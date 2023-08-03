@@ -56,6 +56,7 @@ module mod_solver
     call fft(arrplan(1,2),py) ! fwd transform in y
     !
     call transpose_y_to_z(py,pz)
+    !
     q = 0
     if(c_or_f(3) == 'f'.and.bc(1,3) == 'D') q = 1
     if(bc(0,3)//bc(1,3) == 'PP') then

@@ -5,7 +5,7 @@ Consider the following input file as example (corresponds to a turbulent plane c
 ~~~
 512 256 144              ! itot, jtot, ktot
 6. 3. 1.                 ! lx, ly, lz
-0.                       ! gr
+0 1.                     ! gtype, gr
 .95 1.0e5                ! cfl, dtmin
 5640.                    ! visci
 poi                      ! inivel
@@ -34,14 +34,19 @@ T F F                    ! is_forced(1:3)
 ~~~
 512 256 144              ! itot, jtot, ktot
 6. 3. 1.                 ! lx, ly, lz
-0.                       ! gr
+0 0.                     ! gtype, gr
 ~~~
 
 These lines set the computational grid.
 
 `itot, jtot, ktot ` and `lx, ly, lz` are the **number of points**  and **domain length** in each direction.
 
-`gr` is a **grid stretching parameter** that tweaks the non-uniform grid in the third direction; zero `gr` implies no stretching. See `initgrid.f90` for more details.
+`gtype` and `gr` are the **grid stretching type** and **grid stretching parameter** that tweak the non-uniform grid in the third direction; zero `gr` implies no stretching. See `initgrid.f90` for more details. The following options are available for `gtype`:
+
+* `0`: grid clustered towards both ends (default)
+* `1`: grid clustered towards the lower end
+* `2`: grid clustered towards the upper end
+* `3`: grid clustered towards the middle
 
 ---
 
@@ -106,9 +111,9 @@ These lines set the simulation termination criteria and whether the simulation s
 
 `stop_type` sets which criteria for terminating the simulation are to be used (more than one can be selected, and at least one of them must be `T`)
 
-* `stop_type(1)`, if true (`T`), the simulation will terminate after `nstep` time steps have been simulated;
-* `stop_type(2)`, if true (`T`), the simulation will terminate after `time_max` physical time units have been reached;
-* `stop_type(3)`, if true (`T`), the simulation will terminate after `tw_max` simulation wall-clock time (in hours) has been reached;
+* `stop_type(1)`, if true (`T`), the simulation will terminate after `nstep` time steps have been simulated
+* `stop_type(2)`, if true (`T`), the simulation will terminate after `time_max` physical time units have been reached
+* `stop_type(3)`, if true (`T`), the simulation will terminate after `tw_max` simulation wall-clock time (in hours) has been reached
 
 a checkpoint file `fld.bin` will be saved before the simulation is terminated.
 
@@ -126,12 +131,12 @@ a checkpoint file `fld.bin` will be saved before the simulation is terminated.
 
 These lines set the frequency of time step checking and output:
 
-* every `icheck` time steps **the new time step size** is computed according to the new stability criterion and cfl (above);
-* every `iout0d` time steps **history files with global scalar variables** are appended; currently the forcing pressure gradient and time step history are reported;
-* every `iout1d` time steps **1d profiles** are written (e.g. velocity and its moments) to a file;
-* every `iout2d` time steps **2d slices of a 3d scalar field** are written to a file;
-* every `iout3d` time steps **3d scalar fields** are written to a file;
-* every `isave`  time steps a **checkpoint file** is written (`fld_???????.bin`), and a symbolic link for the restart file, `fld.bin`, will point to this last save so that, by default, the last saved checkpoint file is used to restart the simulation.
+* every `icheck` time steps **the new time step size** is computed according to the new stability criterion and cfl (above)
+* every `iout0d` time steps **history files with global scalar variables** are appended; currently the forcing pressure gradient and time step history are reported
+* every `iout1d` time steps **1d profiles** are written (e.g. velocity and its moments) to a file
+* every `iout2d` time steps **2d slices of a 3d scalar field** are written to a file
+* every `iout3d` time steps **3d scalar fields** are written to a file
+* every `isave`  time steps a **checkpoint file** is written (`fld_???????.bin`), and a symbolic link for the restart file, `fld.bin`, will point to this last save so that, by default, the last saved checkpoint file is used to restart the simulation
 
 1d, 2d and 3d outputs can be tweaked modifying files `out?d.h90`, and re-compiling the source. See also `output.f90` for more details.
 
@@ -152,17 +157,17 @@ These lines set the boundary conditions (BC).
 
 The **type** (BC) for each field variable are set by a row of six characters, `X0 X1  Y0 Y1  Z0 Z1` where,
 
-* `X0` `X1` set the type of BC the field variable for the **lower** and **upper** boundaries in `x`;
-* `Y0` `Y1` set the type of BC the field variable for the **lower** and **upper** boundaries in `y`;
-* `Z0` `Z1` set the type of BC the field variable for the **lower** and **upper** boundaries in `z`.
+* `X0` `X1` set the type of BC the field variable for the **lower** and **upper** boundaries in `x`
+* `Y0` `Y1` set the type of BC the field variable for the **lower** and **upper** boundaries in `y`
+* `Z0` `Z1` set the type of BC the field variable for the **lower** and **upper** boundaries in `z`
 
 The four rows correspond to the three velocity components, and pressure, i.e. `u`, `v`, `w`, and `p`.
 
 The following options are available:
 
-* `P` periodic;
-* `D` Dirichlet;
-* `N` Neumann.
+* `P` periodic
+* `D` Dirichlet
+* `N` Neumann
 
 The **last four rows** follow the same logic, but now for the BC **values** (dummy for a periodic direction).
 
