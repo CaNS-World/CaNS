@@ -1,6 +1,6 @@
 128 128 256                ! itot, jtot, ktot
 40. 20. 72.                ! lx, ly, lz
-1 4.                       ! gtype, gr
+2 4.                       ! gtype, gr
 .95 1.e5                   ! cfl, dtmin
 500.                       ! visci
 tbl                        ! inivel

@@ -16,10 +16,10 @@ module mod_initgrid
     ! initializes the non-uniform grid along z
     !
     implicit none
-    integer, parameter :: CLUSTER_TWO_END              = 0, &
-                          CLUSTER_ONE_END              = 1, &
-                          CLUSTER_ONE_END_R            = 2, &
-                          CLUSTER_MIDDLE               = 3
+    integer, parameter :: CLUSTER_TWO_END              = 1, &
+                          CLUSTER_ONE_END              = 2, &
+                          CLUSTER_ONE_END_R            = 3, &
+                          CLUSTER_MIDDLE               = 4
     integer , intent(in ) :: gtype,n
     real(rp), intent(in ) :: gr,lz
     real(rp), intent(out), dimension(0:n+1) :: dzc,dzf,zc,zf
