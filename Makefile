@@ -78,8 +78,8 @@ $(EXE): $(OBJS)
 	$(FC) $(FFLAGS) $^ $(LIBS) $(INCS) -o $(EXE)
 
 run: $(EXE)
-	@cp $(SRCS_DIR)/input.nml $(EXE_DIR)
-	@printf "\nDefault input files *.in copied to run folder $(EXE_DIR)\n"
+	@cp $(SRCS_DIR)/$(INPUT_FILE) $(EXE_DIR)
+	@printf "\nDefault input file $(INPUT_FILE) copied to run folder $(EXE_DIR)\n"
 
 # Create object files from Fortran source
 $(OBJS): %.o: %

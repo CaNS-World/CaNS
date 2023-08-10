@@ -30,7 +30,10 @@ velf(1:3) = 1., 0., 0.
 dims(1:2) = 2, 2
 \
 ```
-> Tip for vim/nvim users: consider adding the following lines in your `.vimrc` file for syntax highlighting of the namelist file:
+<details>
+
+<summary>Tip for vim/nvim users</summary>
+Consider adding the following lines in your `.vimrc` file for syntax highlighting of the namelist file:
 
 ```vim
 if has("autocmd")
@@ -38,6 +41,8 @@ if has("autocmd")
   au BufNewFile,BufRead *.namelist set filetype=fortran
 endif
 ```
+
+</details>
 
 ---
 ---
@@ -61,7 +66,7 @@ These lines set the computational grid.
 
 ---
 
-```
+```fortran
 cfl = 0.95, dtmin = 1.e5
 ```
 
@@ -72,7 +77,7 @@ The time step is set to be equal to `min(cfl*dtmax,dtmin)`, i.e. the minimum val
 
 ---
 
-```
+```fortran
 visci = 5640.
 ```
 
@@ -80,7 +85,7 @@ This line defines the inverse of the fluid viscosity, `visci`, meaning that the 
 
 ---
 
-```
+```fortran
 inivel = 'poi'
 is_wallturb = T
 ```

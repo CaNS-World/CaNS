@@ -93,10 +93,14 @@ contains
                   is_forced, &
                   velf, &
                   dims
+#if defined(_OPENACC)
+    namelist /cudecomp/ &
+                       cudecomp_t_comm_backend,cudecomp_is_t_enable_nccl,cudecomp_is_t_enable_nvshmem, &
+                       cudecomp_h_comm_backend,cudecomp_is_h_enable_nccl,cudecomp_is_h_enable_nvshmem
+#endif
     open(newunit=iunit,file='input.nml',status='old',action='read',iostat=ierr)
       if( ierr == 0 ) then
         read(iunit,nml=dns,iostat=ierr)
-        print*,ng
       else
         if(myid == 0) print*, 'Error reading the input file'
         if(myid == 0) print*, 'Aborting...'
@@ -109,9 +113,6 @@ contains
     dli(:) = dl(:)**(-1)
     visc = visci**(-1)
 #if defined(_OPENACC)
-    namelist /cudecomp/ &
-                       cudecomp_t_comm_backend,cudecomp_is_t_enable_nccl,cudecomp_is_t_enable_nvshmem, &
-                       cudecomp_h_comm_backend,cudecomp_is_h_enable_nccl,cudecomp_is_h_enable_nvshmem
     !
     ! read cuDecomp parameter file cudecomp.in, if it exists
     !
