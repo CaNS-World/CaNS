@@ -1,45 +1,56 @@
-# about `dns.in`
+# about the input file `input.nml`
 
-Consider the following input file as example (corresponds to a turbulent plane channel flow):
+Consider the following input file as example (corresponds to a turbulent plane channel flow). `&dns` defines a so-called Fortran namelist containing all the necessary physical and computational parameters to set a case.
 
-~~~
-512 256 144              ! itot, jtot, ktot
-6. 3. 1.                 ! lx, ly, lz
-0 1.                     ! gtype, gr
-.95 1.0e5                ! cfl, dtmin
-5640.                    ! visci
-poi                      ! inivel
-T                        ! is_wallturb
-100000 100. 0.1          ! nstep, time_max, tw_max
-T F F                    ! stop_type(1:3)
-F T 0                    ! restart,is_overwrite_save,nsaves_max
-10 10 100 500 10000 5000 ! icheck, iout0d, iout1d, iout2d, iout3d, isave
-P P  P P  D D            ! cbcvel(0:1,1:3,1) [u BC type]
-P P  P P  D D            ! cbcvel(0:1,1:3,2) [v BC type]
-P P  P P  D D            ! cbcvel(0:1,1:3,3) [w BC type]
-P P  P P  N N            ! cbcpre(0:1,1:3  ) [p BC type]
-0. 0.  0. 0.  0. 0.      !  bcvel(0:1,1:3,1) [u BC value]
-0. 0.  0. 0.  0. 0.      !  bcvel(0:1,1:3,2) [v BC value]
-0. 0.  0. 0.  0. 0.      !  bcvel(0:1,1:3,3) [w BC value]
-0. 0.  0. 0.  0. 0.      !  bcpre(0:1,1:3  ) [p BC value]
-0. 0. 0.                 ! bforce(1:3)
-T F F                    ! is_forced(1:3)
-1. 0. 0.                 ! velf(1:3)
-2 2                      ! dims(1:2)
-~~~
+
+```fortran
+&dns
+ng(1:3) = 512, 256, 144
+l(1:3) = 6., 3., 1.
+gtype = 1, gr = 0.
+cfl = 0.95, dtmin = 1.e5
+visci = 5640.
+inivel = 'poi'
+is_wallturb = T
+nstep = 100000, time_max = 100., tw_max = 0.1
+stop_type(1:3) = T, F, F
+restart = F, is_overwrite_save = T, nsaves_max = 0
+icheck = 10, iout0d = 10, iout1d = 100, iout2d = 500, iout3d = 10000, isave = 5000
+cbcvel(0:1,1:3,1) = 'P','P',  'P','P',  'D','D'
+cbcvel(0:1,1:3,2) = 'P','P',  'P','P',  'D','D'
+cbcvel(0:1,1:3,3) = 'P','P',  'P','P',  'D','D'
+cbcpre(0:1,1:3)   = 'P','P',  'P','P',  'N','N'
+bcvel(0:1,1:3,1) =  0.,0.,   0.,0.,   0.,0.
+bcvel(0:1,1:3,2) =  0.,0.,   0.,0.,   0.,0.
+bcvel(0:1,1:3,3) =  0.,0.,   0.,0.,   0.,0.
+bcpre(0:1,1:3  ) =  0.,0.,   0.,0.,   0.,0.
+bforce(1:3) = 0., 0., 0.
+is_forced(1:3) = T, F, F
+velf(1:3) = 1., 0., 0.
+dims(1:2) = 2, 2
+\
+```
+> Tip for vim/nvim users: consider adding the following lines in your `.vimrc` file for syntax highlighting of the namelist file:
+
+```vim
+if has("autocmd")
+  au BufNewFile,BufRead *.nml set filetype=fortran
+  au BufNewFile,BufRead *.namelist set filetype=fortran
+endif
+```
 
 ---
 ---
 
-~~~
-512 256 144              ! itot, jtot, ktot
-6. 3. 1.                 ! lx, ly, lz
-0 0.                     ! gtype, gr
-~~~
+```fortran
+ng(1:3) = 512, 256, 144
+l(1:3) = 6., 3., 1.
+gtype = 1, gr = 0.
+```
 
 These lines set the computational grid.
 
-`itot, jtot, ktot ` and `lx, ly, lz` are the **number of points**  and **domain length** in each direction.
+`ng(1:3)` and `l(1:3)` are the **number of points**  and **domain length** in each direction.
 
 `gtype` and `gr` are the **grid stretching type** and **grid stretching parameter** that tweak the non-uniform grid in the third direction; zero `gr` implies no stretching. See `initgrid.f90` for more details. The following options are available for `gtype`:
 
@@ -50,9 +61,9 @@ These lines set the computational grid.
 
 ---
 
-~~~
-.95 1.0e5                ! cfl, dtmin
-~~~
+```
+cfl = 0.95, dtmin = 1.e5
+```
 
 This line controls the simulation time step.
 
@@ -61,18 +72,18 @@ The time step is set to be equal to `min(cfl*dtmax,dtmin)`, i.e. the minimum val
 
 ---
 
-~~~
-5640.                    ! visci
-~~~
+```
+visci = 5640.
+```
 
 This line defines the inverse of the fluid viscosity, `visci`, meaning that the viscosity is `visc = visci**(-1)`. Note that, for a setup defined with unit reference length and velocity scales, `visci` has the same value as the flow Reynolds number.
 
 ---
 
-~~~
-poi                      ! inivel
-T                        ! is_wallturb
-~~~
+```
+inivel = 'poi'
+is_wallturb = T
+```
 
 These lines set the initial velocity field.
 
@@ -95,11 +106,11 @@ See `initflow.f90` for more details.
 
 ---
 
-~~~
-100000 100. 0.1          ! nstep, time_max, tw_max
-T F F                    ! stop_type(1:3)
-F T 0                    ! restart,is_overwrite_save,nsaves_max
-~~~
+```fortran
+nstep = 100000, time_max = 100., tw_max = 0.1
+stop_type(1:3) = T, F, F
+restart = F, is_overwrite_save = T, nsaves_max = 0
+```
 
 These lines set the simulation termination criteria and whether the simulation should be restarted from a checkpoint file.
 
@@ -125,9 +136,9 @@ a checkpoint file `fld.bin` will be saved before the simulation is terminated.
 
 ---
 
-~~~
-10 10 20 5000 10000 2000 ! icheck, iout0d, iout1d, iout2d, iout3d, isave
-~~~
+```fortran
+icheck = 10, iout0d = 10, iout1d = 100, iout2d = 500, iout3d = 10000, isave = 5000
+```
 
 These lines set the frequency of time step checking and output:
 
@@ -142,16 +153,16 @@ These lines set the frequency of time step checking and output:
 
 ---
 
-~~~
-P P  P P  D D          ! cbcvel(0:1,1:3,1) [u BC type]
-P P  P P  D D          ! cbcvel(0:1,1:3,2) [v BC type]
-P P  P P  D D          ! cbcvel(0:1,1:3,3) [w BC type]
-P P  P P  N N          ! cbcpre(0:1,1:3  ) [p BC type]
-0. 0.  0. 0.  0. 0.    !  bcvel(0:1,1:3,1) [u BC value]
-0. 0.  0. 0.  0. 0.    !  bcvel(0:1,1:3,2) [v BC value]
-0. 0.  0. 0.  0. 0.    !  bcvel(0:1,1:3,3) [w BC value]
-0. 0.  0. 0.  0. 0.    !  bcpre(0:1,1:3  ) [p BC value]
-~~~
+```fortran
+cbcvel(0:1,1:3,1) = 'P','P',  'P','P',  'D','D'
+cbcvel(0:1,1:3,2) = 'P','P',  'P','P',  'D','D'
+cbcvel(0:1,1:3,3) = 'P','P',  'P','P',  'D','D'
+cbcpre(0:1,1:3)   = 'P','P',  'P','P',  'N','N'
+bcvel(0:1,1:3,1) =  0.,0.,   0.,0.,   0.,0.
+bcvel(0:1,1:3,2) =  0.,0.,   0.,0.,   0.,0.
+bcvel(0:1,1:3,3) =  0.,0.,   0.,0.,   0.,0.
+bcpre(0:1,1:3  ) =  0.,0.,   0.,0.,   0.,0.
+```
 
 These lines set the boundary conditions (BC).
 
@@ -173,11 +184,11 @@ The **last four rows** follow the same logic, but now for the BC **values** (dum
 
 ---
 
-~~~
-0. 0. 0.                 ! bforce(1:3)
-T F F                    ! is_forced(1:3)
-1. 0. 0.                 ! velf(1:3)
-~~~
+```fortran
+bforce(1:3) = 0., 0., 0.
+is_forced(1:3) = T, F, F
+velf(1:3) = 1., 0., 0.
+```
 
 These lines set the flow forcing.
 
@@ -189,22 +200,23 @@ These lines set the flow forcing.
 
 ---
 
-~~~
-2 2                      ! dims(1:2)
-~~~
+```fortran
+dims(1:2) = 2, 2
+```
 
 This line set the grid of computational subdomains.
 
 `dims` is the **processor grid**, the number of domain partitions along the first and second decomposed directions (which depend on the selected default pencil orientation). `dims(1)*dims(2)` corresponds therefore to the total number of computational subdomains. Setting `dims(:) = [0,0]` will trigger a runtime autotuning step to find the processor grid that minimizes transpose times. Note, however, that other components of the algorithm (e.g., collective I/O) may also be affected by the choice of processor grid.
 
-# about `cudecomp.in`
+# about the `&cudecomp` namelist under `input.nml`
 
-In addition to the `dns.in` file, there is an **optional** input file to set some runtime configurations for the *cuDecomp* library. Consider the following file, which corresponds to the default options in case the file is not provided:
+In addition to the `&dns` namelist in the input file, there is an **optional** namelist to set some runtime configurations for the *cuDecomp* library. Consider the following `&cudecomp` namelist, which corresponds to the default options in case the file is not provided:
 
-~~~
-0 T T ! cudecomp_t_comm_backend,cudecomp_is_t_enable_nccl,cudecomp_is_t_enable_nvshmem
-0 T T ! cudecomp_t_comm_backend,cudecomp_is_t_enable_nccl,cudecomp_is_t_enable_nvshmem
-~~~
+```fortran
+&cudecomp
+cudecomp_t_comm_backend = 0, cudecomp_is_t_enable_nccl = T, cudecomp_is_t_enable_nvshmem = T
+cudecomp_h_comm_backend = 0, cudecomp_is_h_enable_nccl = T, cudecomp_is_h_enable_nvshmem = T
+```
 
 The first line sets the configuration for the transpose communication backend autotuning. Here `cudecomp_t_comm_backend` can be one of:
 
@@ -230,4 +242,4 @@ The second line is analogous to the first one, but for halo communication backen
 
 The other two boolean values, enable/disable the NCCL (`cudecomp_is_h_enable_nccl`) and NVSHMEM (`cudecomp_is_h_enable_nvshmem`) options for *halo* communication backend autotuning.
 
-Finally, it is worth recalling that passing `dims(1:2) = [0,0]` under `dns.in` will trigger the *processor grid* autotuning, so there is no need to provide that option in the `cudecomp.in` input file.
+Finally, it is worth recalling that passing `dims(1:2) = [0,0]` under `&dns` will trigger the *processor grid* autotuning, so there is no need to provide that option in the `&cudecomp` namelist.
