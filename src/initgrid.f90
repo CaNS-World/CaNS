@@ -24,7 +24,6 @@ module mod_initgrid
     real(rp), intent(in ) :: gr,lz
     real(rp), intent(out), dimension(0:n+1) :: dzc,dzf,zc,zf
     real(rp) :: z0
-    real(dp),              dimension(0:n+1) :: dzc_aux,dzf_aux,zc_aux,zf_aux
     integer :: k
     procedure (), pointer :: gridpoint => null()
     select case(gtype)
@@ -40,46 +39,42 @@ module mod_initgrid
       gridpoint => gridpoint_cluster_two_end
     end select
     !
-    ! step 1) determine coordinates of cell faces zf_aux
+    ! step 1) determine coordinates of cell faces zf
     !
-    zf_aux(0) = 0.
+    zf(0) = 0.
     do k=1,n
       z0  = (k-0.)/(1.*n)
 #if !defined(_GRIDPOINT_NATURAL_CHANNEL)
-      call gridpoint(gr,z0,zf_aux(k))
+      call gridpoint(gr,z0,zf(k))
 #else
-      call gridpoint_natural(k,n,zf_aux(k))
+      call gridpoint_natural(k,n,zf(k))
 #endif
-      zf_aux(k) = zf_aux(k)*lz
+      zf(k) = zf(k)*lz
     end do
     !
-    ! step 2) determine grid spacing between faces dzf_aux
+    ! step 2) determine grid spacing between faces dzf
     !
     do k=1,n
-      dzf_aux(k) = zf_aux(k)-zf_aux(k-1)
+      dzf(k) = zf(k)-zf(k-1)
     end do
-    dzf_aux(0  ) = dzf_aux(1)
-    dzf_aux(n+1) = dzf_aux(n)
+    dzf(0  ) = dzf(1)
+    dzf(n+1) = dzf(n)
     !
-    ! step 3) determine grid spacing between centers dzc_aux
+    ! step 3) determine grid spacing between centers dzc
     !
     do k=0,n
-      dzc_aux(k) = .5*(dzf_aux(k)+dzf_aux(k+1))
+      dzc(k) = .5*(dzf(k)+dzf(k+1))
     end do
-    dzc_aux(n+1) = dzc_aux(n)
+    dzc(n+1) = dzc(n)
     !
-    ! step 4) compute coordinates of cell centers zc_aux and faces zf_aux
+    ! step 4) compute coordinates of cell centers zc and faces zf
     !
-    zc_aux(0)    = -dzc_aux(0)/2.
-    zf_aux(0)    = 0.
+    zc(0)    = -dzc(0)/2.
+    zf(0)    = 0.
     do k=1,n+1
-      zc_aux(k) = zc_aux(k-1) + dzc_aux(k-1)
-      zf_aux(k) = zf_aux(k-1) + dzf_aux(k)
+      zc(k) = zc(k-1) + dzc(k-1)
+      zf(k) = zf(k-1) + dzf(k)
     end do
-    zf(:) = zf_aux(:)
-    zc(:) = zc_aux(:)
-    dzf(:) = dzf_aux(:)
-    dzc(:) = dzc_aux(:)
   end subroutine initgrid
   !
   ! grid stretching functions
@@ -155,15 +150,15 @@ module mod_initgrid
     ! clustered at the two sides
     !
     implicit none
-    real(dp), parameter :: kb_p     = 32._dp,    &
-                           alpha_p  = pi/1.5_dp, &
-                           c_eta_p  = 0.8_dp,    &
-                           dyp_p    = 0.05_dp
+    real(rp), parameter :: kb_p     = 32._rp,    &
+                           alpha_p  = pi/1.5_rp, &
+                           c_eta_p  = 0.8_rp,    &
+                           dyp_p    = 0.05_rp
     integer , intent(in ) :: kg,nzg
-    real(dp), intent(out) :: z
-    real(dp), intent(in ), optional :: kb_a,alpha_a,c_eta_a,dyp_a
-    real(dp)                        :: kb  ,alpha  ,c_eta  ,dyp
-    real(dp) :: retau,n,k
+    real(rp), intent(out) :: z
+    real(rp), intent(in ), optional :: kb_a,alpha_a,c_eta_a,dyp_a
+    real(rp)                        :: kb  ,alpha  ,c_eta  ,dyp
+    real(rp) :: retau,n,k
     !
     ! handle input parameters
     !
@@ -174,16 +169,16 @@ module mod_initgrid
     !
     ! determine retau
     !
-    n = nzg/2._dp
-    retau = 1._dp/(1._dp+(n/kb)**2)*(dyp*n+(3._dp/4._dp*alpha*c_eta*n)**(4._dp/3._dp)*(n/kb)**2)
+    n = nzg/2._rp
+    retau = 1._rp/(1._rp+(n/kb)**2)*(dyp*n+(3._rp/4._rp*alpha*c_eta*n)**(4._rp/3._rp)*(n/kb)**2)
 #if defined(_DEBUG)
     if(kg==1) print*,'Grid targeting Retau = ',retau
 #endif
-    k = 1._dp*min(kg,(nzg-kg))
+    k = 1._rp*min(kg,(nzg-kg))
     !
     ! dermine z/(2h)
     !
-    z = 1._dp/(1._dp+(k/kb)**2)*(dyp*k+(3._dp/4._dp*alpha*c_eta*k)**(4._dp/3._dp)*(k/kb)**2)/(2._dp*retau)
-    if( kg >= nzg-kg ) z = 1._dp-z
+    z = 1._rp/(1._rp+(k/kb)**2)*(dyp*k+(3._rp/4._rp*alpha*c_eta*k)**(4._rp/3._rp)*(k/kb)**2)/(2._rp*retau)
+    if( kg > nzg-kg ) z = 1._rp-z
   end subroutine gridpoint_natural
 end module mod_initgrid
