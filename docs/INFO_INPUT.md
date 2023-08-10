@@ -43,10 +43,10 @@ These lines set the computational grid.
 
 `gtype` and `gr` are the **grid stretching type** and **grid stretching parameter** that tweak the non-uniform grid in the third direction; zero `gr` implies no stretching. See `initgrid.f90` for more details. The following options are available for `gtype`:
 
-* `0`: grid clustered towards both ends (default)
-* `1`: grid clustered towards the lower end
-* `2`: grid clustered towards the upper end
-* `3`: grid clustered towards the middle
+* `1`: grid clustered towards both ends (default)
+* `2`: grid clustered towards the lower end
+* `3`: grid clustered towards the upper end
+* `4`: grid clustered towards the middle
 
 ---
 
