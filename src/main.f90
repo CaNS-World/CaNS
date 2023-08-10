@@ -47,18 +47,20 @@ program cans
   use mod_mom            , only: bulk_forcing
   use mod_rk             , only: rk
   use mod_output         , only: out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
-  use mod_param          , only: lz,visc,small, &
-                                 nb,is_bound,cbcvel,bcvel,cbcpre,bcpre, &
-                                 icheck,iout0d,iout1d,iout2d,iout3d,isave, &
-                                 nstep,time_max,tw_max,stop_type,restart,is_overwrite_save,nsaves_max, &
-                                 rkcoeff,   &
-                                 datadir,   &
-                                 cfl,dtmin, &
-                                 inivel,    &
-                                 dims, &
+  use mod_param          , only: ng,l,dl,dli, &
                                  gtype,gr, &
-                                 is_forced,velf,bforce, &
-                                 ng,l,dl,dli, &
+                                 cfl,dtmin, &
+                                 visc, &
+                                 inivel,is_wallturb, &
+                                 nstep,time_max,tw_max,stop_type, &
+                                 restart,is_overwrite_save,nsaves_max, &
+                                 icheck,iout0d,iout1d,iout2d,iout3d,isave, &
+                                 cbcvel,bcvel,cbcpre,bcpre, &
+                                 is_forced,bforce,velf, &
+                                 dims, &
+                                 nb,is_bound, &
+                                 rkcoeff,small, &
+                                 datadir,   &
                                  read_input
   use mod_sanity         , only: test_sanity_input,test_sanity_solver
 #if !defined(_OPENACC)
@@ -210,7 +212,7 @@ program cans
   if(myid == 0) print*, '*** Beginning of simulation ***'
   if(myid == 0) print*, '*******************************'
   if(myid == 0) print*, ''
-  call initgrid(gtype,ng(3),gr,lz,dzc_g,dzf_g,zc_g,zf_g)
+  call initgrid(gtype,ng(3),gr,l(3),dzc_g,dzf_g,zc_g,zf_g)
   if(myid == 0) then
     inquire(iolength=rlen) 1._rp
     open(99,file=trim(datadir)//'grid.bin',access='direct',recl=4*ng(3)*rlen)
@@ -218,7 +220,7 @@ program cans
     close(99)
     open(99,file=trim(datadir)//'grid.out')
     do kk=0,ng(3)+1
-      write(99,'(5E16.7e3)') 0.,zf_g(kk),zc_g(kk),dzf_g(kk),dzc_g(kk)
+      write(99,*) 0.,zf_g(kk),zc_g(kk),dzf_g(kk),dzc_g(kk)
     end do
     close(99)
     open(99,file=trim(datadir)//'geometry.out')
@@ -310,7 +312,8 @@ program cans
     istep = 0
     time = 0.
     !$acc update self(zc,dzc,dzf)
-    call initflow(inivel,ng,lo,zc,dzc,dzf,visc,u,v,w,p)
+    call initflow(inivel,bcvel,ng,lo,l,dl,zc,zf,dzc,dzf,visc, &
+                  is_forced,velf,bforce,is_wallturb,u,v,w,p)
     if(myid == 0) print*, '*** Initial condition succesfully set ***'
   else
     call load_all('r',trim(datadir)//'fld.bin',MPI_COMM_WORLD,ng,[1,1,1],lo,hi,u,v,w,p,time,istep)

@@ -193,7 +193,7 @@ module mod_sanity
       end if
     end do
     if(myid == 0.and.(.not.passed)) &
-    print*, 'ERROR: Flow cannot be forced in a non-periodic direction; check the BCs and is_forced in dns.in.'
+    print*, 'ERROR: Flow cannot be forced in a non-periodic direction; check the BCs and is_forced in `input.nml`.'
   end subroutine chk_forcing
   !
   subroutine test_sanity_solver(ng,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,dli,dzc,dzf,dzci,dzfi,dzci_g,dzfi_g, &
@@ -358,7 +358,7 @@ module mod_sanity
     implicit none
     if(myid == 0) print*, ''
     if(myid == 0) print*, '*** Simulation aborted due to errors in the input file ***'
-    if(myid == 0) print*, '    check dns.in'
+    if(myid == 0) print*, '    check `input.nml`.'
     call decomp_2d_finalize
     call MPI_FINALIZE(ierr)
     error stop

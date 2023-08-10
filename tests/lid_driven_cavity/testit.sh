@@ -8,7 +8,7 @@ rm -rf $RUNDIR
 echo "Compiling ..."
 sleep 2
 cd $CANSDIR && make allclean && make libs && make -j
-cp $TESTDIR/dns.in $RUNDIR && cd $RUNDIR
+cp $TESTDIR/input.nml $RUNDIR && cd $RUNDIR
 echo "Running CaNS..."
 sleep 2
 mpirun -n 4 --oversubscribe ./cans
