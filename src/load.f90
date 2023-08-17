@@ -16,7 +16,7 @@ module mod_load
   private
   public load,io_field
   contains
-  subroutine load(io,filename,comm,ng,nh,lo,hi,u,v,w,p,time,istep)
+  subroutine load_all(io,filename,comm,ng,nh,lo,hi,u,v,w,p,time,istep)
     !
     ! reads/writes a restart file
     !
@@ -149,7 +149,7 @@ module mod_load
       call MPI_FILE_WRITE(fh,fldinfo,nreals_myid,MPI_REAL_RP,MPI_STATUS_IGNORE,ierr)
       call MPI_FILE_CLOSE(fh,ierr)
     end select
-  end subroutine load
+  end subroutine load_all
   !
   subroutine io_field(io,fh,ng,nh,lo,hi,disp,var)
     implicit none
@@ -346,4 +346,142 @@ module mod_load
   end subroutine transpose_to_or_from_x_gpu
 #endif
 #endif
+  subroutine load_one(io,filename,comm,ng,nh,lo,hi,p,time,istep)
+    !
+    ! reads/writes a restart file
+    !
+    implicit none
+    character(len=1), intent(in) :: io
+    character(len=*), intent(in) :: filename
+    integer         , intent(in) :: comm
+    integer , intent(in), dimension(3) :: ng,nh,lo,hi
+    real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
+    real(rp), intent(inout), optional :: time
+    integer , intent(inout), optional :: istep
+    real(rp), dimension(2) :: fldinfo
+    integer :: fh
+    integer :: nreals_myid
+    integer(kind=MPI_OFFSET_KIND) :: filesize,disp,good
+    !
+    select case(io)
+    case('r')
+      call MPI_FILE_OPEN(comm, filename, &
+           MPI_MODE_RDONLY, MPI_INFO_NULL,fh,ierr)
+      !
+      ! check file size first
+      !
+      call MPI_FILE_GET_SIZE(fh,filesize,ierr)
+      good = (product(int(ng(:),MPI_OFFSET_KIND))*1+2)*f_sizeof(1._rp)
+      if(filesize /= good) then
+        if(myid == 0) print*, ''
+        if(myid == 0) print*, '*** Simulation aborted due a checkpoint file with incorrect size ***'
+        if(myid == 0) print*, '    file: ', filename, ' | expected size: ', good, '| actual size: ', filesize
+        call MPI_FINALIZE(ierr)
+        error stop
+      end if
+      !
+      ! read
+      !
+      disp = 0_MPI_OFFSET_KIND
+#if !defined(_DECOMP_X_IO)
+      call io_field(io,fh,ng,nh,lo,hi,disp,u)
+      call io_field(io,fh,ng,nh,lo,hi,disp,v)
+      call io_field(io,fh,ng,nh,lo,hi,disp,w)
+      call io_field(io,fh,ng,nh,lo,hi,disp,p)
+#else
+      block
+        !
+        ! I/O over x-aligned pencils
+        !
+        use decomp_2d
+        use mod_common_mpi, only: ipencil => ipencil_axis
+        real(rp), allocatable, dimension(:,:,:) :: tmp_x,tmp_y,tmp_z
+        select case(ipencil)
+        case(1)
+          allocate(tmp_x(0,0,0),tmp_y(0,0,0),tmp_z(0,0,0))
+        case(2)
+          allocate(tmp_x(xstart(1):xend(1),xstart(2):xend(2),xstart(3):xend(3)), &
+                   tmp_y(ystart(1):yend(1),ystart(2):yend(2),ystart(3):yend(3)), &
+                   tmp_z(0,0,0))
+        case(3)
+          allocate(tmp_x(xstart(1):xend(1),xstart(2):xend(2),xstart(3):xend(3)), &
+                   tmp_y(ystart(1):yend(1),ystart(2):yend(2),ystart(3):yend(3)), &
+                   tmp_z(zstart(1):zend(1),zstart(2):zend(2),zstart(3):zend(3)))
+        end select
+        call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
+        call transpose_to_or_from_x(io,ipencil,nh,u,tmp_x,tmp_y,tmp_z)
+        call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
+        call transpose_to_or_from_x(io,ipencil,nh,v,tmp_x,tmp_y,tmp_z)
+        call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
+        call transpose_to_or_from_x(io,ipencil,nh,w,tmp_x,tmp_y,tmp_z)
+        call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
+        call transpose_to_or_from_x(io,ipencil,nh,p,tmp_x,tmp_y,tmp_z)
+        deallocate(tmp_x,tmp_y,tmp_z)
+      end block
+#endif
+      if(present(time) .and. present(istep)) then
+        call MPI_FILE_SET_VIEW(fh,disp,MPI_REAL_RP,MPI_REAL_RP,'native',MPI_INFO_NULL,ierr)
+        nreals_myid = 0
+        if(myid == 0) nreals_myid = 2
+        call MPI_FILE_READ(fh,fldinfo,nreals_myid,MPI_REAL_RP,MPI_STATUS_IGNORE,ierr)
+        call MPI_FILE_CLOSE(fh,ierr)
+        call MPI_BCAST(fldinfo,2,MPI_REAL_RP,0,comm,ierr)
+        time  =      fldinfo(1)
+        istep = nint(fldinfo(2))
+      end if
+    case('w')
+      !
+      ! write
+      !
+      call MPI_FILE_OPEN(comm, filename                 , &
+           MPI_MODE_CREATE+MPI_MODE_WRONLY, MPI_INFO_NULL,fh,ierr)
+      filesize = 0_MPI_OFFSET_KIND
+      call MPI_FILE_SET_SIZE(fh,filesize,ierr)
+      disp = 0_MPI_OFFSET_KIND
+#if !defined(_DECOMP_X_IO)
+      call io_field(io,fh,ng,nh,lo,hi,disp,u)
+      call io_field(io,fh,ng,nh,lo,hi,disp,v)
+      call io_field(io,fh,ng,nh,lo,hi,disp,w)
+      call io_field(io,fh,ng,nh,lo,hi,disp,p)
+#else
+      block
+        !
+        ! I/O over x-aligned pencils
+        !
+        use decomp_2d
+        use mod_common_mpi, only: ipencil => ipencil_axis
+        real(rp), allocatable, dimension(:,:,:) :: tmp_x,tmp_y,tmp_z
+        select case(ipencil)
+        case(1)
+          allocate(tmp_x(0,0,0),tmp_y(0,0,0),tmp_z(0,0,0))
+        case(2)
+          allocate(tmp_x(xstart(1):xend(1),xstart(2):xend(2),xstart(3):xend(3)), &
+                   tmp_y(ystart(1):yend(1),ystart(2):yend(2),ystart(3):yend(3)), &
+                   tmp_z(0,0,0))
+        case(3)
+          allocate(tmp_x(xstart(1):xend(1),xstart(2):xend(2),xstart(3):xend(3)), &
+                   tmp_y(ystart(1):yend(1),ystart(2):yend(2),ystart(3):yend(3)), &
+                   tmp_z(zstart(1):zend(1),zstart(2):zend(2),zstart(3):zend(3)))
+        end select
+        call transpose_to_or_from_x(io,ipencil,nh,u,tmp_x,tmp_y,tmp_z)
+        call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
+        call transpose_to_or_from_x(io,ipencil,nh,v,tmp_x,tmp_y,tmp_z)
+        call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
+        call transpose_to_or_from_x(io,ipencil,nh,w,tmp_x,tmp_y,tmp_z)
+        call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
+        call transpose_to_or_from_x(io,ipencil,nh,p,tmp_x,tmp_y,tmp_z)
+        call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
+        deallocate(tmp_x,tmp_y,tmp_z)
+      end block
+#endif
+      if(present(time) .and. present(istep)) then
+        call MPI_FILE_SET_VIEW(fh,disp,MPI_REAL_RP,MPI_REAL_RP,'native',MPI_INFO_NULL,ierr)
+        fldinfo = [time,1._rp*istep]
+        nreals_myid = 0
+        if(myid == 0) nreals_myid = 2
+        call MPI_FILE_WRITE(fh,fldinfo,nreals_myid,MPI_REAL_RP,MPI_STATUS_IGNORE,ierr)
+        call MPI_FILE_CLOSE(fh,ierr)
+      end if
+    end select
+  end subroutine load_one
 end module mod_load
