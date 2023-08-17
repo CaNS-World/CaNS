@@ -14,7 +14,7 @@ module mod_load
   use mod_utils, only: f_sizeof
   implicit none
   private
-  public load,io_field
+  public load_all,io_field
   contains
   subroutine load_all(io,filename,comm,ng,nh,lo,hi,u,v,w,p,time,istep)
     !
@@ -384,9 +384,6 @@ module mod_load
       !
       disp = 0_MPI_OFFSET_KIND
 #if !defined(_DECOMP_X_IO)
-      call io_field(io,fh,ng,nh,lo,hi,disp,u)
-      call io_field(io,fh,ng,nh,lo,hi,disp,v)
-      call io_field(io,fh,ng,nh,lo,hi,disp,w)
       call io_field(io,fh,ng,nh,lo,hi,disp,p)
 #else
       block
@@ -408,12 +405,6 @@ module mod_load
                    tmp_y(ystart(1):yend(1),ystart(2):yend(2),ystart(3):yend(3)), &
                    tmp_z(zstart(1):zend(1),zstart(2):zend(2),zstart(3):zend(3)))
         end select
-        call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
-        call transpose_to_or_from_x(io,ipencil,nh,u,tmp_x,tmp_y,tmp_z)
-        call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
-        call transpose_to_or_from_x(io,ipencil,nh,v,tmp_x,tmp_y,tmp_z)
-        call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
-        call transpose_to_or_from_x(io,ipencil,nh,w,tmp_x,tmp_y,tmp_z)
         call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
         call transpose_to_or_from_x(io,ipencil,nh,p,tmp_x,tmp_y,tmp_z)
         deallocate(tmp_x,tmp_y,tmp_z)
@@ -439,9 +430,6 @@ module mod_load
       call MPI_FILE_SET_SIZE(fh,filesize,ierr)
       disp = 0_MPI_OFFSET_KIND
 #if !defined(_DECOMP_X_IO)
-      call io_field(io,fh,ng,nh,lo,hi,disp,u)
-      call io_field(io,fh,ng,nh,lo,hi,disp,v)
-      call io_field(io,fh,ng,nh,lo,hi,disp,w)
       call io_field(io,fh,ng,nh,lo,hi,disp,p)
 #else
       block
@@ -463,12 +451,6 @@ module mod_load
                    tmp_y(ystart(1):yend(1),ystart(2):yend(2),ystart(3):yend(3)), &
                    tmp_z(zstart(1):zend(1),zstart(2):zend(2),zstart(3):zend(3)))
         end select
-        call transpose_to_or_from_x(io,ipencil,nh,u,tmp_x,tmp_y,tmp_z)
-        call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
-        call transpose_to_or_from_x(io,ipencil,nh,v,tmp_x,tmp_y,tmp_z)
-        call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
-        call transpose_to_or_from_x(io,ipencil,nh,w,tmp_x,tmp_y,tmp_z)
-        call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
         call transpose_to_or_from_x(io,ipencil,nh,p,tmp_x,tmp_y,tmp_z)
         call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
         deallocate(tmp_x,tmp_y,tmp_z)
