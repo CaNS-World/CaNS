@@ -348,7 +348,7 @@ module mod_load
 #endif
   subroutine load_one(io,filename,comm,ng,nh,lo,hi,p,time,istep)
     !
-    ! reads/writes a restart file
+    ! reads/writes a restart file for a single field
     !
     implicit none
     character(len=1), intent(in) :: io
@@ -466,4 +466,143 @@ module mod_load
       end if
     end select
   end subroutine load_one
+  !
+#if defined(_USE_HDF5)
+  subroutine io_field_hdf5(io,filename,varname,ng,nh,lo,hi,var,meta,x_g,y_g,z_g)
+    !
+    ! collective single field data I/O using HDF5
+    !
+    ! written with the help of Josh Romero,
+    ! with the field data I/O inspired from the AFiD code
+    !
+    implicit none
+    character(len=1), intent(in) :: io
+    character(len=*), intent(in) :: filename,varname
+    integer         , intent(in), dimension(3)   :: ng,nh,lo,hi
+    real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: var
+    real(rp), intent(inout), dimension(2), optional :: meta
+    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
+    integer , dimension(3) :: n
+    integer , dimension(3) :: sizes,subsizes,starts
+    !
+    ! HDF5 variables
+    !
+    integer :: ndims, ierr
+    integer(HID_T) :: file_id,group_id
+    integer(HID_T) :: filespace
+    integer(HID_T) :: slabspace
+    integer(HID_T) :: memspace
+    !
+    integer(HID_T) :: dset
+    !
+    integer(HSIZE_T) :: dims(3)
+    !
+    integer(HID_T) :: plist_id
+    integer(HSIZE_T) , dimension(3) :: data_count
+    integer(HSSIZE_T), dimension(3) :: data_offset
+    integer(HSSIZE_T), dimension(3) :: halo_offset
+    type(MPI_INFO) :: info = MPI_INFO_NULL
+    !
+    n(:)        = hi(:)-lo(:)+1
+    sizes(:)    = ng(:)
+    subsizes(:) = n(:)
+    starts(:)   = lo(:) - 1 ! starts from 0
+    !
+    ndims = 3
+    dims(:) = ng(:)
+    data_count(:) = subsizes(:)
+    data_offset(:) = starts(:)
+    halo_offset(:) = nh(:)
+    !
+    select case(io)
+    case('r')
+      call h5pcreate_f(H5P_FILE_ACCESS_F,plist_id,ierr)
+      call h5pset_fapl_mpio_f(plist_id,MPI_COMM_WORLD%MPI_VAL,info%MPI_VAL,ierr)
+      call h5fopen_f(filename,H5F_ACC_RDONLY_F,file_id,ierr,access_prp=plist_id)
+      call h5pclose_f(plist_id,ierr)
+      !
+      call h5dopen_f(file_id,'fields/'//varname,dset,ierr)
+      call h5screate_simple_f(ndims,data_count+2*nh(:),memspace,ierr)
+      !
+      call h5dget_space_f(dset,slabspace,ierr)
+      call h5sselect_hyperslab_f(slabspace,H5S_SELECT_SET_F,data_offset,data_count,ierr)
+      call h5sselect_hyperslab_f(memspace,H5S_SELECT_SET_F,halo_offset,data_count,ierr)
+      call h5pcreate_f(H5P_DATASET_XFER_F,plist_id,ierr)
+      call h5pset_dxpl_mpio_f(plist_id,H5FD_MPIO_COLLECTIVE_F,ierr)
+      !
+      call h5dread_f(dset,H5T_NATIVE_DOUBLE,var,dims,ierr,file_space_id=slabspace,mem_space_id=memspace,xfer_prp=plist_id)
+      !
+      call h5pclose_f(plist_id,ierr)
+      call h5dclose_f(dset,ierr)
+      call h5sclose_f(memspace,ierr)
+      call h5fclose_f(file_id,ierr)
+      !
+      if(myid == 0) then
+        call h5fopen_f(filename,H5F_ACC_RDONLY_F,file_id,ierr)
+        call h5dopen_f(file_id,'meta/time',dset,ierr)
+        call h5dread_f(dset,H5T_NATIVE_DOUBLE,meta,[int(2,HSIZE_T)],ierr)
+        call h5dclose_f(dset,ierr)
+        call h5fclose_f(file_id,ierr)
+      end if
+      call MPI_Bcast(meta,2,MPI_REAL_RP,0,MPI_COMM_WORLD)
+    case('w')
+      call h5screate_simple_f(ndims,dims,filespace,ierr)
+      call h5pcreate_f(H5P_FILE_ACCESS_F,plist_id,ierr)
+      call h5pset_fapl_mpio_f(plist_id,MPI_COMM_WORLD%MPI_VAL,info%MPI_VAL,ierr)
+      call h5fcreate_f(filename,H5F_ACC_TRUNC_F,file_id,ierr,access_prp=plist_id)
+      call h5pclose_f(plist_id,ierr)
+      !
+      call h5gcreate_f(file_id,'fields',group_id,ierr)
+      call h5dcreate_f(group_id,varname,H5T_NATIVE_DOUBLE,filespace,dset,ierr)
+      call h5screate_simple_f(ndims,data_count+2*nh(:),memspace,ierr)
+      call h5dget_space_f(dset,slabspace,ierr)
+      call h5sselect_hyperslab_f(slabspace,H5S_SELECT_SET_F,data_offset,data_count,ierr)
+      call h5sselect_hyperslab_f(memspace,H5S_SELECT_SET_F,halo_offset,data_count,ierr)
+      call h5pcreate_f(H5P_DATASET_XFER_F,plist_id,ierr)
+      call h5pset_dxpl_mpio_f(plist_id,H5FD_MPIO_COLLECTIVE_F,ierr)
+      call h5dwrite_f(dset,H5T_NATIVE_DOUBLE,var,dims,ierr,file_space_id=slabspace,mem_space_id=memspace,xfer_prp=plist_id)
+      !
+      call h5pclose_f(plist_id,ierr)
+      call h5dclose_f(dset,ierr)
+      call h5sclose_f(memspace,ierr)
+      call h5sclose_f(slabspace,ierr)
+      call h5sclose_f(filespace,ierr)
+      call h5gclose_f(group_id,ierr)
+      call h5fclose_f(file_id,ierr)
+      !
+      ! write metadata
+      !
+      if(myid == 0) then
+        call h5fopen_f(filename,H5F_ACC_RDWR_F,file_id,ierr)
+        !
+        if(present(x_g) .and. present(y_g) .and. present(z_g)) then
+          call h5gcreate_f(file_id,'grid',group_id,ierr)
+          call h5screate_simple_f(1,[int(ng(1),hsize_t)],filespace,ierr)
+          call h5dcreate_f(group_id,'x',h5t_native_double,filespace,dset,ierr)
+          call h5dwrite_f(dset,h5t_native_double,x_g(1:ng(1)),[int(ng(1),hsize_t)],ierr)
+          call h5screate_simple_f(1,[int(ng(2),hsize_t)],filespace,ierr)
+          call h5dcreate_f(group_id,'y',h5t_native_double,filespace,dset,ierr)
+          call h5dwrite_f(dset,h5t_native_double,y_g(1:ng(2)),[int(ng(2),hsize_t)],ierr)
+          call h5screate_simple_f(1,[int(ng(3),hsize_t)],filespace,ierr)
+          call h5dcreate_f(group_id,'z',h5t_native_double,filespace,dset,ierr)
+          call h5dwrite_f(dset,h5t_native_double,z_g(1:ng(3)),[int(ng(3),hsize_t)],ierr)
+          call h5dclose_f(dset,ierr)
+          call h5gclose_f(group_id,ierr)
+          call h5sclose_f(filespace,ierr)
+        end if
+        !
+        if(present(meta)) then
+          call h5gcreate_f(file_id,'meta',group_id,ierr)
+          call h5screate_simple_f(1,[int(2,hsize_t)],filespace,ierr)
+          call h5dcreate_f(group_id,'time',h5t_native_double,filespace,dset,ierr)
+          call h5dwrite_f(dset,h5t_native_double,meta,[int(2,hsize_t)],ierr)
+          call h5dclose_f(dset,ierr)
+          call h5gclose_f(group_id,ierr)
+          call h5sclose_f(filespace,ierr)
+        end if
+        call h5fclose_f(file_id,ierr)
+      end if
+    end select
+  end subroutine io_field_hdf5
+#endif
 end module mod_load
