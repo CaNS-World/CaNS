@@ -31,7 +31,7 @@ module mod_mom
     real(rp) :: uuip,uuim,uvjp,uvjm,uwkp,uwkm
     !
     !$acc parallel loop collapse(3) default(present) private(uuip,uuim,uvjp,uvjm,uwkp,uwkm) async(1)
-    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)  PRIVATE(uuip,uuim,uvjp,uvjm,uwkp,uwkm) 
+    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)  PRIVATE(uuip,uuim,uvjp,uvjm,uwkp,uwkm)
     do k=1,nz
       do j=1,ny
         do i=1,nx
@@ -130,7 +130,7 @@ module mod_mom
     integer :: i,j,k
     !
     !$acc parallel loop collapse(3) default(present) private(dudxp,dudxm,dudyp,dudym,dudzp,dudzm) async(1)
-    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)  PRIVATE(dudxp,dudxm,dudyp,dudym,dudzp,dudzm) 
+    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)  PRIVATE(dudxp,dudxm,dudyp,dudym,dudzp,dudzm)
     do k=1,nz
       do j=1,ny
         do i=1,nx

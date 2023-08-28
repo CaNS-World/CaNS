@@ -21,9 +21,10 @@ module mod_rk
   use mod_types
   implicit none
   private
-  public rk,rk_cmpt_bulk_forcing
+  public rk
   contains
-  subroutine rk(rkpar,n,dli,dzci,dzfi,visc,dt,p,bforce,u,v,w)
+  subroutine rk(rkpar,n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,visc,dt,p, &
+                is_forced,velf,bforce,u,v,w,f)
     !
     ! low-storage 3rd-order Runge-Kutta scheme
     ! for time integration of the momentum equations.
@@ -34,9 +35,12 @@ module mod_rk
     real(rp), intent(in) :: visc,dt
     real(rp), intent(in   ), dimension(3) :: dli
     real(rp), intent(in   ), dimension(0:) :: dzci,dzfi
+    real(rp), intent(in   ), dimension(0:) :: grid_vol_ratio_c,grid_vol_ratio_f
     real(rp), intent(in   ), dimension(0:,0:,0:) :: p
-    real(rp), intent(in   ), dimension(3)        :: bforce
+    logical , intent(in   ), dimension(3)        :: is_forced
+    real(rp), intent(in   ), dimension(3)        :: velf,bforce
     real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
+    real(rp), intent(out), dimension(3) :: f
     real(rp), target     , allocatable, dimension(:,:,:), save :: dudtrk_t ,dvdtrk_t ,dwdtrk_t , &
                                                                   dudtrko_t,dvdtrko_t,dwdtrko_t
     real(rp), pointer    , contiguous , dimension(:,:,:), save :: dudtrk   ,dvdtrk   ,dwdtrk   , &
@@ -185,6 +189,10 @@ module mod_rk
     end do
 #endif
     !
+    ! compute bulk velocity forcing
+    !
+    call cmpt_bulk_forcing(n,is_forced,velf,grid_vol_ratio_c,grid_vol_ratio_f,u,v,w,f)
+    !
 #if defined(_IMPDIFF)
     !
     ! compute rhs of Helmholtz equation
@@ -202,6 +210,7 @@ module mod_rk
     end do
 #endif
   end subroutine rk
+  !
   subroutine rk_scal(rkpar,n,dli,l,dzci,dzfi,grid_vol_ratio_f,alpha,dt,is_bound,u,v,w, &
                      is_forced,scalf,ssource,fluxo,s,f)
     !
@@ -277,7 +286,34 @@ module mod_rk
     end if
   end subroutine rk_scal
   !
-  subroutine rk_cmpt_bulk_forcing(rkpar,n,dli,l,dzci,dzfi,visc,dt,is_bound,is_forced,u,v,w,tauxo,tauyo,tauzo,f,is_first)
+  subroutine cmpt_bulk_forcing(n,is_forced,velf,grid_vol_ratio_c,grid_vol_ratio_f,u,v,w,f)
+    implicit none
+    integer , intent(in   ), dimension(3) :: n
+    logical , intent(in   ), dimension(3) :: is_forced
+    real(rp), intent(in   ), dimension(3) :: velf
+    real(rp), intent(in   ), dimension(0:) :: grid_vol_ratio_c,grid_vol_ratio_f
+    real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
+    real(rp), intent(out  ), dimension(3) :: f
+    real(rp) :: mean
+    !
+    ! bulk velocity forcing
+    !
+    f(:) = 0.
+    if(is_forced(1)) then
+      call bulk_mean(n,grid_vol_ratio_f,u,mean)
+      f(1) = velf(1) - mean
+    end if
+    if(is_forced(2)) then
+      call bulk_mean(n,grid_vol_ratio_f,v,mean)
+      f(2) = velf(2) - mean
+    end if
+    if(is_forced(3)) then
+      call bulk_mean(n,grid_vol_ratio_c,w,mean)
+      f(3) = velf(3) - mean
+    end if
+  end subroutine cmpt_bulk_forcing
+  !
+  subroutine cmpt_bulk_forcing_alternative(rkpar,n,dli,l,dzci,dzfi,visc,dt,is_bound,is_forced,u,v,w,tauxo,tauyo,tauzo,f,is_first)
     !
     ! computes the pressure gradient to be added to the flow that perfectly balances the wall shear stresses
     ! this effectively prescribes zero net acceleration, which allows to sustain a constant mass flux
@@ -341,32 +377,5 @@ module mod_rk
     endif
 #endif
 #endif
-  end subroutine rk_cmpt_bulk_forcing
-  !
-  subroutine cmpt_bulk_forcing_alternative(n,is_forced,velf,grid_vol_ratio_c,grid_vol_ratio_f,u,v,w,f)
-    implicit none
-    integer , intent(in   ), dimension(3) :: n
-    logical , intent(in   ), dimension(3) :: is_forced
-    real(rp), intent(in   ), dimension(3) :: velf
-    real(rp), intent(in   ), dimension(0:) :: grid_vol_ratio_c,grid_vol_ratio_f
-    real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
-    real(rp), intent(out  ), dimension(3) :: f
-    real(rp) :: mean
-    !
-    ! bulk velocity forcing
-    !
-    f(:) = 0.
-    if(is_forced(1)) then
-      call bulk_mean(n,grid_vol_ratio_f,u,mean)
-      f(1) = velf(1) - mean
-    end if
-    if(is_forced(2)) then
-      call bulk_mean(n,grid_vol_ratio_f,v,mean)
-      f(2) = velf(2) - mean
-    end if
-    if(is_forced(3)) then
-      call bulk_mean(n,grid_vol_ratio_c,w,mean)
-      f(3) = velf(3) - mean
-    end if
-  end subroutine
+  end subroutine cmpt_bulk_forcing_alternative
 end module mod_rk
