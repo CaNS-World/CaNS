@@ -44,6 +44,7 @@ program cans
   use mod_initmpi        , only: initmpi
   use mod_initsolver     , only: initsolver
   use mod_load           , only: load
+  use mod_mom            , only: bulk_forcing
   use mod_rk             , only: rk
   use mod_output         , only: out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
   use mod_param          , only: lz,visc,small, &
@@ -345,36 +346,16 @@ program cans
     istep = istep + 1
     time = time + dt
     if(myid == 0) print*, 'Time step #', istep, 'Time = ', time
-    dpdl(:)  = 0.
     tauxo(:) = 0.
     tauyo(:) = 0.
     tauzo(:) = 0.
+    dpdl(:)  = 0.
     do irk=1,3
       dtrk = sum(rkcoeff(:,irk))*dt
       dtrki = dtrk**(-1)
-      call rk(rkcoeff(:,irk),n,dli,l,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,visc,dt,p, &
-              is_bound,is_forced,velf,bforce,tauxo,tauyo,tauzo,u,v,w,f)
-      block
-        real(rp) :: ff
-        if(is_forced(1)) then
-          ff = f(1)
-          !$acc kernels default(present) async(1)
-          u(1:n(1),1:n(2),1:n(3)) = u(1:n(1),1:n(2),1:n(3)) + ff
-          !$acc end kernels
-        end if
-        if(is_forced(2)) then
-          ff = f(2)
-          !$acc kernels default(present) async(1)
-          v(1:n(1),1:n(2),1:n(3)) = v(1:n(1),1:n(2),1:n(3)) + ff
-          !$acc end kernels
-        end if
-        if(is_forced(3)) then
-          ff = f(3)
-          !$acc kernels default(present) async(1)
-          w(1:n(1),1:n(2),1:n(3)) = w(1:n(1),1:n(2),1:n(3)) + ff
-          !$acc end kernels
-        end if
-      end block
+      call rk(rkcoeff(:,irk),n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,visc,dt,p, &
+              is_forced,velf,bforce,u,v,w,f)
+      call bulk_forcing(n,is_forced,f,u,v,w)
 #if defined(_IMPDIFF)
       alpha = -.5*visc*dtrk
       !$OMP PARALLEL WORKSHARE
