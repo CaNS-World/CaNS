@@ -43,7 +43,7 @@ program cans
   use mod_initgrid       , only: initgrid
   use mod_initmpi        , only: initmpi
   use mod_initsolver     , only: initsolver
-  use mod_load           , only: load
+  use mod_load           , only: load_all
   use mod_mom            , only: bulk_forcing
   use mod_rk             , only: rk
   use mod_output         , only: out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
@@ -313,7 +313,7 @@ program cans
     call initflow(inivel,ng,lo,zc,dzc,dzf,visc,u,v,w,p)
     if(myid == 0) print*, '*** Initial condition succesfully set ***'
   else
-    call load('r',trim(datadir)//'fld.bin',MPI_COMM_WORLD,ng,[1,1,1],lo,hi,u,v,w,p,time,istep)
+    call load_all('r',trim(datadir)//'fld.bin',MPI_COMM_WORLD,ng,[1,1,1],lo,hi,u,v,w,p,time,istep)
     if(myid == 0) print*, '*** Checkpoint loaded at time = ', time, 'time step = ', istep, '. ***'
   end if
   !$acc enter data copyin(u,v,w,p) create(pp)
@@ -542,7 +542,7 @@ program cans
         end if
       end if
       !$acc update self(u,v,w,p)
-      call load('w',trim(datadir)//trim(filename),MPI_COMM_WORLD,ng,[1,1,1],lo,hi,u,v,w,p,time,istep)
+      call load_all('w',trim(datadir)//trim(filename),MPI_COMM_WORLD,ng,[1,1,1],lo,hi,u,v,w,p,time,istep)
       if(.not.is_overwrite_save) then
         !
         ! fld.bin -> last checkpoint file (symbolic link)
