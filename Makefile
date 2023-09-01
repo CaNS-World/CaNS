@@ -19,6 +19,7 @@ SHELL=/bin/bash
 NAME := cans
 
 TARGET := $(NAME)
+INPUT_FILE := input.nml
 
 #PWD=$(shell pwd)
 #ROOT_DIR := $(PWD)
@@ -77,9 +78,8 @@ $(EXE): $(OBJS)
 	$(FC) $(FFLAGS) $^ $(LIBS) $(INCS) -o $(EXE)
 
 run: $(EXE)
-	@cp $(SRCS_DIR)/dns.in $(EXE_DIR)
-	@cp $(SRCS_DIR)/cudecomp.in $(EXE_DIR)
-	@printf "\nDefault input files *.in copied to run folder $(EXE_DIR)\n"
+	@cp $(SRCS_DIR)/$(INPUT_FILE) $(EXE_DIR)
+	@printf "\nDefault input file $(INPUT_FILE) copied to run folder $(EXE_DIR)\n"
 
 # Create object files from Fortran source
 $(OBJS): %.o: %
