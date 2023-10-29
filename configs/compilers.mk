@@ -5,6 +5,9 @@ endif
 ifeq ($(strip $(FCOMP)),INTEL)
 FC = mpiifort
 endif
+ifeq ($(strip $(FCOMP)),INTEL_IFX)
+FC = mpiifx
+endif
 ifeq ($(strip $(FCOMP)),NVIDIA)
 FC = mpifort
 endif
