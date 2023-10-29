@@ -259,7 +259,7 @@ module mod_rk
       dsdtrko => dsdtrko_t
     end if
     if(is_cmpt_wallflux) then
-      call cmpt_wallflux(n,is_bound,l,dli,dzci,dzfi,alpha,flux)
+      call cmpt_scalflux(n,is_bound,l,dli,dzci,dzfi,alpha,s,flux)
       f = (factor1*sum(flux(:)/l(:)) + factor2*sum(fluxo(:)/l(:)))
       fluxo(:) = flux(:)
     end if
