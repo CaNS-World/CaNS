@@ -54,7 +54,7 @@ module mod_output
     ! ng    -> global domain sizes
     ! lo,hi -> upper and lower extents of the input array
     ! idir  -> direction of the profile
-    ! dl,dl -> uniform grid spacing and length arrays
+    ! dl,l  -> uniform grid spacing and length arrays
     ! z_g   -> global z coordinate array (grid is non-uniform in z)
     ! dz    -> local z grid spacing array (should work also with the global one)
     ! p     -> 3D input scalar field
