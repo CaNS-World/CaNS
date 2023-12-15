@@ -502,8 +502,8 @@ module mod_output
           do j=1,ng(2)
             y_g = (j-.5)*dl(2)
             write(iunit,fmt_rp) y_g,z_g(k),um(j,k),vm(j,k),wm(j,k), &
-                                                  u2(j,k),v2(j,k),w2(j,k), &
-                                                  uv(j,k),uw(j,k)
+                                           u2(j,k),v2(j,k),w2(j,k), &
+                                           uv(j,k),uw(j,k)
           end do
         end do
         close(iunit)
