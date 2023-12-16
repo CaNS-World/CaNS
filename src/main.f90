@@ -133,7 +133,6 @@ program cans
   character(len=100) :: filename
   integer :: k,kk
   logical :: is_done,kill
-  integer :: rlen
   !
   call MPI_INIT(ierr)
   call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
@@ -214,8 +213,7 @@ program cans
   if(myid == 0) print*, ''
   call initgrid(gtype,ng(3),gr,l(3),dzc_g,dzf_g,zc_g,zf_g)
   if(myid == 0) then
-    inquire(iolength=rlen) 1._rp
-    open(99,file=trim(datadir)//'grid.bin',access='direct',recl=4*ng(3)*rlen)
+    open(99,file=trim(datadir)//'grid.bin',access='stream')
     write(99,rec=1) dzc_g(1:ng(3)),dzf_g(1:ng(3)),zc_g(1:ng(3)),zf_g(1:ng(3))
     close(99)
     open(99,file=trim(datadir)//'grid.out')
