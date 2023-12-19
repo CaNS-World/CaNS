@@ -430,14 +430,14 @@ module mod_output
       call MPI_ALLREDUCE(MPI_IN_PLACE,w2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       call MPI_ALLREDUCE(MPI_IN_PLACE,vw(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       call MPI_ALLREDUCE(MPI_IN_PLACE,uv(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      um(:,:) =      um(:,:)*grid_area_ratio
-      vm(:,:) =      vm(:,:)*grid_area_ratio
-      wm(:,:) =      wm(:,:)*grid_area_ratio
-      u2(:,:) = sqrt(u2(:,:)*grid_area_ratio - um(:,:)**2)
-      v2(:,:) = sqrt(v2(:,:)*grid_area_ratio - vm(:,:)**2)
-      w2(:,:) = sqrt(w2(:,:)*grid_area_ratio - wm(:,:)**2)
-      vw(:,:) =      vw(:,:)*grid_area_ratio - vm(:,:)*wm(:,:)
-      uv(:,:) =      uv(:,:)*grid_area_ratio - um(:,:)*vm(:,:)
+      um(:,:) = um(:,:)*grid_area_ratio
+      vm(:,:) = vm(:,:)*grid_area_ratio
+      wm(:,:) = wm(:,:)*grid_area_ratio
+      u2(:,:) = u2(:,:)*grid_area_ratio - um(:,:)**2
+      v2(:,:) = v2(:,:)*grid_area_ratio - vm(:,:)**2
+      w2(:,:) = w2(:,:)*grid_area_ratio - wm(:,:)**2
+      vw(:,:) = vw(:,:)*grid_area_ratio - vm(:,:)*wm(:,:)
+      uv(:,:) = uv(:,:)*grid_area_ratio - um(:,:)*vm(:,:)
       if(myid == 0) then
         open(newunit=iunit,file=fname)
         do k=1,ng(3)
@@ -488,14 +488,14 @@ module mod_output
       call MPI_ALLREDUCE(MPI_IN_PLACE,w2(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       call MPI_ALLREDUCE(MPI_IN_PLACE,uv(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       call MPI_ALLREDUCE(MPI_IN_PLACE,uw(1,1),ng(1)*ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
-      um(:,:) =      um(:,:)*grid_area_ratio
-      vm(:,:) =      vm(:,:)*grid_area_ratio
-      wm(:,:) =      wm(:,:)*grid_area_ratio
-      u2(:,:) = sqrt(u2(:,:)*grid_area_ratio - um(:,:)**2)
-      v2(:,:) = sqrt(v2(:,:)*grid_area_ratio - vm(:,:)**2)
-      w2(:,:) = sqrt(w2(:,:)*grid_area_ratio - wm(:,:)**2)
-      uv(:,:) =      uv(:,:)*grid_area_ratio - um(:,:)*vm(:,:)
-      uw(:,:) =      uw(:,:)*grid_area_ratio - um(:,:)*wm(:,:)
+      um(:,:) = um(:,:)*grid_area_ratio
+      vm(:,:) = vm(:,:)*grid_area_ratio
+      wm(:,:) = wm(:,:)*grid_area_ratio
+      u2(:,:) = u2(:,:)*grid_area_ratio - um(:,:)**2
+      v2(:,:) = v2(:,:)*grid_area_ratio - vm(:,:)**2
+      w2(:,:) = w2(:,:)*grid_area_ratio - wm(:,:)**2
+      uv(:,:) = uv(:,:)*grid_area_ratio - um(:,:)*vm(:,:)
+      uw(:,:) = uw(:,:)*grid_area_ratio - um(:,:)*wm(:,:)
       if(myid == 0) then
         open(newunit=iunit,file=fname)
         do k=1,ng(3)
