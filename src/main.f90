@@ -214,7 +214,7 @@ program cans
   call initgrid(gtype,ng(3),gr,l(3),dzc_g,dzf_g,zc_g,zf_g)
   if(myid == 0) then
     open(99,file=trim(datadir)//'grid.bin',access='stream')
-    write(99,rec=1) dzc_g(1:ng(3)),dzf_g(1:ng(3)),zc_g(1:ng(3)),zf_g(1:ng(3))
+    write(99) dzc_g(1:ng(3)),dzf_g(1:ng(3)),zc_g(1:ng(3)),zf_g(1:ng(3))
     close(99)
     open(99,file=trim(datadir)//'grid.out')
     do kk=0,ng(3)+1
