@@ -34,7 +34,7 @@ module mod_output
     real(rp), intent(in), dimension(:) :: var
     integer :: iunit
     !
-    if (myid  ==  0) then
+    if (myid == 0) then
       open(newunit=iunit,file=fname,position='append')
       write(iunit,fmt_rp) var(1:n)
       close(iunit)
