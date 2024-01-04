@@ -57,6 +57,7 @@ module mod_initflow
       is_mean = .true.
     case('tbl')
       call temporal_bl(n(3),zc,1._rp,visc,uref,u1d)
+      is_noise = .true.
     case('iop') ! reversed 'poi'
       !
       ! convective reference frame moving with velocit `ubulk`;
