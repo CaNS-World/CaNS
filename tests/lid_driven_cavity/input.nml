@@ -9,7 +9,7 @@ is_wallturb = F
 nstep = 1500, time_max = 100., tw_max = 0.1
 stop_type(1:3) = T, F, F
 restart = F, is_overwrite_save = T, nsaves_max = 0
-icheck = 10, iout0d = 10, iout1d = 20, iout2d = 500, iout3d = 1000, isave = 2000
+icheck = 10, iout0d = 10, iout1d = 20, iout2d = 500, iout3d = 500, isave = 2000
 cbcvel(0:1,1:3,1) = 'P','P',  'D','D',  'D','D'
 cbcvel(0:1,1:3,2) = 'P','P',  'D','D',  'D','D'
 cbcvel(0:1,1:3,3) = 'P','P',  'D','D',  'D','D'
