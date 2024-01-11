@@ -8,7 +8,7 @@ The `Makefile` in root directory is used to compiled the code, and is expected t
 #
 # compiler and compiling profile
 #
-FCOMP=GNU           # other options: NVIDIA, INTEL
+FCOMP=GNU           # options: GNU, NVIDIA, INTEL
 FFLAGS_OPT=1        # for production runs
 FFLAGS_OPT_MAX=0    # for production runs (more aggressive optimization)
 FFLAGS_DEBUG=0      # for debugging
