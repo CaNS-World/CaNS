@@ -467,6 +467,80 @@ module mod_load
     end select
   end subroutine load_one
   !
+  subroutine load_all_local(io,filename,n,nh,u,v,w,p,time,istep)
+    !
+    ! reads/writes a restart file
+    !
+    implicit none
+    character(len=1), intent(in) :: io
+    character(len=*), intent(in) :: filename
+    integer , intent(in), dimension(3) :: n,nh
+    real(rp), intent(inout), dimension(1-nh(1):,1-nh(2):,1-nh(3):) :: u,v,w,p
+    real(rp), intent(inout) :: time
+    integer , intent(inout) :: istep
+    real(rp), dimension(2) :: fldinfo
+    integer :: iunit
+    !
+    select case(io)
+    case('r')
+      open(newunit=iunit,file=filename,action='read' ,access='stream',form='unformatted',status='old'    )
+      read(iunit) u(1:n(1),1:n(2),1:n(3)), &
+                  v(1:n(1),1:n(2),1:n(3)), &
+                  w(1:n(1),1:n(2),1:n(3)), &
+                  p(1:n(1),1:n(2),1:n(3)), &
+                  fldinfo(1:2)
+      close(iunit)
+      time = fldinfo(1)
+      istep = nint(fldinfo(2))
+    case('w')
+      !
+      ! write
+      !
+      fldinfo = [time,1._rp*istep]
+      open(newunit=iunit,file=filename,action='write',access='stream',form='unformatted',status='replace')
+      write(iunit) u(1:n(1),1:n(2),1:n(3)), &
+                   v(1:n(1),1:n(2),1:n(3)), &
+                   w(1:n(1),1:n(2),1:n(3)), &
+                   p(1:n(1),1:n(2),1:n(3)), &
+                   fldinfo(1:2)
+      close(iunit)
+    end select
+  end subroutine load_all_local
+  !
+  subroutine load_one_local(io,filename,n,nh,p,time,istep)
+    !
+    ! reads/writes a restart file
+    !
+    implicit none
+    character(len=1), intent(in) :: io
+    character(len=*), intent(in) :: filename
+    integer , intent(in), dimension(3) :: n,nh
+    real(rp), intent(inout), dimension(1-nh(1):,1-nh(2):,1-nh(3):) :: p
+    real(rp), intent(inout), optional :: time
+    integer , intent(inout), optional :: istep
+    real(rp), dimension(2) :: fldinfo
+    integer :: iunit
+    !
+    select case(io)
+    case('r')
+      open(newunit=iunit,file=filename,action='read' ,access='stream',form='unformatted',status='old'    )
+      read(iunit) p(1:n(1),1:n(2),1:n(3))
+      if(present(time) .and. present(istep)) read(iunit)  fldinfo(1:2)
+      close(iunit)
+      time = fldinfo(1)
+      istep = nint(fldinfo(2))
+    case('w')
+      !
+      ! write
+      !
+      fldinfo = [time,1._rp*istep]
+      open(newunit=iunit,file=filename,action='write',access='stream',form='unformatted',status='replace')
+      write(iunit) p(1:n(1),1:n(2),1:n(3))
+      if(present(time) .and. present(istep)) write(iunit) fldinfo(1:2)
+      close(iunit)
+    end select
+  end subroutine load_one_local
+  !
 #if defined(_USE_HDF5)
   subroutine io_field_hdf5(io,filename,varname,ng,nh,lo,hi,var,meta,x_g,y_g,z_g)
     !
