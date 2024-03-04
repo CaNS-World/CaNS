@@ -543,6 +543,7 @@ module mod_load
   !
 #if defined(_USE_HDF5)
   subroutine io_field_hdf5(io,filename,varname,ng,nh,lo,hi,var,meta,x_g,y_g,z_g)
+    use hdf5
     !
     ! collective single field data I/O using HDF5
     !
@@ -575,7 +576,6 @@ module mod_load
     integer(HSIZE_T) , dimension(3) :: data_count
     integer(HSSIZE_T), dimension(3) :: data_offset
     integer(HSSIZE_T), dimension(3) :: halo_offset
-    type(MPI_INFO) :: info = MPI_INFO_NULL
     !
     n(:)        = hi(:)-lo(:)+1
     sizes(:)    = ng(:)
@@ -591,7 +591,7 @@ module mod_load
     select case(io)
     case('r')
       call h5pcreate_f(H5P_FILE_ACCESS_F,plist_id,ierr)
-      call h5pset_fapl_mpio_f(plist_id,MPI_COMM_WORLD%MPI_VAL,info%MPI_VAL,ierr)
+      call h5pset_fapl_mpio_f(plist_id,MPI_COMM_WORLD,MPI_INFO_NULL,ierr)
       call h5fopen_f(filename,H5F_ACC_RDONLY_F,file_id,ierr,access_prp=plist_id)
       call h5pclose_f(plist_id,ierr)
       !
@@ -618,11 +618,11 @@ module mod_load
         call h5dclose_f(dset,ierr)
         call h5fclose_f(file_id,ierr)
       end if
-      call MPI_Bcast(meta,2,MPI_REAL_RP,0,MPI_COMM_WORLD)
+      call MPI_Bcast(meta,2,MPI_REAL_RP,0,MPI_COMM_WORLD,ierr)
     case('w')
       call h5screate_simple_f(ndims,dims,filespace,ierr)
       call h5pcreate_f(H5P_FILE_ACCESS_F,plist_id,ierr)
-      call h5pset_fapl_mpio_f(plist_id,MPI_COMM_WORLD%MPI_VAL,info%MPI_VAL,ierr)
+      call h5pset_fapl_mpio_f(plist_id,MPI_COMM_WORLD,MPI_INFO_NULL,ierr)
       call h5fcreate_f(filename,H5F_ACC_TRUNC_F,file_id,ierr,access_prp=plist_id)
       call h5pclose_f(plist_id,ierr)
       !
