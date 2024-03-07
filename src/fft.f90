@@ -5,7 +5,7 @@
 !
 ! -
 module mod_fft
-  use, intrinsic :: iso_c_binding , only: C_INT
+  use, intrinsic :: iso_c_binding, only: C_INT,c_intptr_t
   use mod_common_mpi, only: ierr
   use mod_fftw_param
   use mod_types
@@ -47,7 +47,7 @@ module mod_fft
     integer :: ix,iy
 #if defined(_OPENACC)
     integer :: istat,batch
-    integer(int_ptr_kind()) :: wsize,max_wsize
+    integer(c_intptr_t) :: wsize,max_wsize
 #endif
 #if defined(_SINGLE_PRECISION)
     !$ call sfftw_init_threads(ierr)
