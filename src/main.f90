@@ -331,7 +331,7 @@ program cans
   !
   call chkdt(n,dl,dzci,dzfi,visc,u,v,w,dtmax)
   dt = min(cfl*dtmax,dtmin)
-  if(myid == 0) print*, 'dtmax = ', dtmax, 'dt = ',dt
+  if(myid == 0) print*, 'dtmax = ', dtmax, 'dt = ', dt
   dti = 1./dt
   kill = .false.
   !
@@ -464,7 +464,7 @@ program cans
       if(myid == 0) print*, 'Checking stability and divergence...'
       call chkdt(n,dl,dzci,dzfi,visc,u,v,w,dtmax)
       dt  = min(cfl*dtmax,dtmin)
-      if(myid == 0) print*, 'dtmax = ', dtmax, 'dt = ',dt
+      if(myid == 0) print*, 'dtmax = ', dtmax, 'dt = ', dt
       if(dtmax < small) then
         if(myid == 0) print*, 'ERROR: time step is too small.'
         if(myid == 0) print*, 'Aborting...'
