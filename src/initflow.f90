@@ -117,6 +117,7 @@ module mod_initflow
     case('ant')
       !
       ! see M. Antuono, JFM 890-A23 (2020)
+      ! N.B. requires the domain to be a (2*pi)^3 triperiodic box
       !
       do k=1,n(3)
         zcc = zc(k)/l(3)*2.*pi+0.5*pi
