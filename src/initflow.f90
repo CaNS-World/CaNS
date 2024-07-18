@@ -116,8 +116,7 @@ module mod_initflow
       end do
     case('ant')
       !
-      ! see M. Antuono, JFM 890-A23 (2020)
-      ! N.B. requires the domain to be a (2*pi)^3 triperiodic box
+      ! see M. Antuono, JFM 890, A23 (2020)
       !
       do k=1,n(3)
         zcc = zc(k)/l(3)*2.*pi+0.5*pi
@@ -128,13 +127,13 @@ module mod_initflow
           do i=1,n(1)
             xc = (i+lo(1)-1-.5)*dl(1)/l(1)*2.*pi+0.5*pi
             xf = (i+lo(1)-1-.0)*dl(1)/l(1)*2.*pi+0.5*pi
-            u(i,j,k) = (4.*sqrt(2.)/3./sqrt(3.))*(sin(xf-5.*pi/6.)*cos(yc-1.*pi/6.)*sin(zcc         ) &
-                                                 -sin(xf-1.*pi/6.)*sin(yc         )*cos(zcc-5.*pi/6.))*uref
-            v(i,j,k) = (4.*sqrt(2.)/3./sqrt(3.))*(sin(xc         )*sin(yf-5.*pi/6.)*sin(zcc-1.*pi/6.) &
-                                                 -cos(xc-5.*pi/6.)*sin(yf-1.*pi/6.)*sin(zcc         ))*uref
-            w(i,j,k) = (4.*sqrt(2.)/3./sqrt(3.))*(cos(xc-1.*pi/6.)*sin(yc         )*sin(zff-5.*pi/6.) &
-                                                 -sin(xc         )*cos(yc-5.*pi/6.)*sin(zff-1.*pi/6.))*uref
-            p(i,j,k) = -(1./2.)*(u(i,j,k)**2+v(i,j,k)**2+w(i,j,k)**2)
+            u(i,j,k) = (4.*sqrt(2.)/3./sqrt(3.))*(sin(xf-5.*pi/6.)*cos(yc-1.*pi/6.)*sin(zcc         ) - &
+                                                  sin(xf-1.*pi/6.)*sin(yc         )*cos(zcc-5.*pi/6.))*uref
+            v(i,j,k) = (4.*sqrt(2.)/3./sqrt(3.))*(sin(xc         )*sin(yf-5.*pi/6.)*sin(zcc-1.*pi/6.) - &
+                                                  cos(xc-5.*pi/6.)*sin(yf-1.*pi/6.)*sin(zcc         ))*uref
+            w(i,j,k) = (4.*sqrt(2.)/3./sqrt(3.))*(cos(xc-1.*pi/6.)*sin(yc         )*sin(zff-5.*pi/6.) - &
+                                                  sin(xc         )*cos(yc-5.*pi/6.)*sin(zff-1.*pi/6.))*uref
+            p(i,j,k) = -(u(i,j,k)**2+v(i,j,k)**2+w(i,j,k)**2)/2.
           end do
         end do
       end do
