@@ -106,6 +106,7 @@ These lines set the initial velocity field.
 * `hdc`: half plane Poiseuille flow profile with constant pressure gradient         ; streamwise direction in `x`
 * `tgv`: three-dimensional Taylor-Green vortex
 * `tgw`: two-dimensional   Taylor-Green vortex
+* `ant`: three-dimensional Antuono vortex
 
 `is_wallturb`, if true, **superimposes a high amplitude disturbance on the initial velocity field** that effectively triggers transition to turbulence in a wall-bounded shear flow.
 
