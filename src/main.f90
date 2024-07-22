@@ -323,6 +323,7 @@ program cans
   ! post-process and write initial condition
   !
   write(fldnum,'(i7.7)') istep
+  !$acc wait ! not needed but to prevent possible future issues
   !$acc update self(u,v,w,p)
   include 'out1d.h90'
   include 'out2d.h90'
@@ -514,14 +515,17 @@ program cans
     end if
     write(fldnum,'(i7.7)') istep
     if(mod(istep,iout1d) == 0) then
+      !$acc wait
       !$acc update self(u,v,w,p)
       include 'out1d.h90'
     end if
     if(mod(istep,iout2d) == 0) then
+      !$acc wait
       !$acc update self(u,v,w,p)
       include 'out2d.h90'
     end if
     if(mod(istep,iout3d) == 0) then
+      !$acc wait
       !$acc update self(u,v,w,p)
       include 'out3d.h90'
     end if
@@ -541,6 +545,7 @@ program cans
           call out0d(trim(datadir)//'log_checkpoints.out',3,var)
         end if
       end if
+      !$acc wait
       !$acc update self(u,v,w,p)
       call load_all('w',trim(datadir)//trim(filename),MPI_COMM_WORLD,ng,[1,1,1],lo,hi,u,v,w,p,time,istep)
       if(.not.is_overwrite_save) then
