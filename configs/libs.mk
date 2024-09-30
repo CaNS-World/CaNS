@@ -2,8 +2,8 @@ override LIBS += -L$(LIBS_DIR)/2decomp-fft -ldecomp2d
 override INCS += -I$(LIBS_DIR)/2decomp-fft/mod
 
 ifeq ($(strip $(GPU)),1)
-override LIBS += -L$(LIBS_DIR)/cuDecomp/build/lib -lcudecomp -lcudecomp_fort -cudalib=cufft
-override INCS += -I$(LIBS_DIR)/cuDecomp/build/include
+override LIBS += -L$(LIBS_DIR)/cuDecomp/build/lib -L$(NVHPC_HOME)/cuda/lib64 -L$(NVHPC_HOME)/math_libs/12.4/lib64 -lcudecomp -lcudecomp_fort -cudalib=cufft,cutensor 
+override INCS += -I$(LIBS_DIR)/cuDecomp/build/include -I$(NVHPC_HOME)/math_libs/12.4/include
 endif
 
 ifeq ($(strip $(USE_NVTX)),1)
