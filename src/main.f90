@@ -323,11 +323,21 @@ program cans
   ! post-process and write initial condition
   !
   write(fldnum,'(i7.7)') istep
-  !$acc wait ! not needed but to prevent possible future issues
-  !$acc update self(u,v,w,p)
-  include 'out1d.h90'
-  include 'out2d.h90'
-  include 'out3d.h90'
+  if(iout1d > 0.and.mod(istep,max(iout1d,1)) == 0) then
+    !$acc wait
+    !$acc update self(u,v,w,p)
+    include 'out1d.h90'
+  end if
+  if(iout2d > 0.and.mod(istep,max(iout2d,1)) == 0) then
+    !$acc wait
+    !$acc update self(u,v,w,p)
+    include 'out2d.h90'
+  end if
+  if(iout3d > 0.and.mod(istep,max(iout3d,1)) == 0) then
+    !$acc wait
+    !$acc update self(u,v,w,p)
+    include 'out3d.h90'
+  end if
   !
   call chkdt(n,dl,dzci,dzfi,visc,u,v,w,dtmax)
   dt = min(cfl*dtmax,dtmin)
@@ -460,7 +470,7 @@ program cans
       tw = (MPI_WTIME()-twi)/3600.
       if(tw    >= tw_max  ) is_done = is_done.or..true.
     end if
-    if(mod(istep,icheck) == 0) then
+    if(icheck > 0.and.mod(istep,max(icheck,1)) == 0) then
       if(myid == 0) print*, 'Checking stability and divergence...'
       call chkdt(n,dl,dzci,dzfi,visc,u,v,w,dtmax)
       dt  = min(cfl*dtmax,dtmin)
@@ -486,7 +496,7 @@ program cans
     !
     ! output routines below
     !
-    if(mod(istep,iout0d) == 0) then
+    if(iout0d > 0.and.mod(istep,max(iout0d,1)) == 0) then
       !allocate(var(4))
       var(1) = 1.*istep
       var(2) = dt
@@ -514,22 +524,22 @@ program cans
       end if
     end if
     write(fldnum,'(i7.7)') istep
-    if(mod(istep,iout1d) == 0) then
+    if(iout1d > 0.and.mod(istep,max(iout1d,1)) == 0) then
       !$acc wait
       !$acc update self(u,v,w,p)
       include 'out1d.h90'
     end if
-    if(mod(istep,iout2d) == 0) then
+    if(iout2d > 0.and.mod(istep,max(iout2d,1)) == 0) then
       !$acc wait
       !$acc update self(u,v,w,p)
       include 'out2d.h90'
     end if
-    if(mod(istep,iout3d) == 0) then
+    if(iout3d > 0.and.mod(istep,max(iout3d,1)) == 0) then
       !$acc wait
       !$acc update self(u,v,w,p)
       include 'out3d.h90'
     end if
-    if(mod(istep,isave ) == 0.or.(is_done.and..not.kill)) then
+    if((isave > 0.and.mod(istep,max(isave,1)) == 0).or.(is_done.and..not.kill)) then
       if(is_overwrite_save) then
         filename = 'fld.bin'
       else
