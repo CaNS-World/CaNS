@@ -323,19 +323,15 @@ program cans
   ! post-process and write initial condition
   !
   write(fldnum,'(i7.7)') istep
+  !$acc wait ! not needed but to prevent possible future issues
+  !$acc update self(u,v,w,p)
   if(iout1d > 0.and.mod(istep,max(iout1d,1)) == 0) then
-    !$acc wait
-    !$acc update self(u,v,w,p)
     include 'out1d.h90'
   end if
   if(iout2d > 0.and.mod(istep,max(iout2d,1)) == 0) then
-    !$acc wait
-    !$acc update self(u,v,w,p)
     include 'out2d.h90'
   end if
   if(iout3d > 0.and.mod(istep,max(iout3d,1)) == 0) then
-    !$acc wait
-    !$acc update self(u,v,w,p)
     include 'out3d.h90'
   end if
   !
@@ -539,7 +535,7 @@ program cans
       !$acc update self(u,v,w,p)
       include 'out3d.h90'
     end if
-    if((isave > 0.and.mod(istep,max(isave,1)) == 0).or.(is_done.and..not.kill)) then
+    if(isave > 0.and.((mod(istep,max(isave,1)) == 0).or.(is_done.and..not.kill))) then
       if(is_overwrite_save) then
         filename = 'fld.bin'
       else
