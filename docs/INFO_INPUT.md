@@ -157,7 +157,7 @@ These lines set the frequency of time step checking and output:
 * every `iout3d` time steps **3d scalar fields** are written to a file
 * every `isave`  time steps a **checkpoint file** is written (`fld_???????.bin`), and a symbolic link for the restart file, `fld.bin`, will point to this last save so that, by default, the last saved checkpoint file is used to restart the simulation
 
-1d, 2d and 3d outputs can be tweaked modifying files `out?d.h90`, and re-compiling the source. See also `output.f90` for more details.
+1d, 2d and 3d outputs can be tweaked modifying files `out?d.h90`, and re-compiling the source. See also `output.f90` for more details. _Set any of these variables to `0` to skip the corresponding operation._
 
 ---
 
