@@ -42,7 +42,7 @@ saves = np.unique(saves)
 #
 # sort elements by increasing isave
 #
-saves = np.sort(saves, order='isave')
+saves = np.sort(saves, order=['isave', 'variable'])
 #
 # harvest some information from the log file
 #
