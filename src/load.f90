@@ -35,8 +35,8 @@ module mod_load
     !
     select case(io)
     case('r')
-      call MPI_FILE_OPEN(comm, filename, &
-           MPI_MODE_RDONLY, MPI_INFO_NULL,fh,ierr)
+      call MPI_FILE_OPEN(comm,filename, &
+                         MPI_MODE_RDONLY,MPI_INFO_NULL,fh,ierr)
       !
       ! check file size first
       !
@@ -101,8 +101,8 @@ module mod_load
       !
       ! write
       !
-      call MPI_FILE_OPEN(comm, filename                 , &
-           MPI_MODE_CREATE+MPI_MODE_WRONLY, MPI_INFO_NULL,fh,ierr)
+      call MPI_FILE_OPEN(comm,filename, &
+                         MPI_MODE_CREATE+MPI_MODE_WRONLY,MPI_INFO_NULL,fh,ierr)
       filesize = 0_MPI_OFFSET_KIND
       call MPI_FILE_SET_SIZE(fh,filesize,ierr)
       disp = 0_MPI_OFFSET_KIND
