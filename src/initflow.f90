@@ -114,6 +114,21 @@ module mod_initflow
           end do
         end do
       end do
+    case('tgw')
+      do k=1,n(3)
+        do j=1,n(2)
+          yc = (j+lo(2)-1-.5)*dl(2)
+          yf = (j+lo(2)-1-.0)*dl(2)
+          do i=1,n(1)
+            xc = (i+lo(1)-1-.5)*dl(1)
+            xf = (i+lo(1)-1-.0)*dl(1)
+            u(i,j,k) =  cos(xf)*sin(yc)*uref
+            v(i,j,k) = -sin(xc)*cos(yf)*uref
+            w(i,j,k) = 0.
+            p(i,j,k) = -(cos(2.*xc)+cos(2.*yc))/4.*uref**2
+          end do
+        end do
+      end do
     case('ant')
       !
       ! see M. Antuono, JFM 890, A23 (2020)
@@ -134,21 +149,6 @@ module mod_initflow
             w(i,j,k) = (4.*sqrt(2.)/3./sqrt(3.))*(cos(xc-1.*pi/6.)*sin(yc         )*sin(zff-5.*pi/6.) - &
                                                   sin(xc         )*cos(yc-5.*pi/6.)*sin(zff-1.*pi/6.))*uref
             p(i,j,k) = -(u(i,j,k)**2+v(i,j,k)**2+w(i,j,k)**2)/2.
-          end do
-        end do
-      end do
-    case('tgw')
-      do k=1,n(3)
-        do j=1,n(2)
-          yc = (j+lo(2)-1-.5)*dl(2)
-          yf = (j+lo(2)-1-.0)*dl(2)
-          do i=1,n(1)
-            xc = (i+lo(1)-1-.5)*dl(1)
-            xf = (i+lo(1)-1-.0)*dl(1)
-            u(i,j,k) =  cos(xf)*sin(yc)*uref
-            v(i,j,k) = -sin(xc)*cos(yf)*uref
-            w(i,j,k) = 0.
-            p(i,j,k) = -(cos(2.*xc)+cos(2.*yc))/4.*uref**2
           end do
         end do
       end do
