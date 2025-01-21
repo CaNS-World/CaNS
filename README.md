@@ -93,7 +93,6 @@ The `Makefile` in root directory is used to compile the code, and is expected to
  * `PENCIL_AXIS`              : sets the default pencil direction, one of [1,2,3] for [X,Y,Z]-aligned pencils; X-aligned is the default and should be optimal for all cases except for Z implicit diffusion, where using Z-pencils is recommended
  * `SINGLE_PRECISION`         : calculation will be carried out in single precision (the default precision is double)
  * `GPU`                      : enable GPU-accelerated runs
- * `USE_NVTX`                 : enable [NVTX](https://s.nvidia.com/nsight-visual-studio-edition/nvtx) tags for profiling
 
 ### Input file
 
