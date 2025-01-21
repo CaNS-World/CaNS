@@ -26,7 +26,6 @@ SINGLE_PRECISION=0         # perform the whole calculation in single precision
 # GPU-related
 #
 GPU=0
-USE_NVTX=0
 ```
 
 In this file, `FCOMP` can be one of `GNU` (`gfortran`), `INTEL` (`ifort`), `NVIDIA` (`nvfortran`), or `CRAY` (`ftn`); the predefined profiles for compiler options can be selected by choosing one of the `FFLAGS_*` option; finer control of the compiler flags may be achieved by building with, e.g., `make FFLAGS+=[OTHER_FLAGS]`, or by tweaking the profiles directly under `configs/flags.mk`. Similarly, the library paths (e.g., for *FFTW*) may need to be adapted in the `Makefile` (`LIBS` variable) or by building with `make LIBS+='-L[PATH_TO_LIB] -l[NAME_OF_LIB]'`. Finally, the following pre-processing options are available:
@@ -38,7 +37,6 @@ In this file, `FCOMP` can be one of `GNU` (`gfortran`), `INTEL` (`ifort`), `NVID
  * `PENCIL_AXIS`              : sets the default pencil direction, one of [1,2,3] for [X,Y,Z]-aligned pencils; X-aligned is the default and should be optimal for all cases except for Z implicit diffusion, where using Z-pencils is recommended
  * `SINGLE_PRECISION`         : calculation will be carried out in single precision (the default precision is double)
  * `GPU`                      : enable GPU accelerated runs (requires the `FCOMP=NVIDIA`)
- * `USE_NVTX`                 : enable [NVTX](https://docs.nvidia.com/nsight-visual-studio-edition/nvtx) markers to tag certain code regions and assist with profiling
 
 Typing `make libs` will build the 2DECOMP&FFT/cuDecomp libraries; then typing `make` will compile the code and copy the executable `cans` to a `run/` folder; `make run` will also copy the default input files `*.in` under `src/` to the same `run/` folder.
 
