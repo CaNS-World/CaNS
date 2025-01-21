@@ -210,57 +210,62 @@ module mod_solver
     character(len=1), dimension(0:1), intent(in) :: bcz
     character(len=1), intent(in), dimension(3) :: c_or_f
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
-#if !defined(_DECOMP_Z)
-    real(rp), dimension(xsize(1),xsize(2),xsize(3)) :: px
-    real(rp), dimension(ysize(1),ysize(2),ysize(3)) :: py
-    real(rp), dimension(zsize(1),zsize(2),zsize(3)) :: pz
-#endif
+    real(rp), allocatable, dimension(:,:,:), save :: px,py,pz
     integer :: q
     integer, dimension(3) :: n_z
+    logical :: is_no_decomp_z
     !
     n_z(:) = zsize(:)
+    is_no_decomp_z = xsize(3) == n_z(3) ! not decomposed along z: xsize(3) == ysize(3) == ng(3) when dims(2) = 1
+    if(.not.is_no_decomp_z) then
+      if(.not.allocated(px)) allocate(px(xsize(1),xsize(2),xsize(3)))
+      if(.not.allocated(py)) allocate(py(ysize(1),ysize(2),ysize(3)))
+      if(.not.allocated(pz)) allocate(pz(zsize(1),zsize(2),zsize(3)))
 #if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
-    !$OMP PARALLEL WORKSHARE
-    px(:,:,:) = p(1:n(1),1:n(2),1:n(3))
-    !$OMP END PARALLEL WORKSHARE
-    !call transpose_x_to_z(px,pz)
-    call transpose_x_to_y(px,py)
-    call transpose_y_to_z(py,pz)
+      !$OMP PARALLEL WORKSHARE
+      px(:,:,:) = p(1:n(1),1:n(2),1:n(3))
+      !$OMP END PARALLEL WORKSHARE
+      !call transpose_x_to_z(px,pz)
+      call transpose_x_to_y(px,py)
+      call transpose_y_to_z(py,pz)
 #elif defined(_DECOMP_Y)
-    !$OMP PARALLEL WORKSHARE
-    py(:,:,:) = p(1:n(1),1:n(2),1:n(3))
-    !$OMP END PARALLEL WORKSHARE
-    call transpose_y_to_z(py,pz)
+      !$OMP PARALLEL WORKSHARE
+      py(:,:,:) = p(1:n(1),1:n(2),1:n(3))
+      !$OMP END PARALLEL WORKSHARE
+      call transpose_y_to_z(py,pz)
 #endif
+    end if
     q = 0
     if(c_or_f(3) == 'f'.and.bcz(1) == 'D') q = 1
-#if !defined(_DECOMP_Z)
-    if(bcz(0)//bcz(1) == 'PP') then
-      call gaussel_periodic(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,pz)
+    if(.not.is_no_decomp_z) then
+      if(bcz(0)//bcz(1) == 'PP') then
+        call gaussel_periodic(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,pz)
+      else
+        call gaussel(         n_z(1),n_z(2),n_z(3)-q,0,a,b,c,pz)
+      end if
     else
-      call gaussel(         n_z(1),n_z(2),n_z(3)-q,0,a,b,c,pz)
+      if(bcz(0)//bcz(1) == 'PP') then
+        call gaussel_periodic(n_z(1),n_z(2),n_z(3)-q,1,a,b,c,p)
+      else
+        call gaussel(         n_z(1),n_z(2),n_z(3)-q,1,a,b,c,p)
+      end if
     end if
-#else
-    if(bcz(0)//bcz(1) == 'PP') then
-      call gaussel_periodic(n_z(1),n_z(2),n_z(3)-q,1,a,b,c,p)
-    else
-      call gaussel(         n_z(1),n_z(2),n_z(3)-q,1,a,b,c,p)
-    end if
-#endif
     !
+    if(.not.is_no_decomp_z) then
 #if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
-    !call transpose_z_to_x(pz,px)
-    call transpose_z_to_y(pz,py)
-    call transpose_y_to_x(py,px)
-    !$OMP PARALLEL WORKSHARE
-    p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)
-    !$OMP END PARALLEL WORKSHARE
+      !call transpose_z_to_x(pz,px)
+      call transpose_z_to_y(pz,py)
+      call transpose_y_to_x(py,px)
+      !$OMP PARALLEL WORKSHARE
+      p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)
+      !$OMP END PARALLEL WORKSHARE
 #elif defined(_DECOMP_Y)
-    call transpose_z_to_y(pz,py)
-    !$OMP PARALLEL WORKSHARE
-    p(1:n(1),1:n(2),1:n(3)) = py(:,:,:)
-    !$OMP END PARALLEL WORKSHARE
+      call transpose_z_to_y(pz,py)
+      !$OMP PARALLEL WORKSHARE
+      p(1:n(1),1:n(2),1:n(3)) = py(:,:,:)
+      !$OMP END PARALLEL WORKSHARE
 #endif
+    end if
   end subroutine solver_gaussel_z
   !
 #if 0

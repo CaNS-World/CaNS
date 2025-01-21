@@ -392,54 +392,59 @@ module mod_solver_gpu
     integer :: q
     integer, dimension(3) :: n_x,n_y,n_z,n_z_0
     integer :: istat
+    logical :: is_no_decomp_z
     !
     n_z_0(:) = ap_z_0%shape(:)
-#if !defined(_DECOMP_Z)
     n_x(:) = ap_x%shape(:)
     n_y(:) = ap_y%shape(:)
     n_z(:) = ap_z%shape(:)
-    px(1:n_x(1),1:n_x(2),1:n_x(3)) => solver_buf_0(1:product(n_x(:)))
-    if(cudecomp_is_t_in_place) then
-      py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_0(1:product(n_y(:)))
-    else
-      py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_1(1:product(n_y(:)))
+    is_no_decomp_z = n_x(3) == n_z(3) ! not decomposed along z: xsize(3) == ysize(3) == ng(3) when dims(2) = 1
+    if(.not.is_no_decomp_z) then
+      px(1:n_x(1),1:n_x(2),1:n_x(3)) => solver_buf_0(1:product(n_x(:)))
+      if(cudecomp_is_t_in_place) then
+        py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_0(1:product(n_y(:)))
+      else
+        py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_1(1:product(n_y(:)))
+      end if
+      pz(1:n_z(1),1:n_z(2),1:n_z(3)) => solver_buf_0(1:product(n_z(:)))
     end if
-    pz(1:n_z(1),1:n_z(2),1:n_z(3)) => solver_buf_0(1:product(n_z(:)))
-#endif
-    select case(ipencil_axis)
-    case(1)
-      !$acc kernels default(present) async(1)
-      !$OMP PARALLEL WORKSHARE
-      px(:,:,:) = p(1:n(1),1:n(2),1:n(3))
-      !$OMP END PARALLEL WORKSHARE
-      !$acc end kernels
-      !$acc host_data use_device(px,py,pz,work)
-      istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_rp,stream=istream)
-      istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
-      !$acc end host_data
-    case(2)
-      block
-        integer :: i,j,k
-        !
-        ! transpose p -> py to axis-contiguous layout
-        !
-        !$acc parallel loop collapse(3) default(present) async(1)
-        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
-        do k=1,n(3)
-          do j=1,n(2)
-            do i=1,n(1)
-              py(j,k,i) = p(i,j,k)
+    !
+    if(.not.is_no_decomp_z) then
+      select case(ipencil_axis)
+      case(1)
+        !$acc kernels default(present) async(1)
+        !$OMP PARALLEL WORKSHARE
+        px(:,:,:) = p(1:n(1),1:n(2),1:n(3))
+        !$OMP END PARALLEL WORKSHARE
+        !$acc end kernels
+        !$acc host_data use_device(px,py,pz,work)
+        istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_rp,stream=istream)
+        istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
+        !$acc end host_data
+      case(2)
+        block
+          integer :: i,j,k
+          !
+          ! transpose p -> py to axis-contiguous layout
+          !
+          !$acc parallel loop collapse(3) default(present) async(1)
+          !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+          do k=1,n(3)
+            do j=1,n(2)
+              do i=1,n(1)
+                py(j,k,i) = p(i,j,k)
+              end do
             end do
           end do
-        end do
-      end block
-      !$acc host_data use_device(py,pz,work)
-      istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
-      !$acc end host_data
-    case(3)
-    end select
+        end block
+        !$acc host_data use_device(py,pz,work)
+        istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
+        !$acc end host_data
+      case(3)
+      end select
+    end if
     !
-    if(ipencil_axis /= 3) then
+    if(ipencil_axis /= 3 .and. .not.is_no_decomp_z) then
       q = 0
       if(c_or_f(3) == 'f'.and.bcz(1) == 'D') q = 1
       if(bcz(0)//bcz(1) == 'PP') then
@@ -457,38 +462,40 @@ module mod_solver_gpu
       end if
     end if
     !
-    select case(ipencil_axis)
-    case(1)
-      !$acc host_data use_device(pz,py,px,work)
-      istat = cudecompTransposeZtoY(ch,gd,pz,py,work,dtype_rp,stream=istream)
-      istat = cudecompTransposeYtoX(ch,gd,py,px,work,dtype_rp,stream=istream)
-      !$acc end host_data
-      !$acc kernels default(present) async(1)
-      !$OMP PARALLEL WORKSHARE
-      p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)
-      !$OMP END PARALLEL WORKSHARE
-      !$acc end kernels
-    case(2)
-      !$acc host_data use_device(pz,py,work)
-      istat = cudecompTransposeZtoY(ch,gd,pz,py,work,dtype_rp,stream=istream)
-      !$acc end host_data
-      block
-        integer :: i,j,k
-        !
-        ! transpose py -> p to default layout
-        !
-        !$acc parallel loop collapse(3) default(present) async(1)
-        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
-        do k=1,n(3)
-          do j=1,n(2)
-            do i=1,n(1)
-              p(i,j,k) = py(j,k,i)
+    if(.not.is_no_decomp_z) then
+      select case(ipencil_axis)
+      case(1)
+        !$acc host_data use_device(pz,py,px,work)
+        istat = cudecompTransposeZtoY(ch,gd,pz,py,work,dtype_rp,stream=istream)
+        istat = cudecompTransposeYtoX(ch,gd,py,px,work,dtype_rp,stream=istream)
+        !$acc end host_data
+        !$acc kernels default(present) async(1)
+        !$OMP PARALLEL WORKSHARE
+        p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)
+        !$OMP END PARALLEL WORKSHARE
+        !$acc end kernels
+      case(2)
+        !$acc host_data use_device(pz,py,work)
+        istat = cudecompTransposeZtoY(ch,gd,pz,py,work,dtype_rp,stream=istream)
+        !$acc end host_data
+        block
+          integer :: i,j,k
+          !
+          ! transpose py -> p to default layout
+          !
+          !$acc parallel loop collapse(3) default(present) async(1)
+          !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+          do k=1,n(3)
+            do j=1,n(2)
+              do i=1,n(1)
+                p(i,j,k) = py(j,k,i)
+              end do
             end do
           end do
-        end do
-      end block
-    case(3)
-    end select
+        end block
+      case(3)
+      end select
+    end if
   end subroutine solver_gaussel_z_gpu
 #endif
 #endif
