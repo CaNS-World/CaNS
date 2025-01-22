@@ -16,7 +16,8 @@ SHELL=/bin/bash
 #NOW := $(shell date +"%FT%T%z")
 
 # Project name
-NAME := cans
+NAME ?= cans
+BUILD_CONFIG_FILE ?= build.conf
 
 TARGET := $(NAME)
 INPUT_FILE := input.nml
@@ -49,7 +50,7 @@ GD := $(SRCS_DIR)/.gen-deps.awk
 CPP := -cpp
 
 # Edit build.conf file desired
--include $(ROOT_DIR)/build.conf
+-include $(ROOT_DIR)/$(BUILD_CONFIG_FILE)
 -include $(CONFIG_DIR)/compilers.mk
 -include $(CONFIG_DIR)/flags.mk
 -include $(CONFIG_DIR)/libs.mk
