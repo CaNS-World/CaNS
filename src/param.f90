@@ -31,7 +31,7 @@ integer , protected, dimension(3) :: ng
 real(rp), protected, dimension(3) :: l
 integer , protected :: gtype
 real(rp), protected :: gr
-real(rp), protected :: cfl,dtmin
+real(rp), protected :: cfl,dtmax,dt_f
 real(rp), protected :: visci
 !
 character(len=100), protected :: inivel
@@ -80,7 +80,7 @@ contains
                   ng, &
                   l, &
                   gtype,gr, &
-                  cfl,dtmin, &
+                  cfl,dtmax,dt_f, &
                   visci, &
                   inivel, &
                   is_wallturb, &

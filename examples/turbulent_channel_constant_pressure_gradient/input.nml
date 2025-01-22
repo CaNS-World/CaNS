@@ -2,7 +2,7 @@
 ng(1:3) = 512, 256, 144
 l(1:3) = 12., 6., 2.
 gtype = 1, gr = 0.
-cfl = 0.95, dtmin = 1.e5
+cfl = 0.95, dtmax = 1.e5, dt_f = -1.
 visci = 180.
 inivel = 'pdc'
 is_wallturb = T
