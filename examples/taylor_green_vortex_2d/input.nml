@@ -2,7 +2,7 @@
 ng(1:3) = 32, 32, 4
 l(1:3) = 6.2831853071795, 6.283185307179586, 0.125
 gtype = 1, gr = 0.
-cfl = 0.95, dtmin = 0.1
+cfl = 0.95, dtmax = 0.1, dt_f = -1.
 visci = 100.
 inivel = 'tgw'
 is_wallturb = F
