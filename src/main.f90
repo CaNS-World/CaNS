@@ -85,7 +85,7 @@ program cans
   implicit none
   integer , dimension(3) :: lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z
   real(rp), allocatable, dimension(:,:,:) :: u,v,w,p,pp
-  real(rp), dimension(3) :: tauxo,tauyo,tauzo
+  real(rp), dimension(0:1,3) :: tauxo,tauyo,tauzo
   real(rp), dimension(3) :: f
 #if !defined(_OPENACC)
   type(C_PTR), dimension(2,2) :: arrplanp
@@ -353,9 +353,7 @@ program cans
     istep = istep + 1
     time = time + dt
     if(myid == 0) print*, 'Time step #', istep, 'Time = ', time
-    tauxo(:) = 0.
-    tauyo(:) = 0.
-    tauzo(:) = 0.
+    tauxo(:,:) = 0.; tauyo(:,:) = 0.; tauzo(:,:) = 0.
     dpdl(:)  = 0.
     do irk=1,3
       dtrk = sum(rkcoeff(:,irk))*dt
