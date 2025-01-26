@@ -327,49 +327,50 @@ module mod_rk
     logical , intent(in   ), dimension(0:1,3)    :: is_bound
     logical , intent(in   ), dimension(3) :: is_forced
     real(rp), intent(in   ), dimension(0:,0:,0:) :: u,v,w
-    real(rp), intent(inout), dimension(3) :: tauxo,tauyo,tauzo
+    real(rp), intent(inout), dimension(0:1,3) :: tauxo,tauyo,tauzo
     real(rp), intent(inout), dimension(3) :: f
     real(rp), dimension(3) :: f_aux
     logical , intent(in   ) :: is_first
-    real(rp), dimension(3) :: taux,tauy,tauz
+    real(rp), dimension(0:1,3) :: taux,tauy,tauz
+    real(rp), dimension(3) :: taux_tot,tauy_tot,tauz_tot,tauxo_tot,tauyo_tot,tauzo_tot
     real(rp) :: factor1,factor2,factor12
     !
     factor1 = rkpar(1)*dt
     factor2 = rkpar(2)*dt
     factor12 = (factor1 + factor2)/2.
     !
-    taux(:) = 0._rp
-    tauy(:) = 0._rp
-    tauz(:) = 0._rp
     call cmpt_wallshear(n,is_forced,is_bound,l,dli,dzci,dzfi,visc,u,v,w,taux,tauy,tauz)
+    taux_tot(:) = sum(taux(0:1,:),1); tauxo_tot(:) = sum(tauxo(0:1,:),1)
+    tauy_tot(:) = sum(tauy(0:1,:),1); tauyo_tot(:) = sum(tauyo(0:1,:),1)
+    tauz_tot(:) = sum(tauz(0:1,:),1); tauzo_tot(:) = sum(tauzo(0:1,:),1)
 #if !defined(_IMPDIFF)
     if(is_first) then
-      f(1) = (factor1*sum(taux(:)/l(:)) + factor2*sum(tauxo(:)/l(:)))
-      f(2) = (factor1*sum(tauy(:)/l(:)) + factor2*sum(tauyo(:)/l(:)))
-      f(3) = (factor1*sum(tauz(:)/l(:)) + factor2*sum(tauzo(:)/l(:)))
-      tauxo(:) = taux(:)
-      tauyo(:) = tauy(:)
-      tauzo(:) = tauz(:)
+      f(1) = (factor1*sum(taux_tot(:)/l(:)) + factor2*sum(tauxo_tot(:)/l(:)))
+      f(2) = (factor1*sum(tauy_tot(:)/l(:)) + factor2*sum(tauyo_tot(:)/l(:)))
+      f(3) = (factor1*sum(tauz_tot(:)/l(:)) + factor2*sum(tauzo_tot(:)/l(:)))
+      tauxo(:,:) = taux(:,:)
+      tauyo(:,:) = tauy(:,:)
+      tauzo(:,:) = tauz(:,:)
     end if
 #else
 #if defined(_IMPDIFF_1D)
-    f_aux(1) = factor12*taux(3)/l(3)
-    f_aux(2) = factor12*tauy(3)/l(3)
+    f_aux(1) = factor12*taux_tot(3)/l(3)
+    f_aux(2) = factor12*tauy_tot(3)/l(3)
     if(is_first) then
-      f(1) = factor1*taux(2)/l(2) + factor2*tauxo(2)/l(2) + f_aux(1)
-      f(2) = factor1*tauy(1)/l(1) + factor2*tauyo(1)/l(1) + f_aux(2)
-      f(3) = factor1*sum(tauz(1:2)/l(1:2)) + factor2*sum(tauzo(1:2)/l(1:2))
-      tauxo(1:2) = taux(1:2)
-      tauyo(1:2) = tauy(1:2)
-      tauzo(1:2) = tauz(1:2)
+      f(1) = factor1*taux_tot(2)/l(2) + factor2*tauxo_tot(2)/l(2) + f_aux(1)
+      f(2) = factor1*tauy_tot(1)/l(1) + factor2*tauyo_tot(1)/l(1) + f_aux(2)
+      f(3) = factor1*sum(tauz_tot(1:2)/l(1:2)) + factor2*sum(tauzo_tot(1:2)/l(1:2))
+      tauxo(:,1:2) = taux(:,1:2)
+      tauyo(:,1:2) = tauy(:,1:2)
+      tauzo(:,1:2) = tauz(:,1:2)
     else
       f(1) = f(1) + f_aux(1)
       f(2) = f(2) + f_aux(2)
     end if
 #else
-    f_aux(:) = factor12*[sum(taux(:)/l(:)), &
-                         sum(tauy(:)/l(:)), &
-                         sum(tauz(:)/l(:))]
+    f_aux(:) = factor12*[sum(taux_tot(:)/l(:)), &
+                         sum(tauy_tot(:)/l(:)), &
+                         sum(tauz_tot(:)/l(:))]
     if(is_first) then
        f(:) = f_aux(:)
     else
