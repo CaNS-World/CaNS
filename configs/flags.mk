@@ -143,3 +143,7 @@ else
 override FFLAGS += -fopenmp
 endif
 endif
+
+ifeq ($(strip $(BOUSSINESQ_BUOYANCY)),1)
+DEFINES += -D_BOUSSINESQ_BUOYANCY
+endif

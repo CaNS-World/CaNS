@@ -38,3 +38,9 @@
   call write_visu_2d(datadir,'pre_slice_fld_'//fldnum//'.bin','log_visu_2d_slice_1.out','Pressure_P', &
                      2,ng(2)/2,ng,time,istep, &
                      p(1:n(1),1:n(2),1:n(3)))
+  do is = 1,nscal
+    write(scalnum,'(i3.3)') is
+    call write_visu_2d(datadir,'sca_'//scalnum//'_slice_fld_'//fldnum//'.bin','log_visu_2d_slice_1.out','Scalar_S'//scalnum, &
+                       2,ng(2)/2,ng,time,istep, &
+                       scalars(is)%val(1:n(1),1:n(2),1:n(3)))
+  end do
