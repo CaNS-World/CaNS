@@ -98,6 +98,10 @@ contains
                        cudecomp_t_comm_backend,cudecomp_is_t_enable_nccl,cudecomp_is_t_enable_nvshmem, &
                        cudecomp_h_comm_backend,cudecomp_is_h_enable_nccl,cudecomp_is_h_enable_nvshmem
 #endif
+    !
+    ! defaults
+    !
+    dt_f = -1.
     open(newunit=iunit,file='input.nml',status='old',action='read',iostat=ierr)
       if(ierr == 0) then
         read(iunit,nml=dns,iostat=ierr)
