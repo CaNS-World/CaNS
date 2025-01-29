@@ -31,7 +31,7 @@ integer , protected, dimension(3) :: ng
 real(rp), protected, dimension(3) :: l
 integer , protected :: gtype
 real(rp), protected :: gr
-real(rp), protected :: cfl,dtmin
+real(rp), protected :: cfl,dtmax,dt_f
 real(rp), protected :: visci
 !
 character(len=100), protected :: inivel
@@ -80,7 +80,7 @@ contains
                   ng, &
                   l, &
                   gtype,gr, &
-                  cfl,dtmin, &
+                  cfl,dtmax,dt_f, &
                   visci, &
                   inivel, &
                   is_wallturb, &
@@ -98,6 +98,10 @@ contains
                        cudecomp_t_comm_backend,cudecomp_is_t_enable_nccl,cudecomp_is_t_enable_nvshmem, &
                        cudecomp_h_comm_backend,cudecomp_is_h_enable_nccl,cudecomp_is_h_enable_nvshmem
 #endif
+    !
+    ! defaults
+    !
+    dt_f = -1.
     open(newunit=iunit,file='input.nml',status='old',action='read',iostat=ierr)
       if(ierr == 0) then
         read(iunit,nml=dns,iostat=ierr)

@@ -8,7 +8,7 @@ Consider the following input file as example (corresponds to a turbulent plane c
 ng(1:3) = 512, 256, 144
 l(1:3) = 6., 3., 1.
 gtype = 1, gr = 0.
-cfl = 0.95, dtmin = 1.e5
+cfl = 0.95, dtmax = 1.e5, dt_f = -1.
 visci = 5640.
 inivel = 'poi'
 is_wallturb = T
@@ -67,13 +67,12 @@ These lines set the computational grid.
 ---
 
 ```fortran
-cfl = 0.95, dtmin = 1.e5
+cfl = 0.95, dtmax = 1.e5, dt_f = -1.
 ```
 
-This line controls the simulation time step.
+This line controls the simulation time step size.
 
-The time step is set to be equal to `min(cfl*dtmax,dtmin)`, i.e. the minimum value between `dtmin` and `cfl` times the maximum allowable time step `dtmax` (computed every `ickeck` time steps; see below).
-`dtmin` is therefore used when a constant time step, smaller than `cfl*dtmax`, is required. If not, it should be set to a high value so that the time step is dynamically adjusted to `cfl*dtmax`.
+The time step size is set to be equal to `min(cfl*dt_cfl,dtmax)` if `dt_f < 0`, and to `dt_f` otherwise. In the former case, the code prescribes the minimum value between `dtmax` and `cfl` times the maximum allowable time step `dt_cfl` (computed every `ickeck` time steps; see below). `dtmax` is therefore used when a constant time step, smaller than `cfl*dt_cfl`, is required. If not, it should be set to a high value so that the time step is dynamically adjusted to `cfl*dt_cfl`. Finally, a constant time step size time step may be forced, irrespective of the temporal stability evaluation through `dt_f`.
 
 ---
 
