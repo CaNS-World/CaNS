@@ -72,8 +72,7 @@ cfl = 0.95, dtmax = 1.e5, dt_f = -1.
 
 This line controls the simulation time step size.
 
-The time step size is set to be equal to `min(cfl*dt_cfl,dtmax)`, i.e. the minimum value between `dtmax` and `cfl` times the maximum allowable time step `dt_cfl` (computed every `ickeck` time steps; see below).
-`dtmax` is therefore used when a constant time step, smaller than `cfl*dt_cfl`, is required. If not, it should be set to a high value so that the time step is dynamically adjusted to `cfl*dtmax`. Finally, a constant time step size time step may be forced to be irrespective of the temporal stability evaluation, by prescribing a positive value of `dt_f`.
+The time step size is set to be equal to `min(cfl*dt_cfl,dtmax)` if `dt_f < 0`, and to `dt_f` otherwise. In the former case, the code prescribes the minimum value between `dtmax` and `cfl` times the maximum allowable time step `dt_cfl` (computed every `ickeck` time steps; see below). `dtmax` is therefore used when a constant time step, smaller than `cfl*dt_cfl`, is required. If not, it should be set to a high value so that the time step is dynamically adjusted to `cfl*dt_cfl`. Finally, a constant time step size time step may be forced, irrespective of the temporal stability evaluation through `dt_f`.
 
 ---
 
