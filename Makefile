@@ -50,10 +50,10 @@ GD := $(SRCS_DIR)/.gen-deps.awk
 CPP := -cpp
 
 # Edit build.conf file desired
--include $(ROOT_DIR)/$(BUILD_CONFIG_FILE)
--include $(CONFIG_DIR)/compilers.mk
--include $(CONFIG_DIR)/flags.mk
--include $(CONFIG_DIR)/libs.mk
+include $(ROOT_DIR)/$(BUILD_CONFIG_FILE)
+include $(CONFIG_DIR)/compilers.mk
+include $(CONFIG_DIR)/flags.mk
+include $(CONFIG_DIR)/libs.mk
 
 # List of all source files
 SRCS_INC := $(wildcard $(SRCS_DIR)/*-inc.f90 $(SRCS_DIR)/*.h90)
