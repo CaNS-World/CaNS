@@ -22,7 +22,7 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 **[29/01/2025]:** To avoid having the `build.conf` and `configs/*.mk` files - often changed by the user - tracked by git, the compiling behavior has changed slightly; see Compilation below.
 
-**[28/01/2025]:** Input file `input.nml` has changed slightly, to allow for prescribing a fixed time-step size `dt_f`.
+**[28/01/2025]:** Input file `input.nml` has changed slightly, to allow for prescribing a fixed time step size `dt_f`.
 
 
 ### _Major Update:_ [`CaNS 2.0`](docs/CaNS-2.0.md) _is finally out!_ :tada:

@@ -113,10 +113,8 @@ include $(LIBS_DIR)/external.mk
 
 # Rules to generate config files from defaults, if they are missing
 $(ROOT_DIR)/%.conf: $(CONFIG_DIR)/defaults/%-default.conf
-	@echo "Generating $@ from $<:"
-	cp $< $@
-	@echo ""
+	@echo "Generating $@ from $<"
+	@cp $< $@
 $(CONFIG_DIR)/%.mk: $(CONFIG_DIR)/defaults/%-default.mk
-	@echo "Generating $@ from $<:"
-	cp $< $@
-	@echo ""
+	@echo "Generating $@ from $<"
+	@cp $< $@
