@@ -89,8 +89,8 @@ The `Makefile` in root directory is used to compile the code, and is expected to
  * `DEBUG`                    : performs some basic checks for debugging purposes
  * `TIMING`                   : wall-clock time per time step is computed
  * `IMPDIFF`                  : diffusion terms are integrated implicitly in time (thereby improving the stability of the numerical algorithm for viscous-dominated flows)
- * `IMPDIFF_1D`               : same as above, but with implicit diffusion *only* along Z; *for optimal parallel performance this option should be combined with* `PENCIL_AXIS=3`
- * `PENCIL_AXIS`              : sets the default pencil direction, one of [1,2,3] for [X,Y,Z]-aligned pencils; X-aligned is the default and should be optimal for all cases except for Z implicit diffusion, where using Z-pencils is recommended
+ * `IMPDIFF_1D`               : same as above, but with implicit diffusion *only* along Z; *for optimal parallel performance, the domain should not be decomposed along Z*
+ * `PENCIL_AXIS`              : sets the default pencil direction, one of [1,2,3] for [X,Y,Z]-aligned pencils; X-aligned is the default and should be optimal for all cases except for Z implicit diffusion, where using Z-pencils is recommended if `dims(2) > 1` in the input file
  * `SINGLE_PRECISION`         : calculation will be carried out in single precision (the default precision is double)
  * `GPU`                      : enable GPU-accelerated runs
  * `USE_NVTX`                 : enable [NVTX](https://s.nvidia.com/nsight-visual-studio-edition/nvtx) tags for profiling
