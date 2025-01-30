@@ -456,9 +456,9 @@ module mod_solver_gpu
       q = 0
       if(c_or_f(3) == 'f'.and.bcz(1) == 'D') q = 1
       if(bcz(0)//bcz(1) == 'PP') then
-        call gaussel_periodic_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,1,a,b,c,p ,work,pz_aux_1,pz_aux_2)
+        call gaussel_periodic_gpu(n(1),n(2),n(3)-q,1,a,b,c,p,work,pz_aux_1,pz_aux_2)
       else
-        call gaussel_gpu(         n_z_0(1),n_z_0(2),n_z_0(3)-q,1,a,b,c,p ,work)
+        call gaussel_gpu(         n(1),n(2),n(3)-q,1,a,b,c,p,work)
       end if
     end if
     !

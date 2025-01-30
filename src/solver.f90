@@ -245,9 +245,9 @@ module mod_solver
       end if
     else
       if(bcz(0)//bcz(1) == 'PP') then
-        call gaussel_periodic(n_z(1),n_z(2),n_z(3)-q,1,a,b,c,p)
+        call gaussel_periodic(n(1),n(2),n(3)-q,1,a,b,c,p)
       else
-        call gaussel(         n_z(1),n_z(2),n_z(3)-q,1,a,b,c,p)
+        call gaussel(         n(1),n(2),n(3)-q,1,a,b,c,p)
       end if
     end if
     !
