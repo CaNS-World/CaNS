@@ -17,3 +17,6 @@ run/
 src/data/*.*
 run/data/*.*
 !src/data/readme.txt
+build.conf
+configs/*.mk
+build/
