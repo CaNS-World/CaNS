@@ -130,6 +130,10 @@ ifeq ($(strip $(MASK_DIVERGENCE_CHECK)),1)
 DEFINES += -D_MASK_DIVERGENCE_CHECK
 endif
 
+ifeq ($(strip $(BOUSSINESQ_BUOYANCY)),1)
+DEFINES += -D_BOUSSINESQ_BUOYANCY
+endif
+
 ifeq ($(strip $(OPENMP)),1)
 ifeq      ($(strip $(FCOMP)),GNU)
 override FFLAGS += -fopenmp
@@ -142,8 +146,4 @@ override FFLAGS += -homp
 else
 override FFLAGS += -fopenmp
 endif
-endif
-
-ifeq ($(strip $(BOUSSINESQ_BUOYANCY)),1)
-DEFINES += -D_BOUSSINESQ_BUOYANCY
 endif
