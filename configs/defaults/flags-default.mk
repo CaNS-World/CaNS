@@ -82,27 +82,22 @@ endif
   
 endif
 
-ifeq ($(strip $(DEBUG)),1)
-DEFINES += -D_DEBUG
-endif
-ifeq ($(strip $(DEBUG_SOLVER)),1)
-DEFINES += -D_DEBUG_SOLVER
-endif
-ifeq ($(strip $(TIMING)),1)
-DEFINES += -D_TIMING
-endif
-ifeq ($(strip $(IMPDIFF)),1)
-DEFINES += -D_IMPDIFF
-endif
+CUSTOM_DEFINES =  DEBUG \
+				  DEBUG_SOLVER \
+				  TIMING \
+				  IMPDIFF IMPDIFF_1D \
+				  DECOMP_X DECOMP_Y DECOMP_Z \
+				  SINGLE_PRECISION \
+				  DECOMP_X_IO \
+                  USE_NVTX \
+				  GRIDPOINT_NATURAL_CHANNEL \
+				  MASK_DIVERGENCE_CHECK \
+				  BOUSSINESQ_BUOYANCY
+
+DEFINES += $(foreach var,$(CUSTOM_DEFINES),$(if $(filter 1,$(strip $($(var)))), -D_$(var)))
+
 ifeq ($(strip $(IMPDIFF_1D)),1)
 DEFINES += -D_IMPDIFF -D_IMPDIFF_1D
-endif
-ifeq      ($(strip $(DECOMP_X)),1)
-DEFINES += -D_DECOMP_X
-else ifeq ($(strip $(DECOMP_Y)),1)
-DEFINES += -D_DECOMP_Y
-else ifeq ($(strip $(DECOMP_Z)),1)
-DEFINES += -D_DECOMP_Z
 endif
 ifeq      ($(strip $(PENCIL_AXIS)),1)
 DEFINES += -D_DECOMP_X
@@ -111,28 +106,8 @@ DEFINES += -D_DECOMP_Y
 else ifeq ($(strip $(PENCIL_AXIS)),3)
 DEFINES += -D_DECOMP_Z
 endif
-ifeq ($(strip $(SINGLE_PRECISION)),1)
-DEFINES += -D_SINGLE_PRECISION
-endif
 
-ifeq      ($(strip $(DECOMP_X_IO)),1)
-DEFINES += -D_DECOMP_X_IO
-endif
-
-ifeq ($(strip $(USE_NVTX)),1)
-DEFINES += -D_USE_NVTX
-endif
-
-ifeq ($(strip $(GRIDPOINT_NATURAL_CHANNEL)),1)
-DEFINES += -D_GRIDPOINT_NATURAL_CHANNEL
-endif
-ifeq ($(strip $(MASK_DIVERGENCE_CHECK)),1)
-DEFINES += -D_MASK_DIVERGENCE_CHECK
-endif
-
-ifeq ($(strip $(BOUSSINESQ_BUOYANCY)),1)
-DEFINES += -D_BOUSSINESQ_BUOYANCY
-endif
+DEFINES := $(sort $(DEFINES)) # remove duplicates
 
 ifeq ($(strip $(OPENMP)),1)
 ifeq      ($(strip $(FCOMP)),GNU)
