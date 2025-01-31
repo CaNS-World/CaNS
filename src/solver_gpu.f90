@@ -398,7 +398,7 @@ module mod_solver_gpu
     n_x(:) = ap_x%shape(:)
     n_y(:) = ap_y%shape(:)
     n_z(:) = ap_z%shape(:)
-    is_no_decomp_z = n_x(3) == n_z(3) ! not decomposed along z: xsize(3) == ysize(3) == ng(3) when dims(2) = 1
+    is_no_decomp_z = n_x(3) == n_z(3).or.ipencil_axis == 3 ! not decomposed along z: xsize(3) == ysize(3) == ng(3) when dims(2) = 1
     if(.not.is_no_decomp_z) then
       px(1:n_x(1),1:n_x(2),1:n_x(3)) => solver_buf_0(1:product(n_x(:)))
       if(cudecomp_is_t_in_place) then
@@ -444,21 +444,20 @@ module mod_solver_gpu
       end select
     end if
     !
-    if(ipencil_axis /= 3 .and. .not.is_no_decomp_z) then
-      q = 0
-      if(c_or_f(3) == 'f'.and.bcz(1) == 'D') q = 1
+    q = 0
+    if(c_or_f(3) == 'f'.and.bcz(1) == 'D') q = 1
+    if(.not.is_no_decomp_z) then
       if(bcz(0)//bcz(1) == 'PP') then
         call gaussel_periodic_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,0,a,b,c,pz,work,pz_aux_1,pz_aux_2)
       else
         call gaussel_gpu(         n_z_0(1),n_z_0(2),n_z_0(3)-q,0,a,b,c,pz,work)
       end if
     else
-      q = 0
-      if(c_or_f(3) == 'f'.and.bcz(1) == 'D') q = 1
+      n_z_0(:) = n(:)
       if(bcz(0)//bcz(1) == 'PP') then
-        call gaussel_periodic_gpu(n(1),n(2),n(3)-q,1,a,b,c,p,work,pz_aux_1,pz_aux_2)
+        call gaussel_periodic_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,1,a,b,c,p ,work,pz_aux_1,pz_aux_2)
       else
-        call gaussel_gpu(         n(1),n(2),n(3)-q,1,a,b,c,p,work)
+        call gaussel_gpu(         n_z_0(1),n_z_0(2),n_z_0(3)-q,1,a,b,c,p ,work)
       end if
     end if
     !
