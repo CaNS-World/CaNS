@@ -79,7 +79,9 @@ program cans
   use mod_timer          , only: timer_tic,timer_toc,timer_print
   use mod_updatep        , only: updatep
   use mod_utils          , only: bulk_mean
-  !@acc use mod_utils    , only: device_memory_footprint
+#if defined(_OPENACC)
+  use mod_utils    , only: device_memory_footprint
+#endif
   use mod_types
   use omp_lib
   implicit none

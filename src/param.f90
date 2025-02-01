@@ -6,7 +6,9 @@
 ! -
 module mod_param
 use mod_types
-!@acc use cudecomp
+#if defined(_OPENACC)
+use cudecomp
+#endif
 implicit none
 public
 !

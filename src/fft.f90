@@ -15,8 +15,10 @@ module mod_fft
   !$ use omp_lib
   private
   public fftini,fftend,fft
-  !@acc public signal_processing,fftf_gpu,fftb_gpu
-  !@acc integer(i8), public :: wsize_fft
+#if defined(_OPENACC)
+  public signal_processing,fftf_gpu,fftb_gpu
+  integer(i8), public :: wsize_fft
+#endif
   contains
   subroutine fftini(ng,n_x,n_y,bcxy,c_or_f,arrplan,normfft)
     implicit none
@@ -155,7 +157,9 @@ module mod_fft
     integer    , intent(in), dimension(:,:) :: arrplan
 #endif
     integer :: i,j
-    !@acc integer :: istat
+#if defined(_OPENACC)
+    integer :: istat
+#endif
 #if !defined(_OPENACC)
 #if defined(_SINGLE_PRECISION)
     do j=1,size(arrplan,2)

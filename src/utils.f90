@@ -8,7 +8,9 @@ module mod_utils
   implicit none
   private
   public bulk_mean,f_sizeof,swap
-  !@acc public device_memory_footprint
+#if defined(_OPENACC)
+  public device_memory_footprint
+#endif
 contains
   subroutine bulk_mean(n,grid_vol_ratio,p,mean)
     !
