@@ -74,23 +74,24 @@ module mod_solver
     call transpose_y_to_x(py,px)
     call fft(arrplan(2,1),px) ! bwd transform in x
     !
-#if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
-    !$OMP PARALLEL WORKSHARE
-    p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)*normfft
-    !$OMP END PARALLEL WORKSHARE
-#elif defined(_DECOMP_Y)
-    call transpose_x_to_y(px,py)
-    !$OMP PARALLEL WORKSHARE
-    p(1:n(1),1:n(2),1:n(3)) = py(:,:,:)*normfft
-    !$OMP END PARALLEL WORKSHARE
-#elif defined(_DECOMP_Z)
-    !call transpose_x_to_z(px,pz)
-    call transpose_x_to_y(px,py)
-    call transpose_y_to_z(py,pz)
-    !$OMP PARALLEL WORKSHARE
-    p(1:n(1),1:n(2),1:n(3)) = pz(:,:,:)*normfft
-    !$OMP END PARALLEL WORKSHARE
-#endif
+    select case(ipencil_axis)
+    case(1)
+      !$OMP PARALLEL WORKSHARE
+      p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)*normfft
+      !$OMP END PARALLEL WORKSHARE
+    case(2)
+      call transpose_x_to_y(px,py)
+      !$OMP PARALLEL WORKSHARE
+      p(1:n(1),1:n(2),1:n(3)) = py(:,:,:)*normfft
+      !$OMP END PARALLEL WORKSHARE
+    case(3)
+      !call transpose_x_to_z(px,pz)
+      call transpose_x_to_y(px,py)
+      call transpose_y_to_z(py,pz)
+      !$OMP PARALLEL WORKSHARE
+      p(1:n(1),1:n(2),1:n(3)) = pz(:,:,:)*normfft
+      !$OMP END PARALLEL WORKSHARE
+    end select
   end subroutine solver
   !
   subroutine gaussel(nx,ny,n,nh,a,b,c,p,lambdaxy)
