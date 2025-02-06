@@ -299,6 +299,36 @@ module mod_rk
 #endif
         end do
       end do
+      !
+      ! compute wall scalar flux
+      !
+      if(is_cmpt_wallflux) then
+        call cmpt_scalflux(n,is_bound,l,dli,dzci,dzfi,s%alpha,s%val(:,:,:),flux)
+        s%f = (factor1*sum((  flux( 0,:) + flux( 1,:))/l(:)) + &
+               factor2*sum((s%fluxo(0,:)+s%fluxo(1,:))/l(:)))
+        s%fluxo(:,:) = flux(:,:)
+      end if
+      !
+      ! bulk scalar forcing
+      !
+      if(s%is_forced) then
+        call bulk_mean(n,grid_vol_ratio_f,s%val(:,:,:),mean)
+        s%f = s%scalf - mean
+      end if
+#if defined(_IMPDIFF)
+      !
+      ! compute rhs of Helmholtz equation
+      !
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            s%val(i,j,k) = s%val(i,j,k) - .5_rp*factor12*dsdtrkd(i,j,k,is)
+          end do
+        end do
+      end do
+#endif
     end do
     !
     ! compute wall scalar flux
