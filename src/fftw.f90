@@ -6,7 +6,9 @@
 ! -
 module mod_fftw_param
   use, intrinsic :: iso_c_binding
-  !@acc use cufft
+#if defined(_OPENACC)
+  use cufft
+#endif
   implicit none
   !
   type, bind(C) :: fftw_iodim

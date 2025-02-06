@@ -256,7 +256,9 @@ module mod_sanity
     call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:), &
                     lambdaxy,['c','c','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
     !$acc enter data copyin(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
-    !@acc call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
+#if defined(_OPENACC)
+    call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
+#endif
     dl  = dli**(-1)
     dt  = acos(-1.) ! value is irrelevant
     dti = dt**(-1)
@@ -290,7 +292,9 @@ module mod_sanity
     call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1), &
                     lambdaxy,['f','c','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
     !$acc update device(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
-    !@acc call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
+#if defined(_OPENACC)
+    call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
+#endif
     call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
     !$acc kernels default(present)
     u(:,:,:) = u(:,:,:)*alpha
@@ -310,7 +314,9 @@ module mod_sanity
     call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2), &
                     lambdaxy,['c','f','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
     !$acc update device(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
-    !@acc call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
+#if defined(_OPENACC)
+    call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
+#endif
     call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
     !$acc kernels default(present)
     v(:,:,:) = v(:,:,:)*alpha
@@ -330,7 +336,9 @@ module mod_sanity
     call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3), &
                     lambdaxy,['c','c','f'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
     !$acc update device(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
-    !@acc call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
+#if defined(_OPENACC)
+    call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
+#endif
     call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
     !$acc kernels default(present)
     w(:,:,:) = w(:,:,:)*alpha
