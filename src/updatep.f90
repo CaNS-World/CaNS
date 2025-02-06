@@ -18,9 +18,9 @@ module mod_updatep
     integer , intent(in   ), dimension(3) :: n
     real(rp), intent(in   ), dimension(3 ) :: dli
     real(rp), intent(in   ), dimension(0:) :: dzci,dzfi
+    real(rp), intent(in   ) :: alpha
     real(rp), intent(in   ), dimension(0:,0:,0:) :: pp
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
-    real(rp), intent(in   ) :: alpha
     real(rp) :: dxi,dyi
     integer :: i,j,k
     !

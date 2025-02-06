@@ -11,6 +11,9 @@ module mod_utils
 #if defined(_OPENACC)
   public device_memory_footprint
 #endif
+  interface swap
+    module procedure swap_3d,swap_4d
+  end interface
 contains
   subroutine bulk_mean(n,grid_vol_ratio,p,mean)
     !
@@ -48,7 +51,7 @@ contains
     class(*), intent(in) :: val
     isize = storage_size(val)/8
   end function f_sizeof
-  subroutine swap(arr1,arr2)
+  subroutine swap_3d(arr1,arr2)
     use mod_types, only: rp
     implicit none
     real(rp), intent(inout), pointer, contiguous, dimension(:,:,:) :: arr1,arr2
@@ -56,23 +59,33 @@ contains
     tmp  => arr1
     arr1 => arr2
     arr2 => tmp
-  end subroutine swap
+  end subroutine swap_3d
+  subroutine swap_4d(arr1,arr2)
+    use mod_types, only: rp
+    implicit none
+    real(rp), intent(inout), pointer, contiguous, dimension(:,:,:,:) :: arr1,arr2
+    real(rp),                pointer, contiguous, dimension(:,:,:,:) :: tmp
+    tmp  => arr1
+    arr1 => arr2
+    arr2 => tmp
+  end subroutine swap_4d
 #if defined(_OPENACC)
-  function device_memory_footprint(n,n_z) result(itotal)
+  function device_memory_footprint(n,n_z,nscal) result(itotal)
     !
     ! estimate GPU memory footprint, assuming one MPI task <-> one GPU
     !
     use mod_types, only: i8,rp
     integer, intent(in), dimension(3) :: n,n_z
+    integer, intent(in) :: nscal
     integer :: nh(3)
     integer(i8) :: itotal,itemp,rp_size
     rp_size = f_sizeof(1._rp)
     itotal = 0
     !
-    ! 1. 'main' arrays: u,v,w,p,pp
+    ! 1. 'main' arrays: u,v,w,p,pp,scalars
     !
     nh(:) = 1
-    itotal = itotal + product(n(:)+2*nh(:))*rp_size*5
+    itotal = itotal + product(n(:)+2*nh(:))*rp_size*(5+nscal)
     !
     ! 2. grids arrays: zc,zf,dzc,dzf,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f (tiny footprint)
     !
@@ -92,26 +105,26 @@ contains
       !
       ! rhsbp, lambdaxyp, ap,bp,cp
       !
-      itotal = itotal + itemp1*rp_size                + itemp2*rp_size   + itemp3*rp_size
+      itotal = itotal + itemp1*rp_size                        + itemp2*rp_size           + itemp3*rp_size
 #elif  defined(_IMPDIFF_1D)
       !
-      ! rhsbp,rhsb[u,v,w,buf]%z, lambdaxyp, a?,b?,c? [p,u,v,w,buf]
+      ! rhsbp,rhsb[u,v,w,scalars,buf]%z, lambdaxyp, a?,b?,c? [p,u,v,w,scalars,buf]
       !
-      itotal = itotal + (itemp1+itemp1_(3)*4)*rp_size + itemp2*rp_size   + itemp3*rp_size*5
+      itotal = itotal + (itemp1+itemp1_(3)*(4+nscal))*rp_size + itemp2*rp_size           + itemp3*rp_size*(5+nscal)
 #else
       !
-      ! rhsbp,rhsb[u,v,w,buf]%[x,y,z], lambdaxy[p,u,v,w], (a?,b?,c?)[p,u,v,w,buf]
+      ! rhsbp,rhsb[u,v,w,scalars,buf]%[x,y,z], lambdaxy[p,u,v,w,scalars], (a?,b?,c?)[p,u,v,w,scalars,buf]
       !
-      itotal = itotal + itemp1*rp_size*(1+4)          + itemp2*rp_size*5 + itemp3*rp_size*5
+      itotal = itotal + itemp1*rp_size*(1+4+nscal)            + itemp2*rp_size*(5+nscal) + itemp3*rp_size*(5+nscal)
 #endif
     end block
     !
-    ! 4. prediction velocity arrays arrays d[u,v,w]dtrk_t, d[u,v,w]dtrko_t
+    ! 4. prediction velocity arrays arrays d[u,v,w]dtrk_t, d[u,v,w]dtrko_t + scalars equivalent
     !
     itemp  = product(n(:))*rp_size
-    itotal = itotal + itemp*6
+    itotal = itotal + itemp*(2*(3+nscal))
 #if defined(_IMPDIFF)
-    itotal = itotal + itemp*3
+    itotal = itotal + itemp*(1*(3+nscal))
 #endif
     !
     ! 5. transpose & FFT buffer arrays, halo buffer arrays, and solver arrays

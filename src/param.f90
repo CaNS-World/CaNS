@@ -62,6 +62,19 @@ real(rp), protected, dimension(3) :: velf
 real(rp), protected, dimension(3) :: dl,dli
 real(rp), protected :: visc
 !
+! scalar input parameters
+!
+integer , protected :: nscal ! number of transported scalars
+real(rp), protected, allocatable, dimension(:) :: alphai
+real(rp), protected :: beta
+real(rp), protected, dimension(3) :: gacc
+character(len=100), protected, allocatable, dimension(:)     :: iniscal
+character(len=1)  , protected, allocatable, dimension(:,:,:) :: cbcscal ! size (0:1,3,nscal)
+real(rp)          , protected, allocatable, dimension(:,:,:) ::  bcscal ! size (0:1,3,nscal)
+real(rp), protected, allocatable, dimension(:) :: ssource
+logical , protected, allocatable, dimension(:) :: is_sforced
+real(rp), protected, allocatable, dimension(:) :: scalf
+!
 #if defined(_OPENACC)
 !
 ! cuDecomp input parameters
@@ -78,6 +91,7 @@ contains
     implicit none
     character(len=*), parameter :: input_file = 'input.nml'
     integer, intent(in) :: myid
+    integer :: is
     integer :: iunit,ierr
     character(len=1024) :: c_iomsg
     namelist /dns/ &
@@ -96,16 +110,27 @@ contains
                   bforce, &
                   is_forced, &
                   velf, &
+                  gacc, &
+                  nscal, &
                   dims
 #if defined(_OPENACC)
     namelist /cudecomp/ &
                        cudecomp_t_comm_backend,cudecomp_is_t_enable_nccl,cudecomp_is_t_enable_nvshmem, &
                        cudecomp_h_comm_backend,cudecomp_is_h_enable_nccl,cudecomp_is_h_enable_nvshmem
 #endif
+    namelist /scalar/ &
+                       alphai,beta,&
+                       iniscal,&
+                       cbcscal,bcscal,&
+                       ssource,&
+                       is_sforced,&
+                       scalf
     !
     ! defaults
     !
     dt_f = -1.
+    gacc(:) = 0.
+    nscal = 0
     open(newunit=iunit,file=input_file,status='old',action='read',iostat=ierr,iomsg=c_iomsg)
       if(ierr /= 0) then
         if(myid == 0) print*, 'Error reading the input file: ', trim(c_iomsg)
@@ -190,6 +215,46 @@ contains
       ! manually set cuDecomp out-of-place transposes by default
       !
       cudecomp_is_t_in_place = .false.
+#endif
+      !
+      ! reading scalar transport parameters, if these are set
+      !
+      if(nscal > 0) then
+        !
+        ! allocate memory
+        !
+        allocate(alphai(nscal),iniscal(nscal), &
+                 cbcscal(0:1,3,nscal),bcscal(0:1,3,nscal), &
+                 ssource(nscal),is_sforced(nscal),scalf(nscal))
+        !
+        ! set default values
+        !
+        beta          = 0.
+        ssource(:)    = 0.
+        is_sforced(:) = .false.
+        scalf(:)      = 0.
+        !
+        ! read scalar namelist
+        !
+        rewind(iunit)
+        read(iunit,nml=scalar,iostat=ierr,iomsg=c_iomsg)
+        if(ierr /= 0) then
+          if(myid == 0) print*, 'Error reading scalar namelist: ', trim(c_iomsg)
+          if(myid == 0) print*, 'Aborting...'
+          call MPI_FINALIZE(ierr)
+          close(iunit)
+          error stop
+        end if
+      else
+        nscal = 0 ! negative values equivalent to nscal = 0
+      end if
+#if defined(_BOUSSINESQ_BUOYANCY)
+      if (nscal == 0) then
+        if(myid == 0) print*, 'Error reading the input file: `BOUSSINESQ_BUOYANCY` requires `nscal > 0`.'
+        if(myid == 0) print*, 'Aborting...'
+        call MPI_FINALIZE(ierr)
+        error stop
+      end if
 #endif
     close(iunit)
   end subroutine read_input

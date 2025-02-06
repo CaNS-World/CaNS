@@ -4,7 +4,7 @@ For most systems, CaNS can be compiled from the root directory with the followin
 
 The `Makefile` in root directory is used to compiled the code, and is expected to work out-of-the-box for most systems. The `build.conf` file in the root directory can be used to choose the Fortran compiler (MPI wrapper), a few pre-defined profiles depending on the nature of the run (e.g., production vs debugging), and pre-processing options:
 
-```
+```shell
 #
 # compiler and compiling profile
 #
@@ -37,11 +37,12 @@ In this file, `FCOMP` can be one of `GNU` (`gfortran`), `INTEL` (`ifort`), `NVID
  * `PENCIL_AXIS`              : sets the default pencil direction, one of [1,2,3] for [X,Y,Z]-aligned pencils; X-aligned is the default and should be optimal for all cases except for Z implicit diffusion, where using Z-pencils is recommended if `dims(2) > 1` in the input file
  * `SINGLE_PRECISION`         : calculation will be carried out in single precision (the default precision is double)
  * `GPU`                      : enable GPU accelerated runs (requires the `FCOMP=NVIDIA`)
+ * `BOUSSINESQ_BUOYANCY`      : enable buoyancy effects
 
 Typing `make libs` will build the 2DECOMP&FFT/cuDecomp libraries; then typing `make` will compile the code and copy the executable `cans` to a `run/` folder; `make run` will also copy the default input files `*.in` under `src/` to the same `run/` folder.
 
 Note that cuDecomp needs to be dynamically linked before performing a GPU run. To do this, one should update the `LD_LIBRARY_PATH` environment variable as follows (from the root directory):
-```
+```shell
 export LD_LIBRARY_PATH=$PWD/dependencies/cuDecomp/build/lib:$LD_LIBRARY_PATH
 ```
 

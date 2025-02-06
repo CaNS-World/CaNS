@@ -39,13 +39,14 @@ program cans
   use mod_correc         , only: correc
   use mod_fft            , only: fftini,fftend
   use mod_fillps         , only: fillps
-  use mod_initflow       , only: initflow
+  use mod_initflow       , only: initflow,initscal
   use mod_initgrid       , only: initgrid
   use mod_initmpi        , only: initmpi
   use mod_initsolver     , only: initsolver
+  use mod_solve_helmholtz, only: solve_helmholtz,rhs_bound
   use mod_load           , only: load_all
   use mod_mom            , only: bulk_forcing
-  use mod_rk             , only: rk
+  use mod_rk             , only: rk,rk_scal
   use mod_output         , only: out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
   use mod_param          , only: ng,l,dl,dli, &
                                  gtype,gr, &
@@ -57,22 +58,18 @@ program cans
                                  icheck,iout0d,iout1d,iout2d,iout3d,isave, &
                                  cbcvel,bcvel,cbcpre,bcpre, &
                                  is_forced,bforce,velf, &
+                                 gacc,nscal,beta, &
                                  dims, &
                                  nb,is_bound, &
                                  rkcoeff,small, &
-                                 datadir,   &
+                                 datadir, &
                                  read_input
   use mod_sanity         , only: test_sanity_input,test_sanity_solver
+  use mod_scal           , only: scalar,initialize_scalars,bulk_forcing_s
 #if !defined(_OPENACC)
   use mod_solver         , only: solver
-#if defined(_IMPDIFF_1D)
-  use mod_solver         , only: solver_gaussel_z
-#endif
 #else
   use mod_solver_gpu     , only: solver => solver_gpu
-#if defined(_IMPDIFF_1D)
-  use mod_solver_gpu     , only: solver_gaussel_z => solver_gaussel_z_gpu
-#endif
   use mod_workspaces     , only: init_wspace_arrays,set_cufft_wspace
   use mod_common_cudecomp, only: istream_acc_queue_1
 #endif
@@ -97,11 +94,6 @@ program cans
   real(rp), allocatable, dimension(:,:) :: lambdaxyp
   real(rp), allocatable, dimension(:) :: ap,bp,cp
   real(rp) :: normfftp
-  type rhs_bound
-    real(rp), allocatable, dimension(:,:,:) :: x
-    real(rp), allocatable, dimension(:,:,:) :: y
-    real(rp), allocatable, dimension(:,:,:) :: z
-  end type rhs_bound
   type(rhs_bound) :: rhsbp
   real(rp) :: alpha
 #if defined(_IMPDIFF)
@@ -111,7 +103,7 @@ program cans
   integer    , dimension(2,2) :: arrplanu,arrplanv,arrplanw
 #endif
   real(rp), allocatable, dimension(:,:) :: lambdaxyu,lambdaxyv,lambdaxyw,lambdaxy
-  real(rp), allocatable, dimension(:) :: au,av,aw,bu,bv,bw,cu,cv,cw,aa,bb,cc
+  real(rp), allocatable, dimension(:) :: au,av,aw,bu,bv,bw,cu,cv,cw
   real(rp) :: normfftu,normfftv,normfftw
   type(rhs_bound) :: rhsbu,rhsbv,rhsbw
   real(rp), allocatable, dimension(:,:,:) :: rhsbx,rhsby,rhsbz
@@ -123,6 +115,20 @@ program cans
                                          grid_vol_ratio_c,grid_vol_ratio_f
   real(rp) :: meanvelu,meanvelv,meanvelw
   real(rp), dimension(3) :: dpdl
+  !
+  type(scalar), target, allocatable, dimension(:) :: scalars
+  type(scalar), pointer :: s
+#if defined(_IMPDIFF)
+#if !defined(_OPENACC)
+  type(C_PTR), dimension(2,2) :: arrplans
+#else
+  integer    , dimension(2,2) :: arrplans
+#endif
+#endif
+  real(rp) :: meanscal
+  real(rp), allocatable, dimension(:) :: fs
+  integer :: is
+  !
   !real(rp), allocatable, dimension(:) :: var
   real(rp), dimension(42) :: var
 #if defined(_TIMING)
@@ -131,6 +137,7 @@ program cans
   real(rp) :: twi,tw
   integer  :: savecounter
   character(len=7  ) :: fldnum
+  character(len=3  ) :: scalnum
   character(len=4  ) :: chkptnum
   character(len=100) :: filename
   integer :: k,kk
@@ -179,12 +186,10 @@ program cans
 #if defined(_IMPDIFF)
   allocate(lambdaxyu(n_z(1),n_z(2)), &
            lambdaxyv(n_z(1),n_z(2)), &
-           lambdaxyw(n_z(1),n_z(2)), &
-           lambdaxy( n_z(1),n_z(2)))
+           lambdaxyw(n_z(1),n_z(2)))
   allocate(au(n_z(3)),bu(n_z(3)),cu(n_z(3)), &
            av(n_z(3)),bv(n_z(3)),cv(n_z(3)), &
-           aw(n_z(3)),bw(n_z(3)),cw(n_z(3)), &
-           aa(n_z(3)),bb(n_z(3)),cc(n_z(3)))
+           aw(n_z(3)),bw(n_z(3)),cw(n_z(3)))
   allocate(rhsbu%x(n(2),n(3),0:1), &
            rhsbu%y(n(1),n(3),0:1), &
            rhsbu%z(n(1),n(2),0:1), &
@@ -193,11 +198,14 @@ program cans
            rhsbv%z(n(1),n(2),0:1), &
            rhsbw%x(n(2),n(3),0:1), &
            rhsbw%y(n(1),n(3),0:1), &
-           rhsbw%z(n(1),n(2),0:1), &
-           rhsbx(  n(2),n(3),0:1), &
-           rhsby(  n(1),n(3),0:1), &
-           rhsbz(  n(1),n(2),0:1))
+           rhsbw%z(n(1),n(2),0:1))
 #endif
+  !
+  allocate(scalars(nscal))
+  call initialize_scalars(scalars,nscal,n,n_z)
+  allocate(fs(nscal))
+  !$acc enter data copyin(scalars(:))
+  !
 #if defined(_DEBUG)
   if(myid == 0) print*, 'This executable of CaNS was built with compiler: ', compiler_version()
   if(myid == 0) print*, 'Using the options: ', compiler_options()
@@ -230,6 +238,7 @@ program cans
   end if
   !$acc enter data copyin(lo,hi,n) async
   !$acc enter data copyin(bforce,dl,dli,l) async
+  !$acc enter data copyin(gacc) async
   !$acc enter data copyin(zc_g,zf_g,dzc_g,dzf_g) async
   !$acc enter data create(zc,zf,dzc,dzf,dzci,dzfi,dzci_g,dzfi_g) async
   !
@@ -274,19 +283,34 @@ program cans
                   lambdaxyv,['c','f','c'],av,bv,cv,arrplanv,normfftv,rhsbv%x,rhsbv%y,rhsbv%z)
   call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3), &
                   lambdaxyw,['c','c','f'],aw,bw,cw,arrplanw,normfftw,rhsbw%x,rhsbw%y,rhsbw%z)
+  do is=1,nscal
+    s => scalars(is)
+    call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,s%cbc,s%bc, &
+                    s%lambdaxy,['c','c','c'],s%a,s%b,s%c,s%arrplan,s%normfft, &
+                    s%rhsb%x,s%rhsb%y,s%rhsb%z)
+  end do
 #if defined(_IMPDIFF_1D)
-  deallocate(lambdaxyu,lambdaxyv,lambdaxyw,lambdaxy)
+  deallocate(lambdaxyu,lambdaxyv,lambdaxyw)
   call fftend(arrplanu)
   call fftend(arrplanv)
   call fftend(arrplanw)
-  deallocate(rhsbu%x,rhsbu%y,rhsbv%x,rhsbv%y,rhsbw%x,rhsbw%y,rhsbx,rhsby)
+  deallocate(rhsbu%x,rhsbu%y,rhsbv%x,rhsbv%y,rhsbw%x,rhsbw%y)
+  do is=1,nscal
+    s => scalars(is)
+    deallocate(s%rhsb%x,s%rhsb%y)
+    deallocate(s%lambdaxy)
+    call fftend(s%arrplan)
+  end do
 #endif
   !$acc enter data copyin(lambdaxyu,au,bu,cu,lambdaxyv,av,bv,cv,lambdaxyw,aw,bw,cw) async
   !$acc enter data copyin(rhsbu,rhsbu%x,rhsbu%y,rhsbu%z) async
   !$acc enter data copyin(rhsbv,rhsbv%x,rhsbv%y,rhsbv%z) async
   !$acc enter data copyin(rhsbw,rhsbw%x,rhsbw%y,rhsbw%z) async
-  !$acc enter data create(lambdaxy,aa,bb,cc) async
-  !$acc enter data create(rhsbx,rhsby,rhsbz) async
+  do is=1,nscal
+    s => scalars(is)
+    !$acc enter data copyin(s%lambdaxy,s%a,s%b,s%c) async
+    !$acc enter data copyin(s%rhsb,s%rhsb%x,s%rhsb%y,s%rhsb%z) async
+  end do
   !$acc wait
 #endif
 #if defined(_OPENACC)
@@ -301,7 +325,7 @@ program cans
   call set_cufft_wspace(pack(arrplanw,.true.),istream_acc_queue_1)
 #endif
   if(myid == 0) print*,'*** Device memory footprint (Gb): ', &
-                  device_memory_footprint(n,n_z)/(1._sp*1024**3), ' ***'
+                  device_memory_footprint(n,n_z,nscal)/(1._sp*1024**3), ' ***'
 #endif
 #if defined(_DEBUG_SOLVER)
   call test_sanity_solver(ng,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,dli,dzc,dzf,dzci,dzfi,dzci_g,dzfi_g, &
@@ -313,20 +337,34 @@ program cans
     time = 0.
     call initflow(inivel,bcvel,ng,lo,l,dl,zc,zf,dzc,dzf,visc, &
                   is_forced,velf,bforce,is_wallturb,u,v,w,p)
+    do is=1,nscal
+      s => scalars(is)
+      call initscal(s%ini,s%bc,ng,lo,l,dl,zc,zf,dzc,dzf,s%alpha, &
+                    s%is_forced,s%scalf,s%source,is_wallturb,s%val)
+    end do
     if(myid == 0) print*, '*** Initial condition succesfully set ***'
   else
-    call load_all('r',trim(datadir)//'fld.bin',MPI_COMM_WORLD,ng,[1,1,1],lo,hi,u,v,w,p,time,istep)
+    call load_all('r',trim(datadir)//'fld.bin',MPI_COMM_WORLD,ng,[1,1,1],lo,hi,nscal,u,v,w,p,scalars,time,istep)
     if(myid == 0) print*, '*** Checkpoint loaded at time = ', time, 'time step = ', istep, '. ***'
   end if
   !$acc enter data copyin(u,v,w,p) create(pp)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
   call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
+  do is=1,nscal
+    s => scalars(is)
+    !$acc enter data copyin(s%val) async(1)
+    call boundp(s%cbc,n,s%bc,nb,is_bound,dl,dzc,s%val)
+  end do
+  !$acc wait
   !
   ! post-process and write initial condition
   !
   write(fldnum,'(i7.7)') istep
   !$acc wait ! not needed but to prevent possible future issues
   !$acc update self(u,v,w,p)
+  do is=1,nscal
+    !$acc update self(scalars(is)%val)
+  end do
   if(iout1d > 0.and.mod(istep,max(iout1d,1)) == 0) then
     include 'out1d.h90'
   end if
@@ -356,92 +394,35 @@ program cans
     time = time + dt
     if(myid == 0) print*, 'Time step #', istep, 'Time = ', time
     tauxo(:,:) = 0.; tauyo(:,:) = 0.; tauzo(:,:) = 0.
-    dpdl(:)  = 0.
+    dpdl(:)     = 0.
+    fs(1:nscal) = 0.
     do irk=1,3
       dtrk = sum(rkcoeff(:,irk))*dt
       dtrki = dtrk**(-1)
+      call rk_scal(rkcoeff(:,irk),nscal,n,dli,l,dzci,dzfi,grid_vol_ratio_f,dt,is_bound,u,v,w,scalars)
+      do is=1,nscal
+        s => scalars(is)
+        call bulk_forcing_s(n,s%is_forced,s%f,s%val)
+        fs(is) = fs(is) + s%f
+#if defined(_IMPDIFF)
+        call solve_helmholtz(n,ng,s%arrplan,s%normfft,-0.5*s%alpha*dtrk, &
+                             s%lambdaxy,s%a,s%b,s%c,s%rhsb%x,s%rhsb%y,s%rhsb%z,is_bound,s%cbc,['c','c','c'],s%val)
+#endif
+        call boundp(s%cbc,n,s%bc,nb,is_bound,dl,dzc,s%val)
+      end do
       call rk(rkcoeff(:,irk),n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,visc,dt,p, &
-              is_forced,velf,bforce,u,v,w,f)
+              is_forced,velf,bforce,gacc,beta,scalars,u,v,w,f)
       call bulk_forcing(n,is_forced,f,u,v,w)
+      dpdl(:) = dpdl(:) + f(:)
 #if defined(_IMPDIFF)
       alpha = -.5*visc*dtrk
-      !$OMP PARALLEL WORKSHARE
-      !$acc kernels present(rhsbx,rhsby,rhsbz,rhsbu) async(1)
-#if !defined(_IMPDIFF_1D)
-      rhsbx(:,:,0:1) = rhsbu%x(:,:,0:1)*alpha
-      rhsby(:,:,0:1) = rhsbu%y(:,:,0:1)*alpha
+      call solve_helmholtz(n,ng,arrplanu,normfftu,alpha, &
+                           lambdaxyu,au,bu,cu,rhsbu%x,rhsbu%y,rhsbu%z,is_bound,cbcvel(:,:,1),['f','c','c'],u)
+      call solve_helmholtz(n,ng,arrplanv,normfftv,alpha, &
+                           lambdaxyv,av,bv,cv,rhsbv%x,rhsbv%y,rhsbv%z,is_bound,cbcvel(:,:,2),['c','f','c'],v)
+      call solve_helmholtz(n,ng,arrplanw,normfftw,alpha, &
+                           lambdaxyw,aw,bw,cw,rhsbw%x,rhsbw%y,rhsbw%z,is_bound,cbcvel(:,:,3),['c','c','f'],w)
 #endif
-      rhsbz(:,:,0:1) = rhsbu%z(:,:,0:1)*alpha
-      !$acc end kernels
-      !$OMP END PARALLEL WORKSHARE
-      call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,is_bound,rhsbx,rhsby,rhsbz,u)
-      !$acc kernels default(present) async(1)
-      !$OMP PARALLEL WORKSHARE
-      aa(:) = au(:)*alpha
-      bb(:) = bu(:)*alpha + 1.
-      cc(:) = cu(:)*alpha
-#if !defined(_IMPDIFF_1D)
-      lambdaxy(:,:) = lambdaxyu(:,:)*alpha
-#endif
-      !$OMP END PARALLEL WORKSHARE
-      !$acc end kernels
-#if !defined(_IMPDIFF_1D)
-      call solver(n,ng,arrplanu,normfftu,lambdaxy,aa,bb,cc,cbcvel(:,:,1),['f','c','c'],u)
-#else
-      call solver_gaussel_z(n                    ,aa,bb,cc,cbcvel(:,3,1),['f','c','c'],u)
-#endif
-      !$OMP PARALLEL WORKSHARE
-      !$acc kernels present(rhsbx,rhsby,rhsbz,rhsbv) async(1)
-#if !defined(_IMPDIFF_1D)
-      rhsbx(:,:,0:1) = rhsbv%x(:,:,0:1)*alpha
-      rhsby(:,:,0:1) = rhsbv%y(:,:,0:1)*alpha
-#endif
-      rhsbz(:,:,0:1) = rhsbv%z(:,:,0:1)*alpha
-      !$acc end kernels
-      !$OMP END PARALLEL WORKSHARE
-      call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,is_bound,rhsbx,rhsby,rhsbz,v)
-      !$acc kernels default(present) async(1)
-      !$OMP PARALLEL WORKSHARE
-      aa(:) = av(:)*alpha
-      bb(:) = bv(:)*alpha + 1.
-      cc(:) = cv(:)*alpha
-#if !defined(_IMPDIFF_1D)
-      lambdaxy(:,:) = lambdaxyv(:,:)*alpha
-#endif
-      !$OMP END PARALLEL WORKSHARE
-      !$acc end kernels
-#if !defined(_IMPDIFF_1D)
-      call solver(n,ng,arrplanv,normfftv,lambdaxy,aa,bb,cc,cbcvel(:,:,2),['c','f','c'],v)
-#else
-      call solver_gaussel_z(n                    ,aa,bb,cc,cbcvel(:,3,2),['c','f','c'],v)
-#endif
-      !$OMP PARALLEL WORKSHARE
-      !$acc kernels present(rhsbx,rhsby,rhsbz,rhsbw) async(1)
-#if !defined(_IMPDIFF_1D)
-      rhsbx(:,:,0:1) = rhsbw%x(:,:,0:1)*alpha
-      rhsby(:,:,0:1) = rhsbw%y(:,:,0:1)*alpha
-#endif
-      rhsbz(:,:,0:1) = rhsbw%z(:,:,0:1)*alpha
-      !$acc end kernels
-      !$OMP END PARALLEL WORKSHARE
-      call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,is_bound,rhsbx,rhsby,rhsbz,w)
-      !$acc kernels default(present) async(1)
-      !$OMP PARALLEL WORKSHARE
-      aa(:) = aw(:)*alpha
-      bb(:) = bw(:)*alpha + 1.
-      cc(:) = cw(:)*alpha
-#if !defined(_IMPDIFF_1D)
-      lambdaxy(:,:) = lambdaxyw(:,:)*alpha
-#endif
-      !$OMP END PARALLEL WORKSHARE
-      !$acc end kernels
-#if !defined(_IMPDIFF_1D)
-      call solver(n,ng,arrplanw,normfftw,lambdaxy,aa,bb,cc,cbcvel(:,:,3),['c','c','f'],w)
-#else
-      call solver_gaussel_z(n                    ,aa,bb,cc,cbcvel(:,3,3),['c','c','f'],w)
-#endif
-#endif
-      dpdl(:) = dpdl(:) + f(:)
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
       call fillps(n,dli,dzfi,dtrki,u,v,w,pp)
       call updt_rhs_b(['c','c','c'],cbcpre,n,is_bound,rhsbp%x,rhsbp%y,rhsbp%z,pp)
@@ -452,7 +433,8 @@ program cans
       call updatep(n,dli,dzci,dzfi,alpha,pp,p)
       call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
     end do
-    dpdl(:) = -dpdl(:)*dti
+    dpdl(:)     = -dpdl(:)*dti
+    fs(1:nscal) = fs(1:nscal)*dti
     !
     ! check simulation stopping criteria
     !
@@ -518,21 +500,42 @@ program cans
         var(5:7) = [meanvelu,meanvelv,meanvelw]
         call out0d(trim(datadir)//'forcing.out',7,var)
       end if
+      !
+      do is=1,nscal
+        s => scalars(is)
+        write(scalnum,'(i3.3)') is
+        if(s%is_forced.or.abs(s%source) > 0.) then
+          meanscal = 0.
+          call bulk_mean(n,grid_vol_ratio_f,s%val,meanscal)
+          if(.not.s%is_forced) fs(:) = s%source
+          var(1:3) = [time,fs(is),meanscal]
+          call out0d(trim(datadir)//'forcing_s_'//scalnum//'.out',3,var)
+        end if
+      end do
     end if
     write(fldnum,'(i7.7)') istep
     if(iout1d > 0.and.mod(istep,max(iout1d,1)) == 0) then
       !$acc wait
       !$acc update self(u,v,w,p)
+      do is=1,nscal
+        !$acc update self(scalars(is)%val)
+      end do
       include 'out1d.h90'
     end if
     if(iout2d > 0.and.mod(istep,max(iout2d,1)) == 0) then
       !$acc wait
       !$acc update self(u,v,w,p)
+      do is=1,nscal
+        !$acc update self(scalars(is)%val)
+      end do
       include 'out2d.h90'
     end if
     if(iout3d > 0.and.mod(istep,max(iout3d,1)) == 0) then
       !$acc wait
       !$acc update self(u,v,w,p)
+      do is=1,nscal
+        !$acc update self(scalars(is)%val)
+      end do
       include 'out3d.h90'
     end if
     if(isave > 0.and.((mod(istep,max(isave,1)) == 0).or.(is_done.and..not.kill))) then
@@ -553,7 +556,10 @@ program cans
       end if
       !$acc wait
       !$acc update self(u,v,w,p)
-      call load_all('w',trim(datadir)//trim(filename),MPI_COMM_WORLD,ng,[1,1,1],lo,hi,u,v,w,p,time,istep)
+      do is=1,nscal
+        !$acc update self(scalars(is)%val)
+      end do
+      call load_all('w',trim(datadir)//trim(filename),MPI_COMM_WORLD,ng,[1,1,1],lo,hi,nscal,u,v,w,p,scalars,time,istep)
       if(.not.is_overwrite_save) then
         !
         ! fld.bin -> last checkpoint file (symbolic link)
