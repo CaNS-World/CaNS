@@ -80,7 +80,7 @@ program cans
   use mod_updatep        , only: updatep
   use mod_utils          , only: bulk_mean
 #if defined(_OPENACC)
-  use mod_utils    , only: device_memory_footprint
+  use mod_utils          , only: device_memory_footprint
 #endif
   use mod_types
   use omp_lib
