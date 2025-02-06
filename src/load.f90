@@ -12,11 +12,12 @@ module mod_load
   use mod_common_mpi, only: myid,ierr
   use mod_types
   use mod_utils, only: f_sizeof
+  use mod_scal, only: scalar
   implicit none
   private
   public load_all,io_field
   contains
-  subroutine load_all(io,filename,comm,ng,nh,lo,hi,u,v,w,p,time,istep)
+  subroutine load_all(io,filename,comm,ng,nh,lo,hi,nscal,u,v,w,p,s,time,istep)
     !
     ! reads/writes a restart file
     !
@@ -25,10 +26,13 @@ module mod_load
     character(len=*), intent(in) :: filename
     integer         , intent(in) :: comm
     integer , intent(in), dimension(3) :: ng,nh,lo,hi
+    integer , intent(in)               :: nscal
     real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: u,v,w,p
+    type(scalar), intent(inout), dimension(:) :: s
     real(rp), intent(inout) :: time
     integer , intent(inout) :: istep
     real(rp), dimension(2) :: fldinfo
+    integer :: is
     integer :: fh
     integer :: nreals_myid
     integer(kind=MPI_OFFSET_KIND) :: filesize,disp,good
@@ -41,7 +45,7 @@ module mod_load
       ! check file size first
       !
       call MPI_FILE_GET_SIZE(fh,filesize,ierr)
-      good = (product(int(ng(:),MPI_OFFSET_KIND))*4+2)*f_sizeof(1._rp)
+      good = (product(int(ng(:),MPI_OFFSET_KIND))*(4+nscal)+2)*f_sizeof(1._rp)
       if(filesize /= good) then
         if(myid == 0) print*, ''
         if(myid == 0) print*, '*** Simulation aborted due a checkpoint file with incorrect size ***'
@@ -58,6 +62,9 @@ module mod_load
       call io_field(io,fh,ng,nh,lo,hi,disp,v)
       call io_field(io,fh,ng,nh,lo,hi,disp,w)
       call io_field(io,fh,ng,nh,lo,hi,disp,p)
+      do is=1,nscal
+        call io_field(io,fh,ng,nh,lo,hi,disp,s(is)%val)
+      end do
 #else
       block
         !
@@ -86,6 +93,10 @@ module mod_load
         call transpose_to_or_from_x(io,ipencil,nh,w,tmp_x,tmp_y,tmp_z)
         call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
         call transpose_to_or_from_x(io,ipencil,nh,p,tmp_x,tmp_y,tmp_z)
+        do is=1,nscal
+          call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
+          call transpose_to_or_from_x(io,ipencil,nh,s(is)%val,tmp_x,tmp_y,tmp_z)
+        end do
         deallocate(tmp_x,tmp_y,tmp_z)
       end block
 #endif
@@ -111,6 +122,9 @@ module mod_load
       call io_field(io,fh,ng,nh,lo,hi,disp,v)
       call io_field(io,fh,ng,nh,lo,hi,disp,w)
       call io_field(io,fh,ng,nh,lo,hi,disp,p)
+      do is=1,nscal
+        call io_field(io,fh,ng,nh,lo,hi,disp,s(is)%val)
+      end do
 #else
       block
         !
@@ -139,6 +153,10 @@ module mod_load
         call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
         call transpose_to_or_from_x(io,ipencil,nh,p,tmp_x,tmp_y,tmp_z)
         call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
+        do is=1,nscal
+          call transpose_to_or_from_x(io,ipencil,nh,s(is)%val,tmp_x,tmp_y,tmp_z)
+          call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
+        end do
         deallocate(tmp_x,tmp_y,tmp_z)
       end block
 #endif
@@ -365,8 +383,8 @@ module mod_load
     !
     select case(io)
     case('r')
-      call MPI_FILE_OPEN(comm, filename, &
-           MPI_MODE_RDONLY, MPI_INFO_NULL,fh,ierr)
+      call MPI_FILE_OPEN(comm,filename, &
+                         MPI_MODE_RDONLY,MPI_INFO_NULL,fh,ierr)
       !
       ! check file size first
       !
@@ -424,8 +442,8 @@ module mod_load
       !
       ! write
       !
-      call MPI_FILE_OPEN(comm, filename                 , &
-           MPI_MODE_CREATE+MPI_MODE_WRONLY, MPI_INFO_NULL,fh,ierr)
+      call MPI_FILE_OPEN(comm,filename, &
+                         MPI_MODE_CREATE+MPI_MODE_WRONLY,MPI_INFO_NULL,fh,ierr)
       filesize = 0_MPI_OFFSET_KIND
       call MPI_FILE_SET_SIZE(fh,filesize,ierr)
       disp = 0_MPI_OFFSET_KIND

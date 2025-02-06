@@ -16,43 +16,50 @@ module mod_rk
 #if defined(_FAST_MOM_KERNELS)
   use mod_mom  , only: mom_xyz_ad
 #endif
-  use mod_scal , only: scal,cmpt_scalflux
+  use mod_scal , only: scal,cmpt_scalflux,scalar
   use mod_utils, only: bulk_mean,swap
   use mod_types
   implicit none
   private
-  public rk
+  public rk,rk_scal
   contains
   subroutine rk(rkpar,n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,visc,dt,p, &
-                is_forced,velf,bforce,u,v,w,f)
+                is_forced,velf,bforce,gacc,beta,scalars,u,v,w,f)
     !
     ! low-storage 3rd-order Runge-Kutta scheme
     ! for time integration of the momentum equations.
     !
     implicit none
-    real(rp), intent(in), dimension(2) :: rkpar
-    integer , intent(in), dimension(3) :: n
-    real(rp), intent(in) :: visc,dt
-    real(rp), intent(in   ), dimension(3) :: dli
-    real(rp), intent(in   ), dimension(0:) :: dzci,dzfi
-    real(rp), intent(in   ), dimension(0:) :: grid_vol_ratio_c,grid_vol_ratio_f
+    real(rp), intent(in   ), dimension(2)        :: rkpar
+    integer , intent(in   ), dimension(3)        :: n
+    real(rp), intent(in   )                      :: visc,dt
+    real(rp), intent(in   ), dimension(3)        :: dli
+    real(rp), intent(in   ), dimension(0:)       :: dzci,dzfi
+    real(rp), intent(in   ), dimension(0:)       :: grid_vol_ratio_c,grid_vol_ratio_f
     real(rp), intent(in   ), dimension(0:,0:,0:) :: p
     logical , intent(in   ), dimension(3)        :: is_forced
     real(rp), intent(in   ), dimension(3)        :: velf,bforce
+    real(rp), intent(in   ), dimension(3)        :: gacc
+    real(rp), intent(in   )                      :: beta
+    type(scalar), intent(in   ), target, dimension(:) :: scalars
     real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
-    real(rp), intent(out), dimension(3) :: f
-    real(rp), target     , allocatable, dimension(:,:,:), save :: dudtrk_t ,dvdtrk_t ,dwdtrk_t , &
-                                                                  dudtrko_t,dvdtrko_t,dwdtrko_t
-    real(rp), pointer    , contiguous , dimension(:,:,:), save :: dudtrk   ,dvdtrk   ,dwdtrk   , &
-                                                                  dudtrko  ,dvdtrko  ,dwdtrko
-    real(rp),              allocatable, dimension(:,:,:), save :: dudtrkd  ,dvdtrkd  ,dwdtrkd
+    real(rp), intent(out  ), dimension(3)        :: f
+    real(rp), pointer, dimension(:,:,:) :: s
+    real(rp), target       , allocatable, dimension(:,:,:), save :: dudtrk_t ,dvdtrk_t ,dwdtrk_t , &
+                                                                    dudtrko_t,dvdtrko_t,dwdtrko_t
+    real(rp), pointer      , contiguous , dimension(:,:,:), save :: dudtrk   ,dvdtrk   ,dwdtrk   , &
+                                                                    dudtrko  ,dvdtrko  ,dwdtrko
+    real(rp),                allocatable, dimension(:,:,:), save :: dudtrkd  ,dvdtrkd  ,dwdtrkd
     logical, save :: is_first = .true.
     real(rp) :: factor1,factor2,factor12
-    integer :: i,j,k
+    integer  :: i,j,k
     !
     factor1 = rkpar(1)*dt
     factor2 = rkpar(2)*dt
     factor12 = factor1 + factor2
+#if defined(_BOUSSINESQ_BUOYANCY)
+    s => scalars(1)%val
+#endif
     !
     ! initialization
     !
@@ -131,12 +138,22 @@ module mod_rk
 #else
           u(i,j,k) = u(i,j,k) + factor1*dudtrk(i,j,k) + factor2*dudtrko(i,j,k) + &
                                 factor12*(bforce(1) - dli(1)*( p(i+1,j,k)-p(i,j,k)))
+#if defined(_BOUSSINESQ_BUOYANCY)
+          u(i,j,k) = u(i,j,k) - factor12*gacc(1)*beta*0.5*(s(i+1,j,k)+s(i,j,k))
+#endif
           !
           v(i,j,k) = v(i,j,k) + factor1*dvdtrk(i,j,k) + factor2*dvdtrko(i,j,k) + &
                                 factor12*(bforce(2) - dli(2)*( p(i,j+1,k)-p(i,j,k)))
+#if defined(_BOUSSINESQ_BUOYANCY)
+          v(i,j,k) = v(i,j,k) - factor12*gacc(2)*beta*0.5*(s(i,j+1,k)+s(i,j,k))
+#endif
           !
           w(i,j,k) = w(i,j,k) + factor1*dwdtrk(i,j,k) + factor2*dwdtrko(i,j,k) + &
                                 factor12*(bforce(3) - dzci(k)*(p(i,j,k+1)-p(i,j,k)))
+#if defined(_BOUSSINESQ_BUOYANCY)
+          w(i,j,k) = w(i,j,k) - factor12*gacc(3)*beta*0.5*(s(i,j,k+1)+s(i,j,k))
+#endif
+
 #endif
 #if defined(_IMPDIFF)
           u(i,j,k) = u(i,j,k) + factor12*dudtrkd(i,j,k)
@@ -182,8 +199,17 @@ module mod_rk
       do j=1,n(2)
         do i=1,n(1)
           u(i,j,k) = u(i,j,k) + factor12*(bforce(1) - dli(1)*( p(i+1,j,k)-p(i,j,k)))
+#if defined(_BOUSSINESQ_BUOYANCY)
+          u(i,j,k) = u(i,j,k) - factor12*gacc(1)*beta*0.5*(s(i+1,j,k)+s(i,j,k))
+#endif
           v(i,j,k) = v(i,j,k) + factor12*(bforce(2) - dli(2)*( p(i,j+1,k)-p(i,j,k)))
+#if defined(_BOUSSINESQ_BUOYANCY)
+          v(i,j,k) = v(i,j,k) - factor12*gacc(2)*beta*0.5*(s(i,j+1,k)+s(i,j,k))
+#endif
           w(i,j,k) = w(i,j,k) + factor12*(bforce(3) - dzci(k)*(p(i,j,k+1)-p(i,j,k)))
+#if defined(_BOUSSINESQ_BUOYANCY)
+          w(i,j,k) = w(i,j,k) - factor12*gacc(3)*beta*0.5*(s(i,j,k+1)+s(i,j,k))
+#endif
         end do
       end do
     end do
@@ -211,79 +237,116 @@ module mod_rk
 #endif
   end subroutine rk
   !
-  subroutine rk_scal(rkpar,n,dli,l,dzci,dzfi,grid_vol_ratio_f,alpha,dt,is_bound,u,v,w, &
-                     is_forced,scalf,ssource,fluxo,s,f)
+  subroutine rk_scal(rkpar,nscal,n,dli,l,dzci,dzfi,grid_vol_ratio_f,dt,is_bound,u,v,w, &
+                     scalars)
     !
     ! low-storage 3rd-order Runge-Kutta scheme
     ! for time integration of the scalar field.
     !
-    ! n.b.: since we leverage the `save` attribute for dsdtrk*, this subroutine only supports
-    !       transport of a single scalar; extension to n arbtritrary scalars could be done,
-    !       e.g., using a loop through an array of scalar derived types, with an ASSOCIATE
-    !       statement to keep the same piece of code to for each scalar
+    ! n.b.: it would be more elegant to have this routine working for a single scalar and 
+    !       having the caller program loop over the scalars and call it, as for mometum;
+    !       however, that way it would be harder to leverage the `save` attribute in `dsdtrk*`
+    !       and the pointer swap trick to update the arrays with the previous rhs of the
+    !       scalar equation; hence, we loop over the scalars inside this subroutine
     !
     implicit none
     logical , parameter :: is_cmpt_wallflux = .false.
     real(rp), intent(in   ), dimension(2) :: rkpar
+    integer , intent(in   )               :: nscal
     integer , intent(in   ), dimension(3) :: n
     real(rp), intent(in   ), dimension(3) :: dli,l
     real(rp), intent(in   ), dimension(0:) :: dzci,dzfi
     real(rp), intent(in   ), dimension(0:) :: grid_vol_ratio_f
-    real(rp), intent(in   ) :: alpha,dt
+    real(rp), intent(in   ) :: dt
     logical , intent(in   ), dimension(0:1,3)    :: is_bound
     real(rp), intent(in   ), dimension(0:,0:,0:) :: u,v,w
-    logical , intent(in   ) :: is_forced
-    real(rp), intent(in   ) :: scalf,ssource
-    real(rp), intent(inout), dimension(3) :: fluxo
-    real(rp), intent(inout), dimension(0:,0:,0:) :: s
-    real(rp), intent(out  ) :: f
-    real(rp), target     , allocatable, dimension(:,:,:), save :: dsdtrk_t,dsdtrko_t
-    real(rp), pointer    , contiguous , dimension(:,:,:), save :: dsdtrk  ,dsdtrko
+    type(scalar), target, intent(inout), dimension(:) :: scalars
+    type(scalar), pointer :: s
+    real(rp), target       , allocatable, dimension(:,:,:,:), save :: dsdtrk_t,dsdtrko_t
+    real(rp), pointer      , contiguous , dimension(:,:,:,:), save :: dsdtrk  ,dsdtrko
+    real(rp),                allocatable, dimension(:,:,:,:), save :: dsdtrkd
     logical, save :: is_first = .true.
-    real(rp) :: factor1,factor2,factor12
-    real(rp), dimension(3) :: flux
+    real(rp) :: factor1,factor2,factor12,ff
+    real(rp), dimension(0:1,3) :: flux
     integer :: i,j,k
-    real(rp) :: mean
+    integer :: is
+    real(rp) :: mean,ss
     !
     factor1 = rkpar(1)*dt
     factor2 = rkpar(2)*dt
     factor12 = factor1 + factor2
     if(is_first) then ! leverage save attribute to allocate these arrays on the device only once
       is_first = .false.
-      allocate(dsdtrk_t(n(1),n(2),n(3)),dsdtrko_t(n(1),n(2),n(3)))
+      allocate(dsdtrk_t(n(1),n(2),n(3),nscal),dsdtrko_t(n(1),n(2),n(3),nscal))
       !$acc enter data create(dsdtrk_t,dsdtrko_t) async(1)
       !$acc kernels default(present) async(1) ! not really necessary
-      dsdtrko_t(:,:,:) = 0._rp
+      dsdtrko_t(:,:,:,:) = 0._rp
       !$acc end kernels
       dsdtrk  => dsdtrk_t
       dsdtrko => dsdtrko_t
+#if defined(_IMPDIFF)
+      allocate(dsdtrkd(n(1),n(2),n(3),nscal))
+#else
+      allocate(dsdtrkd(0,0,0,nscal))
+#endif
+      !$acc enter data create(dsdtrkd) async(1)
+      !$acc kernels default(present) async(1)
+      dsdtrkd(:,:,:,:) = 0._rp
+      !$acc end kernels
     end if
-    if(is_cmpt_wallflux) then
-      call cmpt_scalflux(n,is_bound,l,dli,dzci,dzfi,alpha,s,flux)
-      f = (factor1*sum(flux(:)/l(:)) + factor2*sum(fluxo(:)/l(:)))
-      fluxo(:) = flux(:)
-    end if
-    call scal(n(1),n(2),n(3),dli(1),dli(2),dli(3),dzci,dzfi,alpha,u,v,w,s,dsdtrk)
-    !$acc parallel loop collapse(3) default(present) async(1)
-    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
-    do k=1,n(3)
-      do j=1,n(2)
-        do i=1,n(1)
-          s(i,j,k) = s(i,j,k) + factor1*dsdtrk(i,j,k) + factor2*dsdtrko(i,j,k) + factor12*ssource
+    !
+    do is=1,nscal
+      s => scalars(is)
+      call scal(n(1),n(2),n(3),dli(1),dli(2),dli(3),dzci,dzfi,s%alpha,u,v,w,s%val,dsdtrk(:,:,:,is), &
+                dsdtrkd(:,:,:,is))
+      ss = s%source
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            s%val(i,j,k) = s%val(i,j,k) + factor1*dsdtrk(i,j,k,is) + factor2*dsdtrko(i,j,k,is) + factor12*ss
+#if defined(_IMPDIFF)
+            s%val(i,j,k) = s%val(i,j,k) + factor12*dsdtrkd(i,j,k,is)
+#endif
+          end do
         end do
       end do
+      !
+      ! compute wall scalar flux
+      !
+      if(is_cmpt_wallflux) then
+        call cmpt_scalflux(n,is_bound,l,dli,dzci,dzfi,s%alpha,s%val(:,:,:),flux)
+        s%f = (factor1*sum((  flux( 0,:) + flux( 1,:))/l(:)) + &
+               factor2*sum((s%fluxo(0,:)+s%fluxo(1,:))/l(:)))
+        s%fluxo(:,:) = flux(:,:)
+      end if
+      !
+      ! bulk scalar forcing
+      !
+      if(s%is_forced) then
+        call bulk_mean(n,grid_vol_ratio_f,s%val(:,:,:),mean)
+        s%f = s%scalf - mean
+      end if
+#if defined(_IMPDIFF)
+      !
+      ! compute rhs of Helmholtz equation
+      !
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            s%val(i,j,k) = s%val(i,j,k) - .5_rp*factor12*dsdtrkd(i,j,k,is)
+          end do
+        end do
+      end do
+#endif
     end do
     !
-    ! swap d?dtrk <-> d?dtrko
+    ! swap dsdtrk <-> dsdtrko
     !
     call swap(dsdtrk,dsdtrko)
-    !
-    ! bulk scalar forcing
-    !
-    if(is_forced) then
-      call bulk_mean(n,grid_vol_ratio_f,s,mean)
-      f = scalf - mean
-    end if
   end subroutine rk_scal
   !
   subroutine cmpt_bulk_forcing(n,is_forced,velf,grid_vol_ratio_c,grid_vol_ratio_f,u,v,w,f)
