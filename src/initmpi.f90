@@ -8,6 +8,9 @@ module mod_initmpi
   use mpi
   use decomp_2d
   use mod_common_mpi, only: myid,ierr,halo,ipencil => ipencil_axis
+#if defined(_POISSON_PCR_TDMA)
+  use mod_common_mpi, only: dinfo_ptdma
+#endif
   use mod_types
 #if defined(_OPENACC)
   use openacc
@@ -18,6 +21,9 @@ module mod_initmpi
   use mod_common_cudecomp, only: cudecomp_real_rp, &
                                  ch => handle,gd => gd_halo,gd_poi, &
                                  ap_x,ap_y,ap_z,ap_x_poi,ap_y_poi,ap_z_poi
+#if defined(_POISSON_PCR_TDMA)
+  use mod_common_cudecomp, only: gd_ptdma,ap_y_ptdma,ap_z_ptdma
+#endif
   use mod_param, only: cudecomp_t_comm_backend     ,cudecomp_h_comm_backend    , &
                        cudecomp_is_t_comm_autotune ,cudecomp_is_h_comm_autotune, &
                        cudecomp_is_t_enable_nccl   ,cudecomp_is_h_enable_nccl  , &
@@ -46,6 +52,9 @@ module mod_initmpi
     integer :: istat
     type(cudecompGridDescConfig)          :: conf,conf_poi
     type(cudecompGridDescAutotuneOptions) :: atune_conf
+#if defined(_POISSON_PCR_TDMA)
+    type(cudecompGridDescConfig)          :: conf_ptdma
+#endif
 #else
     integer :: comm_cart
 #endif
@@ -77,8 +86,8 @@ module mod_initmpi
     conf%transpose_comm_backend = cudecomp_t_comm_backend
     conf%transpose_axis_contiguous(:) = [.true.,.true.,.false.]
     conf%gdims(:)      = [2*(ng(1)/2+1),2*(ng(2)/2+1),ng(3)]
-    conf%pdims(:)      = dims(1:2)
     conf%gdims_dist(:) = ng(:)
+    conf%pdims(:)      = dims(:)
     istat = cudecompGridDescAutotuneOptionsSetDefaults(atune_conf)
     if(rp == dp) then
       cudecomp_real_rp = CUDECOMP_DOUBLE
@@ -90,15 +99,48 @@ module mod_initmpi
     atune_conf%autotune_transpose_backend = cudecomp_is_t_comm_autotune
     atune_conf%disable_nccl_backends    = .not.cudecomp_is_t_enable_nccl
     atune_conf%disable_nvshmem_backends = .not.cudecomp_is_t_enable_nvshmem
+    atune_conf%skip_threshold = 0.9
+    select case(ipencil)
+    case(1)
+      atune_conf%transpose_op_weights(1) = 1. ! multiplier for X-to-Y transpose timings
+      atune_conf%transpose_op_weights(2) = 1. ! multiplier for Y-to-Z transpose timings
+      atune_conf%transpose_op_weights(3) = 1. ! multiplier for Z-to-Y transpose timings
+      atune_conf%transpose_op_weights(4) = 1. ! multiplier for Y-to-X transpose timings
+    case(2)
+      atune_conf%transpose_op_weights(1) = 2. ! multiplier for X-to-Y transpose timings
+      atune_conf%transpose_op_weights(2) = 1. ! multiplier for Y-to-Z transpose timings
+      atune_conf%transpose_op_weights(3) = 1. ! multiplier for Z-to-Y transpose timings
+      atune_conf%transpose_op_weights(4) = 2. ! multiplier for Y-to-X transpose timings
+    case(3)
+      atune_conf%transpose_op_weights(1) = 2. ! multiplier for X-to-Y transpose timings
+      atune_conf%transpose_op_weights(2) = 2. ! multiplier for Y-to-Z transpose timings
+      atune_conf%transpose_op_weights(3) = 2. ! multiplier for Z-to-Y transpose timings
+      atune_conf%transpose_op_weights(4) = 2. ! multiplier for Y-to-X transpose timings
+    end select
+#if defined(_POISSON_PCR_TDMA)
+    atune_conf%transpose_op_weights(2) = atune_conf%transpose_op_weights(2) - 1.
+    atune_conf%transpose_op_weights(3) = atune_conf%transpose_op_weights(3) - 1.
+#endif
+    !
+    ! autotune for larger systems
+    !
     istat = cudecompGridDescCreate(ch,gd_poi,conf,atune_conf)
     conf_poi = conf
-    dims(:) = conf%pdims
+    dims(:) = conf%pdims(:)
+#if defined(_POISSON_PCR_TDMA)
+    istat = cudecompGridDescConfigSetDefaults(conf_ptdma)
+    conf_ptdma%transpose_comm_backend = conf_poi%transpose_comm_backend
+    conf_ptdma%transpose_axis_contiguous(:) = .false.
+    conf_ptdma%gdims(:) = [ng(1),ng(2),2*dims(2)]
+    conf_ptdma%pdims(:) = dims(:)
+    istat = cudecompGridDescCreate(ch,gd_ptdma,conf_ptdma)
+#endif
     !
     ! setup descriptor for halo exchanges
     !
     istat = cudecompGridDescConfigSetDefaults(conf)
-    conf%gdims(:)      = ng(:)
-    conf%pdims(:)      = dims(1:2)
+    conf%gdims(:) = ng(:)
+    conf%pdims(:) = dims(:)
     conf%halo_comm_backend = cudecomp_h_comm_backend
     conf%transpose_axis_contiguous(:) = .false.
     istat = cudecompGridDescAutotuneOptionsSetDefaults(atune_conf)
@@ -117,6 +159,9 @@ module mod_initmpi
     istat = cudecompGridDescCreate(ch,gd,conf,atune_conf)
 #endif
     call decomp_2d_init(ng(1),ng(2),ng(3),dims(1),dims(2),periods)
+#if defined(_POISSON_PCR_TDMA)
+    call decomp_info_init(ng(1),ng(2),2*dims(2),dinfo_ptdma)
+#endif
 #if !defined(_DECOMP_Y) && !defined(_DECOMP_Z)
     ipencil=1
 #elif defined(_DECOMP_Y)
@@ -136,6 +181,11 @@ module mod_initmpi
     istat = cudecompGetPencilInfo(ch,gd_poi,ap_x_poi,1)
     istat = cudecompGetPencilInfo(ch,gd_poi,ap_y_poi,2)
     istat = cudecompGetPencilInfo(ch,gd_poi,ap_z_poi,3)
+#if defined(_POISSON_PCR_TDMA)
+    ap_z  = ap_y
+    istat = cudecompGetPencilInfo(ch,gd_ptdma,ap_y_ptdma,2)
+    istat = cudecompGetPencilInfo(ch,gd_ptdma,ap_z_ptdma,3)
+#endif
     select case(ipencil)
     case(1)
       lo(:) = ap_x%lo(:)
@@ -179,9 +229,15 @@ module mod_initmpi
     n(:)       = hi(:)-lo(:)+1
     n_x_fft(:) = xsize(:)
     n_y_fft(:) = ysize(:)
+#if !defined(_POISSON_PCR_TDMA)
     lo_z(:)    = zstart(:)
     hi_z(:)    = zend(:)
     n_z(:)     = zsize(:)
+#else
+    lo_z(:)    = ystart(:)
+    hi_z(:)    = yend(:)
+    n_z(:)     = ysize(:)
+#endif
     do l=1,3
       call makehalo(l,1,n(:),halo(l))
     end do
@@ -189,6 +245,14 @@ module mod_initmpi
     call MPI_CART_SHIFT(comm_cart,0,1,nb(0,ipencil_t(1)),nb(1,ipencil_t(1)),ierr)
     call MPI_CART_SHIFT(comm_cart,1,1,nb(0,ipencil_t(2)),nb(1,ipencil_t(2)),ierr)
     where(nb(:,:) == MPI_PROC_NULL) is_bound(:,:) = .true.
+#endif
+#if defined(_POISSON_PCR_TDMA) && defined(_OPENACC)
+    !
+    ! generate global coefficient arrays a(1:ng(3)), b(1:ng(3)), c(1:ng(3)) under initsolver
+    !
+    lo_z(3)    = 1
+    hi_z(3)    = ng(3)
+    n_z(3)     = hi_z(3)-lo_z(3)+1
 #endif
   end subroutine initmpi
   !

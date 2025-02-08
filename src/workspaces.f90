@@ -7,7 +7,7 @@
 module mod_workspaces
 #if defined(_OPENACC)
   use mod_types
-  use mod_common_cudecomp, only: work,work_cuda,work_halo,work_halo_cuda
+  use mod_common_cudecomp, only: work,work_cuda,work_halo,work_halo_cuda,work_ptdma,work_ptdma_cuda
   use mod_utils, only: f_sizeof
   implicit none
   private
@@ -17,8 +17,11 @@ contains
     use mod_common_cudecomp, only: handle,gd_halo,gd_poi     , &
                                    ap_x_poi,ap_y_poi,ap_z_poi, &
                                    solver_buf_0,solver_buf_1, &
-                                   ap_z,pz_aux_1,pz_aux_2, &
+                                   ap_z,pz_aux_1, &
                                    istream_acc_queue_1
+#if defined(_POISSON_PCR_TDMA)
+    use mod_common_cudecomp, only: gd_ptdma
+#endif
     use mod_common_mpi     , only: ipencil => ipencil_axis
     use mod_fft            , only: wsize_fft
     use mod_param          , only: cudecomp_is_t_in_place,cbcpre
@@ -61,10 +64,23 @@ contains
     if(.not.cudecomp_is_t_in_place) allocate(solver_buf_1,mold=solver_buf_0)
     !$acc enter data create(solver_buf_0,solver_buf_1)
     if(cbcpre(0,3)//cbcpre(1,3) == 'PP') then
-      allocate(pz_aux_1(ap_z%shape(1),ap_z%shape(2),ap_z%shape(3)), &
-               pz_aux_2(ap_z%shape(1),ap_z%shape(2),ap_z%shape(3)))
-      !$acc enter data create(pz_aux_1,pz_aux_2)
+      allocate(pz_aux_1(ap_z%shape(1),ap_z%shape(2),ap_z%shape(3)))
+      !$acc enter data create(pz_aux_1)
     end if
+#if defined(_POISSON_PCR_TDMA)
+    if(.not.allocated(pz_aux_1)) then
+      allocate(pz_aux_1(ap_z%shape(1),ap_z%shape(2),ap_z%shape(3)))
+      !$acc enter data create(pz_aux_1)
+    end if
+    !
+    ! allocate pcr-tdma transpose workspaces: separate buffer is needed because work is used along with work_ptdma
+    !
+    istat = cudecompGetTransposeWorkspaceSize(handle,gd_ptdma,wsize)
+    allocate(work_ptdma(wsize))
+    istat = cudecompMalloc(handle,gd_ptdma,work_ptdma_cuda,wsize)
+    call acc_map_data(work_ptdma,work_ptdma_cuda,wsize*f_sizeof(work_ptdma(1)))
+#endif
+    !
     istream_acc_queue_1 = acc_get_cuda_stream(1) ! fetch CUDA stream of OpenACC queue 1
   end subroutine init_wspace_arrays
   subroutine set_cufft_wspace(arrplan,istream)
