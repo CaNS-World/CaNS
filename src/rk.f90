@@ -153,7 +153,7 @@ module mod_rk
 #if defined(_BOUSSINESQ_BUOYANCY)
           w(i,j,k) = w(i,j,k) - factor12*gacc(3)*beta*0.5*(s(i,j,k+1)+s(i,j,k))
 #endif
-
+          !
 #endif
 #if defined(_IMPDIFF)
           u(i,j,k) = u(i,j,k) + factor12*dudtrkd(i,j,k)
