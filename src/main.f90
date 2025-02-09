@@ -51,7 +51,7 @@ program cans
   use mod_param          , only: ng,l,dl,dli, &
                                  gtype,gr, &
                                  cfl,dtmax,dt_f, &
-                                 visc, &
+                                 visc,alpha_max, &
                                  inivel,is_wallturb, &
                                  nstep,time_max,tw_max,stop_type, &
                                  restart,is_overwrite_save,nsaves_max, &
@@ -375,7 +375,7 @@ program cans
     include 'out3d.h90'
   end if
   !
-  call chkdt(n,dl,dzci,dzfi,visc,u,v,w,dt_cfl)
+  call chkdt(n,dl,dzci,dzfi,visc,alpha_max,u,v,w,dt_cfl)
   dt = merge(dt_f,min(cfl*dt_cfl,dtmax),dt_f > 0.)
   if(myid == 0) print*, 'dt_cfl = ', dt_cfl, 'dt = ', dt
   dti = 1./dt
@@ -450,7 +450,7 @@ program cans
     end if
     if(icheck > 0.and.mod(istep,max(icheck,1)) == 0) then
       if(myid == 0) print*, 'Checking stability and divergence...'
-      call chkdt(n,dl,dzci,dzfi,visc,u,v,w,dt_cfl)
+      call chkdt(n,dl,dzci,dzfi,visc,alpha_max,u,v,w,dt_cfl)
       dt = merge(dt_f,min(cfl*dt_cfl,dtmax),dt_f > 0.)
       if(myid == 0) print*, 'dt_cfl = ', dt_cfl, 'dt = ', dt
       if(dt_cfl < small) then
