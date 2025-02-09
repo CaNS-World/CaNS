@@ -155,7 +155,7 @@ module mod_output
   end subroutine out1d
   !
   subroutine out2d(fname,inorm,islice,p)
-    use mod_common_mpi, only: ipencil => ipencil_axis
+    use mod_param, only: ipencil => ipencil_axis
     !
     ! saves a planar slice of a scalar field into a binary file
     !
@@ -182,7 +182,7 @@ module mod_output
   end subroutine out2d
   !
   subroutine out3d(fname,nskip,p)
-    use mod_common_mpi, only: ipencil => ipencil_axis
+    use mod_param, only: ipencil => ipencil_axis
     !
     ! saves a 3D scalar field into a binary file
     !

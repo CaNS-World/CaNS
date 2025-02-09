@@ -25,17 +25,15 @@ module mod_scal
     real(rp) :: scalf
     real(rp) :: f
     real(rp), dimension(0:1,3) :: fluxo
-#if defined(_IMPDIFF)
 #if !defined(_OPENACC)
-      type(C_PTR), dimension(2,2) :: arrplan
+    type(C_PTR), dimension(2,2) :: arrplan
 #else
-      integer    , dimension(2,2) :: arrplan
+    integer    , dimension(2,2) :: arrplan
 #endif
-      real(rp), allocatable, dimension(:,:) :: lambdaxy
-      real(rp), allocatable, dimension(:) :: a,b,c
-      real(rp) :: normfft
-      type(rhs_bound) :: rhsb
-#endif
+    real(rp), allocatable, dimension(:,:) :: lambdaxy
+    real(rp), allocatable, dimension(:) :: a,b,c
+    real(rp) :: normfft
+    type(rhs_bound) :: rhsb
   end type scalar
   !
   contains
@@ -218,7 +216,8 @@ module mod_scal
   end subroutine bulk_forcing_s
   !
   subroutine initialize_scalars(scalars,nscal,n,n_z)
-    use mod_param, only: alphai,iniscal,cbcscal,bcscal,ssource,is_sforced,scalf
+    use mod_param, only: alphai,iniscal,cbcscal,bcscal,ssource,is_sforced,scalf, &
+                         is_impdiff
     !
     ! initializes/allocates members of an array of `nscal` scalar derived types
     !
@@ -228,15 +227,15 @@ module mod_scal
     integer :: iscal
     do iscal=1,nscal
       allocate(scalars(iscal)%val(0:n(1)+1,0:n(2)+1,0:n(3)+1))
-#if defined(_IMPDIFF)
-      allocate(scalars(iscal)%lambdaxy(n_z(1),n_z(2)))
-      allocate(scalars(iscal)%a(n_z(3)), &
-               scalars(iscal)%b(n_z(3)), &
-               scalars(iscal)%c(n_z(3)))
-      allocate(scalars(iscal)%rhsb%x(n(2),n(3),0:1), &
-               scalars(iscal)%rhsb%y(n(1),n(3),0:1), &
-               scalars(iscal)%rhsb%z(n(1),n(2),0:1))
-#endif
+      if(is_impdiff) then
+        allocate(scalars(iscal)%lambdaxy(n_z(1),n_z(2)))
+        allocate(scalars(iscal)%a(n_z(3)), &
+                 scalars(iscal)%b(n_z(3)), &
+                 scalars(iscal)%c(n_z(3)))
+        allocate(scalars(iscal)%rhsb%x(n(2),n(3),0:1), &
+                 scalars(iscal)%rhsb%y(n(1),n(3),0:1), &
+                 scalars(iscal)%rhsb%z(n(1),n(2),0:1))
+      end if
       scalars(iscal)%alpha     = alphai(iscal)**(-1)
       scalars(iscal)%ini       = iniscal(iscal)
       scalars(iscal)%cbc       = cbcscal(:,:,iscal)
