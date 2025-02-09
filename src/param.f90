@@ -74,6 +74,7 @@ real(rp)          , protected, allocatable, dimension(:,:,:) ::  bcscal ! size (
 real(rp), protected, allocatable, dimension(:) :: ssource
 logical , protected, allocatable, dimension(:) :: is_sforced
 real(rp), protected, allocatable, dimension(:) :: scalf
+real(rp), protected :: alpha_max
 !
 #if defined(_OPENACC)
 !
@@ -91,7 +92,6 @@ contains
     implicit none
     character(len=*), parameter :: input_file = 'input.nml'
     integer, intent(in) :: myid
-    integer :: is
     integer :: iunit,ierr
     character(len=1024) :: c_iomsg
     namelist /dns/ &
@@ -248,6 +248,9 @@ contains
       else
         nscal = 0 ! negative values equivalent to nscal = 0
       end if
+      alpha_max = huge(1._rp)
+      alpha_max = minval(alphai(1:nscal))
+      alpha_max = alpha_max**(-1)
 #if defined(_BOUSSINESQ_BUOYANCY)
       if (nscal == 0) then
         if(myid == 0) print*, 'Error reading the input file: `BOUSSINESQ_BUOYANCY` requires `nscal > 0`.'
