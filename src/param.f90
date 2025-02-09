@@ -85,8 +85,30 @@ logical, protected :: cudecomp_is_t_comm_autotune ,cudecomp_is_h_comm_autotune ,
                       cudecomp_is_t_enable_nccl   ,cudecomp_is_h_enable_nccl   , &
                       cudecomp_is_t_enable_nvshmem,cudecomp_is_h_enable_nvshmem, &
                       cudecomp_is_t_in_place
-logical :: exists
 #endif
+!
+! other options -- currently triggered by CPP macros
+!
+!  other options: debugging/benchmarking
+!
+logical, protected :: is_debug = .true., is_debug_poisson = .false., &
+                      is_timing = .true., &
+                      is_mask_divergence_check = .false.
+!
+!  other options: domain decomposition
+!
+integer, protected :: ipencil_axis = 1
+!
+!  other options: numerics
+!
+logical, protected :: is_impdiff = .false., is_impdiff_1d = .false., &
+                      is_poisson_pcr_tdma = .false., &
+                      is_fast_mom_kernels = .true., &
+                      is_gridpoint_natural_channel = .false.
+!
+!  other options: physics
+!
+logical, protected :: is_boussinesq_buoyancy = .false.
 contains
   subroutine read_input(myid)
     use mpi
@@ -253,6 +275,89 @@ contains
       call MPI_FINALIZE(ierr)
       error stop
     end if
+<<<<<<< HEAD
+||||||| parent of cb92251 (Reduce number of CPP macros.)
+    close(iunit)
+  else
+    nscal = 0 ! negative values equivalent to nscal = 0
+  end if
+  alpha_max = huge(1._rp)
+  alpha_max = minval(alphai(1:nscal))
+  alpha_max = alpha_max**(-1)
+#if defined(_BOUSSINESQ_BUOYANCY)
+  if (nscal == 0) then
+    if(myid == 0) print*, 'Error reading the input file: `BOUSSINESQ_BUOYANCY` requires `nscal > 0`.'
+    if(myid == 0) print*, 'Aborting...'
+    call MPI_FINALIZE(ierr)
+    error stop
+  end if
+=======
+    close(iunit)
+  else
+    nscal = 0 ! negative values equivalent to nscal = 0
+  end if
+  alpha_max = huge(1._rp)
+  alpha_max = minval(alphai(1:nscal))
+  alpha_max = alpha_max**(-1)
+    !
+    ! other options: debugging/benchmarking
+    !
+#if defined(_TIMING)
+    is_timing = .true.
+>>>>>>> cb92251 (Reduce number of CPP macros.)
 #endif
+#if !defined(_DEBUG)
+    is_debug = .false.
+#endif
+#if defined(_DEBUG_POISSON)
+    is_debug_poisson = .true.
+#endif
+#if !defined(_TIMING)
+    is_timing = .false.
+#endif
+#if defined(_MASK_DIVERGENCE_CHECK)
+    is_mask_divergence_check = .true.
+#endif
+    !
+    ! other options: domain decomposition
+    !
+#if   defined(_DECOMP_X)
+    ipencil_axis = 1
+#elif defined(_DECOMP_Y)
+    ipencil_axis = 2
+#elif defined(_DECOMP_Z)
+    ipencil_axis = 3
+#endif
+    !
+    ! other options: numerics
+    !
+#if defined(_IMPDIFF)
+    is_impdiff = .true.
+#endif
+#if defined(_IMPDIFF_1D)
+    is_impdiff    = .true.
+    is_impdiff_1d = .true.
+#endif
+#if defined(_POISSON_PCR_TDMA)
+    is_poisson_pcr_tdma = .true.
+#endif
+#define _FAST_MOM_KERNELS
+#if !defined(_FAST_MOM_KERNELS)
+    is_fast_mom_kernels = .false.
+#endif
+#if defined(_GRIDPOINT_NATURAL_CHANNEL)
+    is_gridpoint_natural_channel = .true.
+#endif
+    !
+    ! other options: physics
+    !
+    if(is_boussinesq_buoyancy) then
+      if(nscal == 0) then
+        if(myid == 0) print*, 'Error reading the input file: `BOUSSINESQ_BUOYANCY` requires `nscal > 0`.'
+        if(myid == 0) print*, 'Aborting...'
+        call MPI_FINALIZE(ierr)
+        error stop
+      end if
+    end if
   end subroutine read_input
 end module mod_param

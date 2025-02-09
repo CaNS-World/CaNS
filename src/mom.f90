@@ -13,12 +13,10 @@ module mod_mom
   public momx_a,momy_a,momz_a, &
          momx_d,momy_d,momz_d, &
          momx_p,momy_p,momz_p, &
-         cmpt_wallshear,bulk_forcing
-#if defined(_IMPDIFF_1D)
-  public momx_d_xy,momy_d_xy,momz_d_xy, &
-         momx_d_z ,momy_d_z ,momz_d_z
-#endif
-  public mom_xyz_ad
+         cmpt_wallshear,bulk_forcing, &
+         momx_d_xy,momy_d_xy,momz_d_xy, &
+         momx_d_z ,momy_d_z ,momz_d_z, &
+         mom_xyz_ad
   contains
   !
   subroutine momx_a(nx,ny,nz,dxi,dyi,dzfi,u,v,w,dudt)
@@ -270,7 +268,6 @@ module mod_mom
     end do
   end subroutine momz_p
   !
-#if defined(_IMPDIFF_1D)
   subroutine momx_d_z(nx,ny,nz,dzci,dzfi,visc,u,dudt)
     implicit none
     integer , intent(in) :: nx,ny,nz
@@ -420,7 +417,6 @@ module mod_mom
       end do
     end do
   end subroutine momz_d_xy
-#endif
   !
   subroutine cmpt_wallshear(n,is_cmpt,is_bound,l,dli,dzci,dzfi,visc,u,v,w,taux,tauy,tauz)
     use mod_param, only: cbcpre
