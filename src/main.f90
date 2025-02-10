@@ -398,9 +398,10 @@ program cans
     do irk=1,3
       dtrk = sum(rkcoeff(:,irk))*dt
       dtrki = dtrk**(-1)
-      call rk_scal(rkcoeff(:,irk),nscal,n,dli,l,dzci,dzfi,grid_vol_ratio_f,dt,is_bound,u,v,w,scalars)
       do is=1,nscal
         s => scalars(is)
+        call rk_scal(rkcoeff(:,irk),is,nscal,n,dli,l,dzci,dzfi,grid_vol_ratio_f,s%alpha,dt,is_bound,u,v,w, &
+                     s%is_forced,s%scalf,s%source,s%fluxo,s%val,s%f)
         call bulk_forcing_s(n,s%is_forced,s%f,s%val)
         fs(is) = fs(is) + s%f
 #if defined(_IMPDIFF)
