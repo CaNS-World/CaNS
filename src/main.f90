@@ -126,7 +126,7 @@ program cans
 #endif
   real(rp) :: meanscal
   real(rp), allocatable, dimension(:) :: fs
-  integer :: is
+  integer :: iscal
   !
   !real(rp), allocatable, dimension(:) :: var
   real(rp), dimension(42) :: var
@@ -282,8 +282,8 @@ program cans
                   lambdaxyv,['c','f','c'],av,bv,cv,arrplanv,normfftv,rhsbv%x,rhsbv%y,rhsbv%z)
   call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3), &
                   lambdaxyw,['c','c','f'],aw,bw,cw,arrplanw,normfftw,rhsbw%x,rhsbw%y,rhsbw%z)
-  do is=1,nscal
-    s => scalars(is)
+  do iscal=1,nscal
+    s => scalars(iscal)
     call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,s%cbc,s%bc, &
                     s%lambdaxy,['c','c','c'],s%a,s%b,s%c,s%arrplan,s%normfft, &
                     s%rhsb%x,s%rhsb%y,s%rhsb%z)
@@ -294,8 +294,8 @@ program cans
   call fftend(arrplanv)
   call fftend(arrplanw)
   deallocate(rhsbu%x,rhsbu%y,rhsbv%x,rhsbv%y,rhsbw%x,rhsbw%y)
-  do is=1,nscal
-    s => scalars(is)
+  do iscal=1,nscal
+    s => scalars(iscal)
     deallocate(s%rhsb%x,s%rhsb%y)
     deallocate(s%lambdaxy)
     call fftend(s%arrplan)
@@ -305,8 +305,8 @@ program cans
   !$acc enter data copyin(rhsbu,rhsbu%x,rhsbu%y,rhsbu%z) async
   !$acc enter data copyin(rhsbv,rhsbv%x,rhsbv%y,rhsbv%z) async
   !$acc enter data copyin(rhsbw,rhsbw%x,rhsbw%y,rhsbw%z) async
-  do is=1,nscal
-    s => scalars(is)
+  do iscal=1,nscal
+    s => scalars(iscal)
     !$acc enter data copyin(s%lambdaxy,s%a,s%b,s%c) async
     !$acc enter data copyin(s%rhsb,s%rhsb%x,s%rhsb%y,s%rhsb%z) async
   end do
@@ -336,8 +336,8 @@ program cans
     time = 0.
     call initflow(inivel,bcvel,ng,lo,l,dl,zc,zf,dzc,dzf,visc, &
                   is_forced,velf,bforce,is_wallturb,u,v,w,p)
-    do is=1,nscal
-      s => scalars(is)
+    do iscal=1,nscal
+      s => scalars(iscal)
       call initscal(s%ini,s%bc,ng,lo,l,dl,zc,zf,dzc,dzf,s%alpha, &
                     s%is_forced,s%scalf,s%source,is_wallturb,s%val)
     end do
@@ -349,8 +349,8 @@ program cans
   !$acc enter data copyin(u,v,w,p) create(pp)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
   call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
-  do is=1,nscal
-    s => scalars(is)
+  do iscal=1,nscal
+    s => scalars(iscal)
     !$acc enter data copyin(s%val) async(1)
     call boundp(s%cbc,n,s%bc,nb,is_bound,dl,dzc,s%val)
   end do
@@ -361,8 +361,8 @@ program cans
   write(fldnum,'(i7.7)') istep
   !$acc wait ! not needed but to prevent possible future issues
   !$acc update self(u,v,w,p)
-  do is=1,nscal
-    !$acc update self(scalars(is)%val)
+  do iscal=1,nscal
+    !$acc update self(scalars(iscal)%val)
   end do
   if(iout1d > 0.and.mod(istep,max(iout1d,1)) == 0) then
     include 'out1d.h90'
@@ -398,12 +398,12 @@ program cans
     do irk=1,3
       dtrk = sum(rkcoeff(:,irk))*dt
       dtrki = dtrk**(-1)
-      do is=1,nscal
-        s => scalars(is)
-        call rk_scal(rkcoeff(:,irk),is,nscal,n,dli,l,dzci,dzfi,grid_vol_ratio_f,s%alpha,dt,is_bound,u,v,w, &
+      do iscal=1,nscal
+        s => scalars(iscal)
+        call rk_scal(rkcoeff(:,irk),iscal,nscal,n,dli,l,dzci,dzfi,grid_vol_ratio_f,s%alpha,dt,is_bound,u,v,w, &
                      s%is_forced,s%scalf,s%source,s%fluxo,s%val,s%f)
         call bulk_forcing_s(n,s%is_forced,s%f,s%val)
-        fs(is) = fs(is) + s%f
+        fs(iscal) = fs(iscal) + s%f
 #if defined(_IMPDIFF)
         call solve_helmholtz(n,ng,s%arrplan,s%normfft,-0.5*s%alpha*dtrk, &
                              s%lambdaxy,s%a,s%b,s%c,s%rhsb%x,s%rhsb%y,s%rhsb%z,is_bound,s%cbc,['c','c','c'],s%val)
@@ -501,14 +501,14 @@ program cans
         call out0d(trim(datadir)//'forcing.out',7,var)
       end if
       !
-      do is=1,nscal
-        s => scalars(is)
-        write(scalnum,'(i3.3)') is
+      do iscal=1,nscal
+        s => scalars(iscal)
+        write(scalnum,'(i3.3)') iscal
         if(s%is_forced.or.abs(s%source) > 0.) then
           meanscal = 0.
           call bulk_mean(n,grid_vol_ratio_f,s%val,meanscal)
           if(.not.s%is_forced) fs(:) = s%source
-          var(1:3) = [time,fs(is),meanscal]
+          var(1:3) = [time,fs(iscal),meanscal]
           call out0d(trim(datadir)//'forcing_s_'//scalnum//'.out',3,var)
         end if
       end do
@@ -517,24 +517,24 @@ program cans
     if(iout1d > 0.and.mod(istep,max(iout1d,1)) == 0) then
       !$acc wait
       !$acc update self(u,v,w,p)
-      do is=1,nscal
-        !$acc update self(scalars(is)%val)
+      do iscal=1,nscal
+        !$acc update self(scalars(iscal)%val)
       end do
       include 'out1d.h90'
     end if
     if(iout2d > 0.and.mod(istep,max(iout2d,1)) == 0) then
       !$acc wait
       !$acc update self(u,v,w,p)
-      do is=1,nscal
-        !$acc update self(scalars(is)%val)
+      do iscal=1,nscal
+        !$acc update self(scalars(iscal)%val)
       end do
       include 'out2d.h90'
     end if
     if(iout3d > 0.and.mod(istep,max(iout3d,1)) == 0) then
       !$acc wait
       !$acc update self(u,v,w,p)
-      do is=1,nscal
-        !$acc update self(scalars(is)%val)
+      do iscal=1,nscal
+        !$acc update self(scalars(iscal)%val)
       end do
       include 'out3d.h90'
     end if
@@ -556,8 +556,8 @@ program cans
       end if
       !$acc wait
       !$acc update self(u,v,w,p)
-      do is=1,nscal
-        !$acc update self(scalars(is)%val)
+      do iscal=1,nscal
+        !$acc update self(scalars(iscal)%val)
       end do
       call load_all('w',trim(datadir)//trim(filename),MPI_COMM_WORLD,ng,[1,1,1],lo,hi,nscal,u,v,w,p,scalars,time,istep)
       if(.not.is_overwrite_save) then

@@ -32,7 +32,7 @@ module mod_load
     real(rp), intent(inout) :: time
     integer , intent(inout) :: istep
     real(rp), dimension(2) :: fldinfo
-    integer :: is
+    integer :: iscal
     integer :: fh
     integer :: nreals_myid
     integer(kind=MPI_OFFSET_KIND) :: filesize,disp,good
@@ -62,8 +62,8 @@ module mod_load
       call io_field(io,fh,ng,nh,lo,hi,disp,v)
       call io_field(io,fh,ng,nh,lo,hi,disp,w)
       call io_field(io,fh,ng,nh,lo,hi,disp,p)
-      do is=1,nscal
-        call io_field(io,fh,ng,nh,lo,hi,disp,s(is)%val)
+      do iscal=1,nscal
+        call io_field(io,fh,ng,nh,lo,hi,disp,s(iscal)%val)
       end do
 #else
       block
@@ -93,9 +93,9 @@ module mod_load
         call transpose_to_or_from_x(io,ipencil,nh,w,tmp_x,tmp_y,tmp_z)
         call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
         call transpose_to_or_from_x(io,ipencil,nh,p,tmp_x,tmp_y,tmp_z)
-        do is=1,nscal
+        do iscal=1,nscal
           call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
-          call transpose_to_or_from_x(io,ipencil,nh,s(is)%val,tmp_x,tmp_y,tmp_z)
+          call transpose_to_or_from_x(io,ipencil,nh,s(iscal)%val,tmp_x,tmp_y,tmp_z)
         end do
         deallocate(tmp_x,tmp_y,tmp_z)
       end block
@@ -122,8 +122,8 @@ module mod_load
       call io_field(io,fh,ng,nh,lo,hi,disp,v)
       call io_field(io,fh,ng,nh,lo,hi,disp,w)
       call io_field(io,fh,ng,nh,lo,hi,disp,p)
-      do is=1,nscal
-        call io_field(io,fh,ng,nh,lo,hi,disp,s(is)%val)
+      do iscal=1,nscal
+        call io_field(io,fh,ng,nh,lo,hi,disp,s(iscal)%val)
       end do
 #else
       block
@@ -153,8 +153,8 @@ module mod_load
         call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
         call transpose_to_or_from_x(io,ipencil,nh,p,tmp_x,tmp_y,tmp_z)
         call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
-        do is=1,nscal
-          call transpose_to_or_from_x(io,ipencil,nh,s(is)%val,tmp_x,tmp_y,tmp_z)
+        do iscal=1,nscal
+          call transpose_to_or_from_x(io,ipencil,nh,s(iscal)%val,tmp_x,tmp_y,tmp_z)
           call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
         end do
         deallocate(tmp_x,tmp_y,tmp_z)

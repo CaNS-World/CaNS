@@ -299,17 +299,19 @@ module mod_rk
       dsdtrk(iscal)%s  => dsdtrk_t(iscal)%s
       dsdtrko(iscal)%s => dsdtrko_t(iscal)%s
       !$acc enter data attach(dsdtrk(iscal)%s,dsdtrko(iscal)%s) async(1)
-#if defined(_IMPDIFF)
       if(.not.allocated(dsdtrkd)) then
         allocate(dsdtrkd(nscal))
         !$acc enter data create(dsdtrkd) async(1)
       end if
-      allocate(dsdtrkd(nscal)%s(n(1),n(2),n(3)))
+#if defined(_IMPDIFF)
+      allocate(dsdtrkd(iscal)%s(n(1),n(2),n(3)))
+#else
+      allocate(dsdtrkd(iscal)%s(0,0,0))
+#endif
       !$acc enter data create(dsdtrkd(iscal)%s) async(1)
       !$acc kernels default(present) async(1)
       dsdtrkd(iscal)%s(:,:,:) = 0._rp
       !$acc end kernels
-#endif
     end if
     !
     call scal(n(1),n(2),n(3),dli(1),dli(2),dli(3),dzci,dzfi,alpha,u,v,w,s,dsdtrk(iscal)%s, &
