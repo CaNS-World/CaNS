@@ -438,7 +438,7 @@ module mod_rk
        f(:) = f_aux(:)
     else
        f(:) = f(:) + f_aux(:)
-    endif
+    end if
 #endif
 #endif
   end subroutine cmpt_bulk_forcing_alternative
