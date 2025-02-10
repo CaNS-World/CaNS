@@ -224,25 +224,25 @@ module mod_scal
     implicit none
     type(scalar), intent(inout), dimension(:) :: scalars
     integer     , intent(in   ) :: nscal,n(3),n_z(3)
-    integer :: is
-    do is=1,nscal
-      allocate(scalars(is)%val(0:n(1)+1,0:n(2)+1,0:n(3)+1))
+    integer :: iscal
+    do iscal=1,nscal
+      allocate(scalars(iscal)%val(0:n(1)+1,0:n(2)+1,0:n(3)+1))
 #if defined(_IMPDIFF)
-      allocate(scalars(is)%lambdaxy(n_z(1),n_z(2)))
-      allocate(scalars(is)%a(n_z(3)), &
-               scalars(is)%b(n_z(3)), &
-               scalars(is)%c(n_z(3)))
-      allocate(scalars(is)%rhsb%x(n(2),n(3),0:1), &
-               scalars(is)%rhsb%y(n(1),n(3),0:1), &
-               scalars(is)%rhsb%z(n(1),n(2),0:1))
+      allocate(scalars(iscal)%lambdaxy(n_z(1),n_z(2)))
+      allocate(scalars(iscal)%a(n_z(3)), &
+               scalars(iscal)%b(n_z(3)), &
+               scalars(iscal)%c(n_z(3)))
+      allocate(scalars(iscal)%rhsb%x(n(2),n(3),0:1), &
+               scalars(iscal)%rhsb%y(n(1),n(3),0:1), &
+               scalars(iscal)%rhsb%z(n(1),n(2),0:1))
 #endif
-      scalars(is)%alpha     = alphai(is)**(-1)
-      scalars(is)%ini       = iniscal(is)
-      scalars(is)%cbc       = cbcscal(:,:,is)
-      scalars(is)%bc        = bcscal(:,:,is)
-      scalars(is)%source    = ssource(is)
-      scalars(is)%is_forced = is_sforced(is)
-      scalars(is)%scalf     = scalf(is)
+      scalars(iscal)%alpha     = alphai(iscal)**(-1)
+      scalars(iscal)%ini       = iniscal(iscal)
+      scalars(iscal)%cbc       = cbcscal(:,:,iscal)
+      scalars(iscal)%bc        = bcscal(:,:,iscal)
+      scalars(iscal)%source    = ssource(iscal)
+      scalars(iscal)%is_forced = is_sforced(iscal)
+      scalars(iscal)%scalf     = scalf(iscal)
     end do
   end subroutine initialize_scalars
 end module mod_scal
