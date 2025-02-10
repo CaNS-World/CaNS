@@ -464,7 +464,7 @@ module mod_initflow
       z = zc(k)*2.*retau
       if(z >= retau) z = 2.*retau-z
       p(k) = 2.5*log(z) + 5.5
-      if (z <= 11.6) p(k)=z
+      if(z <= 11.6 ) p(k)=z
     end do
   end subroutine log_profile
   !
