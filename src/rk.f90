@@ -284,7 +284,6 @@ module mod_rk
       !$acc kernels default(present) async(1)
       dsdtrkd(iscal)%s(:,:,:) = 0._rp
       !$acc end kernels
-#endif
     end if
     !
     call scal(n(1),n(2),n(3),dli(1),dli(2),dli(3),dzci,dzfi,alpha,u,v,w,s,dsdtrk(iscal)%s, &
