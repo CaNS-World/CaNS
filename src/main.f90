@@ -106,7 +106,6 @@ program cans
   real(rp), allocatable, dimension(:) :: au,av,aw,bu,bv,bw,cu,cv,cw
   real(rp) :: normfftu,normfftv,normfftw
   type(rhs_bound) :: rhsbu,rhsbv,rhsbw
-  real(rp), allocatable, dimension(:,:,:) :: rhsbx,rhsby,rhsbz
 #endif
   real(rp) :: dt,dti,dt_cfl,time,dtrk,dtrki,divtot,divmax
   integer :: irk,istep
