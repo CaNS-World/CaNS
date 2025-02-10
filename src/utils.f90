@@ -11,9 +11,6 @@ module mod_utils
 #if defined(_OPENACC)
   public device_memory_footprint
 #endif
-  interface swap
-    module procedure swap_3d,swap_4d
-  end interface
 contains
   subroutine bulk_mean(n,grid_vol_ratio,p,mean)
     !
@@ -51,7 +48,7 @@ contains
     class(*), intent(in) :: val
     isize = storage_size(val)/8
   end function f_sizeof
-  subroutine swap_3d(arr1,arr2)
+  subroutine swap(arr1,arr2)
     use mod_types, only: rp
     implicit none
     real(rp), intent(inout), pointer, contiguous, dimension(:,:,:) :: arr1,arr2
@@ -59,16 +56,7 @@ contains
     tmp  => arr1
     arr1 => arr2
     arr2 => tmp
-  end subroutine swap_3d
-  subroutine swap_4d(arr1,arr2)
-    use mod_types, only: rp
-    implicit none
-    real(rp), intent(inout), pointer, contiguous, dimension(:,:,:,:) :: arr1,arr2
-    real(rp),                pointer, contiguous, dimension(:,:,:,:) :: tmp
-    tmp  => arr1
-    arr1 => arr2
-    arr2 => tmp
-  end subroutine swap_4d
+  end subroutine swap
 #if defined(_OPENACC)
   function device_memory_footprint(n,n_z,nscal) result(itotal)
     !
