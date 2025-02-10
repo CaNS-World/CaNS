@@ -2,7 +2,7 @@
 ng(1:3) = 128, 2, 128
 l(1:3)  = 1., 0.015625, 1.
 gtype = 1, gr = 0.
-cfl = 0.95, dtmin = 1.e9
+cfl = 0.95, dtmax = 1.e9
 visci = 1186.78165819
 inivel = 'zer'
 is_wallturb = F
