@@ -38,6 +38,7 @@ module mod_scal
   !
   contains
   subroutine scal(nx,ny,nz,dxi,dyi,dzi,dzci,dzfi,visc,u,v,w,s,dsdt,dsdtd)
+    use mod_param, only: is_impdiff,is_impdiff_1d
     !
     ! computes convective and diffusive fluxes
     !
@@ -79,16 +80,16 @@ module mod_scal
           dsdtd_xy = (dsdxp-dsdxm)*visc*dxi + &
                      (dsdyp-dsdym)*visc*dyi
           dsdtd_z  = (dsdzp-dsdzm)*visc*dzfi(k)
-#if defined(_IMPDIFF)
-#if defined(_IMPDIFF_1D)
-          dsdt(i,j,k)  = dsdt(i,j,k) + dsdtd_xy
-          dsdtd(i,j,k) = dsdtd_z
-#else
-          dsdtd(i,j,k) = dsdtd_xy + dsdtd_z
-#endif
-#else
-          dsdt(i,j,k)  = dsdt(i,j,k) + dsdtd_xy + dsdtd_z
-#endif
+          if(is_impdiff) then
+            if(is_impdiff_1d) then
+              dsdt(i,j,k)  = dsdt(i,j,k) + dsdtd_xy
+              dsdtd(i,j,k) = dsdtd_z
+            else
+              dsdtd(i,j,k) = dsdtd_xy + dsdtd_z
+            end if
+          else
+            dsdt(i,j,k)  = dsdt(i,j,k) + dsdtd_xy + dsdtd_z
+          end if
         end do
       end do
     end do

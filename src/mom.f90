@@ -628,6 +628,7 @@ module mod_mom
   end subroutine bulk_forcing
   !
   subroutine mom_xyz_ad(nx,ny,nz,dxi,dyi,dzci,dzfi,visc,u,v,w,dudt,dvdt,dwdt,dudtd,dvdtd,dwdtd)
+    use mod_param, only: is_impdiff,is_impdiff_1d
     !
     ! lump all r.h.s. of momentum terms (excluding pressure) into a single fast kernel
     !
@@ -815,33 +816,33 @@ module mod_mom
                               -(uwip -uwim )*dxi - &
                                (vwjp -vwjm )*dyi - &
                                (wwkp -wwkm )*dzci(k)
-#if defined(_IMPDIFF)
-#if defined(_IMPDIFF_1D)
-          dudt_s = dudt_s + dudtd_xy_s
-          dvdt_s = dvdt_s + dvdtd_xy_s
-          dwdt_s = dwdt_s + dwdtd_xy_s
-          dudtd_s = dudtd_z_s
-          dvdtd_s = dvdtd_z_s
-          dwdtd_s = dwdtd_z_s
-#else
-          dudtd_s = dudtd_xy_s + dudtd_z_s
-          dvdtd_s = dvdtd_xy_s + dvdtd_z_s
-          dwdtd_s = dwdtd_xy_s + dwdtd_z_s
-#endif
-          dudt( i,j,k) = dudt_s
-          dvdt( i,j,k) = dvdt_s
-          dwdt( i,j,k) = dwdt_s
-          dudtd(i,j,k) = dudtd_s
-          dvdtd(i,j,k) = dvdtd_s
-          dwdtd(i,j,k) = dwdtd_s
-#else
-          dudt_s = dudt_s + dudtd_xy_s + dudtd_z_s
-          dvdt_s = dvdt_s + dvdtd_xy_s + dvdtd_z_s
-          dwdt_s = dwdt_s + dwdtd_xy_s + dwdtd_z_s
-          dudt(i,j,k) = dudt_s
-          dvdt(i,j,k) = dvdt_s
-          dwdt(i,j,k) = dwdt_s
-#endif
+          if(is_impdiff) then
+            if(is_impdiff_1d) then
+              dudt_s = dudt_s + dudtd_xy_s
+              dvdt_s = dvdt_s + dvdtd_xy_s
+              dwdt_s = dwdt_s + dwdtd_xy_s
+              dudtd_s = dudtd_z_s
+              dvdtd_s = dvdtd_z_s
+              dwdtd_s = dwdtd_z_s
+            else
+              dudtd_s = dudtd_xy_s + dudtd_z_s
+              dvdtd_s = dvdtd_xy_s + dvdtd_z_s
+              dwdtd_s = dwdtd_xy_s + dwdtd_z_s
+            end if
+            dudt( i,j,k) = dudt_s
+            dvdt( i,j,k) = dvdt_s
+            dwdt( i,j,k) = dwdt_s
+            dudtd(i,j,k) = dudtd_s
+            dvdtd(i,j,k) = dvdtd_s
+            dwdtd(i,j,k) = dwdtd_s
+          else
+            dudt_s = dudt_s + dudtd_xy_s + dudtd_z_s
+            dvdt_s = dvdt_s + dvdtd_xy_s + dvdtd_z_s
+            dwdt_s = dwdt_s + dwdtd_xy_s + dwdtd_z_s
+            dudt(i,j,k) = dudt_s
+            dvdt(i,j,k) = dvdt_s
+            dwdt(i,j,k) = dwdt_s
+          endif
         end do
       end do
     end do

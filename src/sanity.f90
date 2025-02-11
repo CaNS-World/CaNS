@@ -49,17 +49,17 @@ module mod_sanity
     call chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed); if(.not.passed) call abortit
     call chk_forcing(cbcpre,is_forced,passed);     if(.not.passed) call abortit
     if(is_impdiff_1d .and. .not.is_impdiff) then
-      if(myid == 0)  print*, 'ERROR: `_IMPDIFF_1D` cpp macro requires building with `_IMPDIFF` too.'; call abortit
+      if(myid == 0)  print*, 'ERROR: `is_impdiff_1d = T` requires `is_impdiff = T` (forced in `param.f90`).'; call abortit
     end if
     if(is_impdiff_1d .and. .not.(ipencil_axis == 3) .and. .not.is_poisson_pcr_tdma) then
       if(dims(2) > 1) then
-        if(myid == 0)  print*, 'WARNING: a run with implicit Z diffusion (`_IMPDIFF_1D`) is much more efficient &
+        if(myid == 0)  print*, 'WARNING: a run with implicit Z diffusion (`is_impdiff_1d = T`) is much more efficient &
                                        & when the flow is not decomposed along the Z direction.'
       end if
     end if
 #if !defined(_OPENACC)
      if(is_impdiff_1d .and. is_poisson_pcr_tdma .and. .not.(ipencil_axis == 2)) then
-       if(myid == 0)  print*, 'ERROR: `_IMPDIFF_1D` on CPUs requires Y-aligned pencils.'; call abortit
+       if(myid == 0)  print*, 'ERROR: `is_impdiff_1d = T` on CPUs requires Y-aligned pencils.'; call abortit
      end if
 #endif
   end subroutine test_sanity_input
@@ -151,28 +151,28 @@ module mod_sanity
     if(myid == 0.and.(.not.passed_loc)) &
       print*, 'ERROR: pressure BCs in directions x and y must be homogeneous (value = 0.).'
     passed = passed.and.passed_loc
-#if defined(_IMPDIFF)
-    passed_loc = .true.
-    do ivel = 1,3
-      do idir=1,2
-        bc01v = cbcvel(0,idir,ivel)//cbcvel(1,idir,ivel)
-        passed_loc = passed_loc.and.(bc01v /= 'NN')
+    if(is_impdiff) then
+      passed_loc = .true.
+      do ivel = 1,3
+        do idir=1,2
+          bc01v = cbcvel(0,idir,ivel)//cbcvel(1,idir,ivel)
+          passed_loc = passed_loc.and.(bc01v /= 'NN')
+        end do
       end do
-    end do
-    if(myid == 0.and.(.not.passed_loc)) &
-      print*, 'ERROR: Neumann-Neumann velocity BCs with implicit diffusion currently not supported in x and y; only in z.'
-    passed = passed.and.passed_loc
-    !
-    passed_loc = .true.
-    do ivel = 1,3
-      do idir=1,2
-        passed_loc = passed_loc.and.((bcvel(0,idir,ivel) == 0.).and.(bcvel(1,idir,ivel) == 0.))
+      if(myid == 0.and.(.not.passed_loc)) &
+        print*, 'ERROR: Neumann-Neumann velocity BCs with implicit diffusion currently not supported in x and y; only in z.'
+      passed = passed.and.passed_loc
+      !
+      passed_loc = .true.
+      do ivel = 1,3
+        do idir=1,2
+          passed_loc = passed_loc.and.((bcvel(0,idir,ivel) == 0.).and.(bcvel(1,idir,ivel) == 0.))
+        end do
       end do
-    end do
-    if(myid == 0.and.(.not.passed_loc)) &
-      print*, 'ERROR: velocity BCs with implicit diffusion in directions x and y must be homogeneous (value = 0.).'
-    passed = passed.and.passed_loc
-#endif
+      if(myid == 0.and.(.not.passed_loc)) &
+        print*, 'ERROR: velocity BCs with implicit diffusion in directions x and y must be homogeneous (value = 0.).'
+      passed = passed.and.passed_loc
+    end if
 #if defined(_OPENACC)
     do idir=1,2
       bc01p = cbcpre(0,idir)//cbcpre(1,idir)

@@ -5,7 +5,7 @@
 !
 ! -
 module mod_initgrid
-  use mod_param, only:pi
+  use mod_param, only:pi,is_gridpoint_natural_channel
   use mod_types
   implicit none
   private
@@ -42,15 +42,17 @@ module mod_initgrid
     ! step 1) determine coordinates of cell faces zf
     !
     zf(0) = 0.
-    do k=1,n
-      z0  = (k-0.)/(1.*n)
-#if !defined(_GRIDPOINT_NATURAL_CHANNEL)
-      call gridpoint(gr,z0,zf(k))
-#else
-      call gridpoint_natural(k,n,zf(k))
-#endif
-      zf(k) = zf(k)*lz
-    end do
+    if(.not.is_gridpoint_natural_channel) then
+      do k=1,n
+        z0  = (k-0.)/(1.*n)
+        call gridpoint(gr,z0,zf(k))
+      end do
+    else
+      do k=1,n
+        call gridpoint_natural(k,n,zf(k))
+      end do
+    end if
+    zf(1:n) = zf(1:n)*lz
     !
     ! step 2) determine grid spacing between faces dzf
     !
@@ -171,7 +173,7 @@ module mod_initgrid
     !
     n = nzg/2._rp
     retau = 1._rp/(1._rp+(n/kb)**2)*(dyp*n+(3._rp/4._rp*alpha*c_eta*n)**(4._rp/3._rp)*(n/kb)**2)
-#if defined(_DEBUG)
+#if 0
     if(kg==1) print*,'Grid targeting Retau = ',retau
 #endif
     k = 1._rp*min(kg,(nzg-kg))

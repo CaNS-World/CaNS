@@ -129,27 +129,27 @@ module mod_rk
         do i=1,n(1)
           u(i,j,k) = u(i,j,k) + factor1*dudtrk(i,j,k) + factor2*dudtrko(i,j,k) + &
                                 factor12*(bforce(1) - dli(1)*( p(i+1,j,k)-p(i,j,k)))
-#if defined(_BOUSSINESQ_BUOYANCY)
-          u(i,j,k) = u(i,j,k) - factor12*gacc(1)*beta*0.5*(s(i+1,j,k)+s(i,j,k))
-#endif
+          if(is_boussinesq_buoyancy) then
+            u(i,j,k) = u(i,j,k) - factor12*gacc(1)*beta*0.5*(s(i+1,j,k)+s(i,j,k))
+          end if
           !
           v(i,j,k) = v(i,j,k) + factor1*dvdtrk(i,j,k) + factor2*dvdtrko(i,j,k) + &
                                 factor12*(bforce(2) - dli(2)*( p(i,j+1,k)-p(i,j,k)))
-#if defined(_BOUSSINESQ_BUOYANCY)
-          v(i,j,k) = v(i,j,k) - factor12*gacc(2)*beta*0.5*(s(i,j+1,k)+s(i,j,k))
-#endif
+          if(is_boussinesq_buoyancy) then
+            v(i,j,k) = v(i,j,k) - factor12*gacc(2)*beta*0.5*(s(i,j+1,k)+s(i,j,k))
+          end if
           !
           w(i,j,k) = w(i,j,k) + factor1*dwdtrk(i,j,k) + factor2*dwdtrko(i,j,k) + &
                                 factor12*(bforce(3) - dzci(k)*(p(i,j,k+1)-p(i,j,k)))
-#if defined(_BOUSSINESQ_BUOYANCY)
-          w(i,j,k) = w(i,j,k) - factor12*gacc(3)*beta*0.5*(s(i,j,k+1)+s(i,j,k))
-#endif
+          if(is_boussinesq_buoyancy) then
+            w(i,j,k) = w(i,j,k) - factor12*gacc(3)*beta*0.5*(s(i,j,k+1)+s(i,j,k))
+          end if
           !
-#if defined(_IMPDIFF)
-          u(i,j,k) = u(i,j,k) + factor12*dudtrkd(i,j,k)
-          v(i,j,k) = v(i,j,k) + factor12*dvdtrkd(i,j,k)
-          w(i,j,k) = w(i,j,k) + factor12*dwdtrkd(i,j,k)
-#endif
+          if(is_impdiff) then
+            u(i,j,k) = u(i,j,k) + factor12*dudtrkd(i,j,k)
+            v(i,j,k) = v(i,j,k) + factor12*dvdtrkd(i,j,k)
+            w(i,j,k) = w(i,j,k) + factor12*dwdtrkd(i,j,k)
+          end if
         end do
       end do
     end do
@@ -290,9 +290,9 @@ module mod_rk
       do j=1,n(2)
         do i=1,n(1)
           s(i,j,k) = s(i,j,k) + factor1*dsdtrk(iscal)%s(i,j,k) + factor2*dsdtrko(iscal)%s(i,j,k) + factor12*ssource
-#if defined(_IMPDIFF)
-          s(i,j,k) = s(i,j,k) + factor12*dsdtrkd(iscal)%s(i,j,k)
-#endif
+          if(is_impdiff) then
+            s(i,j,k) = s(i,j,k) + factor12*dsdtrkd(iscal)%s(i,j,k)
+          end if
         end do
       end do
     end do
