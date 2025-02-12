@@ -119,12 +119,12 @@ contains
                        cudecomp_h_comm_backend,cudecomp_is_h_enable_nccl,cudecomp_is_h_enable_nvshmem
 #endif
     namelist /scalar/ &
-                       alphai,beta, &
-                       iniscal, &
-                       cbcscal,bcscal, &
-                       ssource, &
-                       is_sforced, &
-                       scalf
+                     alphai,beta, &
+                     iniscal, &
+                     cbcscal,bcscal, &
+                     ssource, &
+                     is_sforced, &
+                     scalf
     !
     ! defaults
     !
