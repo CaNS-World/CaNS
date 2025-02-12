@@ -268,44 +268,6 @@ contains
     alpha_max = huge(1._rp)
     alpha_max = minval(alphai(1:nscal))
     alpha_max = alpha_max**(-1)
-#if defined(_BOUSSINESQ_BUOYANCY)
-    if (nscal == 0) then
-      if(myid == 0) print*, 'Error reading the input file: `BOUSSINESQ_BUOYANCY` requires `nscal > 0`.'
-      if(myid == 0) print*, 'Aborting...'
-      call MPI_FINALIZE(ierr)
-      error stop
-    end if
-<<<<<<< HEAD
-||||||| parent of cb92251 (Reduce number of CPP macros.)
-    close(iunit)
-  else
-    nscal = 0 ! negative values equivalent to nscal = 0
-  end if
-  alpha_max = huge(1._rp)
-  alpha_max = minval(alphai(1:nscal))
-  alpha_max = alpha_max**(-1)
-#if defined(_BOUSSINESQ_BUOYANCY)
-  if (nscal == 0) then
-    if(myid == 0) print*, 'Error reading the input file: `BOUSSINESQ_BUOYANCY` requires `nscal > 0`.'
-    if(myid == 0) print*, 'Aborting...'
-    call MPI_FINALIZE(ierr)
-    error stop
-  end if
-=======
-    close(iunit)
-  else
-    nscal = 0 ! negative values equivalent to nscal = 0
-  end if
-  alpha_max = huge(1._rp)
-  alpha_max = minval(alphai(1:nscal))
-  alpha_max = alpha_max**(-1)
-    !
-    ! other options: debugging/benchmarking
-    !
-#if defined(_TIMING)
-    is_timing = .true.
->>>>>>> cb92251 (Reduce number of CPP macros.)
-#endif
 #if !defined(_DEBUG)
     is_debug = .false.
 #endif
