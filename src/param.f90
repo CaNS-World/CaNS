@@ -119,12 +119,12 @@ contains
                        cudecomp_h_comm_backend,cudecomp_is_h_enable_nccl,cudecomp_is_h_enable_nvshmem
 #endif
     namelist /scalar/ &
-                       alphai,beta, &
-                       iniscal, &
-                       cbcscal,bcscal, &
-                       ssource, &
-                       is_sforced, &
-                       scalf
+                     alphai,beta, &
+                     iniscal, &
+                     cbcscal,bcscal, &
+                     ssource, &
+                     is_sforced, &
+                     scalf
     !
     ! defaults
     !
@@ -210,49 +210,49 @@ contains
     !
     cudecomp_is_t_in_place = .false.
 #endif
-  !
-  ! reading scalar transport parameters, if these are set
-  !
-  if(nscal > 0) then
     !
-    ! allocate memory
+    ! reading scalar transport parameters, if these are set
     !
-    allocate(alphai(nscal),iniscal(nscal), &
-             cbcscal(0:1,3,nscal),bcscal(0:1,3,nscal), &
-             ssource(nscal),is_sforced(nscal),scalf(nscal))
-    !
-    ! set default values
-    !
-    beta          = 0.
-    ssource(:)    = 0.
-    is_sforced(:) = .false.
-    scalf(:)      = 0.
-    !
-    ! read scalar namelist
-    !
-    open(newunit=iunit,file='input.nml',status='old',action='read',iostat=ierr)
-    if(ierr == 0) then
-      read(iunit,nml=scalar,iostat=ierr)
+    if(nscal > 0) then
+      !
+      ! allocate memory
+      !
+      allocate(alphai(nscal),iniscal(nscal), &
+               cbcscal(0:1,3,nscal),bcscal(0:1,3,nscal), &
+               ssource(nscal),is_sforced(nscal),scalf(nscal))
+      !
+      ! set default values
+      !
+      beta          = 0.
+      ssource(:)    = 0.
+      is_sforced(:) = .false.
+      scalf(:)      = 0.
+      !
+      ! read scalar namelist
+      !
+      open(newunit=iunit,file='input.nml',status='old',action='read',iostat=ierr)
+      if(ierr == 0) then
+        read(iunit,nml=scalar,iostat=ierr)
+      else
+        if(myid == 0) print*, 'Error reading the input file'
+        if(myid == 0) print*, 'Aborting...'
+        call MPI_FINALIZE(ierr)
+        error stop
+      end if
+      close(iunit)
     else
-      if(myid == 0) print*, 'Error reading the input file'
-      if(myid == 0) print*, 'Aborting...'
-      call MPI_FINALIZE(ierr)
-      error stop
+      nscal = 0 ! negative values equivalent to nscal = 0
     end if
-    close(iunit)
-  else
-    nscal = 0 ! negative values equivalent to nscal = 0
-  end if
-  alpha_max = huge(1._rp)
-  alpha_max = minval(alphai(1:nscal))
-  alpha_max = alpha_max**(-1)
+    alpha_max = huge(1._rp)
+    alpha_max = minval(alphai(1:nscal))
+    alpha_max = alpha_max**(-1)
 #if defined(_BOUSSINESQ_BUOYANCY)
-  if (nscal == 0) then
+    if (nscal == 0) then
       if(myid == 0) print*, 'Error reading the input file: `BOUSSINESQ_BUOYANCY` requires `nscal > 0`.'
       if(myid == 0) print*, 'Aborting...'
       call MPI_FINALIZE(ierr)
       error stop
-  end if
+    end if
 #endif
   end subroutine read_input
 end module mod_param
