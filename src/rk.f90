@@ -122,6 +122,7 @@ module mod_rk
       end if
     end if
     !
+#if !defined(_LOOP_UNSWITCHING)
     !$acc parallel loop collapse(3) default(present) async(1)
     !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
     do k=1,n(3)
@@ -153,6 +154,81 @@ module mod_rk
         end do
       end do
     end do
+#else
+    if(.not.is_impdiff .and. .not.is_boussinesq_buoyancy) then
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            u(i,j,k) = u(i,j,k) + factor1*dudtrk(i,j,k) + factor2*dudtrko(i,j,k) + &
+                                  factor12*(bforce(1) - dli(1)*(p(i+1,j,k)-p(i,j,k)))
+            v(i,j,k) = v(i,j,k) + factor1*dvdtrk(i,j,k) + factor2*dvdtrko(i,j,k) + &
+                                  factor12*(bforce(2) - dli(2)*(p(i,j+1,k)-p(i,j,k)))
+            w(i,j,k) = w(i,j,k) + factor1*dwdtrk(i,j,k) + factor2*dwdtrko(i,j,k) + &
+                                  factor12*(bforce(3) - dzci(k)*(p(i,j,k+1)-p(i,j,k)))
+          end do
+        end do
+      end do
+    else if(is_impdiff .and. .not.is_boussinesq_buoyancy) then
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            u(i,j,k) = u(i,j,k) + factor1*dudtrk(i,j,k) + factor2*dudtrko(i,j,k) + &
+                                  factor12*(bforce(1) - dli(1)*(p(i+1,j,k)-p(i,j,k)) + &
+                                            dudtrkd(i,j,k))
+            v(i,j,k) = v(i,j,k) + factor1*dvdtrk(i,j,k) + factor2*dvdtrko(i,j,k) + &
+                                  factor12*(bforce(2) - dli(2)*(p(i,j+1,k)-p(i,j,k)) + &
+                                            dvdtrkd(i,j,k))
+            w(i,j,k) = w(i,j,k) + factor1*dwdtrk(i,j,k) + factor2*dwdtrko(i,j,k) + &
+                                  factor12*(bforce(3) - dzci(k)*(p(i,j,k+1)-p(i,j,k)) + &
+                                            dwdtrkd(i,j,k))
+          end do
+        end do
+      end do
+    else if(.not.is_impdiff .and. is_boussinesq_buoyancy) then
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            u(i,j,k) = u(i,j,k) + factor1*dudtrk(i,j,k) + factor2*dudtrko(i,j,k) + &
+                                  factor12*(bforce(1) - dli(1)*(p(i+1,j,k)-p(i,j,k))) &
+                                          - gacc(1)*beta*0.5*(s(i+1,j,k)+s(i,j,k))
+            v(i,j,k) = v(i,j,k) + factor1*dvdtrk(i,j,k) + factor2*dvdtrko(i,j,k) + &
+                                  factor12*(bforce(2) - dli(2)*(p(i,j+1,k)-p(i,j,k))) &
+                                          - gacc(2)*beta*0.5*(s(i,j+1,k)+s(i,j,k))
+            w(i,j,k) = w(i,j,k) + factor1*dwdtrk(i,j,k) + factor2*dwdtrko(i,j,k) + &
+                                  factor12*(bforce(3) - dzci(k)*(p(i,j,k+1)-p(i,j,k))) &
+                                          - gacc(3)*beta*0.5*(s(i,j,k+1)+s(i,j,k))
+          end do
+        end do
+      end do
+    else
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            u(i,j,k) = u(i,j,k) + factor1*dudtrk(i,j,k) + factor2*dudtrko(i,j,k) + &
+                                  factor12*(bforce(1) - dli(1)*(p(i+1,j,k)-p(i,j,k)) &
+                                          - gacc(1)*beta*0.5*(s(i+1,j,k)+s(i,j,k)) + &
+                                            dudtrkd(i,j,k))
+            v(i,j,k) = v(i,j,k) + factor1*dvdtrk(i,j,k) + factor2*dvdtrko(i,j,k) + &
+                                  factor12*(bforce(2) - dli(2)*(p(i,j+1,k)-p(i,j,k)) &
+                                          - gacc(2)*beta*0.5*(s(i,j+1,k)+s(i,j,k)) + &
+                                            dvdtrkd(i,j,k))
+            w(i,j,k) = w(i,j,k) + factor1*dwdtrk(i,j,k) + factor2*dwdtrko(i,j,k) + &
+                                  factor12*(bforce(3) - dzci(k)*(p(i,j,k+1)-p(i,j,k)) &
+                                          - gacc(3)*beta*0.5*(s(i,j,k+1)+s(i,j,k)) + &
+                                            dwdtrkd(i,j,k))
+          end do
+        end do
+      end do
+    end if
+#endif
     !
     ! swap d?dtrk <-> d?dtrko
     !
