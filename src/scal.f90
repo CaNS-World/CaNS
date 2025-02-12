@@ -203,6 +203,7 @@ module mod_scal
   end subroutine cmpt_scalflux
   !
   subroutine bulk_forcing_s(n,is_forced,ff,p)
+    implicit none
     integer , intent(in   ), dimension(3) :: n
     logical , intent(in   )               :: is_forced
     real(rp), intent(in   )               :: ff
