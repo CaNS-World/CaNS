@@ -54,6 +54,7 @@ module mod_scal
     real(rp) :: dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm
     real(rp) :: dsdtd_xy,dsdtd_z
     !
+#if !defined(_LOOP_UNSWITCHING)
     !$acc parallel loop collapse(3) default(present) &
     !$acc private(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z) async(1)
     !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared) &
@@ -93,6 +94,100 @@ module mod_scal
         end do
       end do
     end do
+#else
+    if(.not.is_impdiff) then
+      !$acc parallel loop collapse(3) default(present) &
+      !$acc private(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z) async(1)
+      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared) &
+      !$OMP PRIVATE(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z)
+      do k=1,nz
+        do j=1,ny
+          do i=1,nx
+            usim  = 0.5*( s(i-1,j,k)+s(i,j,k) )*u(i-1,j,k)
+            usip  = 0.5*( s(i+1,j,k)+s(i,j,k) )*u(i  ,j,k)
+            vsjm  = 0.5*( s(i,j-1,k)+s(i,j,k) )*v(i,j-1,k)
+            vsjp  = 0.5*( s(i,j+1,k)+s(i,j,k) )*v(i,j  ,k)
+            wskm  = 0.5*( s(i,j,k-1)+s(i,j,k) )*w(i,j,k-1)
+            wskp  = 0.5*( s(i,j,k+1)+s(i,j,k) )*w(i,j,k  )
+            dsdxp = (s(i+1,j,k)-s(i  ,j,k))*dxi
+            dsdxm = (s(i  ,j,k)-s(i-1,j,k))*dxi
+            dsdyp = (s(i,j+1,k)-s(i,j  ,k))*dyi
+            dsdym = (s(i,j  ,k)-s(i,j-1,k))*dyi
+            dsdzp = (s(i,j,k+1)-s(i,j,k  ))*dzci(k  )
+            dsdzm = (s(i,j,k  )-s(i,j,k-1))*dzci(k-1)
+            dsdt(i,j,k) = dxi*(    -usip + usim ) + &
+                          dyi*(    -vsjp + vsjm ) + &
+                          dzfi(k)*( -wskp + wskm )
+            dsdtd_xy = (dsdxp-dsdxm)*visc*dxi + &
+                       (dsdyp-dsdym)*visc*dyi
+            dsdtd_z  = (dsdzp-dsdzm)*visc*dzfi(k)
+            dsdt(i,j,k) = dsdt(i,j,k) + dsdtd_xy + dsdtd_z
+          end do
+        end do
+      end do
+    else if(is_impdiff .and. is_impdiff_1d) then
+      !$acc parallel loop collapse(3) default(present) &
+      !$acc private(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z) async(1)
+      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared) &
+      !$OMP PRIVATE(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z)
+      do k=1,nz
+        do j=1,ny
+          do i=1,nx
+            usim  = 0.5*( s(i-1,j,k)+s(i,j,k) )*u(i-1,j,k)
+            usip  = 0.5*( s(i+1,j,k)+s(i,j,k) )*u(i  ,j,k)
+            vsjm  = 0.5*( s(i,j-1,k)+s(i,j,k) )*v(i,j-1,k)
+            vsjp  = 0.5*( s(i,j+1,k)+s(i,j,k) )*v(i,j  ,k)
+            wskm  = 0.5*( s(i,j,k-1)+s(i,j,k) )*w(i,j,k-1)
+            wskp  = 0.5*( s(i,j,k+1)+s(i,j,k) )*w(i,j,k  )
+            dsdxp = (s(i+1,j,k)-s(i  ,j,k))*dxi
+            dsdxm = (s(i  ,j,k)-s(i-1,j,k))*dxi
+            dsdyp = (s(i,j+1,k)-s(i,j  ,k))*dyi
+            dsdym = (s(i,j  ,k)-s(i,j-1,k))*dyi
+            dsdzp = (s(i,j,k+1)-s(i,j,k  ))*dzci(k  )
+            dsdzm = (s(i,j,k  )-s(i,j,k-1))*dzci(k-1)
+            dsdt(i,j,k) = dxi*(    -usip + usim ) + &
+                          dyi*(    -vsjp + vsjm ) + &
+                          dzfi(k)*( -wskp + wskm )
+            dsdtd_xy = (dsdxp-dsdxm)*visc*dxi + &
+                       (dsdyp-dsdym)*visc*dyi
+            dsdtd_z  = (dsdzp-dsdzm)*visc*dzfi(k)
+            dsdt(i,j,k)  = dsdt(i,j,k) + dsdtd_xy
+            dsdtd(i,j,k) = dsdtd_z
+          end do
+        end do
+      end do
+    else
+      !$acc parallel loop collapse(3) default(present) &
+      !$acc private(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z) async(1)
+      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared) &
+      !$OMP PRIVATE(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z)
+      do k=1,nz
+        do j=1,ny
+          do i=1,nx
+            usim  = 0.5*( s(i-1,j,k)+s(i,j,k) )*u(i-1,j,k)
+            usip  = 0.5*( s(i+1,j,k)+s(i,j,k) )*u(i  ,j,k)
+            vsjm  = 0.5*( s(i,j-1,k)+s(i,j,k) )*v(i,j-1,k)
+            vsjp  = 0.5*( s(i,j+1,k)+s(i,j,k) )*v(i,j  ,k)
+            wskm  = 0.5*( s(i,j,k-1)+s(i,j,k) )*w(i,j,k-1)
+            wskp  = 0.5*( s(i,j,k+1)+s(i,j,k) )*w(i,j,k  )
+            dsdxp = (s(i+1,j,k)-s(i  ,j,k))*dxi
+            dsdxm = (s(i  ,j,k)-s(i-1,j,k))*dxi
+            dsdyp = (s(i,j+1,k)-s(i,j  ,k))*dyi
+            dsdym = (s(i,j  ,k)-s(i,j-1,k))*dyi
+            dsdzp = (s(i,j,k+1)-s(i,j,k  ))*dzci(k  )
+            dsdzm = (s(i,j,k  )-s(i,j,k-1))*dzci(k-1)
+            dsdt(i,j,k) = dxi*(    -usip + usim ) + &
+                          dyi*(    -vsjp + vsjm ) + &
+                          dzfi(k)*( -wskp + wskm )
+            dsdtd_xy = (dsdxp-dsdxm)*visc*dxi + &
+                       (dsdyp-dsdym)*visc*dyi
+            dsdtd_z  = (dsdzp-dsdzm)*visc*dzfi(k)
+            dsdtd(i,j,k) = dsdtd_xy + dsdtd_z
+          end do
+        end do
+      end do
+    end if
+#endif
   end subroutine scal
   !
   subroutine cmpt_scalflux(n,is_bound,l,dli,dzci,dzfi,alpha,s,flux)
