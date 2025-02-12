@@ -208,11 +208,11 @@ module mod_scal
     real(rp), intent(in   )               :: ff
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
     if(is_forced) then
-      !$OMP PARALLEL WORKSHARE
       !$acc kernels default(present) async(1)
+      !$OMP PARALLEL WORKSHARE
       p(1:n(1),1:n(2),1:n(3)) = p(1:n(1),1:n(2),1:n(3)) + ff
-      !$acc end kernels
       !$OMP END PARALLEL WORKSHARE
+      !$acc end kernels
     end if
   end subroutine bulk_forcing_s
   !
