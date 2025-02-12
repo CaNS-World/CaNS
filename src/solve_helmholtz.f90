@@ -66,11 +66,13 @@ module mod_solve_helmholtz
     end if
     !
     !$acc kernels default(present) async(1)
-    !$OMP PARALLEL WORKSHARE
     if(.not.is_impdiff_1d) then
+      !$OMP PARALLEL WORKSHARE
       rhsbx(:,:,0:1) = rhsbxi(:,:,0:1)*alpha
       rhsby(:,:,0:1) = rhsbyi(:,:,0:1)*alpha
+      !$OMP END PARALLEL WORKSHARE
     end if
+    !$OMP PARALLEL WORKSHARE
     rhsbz(:,:,0:1) = rhsbzi(:,:,0:1)*alpha
     !$OMP END PARALLEL WORKSHARE
     !$acc end kernels
