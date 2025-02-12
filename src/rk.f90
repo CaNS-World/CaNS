@@ -131,11 +131,6 @@ module mod_rk
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
-#if !defined(_FAST_MOM_KERNELS)
-          u(i,j,k) = u(i,j,k) + factor1*dudtrk(i,j,k) + factor2*dudtrko(i,j,k)
-          v(i,j,k) = v(i,j,k) + factor1*dvdtrk(i,j,k) + factor2*dvdtrko(i,j,k)
-          w(i,j,k) = w(i,j,k) + factor1*dwdtrk(i,j,k) + factor2*dwdtrko(i,j,k)
-#else
           u(i,j,k) = u(i,j,k) + factor1*dudtrk(i,j,k) + factor2*dudtrko(i,j,k) + &
                                 factor12*(bforce(1) - dli(1)*( p(i+1,j,k)-p(i,j,k)))
 #if defined(_BOUSSINESQ_BUOYANCY)
@@ -154,7 +149,6 @@ module mod_rk
           w(i,j,k) = w(i,j,k) - factor12*gacc(3)*beta*0.5*(s(i,j,k+1)+s(i,j,k))
 #endif
           !
-#endif
 #if defined(_IMPDIFF)
           u(i,j,k) = u(i,j,k) + factor12*dudtrkd(i,j,k)
           v(i,j,k) = v(i,j,k) + factor12*dvdtrkd(i,j,k)
@@ -169,7 +163,7 @@ module mod_rk
     call swap(dudtrk,dudtrko)
     call swap(dvdtrk,dvdtrko)
     call swap(dwdtrk,dwdtrko)
-!#if 0 /*pressure gradient term treated explicitly later */
+!#if 0 /*pressure gradient term treated explicitly above */
 !    !$acc kernels
 !    !$OMP PARALLEL WORKSHARE
 !    dudtrk(:,:,:) = 0._rp
@@ -192,28 +186,6 @@ module mod_rk
 !      end do
 !    end do
 !#endif
-#if !defined(_FAST_MOM_KERNELS)
-    !$acc parallel loop collapse(3) default(present) async(1)
-    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
-    do k=1,n(3)
-      do j=1,n(2)
-        do i=1,n(1)
-          u(i,j,k) = u(i,j,k) + factor12*(bforce(1) - dli(1)*( p(i+1,j,k)-p(i,j,k)))
-#if defined(_BOUSSINESQ_BUOYANCY)
-          u(i,j,k) = u(i,j,k) - factor12*gacc(1)*beta*0.5*(s(i+1,j,k)+s(i,j,k))
-#endif
-          v(i,j,k) = v(i,j,k) + factor12*(bforce(2) - dli(2)*( p(i,j+1,k)-p(i,j,k)))
-#if defined(_BOUSSINESQ_BUOYANCY)
-          v(i,j,k) = v(i,j,k) - factor12*gacc(2)*beta*0.5*(s(i,j+1,k)+s(i,j,k))
-#endif
-          w(i,j,k) = w(i,j,k) + factor12*(bforce(3) - dzci(k)*(p(i,j,k+1)-p(i,j,k)))
-#if defined(_BOUSSINESQ_BUOYANCY)
-          w(i,j,k) = w(i,j,k) - factor12*gacc(3)*beta*0.5*(s(i,j,k+1)+s(i,j,k))
-#endif
-        end do
-      end do
-    end do
-#endif
     !
     ! compute bulk velocity forcing
     !
