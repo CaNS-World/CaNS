@@ -105,9 +105,10 @@ contains
   subroutine read_input(myid)
     use mpi
     implicit none
+    character(len=*), parameter :: input_file = 'input.nml'
     integer, intent(in) :: myid
-    integer :: is
     integer :: iunit,ierr
+    character(len=1024) :: c_iomsg
     namelist /dns/ &
                   ng, &
                   l, &
@@ -154,151 +155,158 @@ contains
     dt_f = -1.
     gacc(:) = 0.
     nscal = 0
-    open(newunit=iunit,file='input.nml',status='old',action='read',iostat=ierr)
-      if(ierr == 0) then
-        read(iunit,nml=dns,iostat=ierr)
-      else
-        if(myid == 0) print*, 'Error reading the input file'
+    open(newunit=iunit,file=input_file,status='old',action='read',iostat=ierr,iomsg=c_iomsg)
+      if(ierr /= 0) then
+        if(myid == 0) print*, 'Error reading the input file: ', trim(c_iomsg)
         if(myid == 0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
+        close(iunit)
         error stop
       end if
-    close(iunit)
-    !
-    dl(:) = l(:)/(1.*ng(:))
-    dli(:) = dl(:)**(-1)
-    visc = visci**(-1)
+      read(iunit,nml=dns,iostat=ierr,iomsg=c_iomsg)
+      if(ierr /= 0) then
+        if(myid == 0) print*, 'Error reading `dns` namelist: ', trim(c_iomsg)
+        if(myid == 0) print*, 'Aborting...'
+        call MPI_FINALIZE(ierr)
+        close(iunit)
+        error stop
+      end if
+      !
+      dl(:) = l(:)/(1.*ng(:))
+      dli(:) = dl(:)**(-1)
+      visc = visci**(-1)
 #if defined(_OPENACC)
-    !
-    ! reading cuDecomp parameters, if these are set
-    !
-    ! defaults
-    !
-    cudecomp_is_t_comm_autotune  = .true.
-    cudecomp_is_h_comm_autotune  = .true.
-    cudecomp_is_t_enable_nccl    = .true.
-    cudecomp_is_h_enable_nccl    = .true.
-    cudecomp_is_t_enable_nvshmem = .true.
-    cudecomp_is_h_enable_nvshmem = .true.
-    open(newunit=iunit,file='input.nml',status='old',action='read',iostat=ierr)
-      if(ierr == 0) then
-        read(iunit,nml=cudecomp,iostat=ierr)
-      else
-        if(myid == 0) print*, 'Error reading the input file'
+      !
+      ! reading cuDecomp parameters, if these are set
+      !
+      ! defaults
+      !
+      cudecomp_is_t_comm_autotune  = .true.
+      cudecomp_is_h_comm_autotune  = .true.
+      cudecomp_is_t_enable_nccl    = .true.
+      cudecomp_is_h_enable_nccl    = .true.
+      cudecomp_is_t_enable_nvshmem = .true.
+      cudecomp_is_h_enable_nvshmem = .true.
+      rewind(iunit)
+      read(iunit,nml=cudecomp,iostat=ierr,iomsg=c_iomsg)
+      if(ierr /= 0) then
+        if(myid == 0) print*, 'Error reading cudecomp namelist: ', trim(c_iomsg)
         if(myid == 0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
+        close(iunit)
         error stop
       end if
-    close(iunit)
-    if(cudecomp_t_comm_backend >= 1 .and. cudecomp_t_comm_backend <= 7) then
-      cudecomp_is_t_comm_autotune = .false. ! do not autotune if backend is prescribed
-      select case(cudecomp_t_comm_backend)
-      case(1)
-        cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_MPI_P2P
-      case(2)
-        cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_MPI_P2P_PL
-      case(3)
-        cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_MPI_A2A
-      case(4)
-        cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_NCCL
-      case(5)
-        cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_NCCL_PL
-      case(6)
-        cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_NVSHMEM
-      case(7)
-        cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_NVSHMEM_PL
-      case default
-        cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_MPI_P2P
-      end select
-    end if
-    if(cudecomp_h_comm_backend >= 1 .and. cudecomp_h_comm_backend <= 4) then
-      cudecomp_is_h_comm_autotune = .false. ! do not autotune if backend is prescribed
-      select case(cudecomp_h_comm_backend)
-      case(1)
-        cudecomp_h_comm_backend = CUDECOMP_HALO_COMM_MPI
-      case(2)
-        cudecomp_h_comm_backend = CUDECOMP_HALO_COMM_MPI_BLOCKING
-      case(3)
-        cudecomp_h_comm_backend = CUDECOMP_HALO_COMM_NCCL
-      case(4)
-        cudecomp_h_comm_backend = CUDECOMP_HALO_COMM_NVSHMEM
-      case(5)
-        cudecomp_h_comm_backend = CUDECOMP_HALO_COMM_NVSHMEM_BLOCKING
-      case default
-        cudecomp_h_comm_backend = CUDECOMP_HALO_COMM_MPI
-      end select
-    end if
-    !
-    ! manually set cuDecomp out-of-place transposes by default
-    !
-    cudecomp_is_t_in_place = .false.
+      !
+      if(cudecomp_t_comm_backend >= 1 .and. cudecomp_t_comm_backend <= 7) then
+        cudecomp_is_t_comm_autotune = .false. ! do not autotune if backend is prescribed
+        select case(cudecomp_t_comm_backend)
+        case(1)
+          cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_MPI_P2P
+        case(2)
+          cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_MPI_P2P_PL
+        case(3)
+          cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_MPI_A2A
+        case(4)
+          cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_NCCL
+        case(5)
+          cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_NCCL_PL
+        case(6)
+          cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_NVSHMEM
+        case(7)
+          cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_NVSHMEM_PL
+        case default
+          cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_MPI_P2P
+        end select
+      end if
+      if(cudecomp_h_comm_backend >= 1 .and. cudecomp_h_comm_backend <= 4) then
+        cudecomp_is_h_comm_autotune = .false. ! do not autotune if backend is prescribed
+        select case(cudecomp_h_comm_backend)
+        case(1)
+          cudecomp_h_comm_backend = CUDECOMP_HALO_COMM_MPI
+        case(2)
+          cudecomp_h_comm_backend = CUDECOMP_HALO_COMM_MPI_BLOCKING
+        case(3)
+          cudecomp_h_comm_backend = CUDECOMP_HALO_COMM_NCCL
+        case(4)
+          cudecomp_h_comm_backend = CUDECOMP_HALO_COMM_NVSHMEM
+        case(5)
+          cudecomp_h_comm_backend = CUDECOMP_HALO_COMM_NVSHMEM_BLOCKING
+        case default
+          cudecomp_h_comm_backend = CUDECOMP_HALO_COMM_MPI
+        end select
+      end if
+      !
+      ! manually set cuDecomp out-of-place transposes by default
+      !
+      cudecomp_is_t_in_place = .false.
 #endif
-    !
-    ! reading scalar transport parameters, if these are set
-    !
-    if(nscal > 0) then
       !
-      ! allocate memory
+      ! reading scalar transport parameters, if these are set
       !
-      allocate(alphai(nscal),iniscal(nscal), &
-               cbcscal(0:1,3,nscal),bcscal(0:1,3,nscal), &
-               ssource(nscal),is_sforced(nscal),scalf(nscal))
-      !
-      ! set default values
-      !
-      beta          = 0.
-      ssource(:)    = 0.
-      is_sforced(:) = .false.
-      scalf(:)      = 0.
-      !
-      ! read scalar namelist
-      !
-      open(newunit=iunit,file='input.nml',status='old',action='read',iostat=ierr)
-      if(ierr == 0) then
-        read(iunit,nml=scalar,iostat=ierr)
+      if(nscal > 0) then
+        !
+        ! allocate memory
+        !
+        allocate(alphai(nscal),iniscal(nscal), &
+                 cbcscal(0:1,3,nscal),bcscal(0:1,3,nscal), &
+                 ssource(nscal),is_sforced(nscal),scalf(nscal))
+        !
+        ! set default values
+        !
+        beta          = 0.
+        ssource(:)    = 0.
+        is_sforced(:) = .false.
+        scalf(:)      = 0.
+        !
+        ! read `scalar` namelist
+        !
+        rewind(iunit)
+        read(iunit,nml=scalar,iostat=ierr,iomsg=c_iomsg)
+        if(ierr /= 0) then
+          if(myid == 0) print*, 'Error reading scalar namelist: ', trim(c_iomsg)
+          if(myid == 0) print*, 'Aborting...'
+          call MPI_FINALIZE(ierr)
+          close(iunit)
+          error stop
+        end if
       else
-        if(myid == 0) print*, 'Error reading the input file'
+        nscal = 0 ! negative values equivalent to nscal = 0
+      end if
+      alpha_max = huge(1._rp)
+      alpha_max = minval(alphai(1:nscal))
+      alpha_max = alpha_max**(-1)
+      if(is_boussinesq_buoyancy) then
+        if(nscal == 0) then
+          if(myid == 0) print*, 'error reading the input file: `is_boussinesq_buoyancy = T` requires `nscal > 0`.'
+          if(myid == 0) print*, 'Aborting...'
+          call MPI_FINALIZE(ierr)
+          error stop
+        end if
+      end if
+      !
+      ! read `numerics` namelist
+      !
+      rewind(iunit)
+      read(iunit,nml=numerics,iostat=ierr,iomsg=c_iomsg)
+      if(ierr /= 0) then
+        if(myid == 0) print*, 'Error reading `numerics` namelist: ', trim(c_iomsg)
         if(myid == 0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
+        close(iunit)
         error stop
       end if
-      close(iunit)
-    else
-      nscal = 0 ! negative values equivalent to nscal = 0
-    end if
-    alpha_max = huge(1._rp)
-    alpha_max = minval(alphai(1:nscal))
-    alpha_max = alpha_max**(-1)
-    !
-    ! other options: physics
-    !
-    if(is_boussinesq_buoyancy) then
-      if(nscal == 0) then
-        if(myid == 0) print*, 'error reading the input file: `is_boussinesq_buoyancy = T` requires `nscal > 0`.'
+      !
+      ! read `other_options` namelist
+      !
+      rewind(iunit)
+      read(iunit,nml=other_options,iostat=ierr,iomsg=c_iomsg)
+      if(ierr /= 0) then
+        if(myid == 0) print*, 'Error reading `other_options` namelist: ', trim(c_iomsg)
         if(myid == 0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
+        close(iunit)
         error stop
       end if
-    end if
-    open(newunit=iunit,file='input.nml',status='old',action='read',iostat=ierr)
-    if(ierr == 0) then
-      read(iunit,nml=numerics,iostat=ierr)
-    else
-      if(myid == 0) print*, 'Error reading the input file'
-      if(myid == 0) print*, 'Aborting...'
-      call MPI_FINALIZE(ierr)
-      error stop
-    end if
-    close(iunit)
-    open(newunit=iunit,file='input.nml',status='old',action='read',iostat=ierr)
-    if(ierr == 0) then
-      read(iunit,nml=other_options,iostat=ierr)
-    else
-      if(myid == 0) print*, 'Error reading the input file'
-      if(myid == 0) print*, 'Aborting...'
-      call MPI_FINALIZE(ierr)
-      error stop
-    end if
     close(iunit)
   end subroutine read_input
 end module mod_param
