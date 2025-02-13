@@ -92,7 +92,6 @@ contains
     implicit none
     character(len=*), parameter :: input_file = 'input.nml'
     integer, intent(in) :: myid
-    integer :: is
     integer :: iunit,ierr
     character(len=1024) :: c_iomsg
     namelist /dns/ &
@@ -132,11 +131,9 @@ contains
     dt_f = -1.
     gacc(:) = 0.
     nscal = 0
-    open(newunit=iunit,file='input.nml',status='old',action='read',iostat=ierr)
-      if(ierr == 0) then
-        read(iunit,nml=dns,iostat=ierr)
-      else
-        if(myid == 0) print*, 'Error reading the input file'
+    open(newunit=iunit,file=input_file,status='old',action='read',iostat=ierr,iomsg=c_iomsg)
+      if(ierr /= 0) then
+        if(myid == 0) print*, 'Error reading the input file: ', trim(c_iomsg)
         if(myid == 0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
         close(iunit)
@@ -218,6 +215,49 @@ contains
       ! manually set cuDecomp out-of-place transposes by default
       !
       cudecomp_is_t_in_place = .false.
+#endif
+      !
+      ! reading scalar transport parameters, if these are set
+      !
+      if(nscal > 0) then
+        !
+        ! allocate memory
+        !
+        allocate(alphai(nscal),iniscal(nscal), &
+                 cbcscal(0:1,3,nscal),bcscal(0:1,3,nscal), &
+                 ssource(nscal),is_sforced(nscal),scalf(nscal))
+        !
+        ! set default values
+        !
+        beta          = 0.
+        ssource(:)    = 0.
+        is_sforced(:) = .false.
+        scalf(:)      = 0.
+        !
+        ! read scalar namelist
+        !
+        rewind(iunit)
+        read(iunit,nml=scalar,iostat=ierr,iomsg=c_iomsg)
+        if(ierr /= 0) then
+          if(myid == 0) print*, 'Error reading scalar namelist: ', trim(c_iomsg)
+          if(myid == 0) print*, 'Aborting...'
+          call MPI_FINALIZE(ierr)
+          close(iunit)
+          error stop
+        end if
+      else
+        nscal = 0 ! negative values equivalent to nscal = 0
+      end if
+      alpha_max = huge(1._rp)
+      alpha_max = minval(alphai(1:nscal))
+      alpha_max = alpha_max**(-1)
+#if defined(_BOUSSINESQ_BUOYANCY)
+      if (nscal == 0) then
+        if(myid == 0) print*, 'Error reading the input file: `BOUSSINESQ_BUOYANCY` requires `nscal > 0`.'
+        if(myid == 0) print*, 'Aborting...'
+        call MPI_FINALIZE(ierr)
+        error stop
+      end if
 #endif
     close(iunit)
   end subroutine read_input
