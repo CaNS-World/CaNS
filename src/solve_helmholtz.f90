@@ -62,9 +62,9 @@ module mod_solve_helmholtz
       allocate(a,mold=ai)
       allocate(b,mold=bi)
       allocate(c,mold=ci)
-      if(present(rhsbxi)) allocate(rhsbx,mold=rhsbxi)
-      if(present(rhsbyi)) allocate(rhsby,mold=rhsbyi)
-      if(present(rhsbzi)) allocate(rhsbz,mold=rhsbzi)
+      if(present(rhsbxi)) allocate(rhsbx(n(2),n(3),0:1)) ! allocate(rhsbx,mold=rhsbxi) ! gfortran 11.4.0 bug
+      if(present(rhsbyi)) allocate(rhsby(n(1),n(3),0:1)) ! allocate(rhsby,mold=rhsbyi) ! gfortran 11.4.0 bug
+      if(present(rhsbzi)) allocate(rhsbz(n(1),n(2),0:1)) ! allocate(rhsbz,mold=rhsbzi) ! gfortran 11.4.0 bug
       !$acc enter data create(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz) async(1)
     end if
     !
