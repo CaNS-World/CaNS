@@ -22,9 +22,9 @@ bforce(1:3) = 0., 0., 0.
 is_forced(1:3) = F, F, F
 velf(1:3) = 0., 0., 0.
 dims(1:2) = 1, 1
-\
+/
 
 &cudecomp
 cudecomp_t_comm_backend = 0, cudecomp_is_t_enable_nccl = T, cudecomp_is_t_enable_nvshmem = T
 cudecomp_h_comm_backend = 0, cudecomp_is_h_enable_nccl = T, cudecomp_is_h_enable_nvshmem = T
-\
+/
