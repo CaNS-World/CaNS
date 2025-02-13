@@ -24,7 +24,7 @@ velf(1:3) = 0., 0., 0.
 gacc(1:3) = 0., 0., -1.
 nscal     = 1
 dims(1:2) = 0, 0
-\
+/
 
 &scalar
 iniscal(:)         = 'dhc'
@@ -35,10 +35,10 @@ bcscal(0:1,1:3,:)  =  -0.5,0.5 ,   0.,0. ,   0.,0.
 ssource(:)         = 0.
 is_sforced(:)      = F
 scalf(:)           = 0.
-\
+/
 
 &cudecomp
 cudecomp_t_comm_backend = 0, cudecomp_is_t_enable_nccl = T, cudecomp_is_t_enable_nvshmem = T
 cudecomp_h_comm_backend = 0, cudecomp_is_h_enable_nccl = T, cudecomp_is_h_enable_nvshmem = T
 cudecomp_is_t_in_place = F
-\
+/
