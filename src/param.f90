@@ -92,7 +92,6 @@ contains
     implicit none
     character(len=*), parameter :: input_file = 'input.nml'
     integer, intent(in) :: myid
-    integer :: is
     integer :: iunit,ierr
     character(len=1024) :: c_iomsg
     namelist /dns/ &
