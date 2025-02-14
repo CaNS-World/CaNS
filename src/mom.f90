@@ -1109,7 +1109,7 @@ module mod_mom
           end do
         end do
       end do
-    else
+    else if(is_impdiff) then
       !$acc parallel loop collapse(3) default(present) async(1) &
       !$acc private(u_ccm,u_pcm,u_cpm,u_cmc,u_pmc,u_mcc,u_ccc,u_pcc,u_mpc,u_cpc,u_cmp,u_mcp,u_ccp) &
       !$acc private(v_ccm,v_pcm,v_cpm,v_cmc,v_pmc,v_mcc,v_ccc,v_pcc,v_mpc,v_cpc,v_cmp,v_mcp,v_ccp) &
