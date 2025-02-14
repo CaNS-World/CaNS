@@ -24,6 +24,8 @@
   call out1d(trim(datadir)//'umean_z_fld_'//fldnum//'.out',ng,lo,hi,3,l,dl,zc_g,dzf,u)
   call out1d(trim(datadir)//'vmean_z_fld_'//fldnum//'.out',ng,lo,hi,3,l,dl,zc_g,dzf,v)
   call out1d(trim(datadir)//'wmean_z_fld_'//fldnum//'.out',ng,lo,hi,3,l,dl,zf_g,dzc,w)
+  if(nscal > 0) &
+  call out1d(trim(datadir)//'scal_01_mean_fld_'//fldnum//'.out',ng,lo,hi,3,l,dl,zc_g,dzc,scalars(1)%val)
   !call out1d(trim(datadir)//'umean_y_fld_'//fldnum//'.out',ng,lo,hi,2,l,dl,zc_g,dzf,u)
   !call out1d(trim(datadir)//'vmean_y_fld_'//fldnum//'.out',ng,lo,hi,2,l,dl,zc_g,dzf,v)
   !call out1d(trim(datadir)//'wmean_y_fld_'//fldnum//'.out',ng,lo,hi,2,l,dl,zc_g,dzf,w)

@@ -250,3 +250,96 @@ The second line is analogous to the first one, but for halo communication backen
 The other two boolean values, enable/disable the NCCL (`cudecomp_is_h_enable_nccl`) and NVSHMEM (`cudecomp_is_h_enable_nvshmem`) options for *halo* communication backend autotuning.
 
 Finally, it is worth recalling that passing `dims(1:2) = [0,0]` under `&dns` will trigger the *processor grid* autotuning, so there is no need to provide that option in the `&cudecomp` namelist.
+
+# about the `&scalar` namelist under `input.nml`
+
+This namelist is **optional** and defines the parameters needed to solve the transport equations associated with an arbitrary number of scalars.
+
+The **number of scalars** `nscal` has to be set in the `&dns` namelist, e.g., for a single scalar:
+```fortran
+&dns
+! (...)
+nscal = 1
+\
+```
+The default value of `nscal` is zero.
+
+---
+
+The following example namelist defines the parameters needed for the differentially heated cavity case that may be found under `examples/`.
+```fortran
+&scalar
+alphai(1)          = 842.61498
+beta               = 1
+iniscal(1)         = 'dhc'
+cbcscal(0:1,1:3,1) = 'D'  ,'D' ,  'P','P',  'N','N'
+bcscal(0:1,1:3,1)  =  -0.5,0.5 ,   0.,0. ,   0.,0.
+ssource(1)         = 0.
+is_sforced(1)      = F
+scalf(1)           = 0.
+\
+```
+
+---
+
+```fortran
+alphai(1)        = 842.61498
+beta             = 1
+```
+These lines define the **inverse of the diffusivity** `alphai` of the scalar(s) and, in this case, the **thermal expansion coefficient** `beta`.
+
+`alphai` is an array with size `nscal`. To define several scalars, the inverse diffusivities can be defined as:
+```fortran
+alphai(:)        = alphai_1, alphai_2, alphai_3, ..., alphai_nscal
+```
+
+---
+
+```fortran
+iniscal(1)       = 'dhc'
+```
+This line sets the **initial scalar field(s)**. `iniscal` is an array with size `nscal`. The following options are available:
+* `zer`: uniform scalar field equal to zero
+* `uni`: uniform scalar field equal to `sref`
+* `cou`: linearly varying scalar field from bottom (`z = 0`) to top   (`z = l(3)`)
+* `dhc`: linearly varying scalar field from left   (`x = 0`) to right (`x = l(1)`)
+* `tbl`: temporal boundary layer profile with scalar bc `sref` at the bottom wall
+
+---
+
+```fortran
+cbcscal(0:1,1:3,1) = 'D'  ,'D' ,  'P','P',  'N','N'
+bcscal(0:1,1:3,1)  =  -0.5,0.5 ,   0.,0. ,   0.,0.
+```
+These lines set the **boundary conditions** for each scalar, just like the velocity components. The last dimension corresponds to the scalar index.
+
+---
+
+```fortran
+ssource(1)       = 0.
+is_sforced(1)    = F
+scalf(1)         = 0.
+```
+These lines set the **scalar forcing**.
+
+`ssource` is an array of size `nscal` defining a **uniform volumetric source term** added to the righ-hand-side of each scalar equation (analogous to `source` in momentum).
+
+`is_sforced` is a logical array of size `nscal` that **triggers the bulk forcing** of the corresponding scalar field (analogous to `is_forced` in momentum).
+
+`scalf` is an array of size `nscal` defining **the target bulk mean** for each scalar (where `is_sforced` is true; analogous to `velf` in momentum).
+
+---
+
+**Buoyancy effects**
+
+The input value `beta` above is the thermal expansion coefficient that relates density to temperature in the so-called _Boussinesq approximation_, thereby triggering buoyancy-induced momentum transport. Its default value is zero. When buoyancy is activated, **the first scalar is always associated with the temperature difference**. Moreover, in that case, the value for the **gravitational acceleration vector** `gacc` should be provided in the `&dns` namelist:
+```fortran
+&dns
+! (...)
+gacc(1:3) = 0., 0., -1.
+nscal = 1
+\
+```
+which, in this example, defines a negative gravitational acceleration along `z` with unit magnitude. Its default value is `[0., 0., 0.]`.
+
+Finally, **to activate the buoyancy term**, the `BOUSSINESQ_BUOYANCY` pre-processor macro must be set to `1` in `build.conf` (see [`INFO_COMPILING.md`](INFO_COMPILING.md)).

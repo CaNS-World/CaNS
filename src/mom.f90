@@ -12,7 +12,8 @@ module mod_mom
   private
   public momx_a,momy_a,momz_a, &
          momx_d,momy_d,momz_d, &
-         momx_p,momy_p,momz_p, cmpt_wallshear, bulk_forcing
+         momx_p,momy_p,momz_p, &
+         cmpt_wallshear,bulk_forcing
 #if defined(_IMPDIFF_1D)
   public momx_d_xy,momy_d_xy,momz_d_xy, &
          momx_d_z ,momy_d_z ,momz_d_z
@@ -604,6 +605,7 @@ module mod_mom
   end subroutine cmpt_wallshear
   !
   subroutine bulk_forcing(n,is_forced,f,u,v,w)
+    implicit none
     integer , intent(in   ), dimension(3) :: n
     logical , intent(in   ), dimension(3) :: is_forced
     real(rp), intent(in   ), dimension(3) :: f
@@ -633,6 +635,7 @@ module mod_mom
     !
     ! lump all r.h.s. of momentum terms (excluding pressure) into a single fast kernel
     !
+    implicit none
     integer , intent(in   ) :: nx,ny,nz
     real(rp), intent(in   ) :: dxi,dyi
     real(rp), intent(in   ), dimension(0:) :: dzci,dzfi
