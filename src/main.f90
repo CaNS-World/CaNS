@@ -333,7 +333,7 @@ program cans
   !
   call init_wspace_arrays()
   call set_cufft_wspace(pack(arrplanp,.true.),istream_acc_queue_1)
-  if(is_impdiff .and. is_impdiff_1d) then
+  if(is_impdiff .and. .not.is_impdiff_1d) then
     call set_cufft_wspace(pack(arrplanu,.true.),istream_acc_queue_1)
     call set_cufft_wspace(pack(arrplanv,.true.),istream_acc_queue_1)
     call set_cufft_wspace(pack(arrplanw,.true.),istream_acc_queue_1)
