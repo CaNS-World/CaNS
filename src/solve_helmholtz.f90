@@ -65,17 +65,21 @@ module mod_solve_helmholtz
       !$acc enter data create(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz) async(1)
     end if
     !
-    !$acc kernels default(present) async(1)
     if(.not.is_impdiff_1d) then
+      !$acc kernels default(present) async(1)
       !$OMP PARALLEL WORKSHARE
       rhsbx(:,:,0:1) = rhsbxi(:,:,0:1)*alpha
       rhsby(:,:,0:1) = rhsbyi(:,:,0:1)*alpha
+      rhsbz(:,:,0:1) = rhsbzi(:,:,0:1)*alpha
       !$OMP END PARALLEL WORKSHARE
+      !$acc end kernels
+    else
+      !$acc kernels default(present) async(1)
+      !$OMP PARALLEL WORKSHARE
+      rhsbz(:,:,0:1) = rhsbzi(:,:,0:1)*alpha
+      !$OMP END PARALLEL WORKSHARE
+      !$acc end kernels
     end if
-    !$OMP PARALLEL WORKSHARE
-    rhsbz(:,:,0:1) = rhsbzi(:,:,0:1)*alpha
-    !$OMP END PARALLEL WORKSHARE
-    !$acc end kernels
     call updt_rhs_b(c_or_f,cbc,n,is_bound,rhsbx,rhsby,rhsbz,p)
     !$acc kernels default(present) async(1)
     !$OMP PARALLEL WORKSHARE
