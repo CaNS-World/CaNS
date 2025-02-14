@@ -175,6 +175,11 @@ contains
       dl(:) = l(:)/(1.*ng(:))
       dli(:) = dl(:)**(-1)
       visc = visci**(-1)
+      if(all([1,2,3] /= ipencil_axis)) then
+        ipencil_axis = 1 ! default to one
+        if(myid == 0) print*, 'Warning: prescribed value of `ipencil_axis` different than 1/2/3.', trim(c_iomsg)
+        if(myid == 0) print*, 'Defaulting to `ipencil_axis = 1` (x-aligned pencils)...'
+      end if
 #if defined(_OPENACC)
       !
       ! reading cuDecomp parameters, if these are set
