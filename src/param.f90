@@ -103,6 +103,7 @@ logical, protected :: is_impdiff = .false., is_impdiff_1d = .false., &
                       is_gridpoint_natural_channel = .false.
 contains
   subroutine read_input(myid)
+    use, intrinsic :: iso_fortran_env, only: iostat_end
     use mpi
     implicit none
     character(len=*), parameter :: input_file = 'input.nml'
@@ -293,7 +294,7 @@ contains
       !
       rewind(iunit)
       read(iunit,nml=numerics,iostat=ierr,iomsg=c_iomsg)
-      if(ierr /= 0) then
+      if(ierr /= 0 .and. ierr /= iostat_end) then
         if(myid == 0) print*, 'Error reading `numerics` namelist: ', trim(c_iomsg)
         if(myid == 0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
@@ -305,7 +306,7 @@ contains
       !
       rewind(iunit)
       read(iunit,nml=other_options,iostat=ierr,iomsg=c_iomsg)
-      if(ierr /= 0) then
+      if(ierr /= 0 .and. ierr /= iostat_end) then
         if(myid == 0) print*, 'Error reading `other_options` namelist: ', trim(c_iomsg)
         if(myid == 0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
