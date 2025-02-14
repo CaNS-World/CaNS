@@ -8,7 +8,6 @@ module mod_solver_gpu
 #if defined(_OPENACC)
   use, intrinsic :: iso_c_binding, only: C_PTR
   use cudecomp
-  use mod_common_mpi     , only: ipencil_axis
   use mod_common_cudecomp, only: dtype_rp => cudecomp_real_rp, &
                                  cudecomp_is_t_in_place, &
                                  solver_buf_0,solver_buf_1, &
@@ -20,7 +19,7 @@ module mod_solver_gpu
                                  ch => handle,gd => gd_poi, &
                                  istream => istream_acc_queue_1
   use mod_fft            , only: signal_processing,fftf_gpu,fftb_gpu
-  use mod_param          , only: is_poisson_pcr_tdma
+  use mod_param          , only: ipencil_axis,is_poisson_pcr_tdma
   use mod_types
   implicit none
   private

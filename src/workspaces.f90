@@ -19,9 +19,8 @@ contains
                                    solver_buf_0,solver_buf_1, &
                                    ap_z,pz_aux_1, &
                                    istream_acc_queue_1
-    use mod_common_mpi     , only: ipencil => ipencil_axis
     use mod_fft            , only: wsize_fft
-    use mod_param          , only: cudecomp_is_t_in_place,cbcpre,is_poisson_pcr_tdma
+    use mod_param          , only: cudecomp_is_t_in_place,cbcpre,ipencil => ipencil_axis,is_poisson_pcr_tdma
     use cudecomp
     use openacc
     implicit none

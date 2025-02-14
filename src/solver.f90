@@ -7,9 +7,8 @@
 module mod_solver
   use, intrinsic :: iso_c_binding, only: C_PTR
   use decomp_2d
-  use mod_common_mpi, only: ipencil_axis
   use mod_fft       , only: fft
-  use mod_param     , only: is_poisson_pcr_tdma
+  use mod_param     , only: ipencil_axis,is_poisson_pcr_tdma
   use mod_types
   implicit none
   private
