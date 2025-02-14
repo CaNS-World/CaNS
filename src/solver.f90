@@ -197,11 +197,10 @@ module mod_solver
     real(rp),              dimension(nx,ny,n) :: aa,cc
     real(rp), allocatable, dimension(: ,: ,:) :: aa_y,cc_y,pp_y,aa_z,cc_z,pp_z
     real(rp), allocatable, dimension(: ,: ,:) :: pp_z_2,cc_z_0
-    real(rp) :: z,zz(2),lxy,bb(n)
+    real(rp) :: z,zz(2),bb(n)
     integer :: i,j,k
     integer , dimension(3) :: nr_z
     integer :: nx_r,ny_r,nn
-    integer :: istat,wsize
     !
     nr_z(:) = dinfo_ptdma%zsz(:)
     allocate(aa_y(nx,ny,2), &
@@ -419,7 +418,6 @@ module mod_solver
   end subroutine dgtsv_homebrewed
   !
   subroutine solver_gaussel_z(n,ng,hi,a,b,c,bcz,c_or_f,p)
-    use mod_param, only: eps
     implicit none
     integer , intent(in), dimension(3) :: n,ng,hi
     real(rp), intent(in), dimension(:) :: a,b,c

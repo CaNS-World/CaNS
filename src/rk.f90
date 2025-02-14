@@ -314,11 +314,10 @@ module mod_rk
     type(arr_ptr),         allocatable, dimension(:), save :: dsdtrk  ,dsdtrko
     !
     logical, save :: is_first = .true.
-    real(rp) :: factor1,factor2,factor12,ff
+    real(rp) :: factor1,factor2,factor12
     real(rp), dimension(0:1,3) :: flux
     integer :: i,j,k
-    integer :: is
-    real(rp) :: mean,ss
+    real(rp) :: mean
     !
     factor1 = rkpar(1)*dt
     factor2 = rkpar(2)*dt
@@ -358,7 +357,7 @@ module mod_rk
       !$acc end kernels
     end if
     !
-    call scal(n(1),n(2),n(3),dli(1),dli(2),dli(3),dzci,dzfi,alpha,u,v,w,s,dsdtrk(iscal)%s, &
+    call scal(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,alpha,u,v,w,s,dsdtrk(iscal)%s, &
               dsdtrkd(iscal)%s)
 #if !defined(_LOOP_UNSWITCHING)
     !$acc parallel loop collapse(3) default(present) async(1)

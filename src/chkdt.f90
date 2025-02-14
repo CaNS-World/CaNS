@@ -69,7 +69,7 @@ module mod_chkdt
     !$acc end data
     !$acc wait(1)
     call MPI_ALLREDUCE(MPI_IN_PLACE,dti,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
-    if(dti == 0.) dti = 1.
+    if(dti < epsilon(0._rp)) dti = 1.
     if(is_impdiff .and. .not.is_impdiff_1d) then
       dtmax = sqrt(3.)/dti
     else

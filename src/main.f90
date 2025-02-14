@@ -107,7 +107,7 @@ program cans
 #else
   integer    , dimension(2,2) :: arrplanu,arrplanv,arrplanw
 #endif
-  real(rp), allocatable, dimension(:,:) :: lambdaxyu,lambdaxyv,lambdaxyw,lambdaxy
+  real(rp), allocatable, dimension(:,:) :: lambdaxyu,lambdaxyv,lambdaxyw
   real(rp), allocatable, dimension(:) :: au,av,aw,bu,bv,bw,cu,cv,cw
   real(rp) :: normfftu,normfftv,normfftw
   type(rhs_bound) :: rhsbu,rhsbv,rhsbw
@@ -122,11 +122,6 @@ program cans
   !
   type(scalar), target, allocatable, dimension(:) :: scalars
   type(scalar), pointer :: s
-#if !defined(_OPENACC)
-  type(C_PTR), dimension(2,2) :: arrplans
-#else
-  integer    , dimension(2,2) :: arrplans
-#endif
   real(rp) :: meanscal
   real(rp), allocatable, dimension(:) :: fs
   integer :: iscal
@@ -350,12 +345,10 @@ program cans
   if(.not.restart) then
     istep = 0
     time = 0.
-    call initflow(inivel,bcvel,ng,lo,l,dl,zc,zf,dzc,dzf,visc, &
-                  is_forced,velf,bforce,is_wallturb,u,v,w,p)
+    call initflow(inivel,bcvel,ng,lo,l,dl,zc,zf,dzc,dzf,visc,is_forced,velf,bforce,is_wallturb,u,v,w,p)
     do iscal=1,nscal
       s => scalars(iscal)
-      call initscal(s%ini,s%bc,ng,lo,l,dl,zc,zf,dzc,dzf,s%alpha, &
-                    s%is_forced,s%scalf,s%source,is_wallturb,s%val)
+      call initscal(s%ini,s%bc,ng,lo,l,dl,zc,dzf,s%alpha,s%is_forced,s%scalf,s%val)
     end do
     if(myid == 0) print*, '*** Initial condition succesfully set ***'
   else

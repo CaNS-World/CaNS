@@ -37,14 +37,14 @@ module mod_scal
   end type scalar
   !
   contains
-  subroutine scal(nx,ny,nz,dxi,dyi,dzi,dzci,dzfi,visc,u,v,w,s,dsdt,dsdtd)
+  subroutine scal(nx,ny,nz,dxi,dyi,dzci,dzfi,visc,u,v,w,s,dsdt,dsdtd)
     use mod_param, only: is_impdiff,is_impdiff_1d
     !
     ! computes convective and diffusive fluxes
     !
     implicit none
     integer , intent(in) :: nx,ny,nz
-    real(rp), intent(in) :: dxi,dyi,dzi,visc
+    real(rp), intent(in) :: dxi,dyi,visc
     real(rp), intent(in), dimension(0:) :: dzci,dzfi
     real(rp), dimension(0:,0:,0:), intent(in) :: u,v,w,s
     real(rp), dimension(:,:,:), intent(out) :: dsdt
