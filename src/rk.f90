@@ -360,6 +360,7 @@ module mod_rk
     !
     call scal(n(1),n(2),n(3),dli(1),dli(2),dli(3),dzci,dzfi,alpha,u,v,w,s,dsdtrk(iscal)%s, &
               dsdtrkd(iscal)%s)
+#if !defined(_LOOP_UNSWITCHING)
     !$acc parallel loop collapse(3) default(present) async(1)
     !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
     do k=1,n(3)
@@ -372,6 +373,30 @@ module mod_rk
         end do
       end do
     end do
+#else
+    if(.not.is_impdiff) then
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            s(i,j,k) = s(i,j,k) + factor1*dsdtrk(iscal)%s(i,j,k) + factor2*dsdtrko(iscal)%s(i,j,k) + factor12*ssource
+          end do
+        end do
+      end do
+    else
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            s(i,j,k) = s(i,j,k) + factor1*dsdtrk(iscal)%s(i,j,k) + factor2*dsdtrko(iscal)%s(i,j,k) + &
+                                  factor12*(ssource + dsdtrkd(iscal)%s(i,j,k))
+          end do
+        end do
+      end do
+    end if
+#endif
     !
     ! compute wall scalar flux
     !
