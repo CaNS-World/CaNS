@@ -57,8 +57,8 @@ module mod_sanity
                                      & when the flow is not decomposed along the Z direction.'
     end if
 #endif
-#if defined(_IMPDIFF_1D) && defined(_POISSON_PCR_TDMA) && !defined(_DECOMP_Y) && !defined(_OPENACC)
-    if(myid == 0)  print*, 'ERROR: `_IMPDIFF_1D` on CPUs requires Y-aligned pencils.'; call abortit
+#if defined(_IMPDIFF_1D) && defined(_POISSON_PCR_TDMA) && defined(_DECOMP_Z) && !defined(_OPENACC)
+    if(myid == 0)  print*, 'ERROR: `_IMPDIFF_1D` w/ `_POISSON_PCR_TDMA` requires X/Y-aligned pencils.'; call abortit
 #endif
   end subroutine test_sanity_input
   !
