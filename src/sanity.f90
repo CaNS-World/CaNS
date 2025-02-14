@@ -57,11 +57,9 @@ module mod_sanity
                                        & when the flow is not decomposed along the Z direction.'
       end if
     end if
-#if !defined(_OPENACC)
-     if(is_impdiff_1d .and. is_poisson_pcr_tdma .and. .not.(ipencil_axis == 2)) then
-       if(myid == 0)  print*, 'ERROR: `is_impdiff_1d = T` on CPUs requires Y-aligned pencils.'; call abortit
-     end if
-#endif
+    if(is_poisson_pcr_tdma .and. (ipencil_axis == 3)) then
+      if(myid == 0)  print*, 'ERROR: `is_poisson_pcr_tdma = T` requires X/Y-aligned pencils.'; call abortit
+    end if
   end subroutine test_sanity_input
   !
   subroutine chk_stop_type(stop_type,passed)
