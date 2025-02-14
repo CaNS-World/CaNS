@@ -96,7 +96,10 @@ $(DEPS):
 	@$(foreach file, $(SRCS), $(GD) $(file) >> $(DEPS))
 
 # Define all module interdependencies
+ifneq ($(filter clean libsclean allclean,$(MAKECMDGOALS)),)
+else
 -include $(DEPS)
+endif
 $(foreach dep, $(OBJS), $(eval $(dep): $($(dep))))
 
 # Cleanup, filter to avoid removing source code by accident
