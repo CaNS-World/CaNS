@@ -8,16 +8,16 @@ The `Makefile` in root directory is used to compiled the code, and is expected t
 #
 # compiler and compiling profile
 #
-FCOMP=GNU           # options: GNU, NVIDIA, INTEL
-FFLAGS_OPT=1        # for production runs
-FFLAGS_OPT_MAX=0    # for production runs (more aggressive optimization)
-FFLAGS_DEBUG=0      # for debugging
-FFLAGS_DEBUG_MAX=0  # for thorough debugging
+FCOMP=GNU          # options: GNU, NVIDIA, INTEL
+FFLAGS_OPT=1       # for production runs
+FFLAGS_OPT_MAX=0   # for production runs (more aggressive optimization)
+FFLAGS_DEBUG=0     # for debugging
+FFLAGS_DEBUG_MAX=0 # for thorough debugging
 #
 # defines
 #
-SINGLE_PRECISION=0  # perform the whole calculation in single precision
-GPU=0
+SINGLE_PRECISION=0 # perform the whole calculation in single precision
+GPU=0              # GPU build
 ```
 
 In this file, `FCOMP` can be one of `GNU` (`gfortran`), `INTEL` (`ifort`), `NVIDIA` (`nvfortran`), or `CRAY` (`ftn`); the predefined profiles for compiler options can be selected by choosing one of the `FFLAGS_*` option; finer control of the compiler flags may be achieved by building with, e.g., `make FFLAGS+=[OTHER_FLAGS]`, or by tweaking the profiles directly under `configs/flags.mk`. Similarly, the library paths (e.g., for *FFTW*) may need to be adapted in the `Makefile` (`LIBS` variable) or by building with `make LIBS+='-L[PATH_TO_LIB] -l[NAME_OF_LIB]'`. Finally, the following pre-processing options are available:

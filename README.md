@@ -91,8 +91,8 @@ For most systems, CaNS can be compiled from the root directory with the followin
 #### Detailed instructions
 The `Makefile` in root directory is used to compile the code, and is expected to work out-of-the-box for most systems. The `build.conf` file in the root directory can be used to choose the Fortran compiler (MPI wrapper), and a few pre-defined profiles depending on the nature of the run (e.g., production vs debugging), and pre-processing options; see [`INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details. The default `build.conf` file is created from `configs/defaults/build-default.conf` at the first compilation. Concerning the pre-processing options, the following are available:
 
- * `SINGLE_PRECISION`         : calculation will be carried out in single precision (the default precision is double)
- * `GPU`                      : enable GPU-accelerated runs
+ * `SINGLE_PRECISION` : calculation will be carried out in single precision (the default precision is double)
+ * `GPU`              : enable GPU-accelerated runs
 
 ### Input file
 
