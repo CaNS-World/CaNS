@@ -35,7 +35,7 @@ contains
     real(dp), allocatable :: timing_results_acc(:,:), &
                              timing_results_min(:,:), &
                              timing_results_max(:,:)
-    integer  :: i,myid,nproc,ierr,iend
+    integer  :: i,myid,nproc,ierr
     !
     if(present(myid_arg)) then
       myid = myid_arg
