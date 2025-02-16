@@ -301,6 +301,7 @@ contains
         close(iunit)
         error stop
       end if
+      if(is_impdiff_1d) is_impdiff = .true.
       !
       ! read `other_options` namelist
       !
