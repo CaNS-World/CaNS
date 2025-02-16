@@ -427,7 +427,7 @@ module mod_bound
     end select
   end subroutine inflow
   !
-  subroutine updt_rhs_b(c_or_f,cbc,n,is_bound,rhsbx,rhsby,rhsbz,p)
+  subroutine updt_rhs_b(c_or_f,cbc,n,is_bound,rhsbx,rhsby,rhsbz,p,alpha)
     implicit none
     character(len=1), intent(in), dimension(3    ) :: c_or_f
     character(len=1), intent(in), dimension(0:1,3) :: cbc
@@ -435,14 +435,18 @@ module mod_bound
     logical , intent(in), dimension(0:1,3) :: is_bound
     real(rp), intent(in), dimension(:,:,0:), optional :: rhsbx,rhsby,rhsbz
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
+    real(rp), intent(in), optional :: alpha
     integer , dimension(3) :: q
     integer :: idir
     integer :: nn
     integer :: i,j,k
+    real(rp) :: norm
     q(:) = 0
     do idir = 1,3
       if(c_or_f(idir) == 'f'.and.cbc(1,idir) == 'D') q(idir) = 1
     end do
+    norm = 1.
+    if(present(alpha)) norm = alpha
     !
     if(present(rhsbx)) then
       if(is_bound(0,1)) then
@@ -450,7 +454,7 @@ module mod_bound
         !$OMP parallel do   collapse(2) DEFAULT(shared)
         do k=1,n(3)
           do j=1,n(2)
-            p(1 ,j,k) = p(1 ,j,k) + rhsbx(j,k,0)
+            p(1 ,j,k) = p(1 ,j,k) + rhsbx(j,k,0)*norm
           end do
         end do
       end if
@@ -460,7 +464,7 @@ module mod_bound
         !$OMP parallel do   collapse(2) DEFAULT(shared)
         do k=1,n(3)
           do j=1,n(2)
-            p(nn,j,k) = p(nn,j,k) + rhsbx(j,k,1)
+            p(nn,j,k) = p(nn,j,k) + rhsbx(j,k,1)*norm
           end do
         end do
       end if
@@ -471,7 +475,7 @@ module mod_bound
         !$OMP parallel do   collapse(2) DEFAULT(shared)
         do k=1,n(3)
           do i=1,n(1)
-            p(i,1 ,k) = p(i,1 ,k) + rhsby(i,k,0)
+            p(i,1 ,k) = p(i,1 ,k) + rhsby(i,k,0)*norm
           end do
         end do
       end if
@@ -481,7 +485,7 @@ module mod_bound
         !$OMP parallel do   collapse(2) DEFAULT(shared)
         do k=1,n(3)
           do i=1,n(1)
-            p(i,nn,k) = p(i,nn,k) + rhsby(i,k,1)
+            p(i,nn,k) = p(i,nn,k) + rhsby(i,k,1)*norm
           end do
         end do
       end if
@@ -492,7 +496,7 @@ module mod_bound
         !$OMP parallel do   collapse(2) DEFAULT(shared)
         do j=1,n(2)
           do i=1,n(1)
-            p(i,j,1 ) = p(i,j,1 ) + rhsbz(i,j,0)
+            p(i,j,1 ) = p(i,j,1 ) + rhsbz(i,j,0)*norm
           end do
         end do
       end if
@@ -502,7 +506,7 @@ module mod_bound
         !$OMP parallel do   collapse(2) DEFAULT(shared)
         do j=1,n(2)
           do i=1,n(1)
-            p(i,j,nn) = p(i,j,nn) + rhsbz(i,j,1)
+            p(i,j,nn) = p(i,j,nn) + rhsbz(i,j,1)*norm
           end do
         end do
       end if
