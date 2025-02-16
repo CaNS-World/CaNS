@@ -29,7 +29,7 @@ dims(1:2) = 0, 0, ipencil_axis = 1
 &scalar
 iniscal(:)             = 'dhc'
 alphai(:)              = 842.614977318
-beta(:)                = 1.
+beta                   = 1.
 cbcscal(0:1,1:3,:)     = 'D'  ,'D' ,  'P','P',  'N','N'
 bcscal(0:1,1:3,:)      =  -0.5,0.5 ,   0.,0. ,   0.,0.
 ssource(:)             = 0.
@@ -41,7 +41,6 @@ is_boussinesq_buoyancy = T
 &cudecomp
 cudecomp_t_comm_backend = 0, cudecomp_is_t_enable_nccl = T, cudecomp_is_t_enable_nvshmem = T
 cudecomp_h_comm_backend = 0, cudecomp_is_h_enable_nccl = T, cudecomp_is_h_enable_nvshmem = T
-cudecomp_is_t_in_place = F
 /
 
 &numerics
