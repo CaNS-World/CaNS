@@ -81,9 +81,10 @@ module mod_output
     !
     allocate(p1d(ng(idir)))
     !$acc enter data create(p1d)
-    !$acc kernels default(present)
-    p1d(:) = 0._rp
-    !$acc end kernels
+    !$acc parallel loop default(present)
+    do k=1,size(p1d)
+      p1d(k) = 0._rp
+    end do
     select case(idir)
     case(3)
       grid_area_ratio = dl(1)*dl(2)/(l(1)*l(2))

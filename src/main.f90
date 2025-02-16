@@ -258,15 +258,19 @@ program cans
     dzci(k) = dzc(k)**(-1)
     dzfi(k) = dzf(k)**(-1)
   end do
-  !$acc kernels default(present) async
-  dzci_g(:) = dzc_g(:)**(-1)
-  dzfi_g(:) = dzf_g(:)**(-1)
-  !$acc end kernels
+  !$acc data copy(ng) async
+  !$acc parallel loop default(present) async
+  do k=0,ng(3)+1
+    dzci_g(k) = dzc_g(k)**(-1)
+    dzfi_g(k) = dzf_g(k)**(-1)
+  end do
+  !$acc end data
   !$acc enter data create(grid_vol_ratio_c,grid_vol_ratio_f) async
-  !$acc kernels default(present) async
-  grid_vol_ratio_c(:) = dl(1)*dl(2)*dzc(:)/(l(1)*l(2)*l(3))
-  grid_vol_ratio_f(:) = dl(1)*dl(2)*dzf(:)/(l(1)*l(2)*l(3))
-  !$acc end kernels
+  !$acc parallel loop default(present) async
+  do k=0,n(3)+1
+    grid_vol_ratio_c(k) = dl(1)*dl(2)*dzc(k)/(l(1)*l(2)*l(3))
+    grid_vol_ratio_f(k) = dl(1)*dl(2)*dzf(k)/(l(1)*l(2)*l(3))
+  end do
   !$acc update self(zc,zf,dzc,dzf,dzci,dzfi) async
   !$acc exit data copyout(zc_g,zf_g,dzc_g,dzf_g,dzci_g,dzfi_g) async ! not needed on the device
   !$acc wait

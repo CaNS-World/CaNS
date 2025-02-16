@@ -38,7 +38,7 @@ module mod_solver_gpu
     logical , intent(inout), target, optional :: is_ptdma_update
     real(rp), intent(inout), dimension(:,:,:), optional :: aa_z,cc_z
     real(rp), pointer, contiguous, dimension(:,:,:) :: px,py,pz
-    integer :: q
+    integer :: i,j,k,q
     logical :: is_periodic_z
     integer, dimension(3) :: n_x,n_y,n_z,n_z_0,lo_z_0,hi_z_0
     integer :: istat
@@ -69,36 +69,41 @@ module mod_solver_gpu
     !
     select case(ipencil_axis)
     case(1)
-      !$acc kernels default(present) async(1)
-      !$OMP PARALLEL WORKSHARE
-      px(1:n(1),1:n(2),1:n(3)) = p(1:n(1),1:n(2),1:n(3))
-      !$OMP END PARALLEL WORKSHARE
-      !$acc end kernels
-    case(2)
-      block
-        integer :: i,j,k
-        !
-        ! transpose p -> py to axis-contiguous layout
-        !
-        !$acc parallel loop collapse(3) default(present) async(1)
-        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
-        do k=1,n(3)
-          do j=1,n(2)
-            do i=1,n(1)
-              py(j,k,i) = p(i,j,k)
-            end do
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            px(i,j,k) = p(i,j,k)
           end do
         end do
-      end block
+      end do
+    case(2)
+      !
+      ! transpose p -> py to axis-contiguous layout
+      !
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            py(j,k,i) = p(i,j,k)
+          end do
+        end do
+      end do
       !$acc host_data use_device(py,px,work)
       istat = cudecompTransposeYtoX(ch,gd,py,px,work,dtype_rp,stream=istream)
       !$acc end host_data
     case(3)
-      !$acc kernels default(present) async(1)
-      !$OMP PARALLEL WORKSHARE
-      pz(1:n(1),1:n(2),1:n(3)) = p(1:n(1),1:n(2),1:n(3))
-      !$OMP END PARALLEL WORKSHARE
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            pz(i,j,k) = p(i,j,k)
+          end do
+        end do
+      end do
       !$acc host_data use_device(pz,py,px,work)
       istat = cudecompTransposeZtoY(ch,gd,pz,py,work,dtype_rp,stream=istream)
       istat = cudecompTransposeYtoX(ch,gd,py,px,work,dtype_rp,stream=istream)
@@ -132,7 +137,6 @@ module mod_solver_gpu
     else
       block
         use mod_common_cudecomp, only: ap_y
-        integer :: i,j,k
         integer :: n_y_1,n_y_2,n_y_3
         !
         ! transpose py -> pz with non-axis-contiguous layout
@@ -156,7 +160,6 @@ module mod_solver_gpu
       !
       block
         use mod_common_cudecomp, only: ap_y
-        integer :: i,j,k
         integer :: n_y_1,n_y_2,n_y_3
         !
         ! transpose pz -> py with axis-contiguous layout
@@ -190,40 +193,45 @@ module mod_solver_gpu
     !
     select case(ipencil_axis)
     case(1)
-      !$acc kernels default(present) async(1)
-      !$OMP PARALLEL WORKSHARE
-      p(1:n(1),1:n(2),1:n(3)) = px(1:n(1),1:n(2),1:n(3))
-      !$OMP END PARALLEL WORKSHARE
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            p(i,j,k) = px(i,j,k)
+          end do
+        end do
+      end do
     case(2)
       !$acc host_data use_device(px,py,work)
       istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_rp,stream=istream)
       !$acc end host_data
-      block
-        integer :: i,j,k
-        !
-        ! transpose py -> p to default layout
-        !
-        !$acc parallel loop collapse(3) default(present) async(1)
-        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
-        do k=1,n(3)
-          do j=1,n(2)
-            do i=1,n(1)
-              p(i,j,k) = py(j,k,i)
-            end do
+      !
+      ! transpose py -> p to default layout
+      !
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            p(i,j,k) = py(j,k,i)
           end do
         end do
-      end block
+      end do
     case(3)
       !$acc host_data use_device(px,py,pz,work)
       istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_rp,stream=istream)
       istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
       !$acc end host_data
-      !$acc kernels default(present) async(1)
-      !$OMP PARALLEL WORKSHARE
-      p(1:n(1),1:n(2),1:n(3)) = pz(1:n(1),1:n(2),1:n(3))
-      !$OMP END PARALLEL WORKSHARE
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            p(i,j,k) = pz(i,j,k)
+          end do
+        end do
+      end do
     end select
   end subroutine solver_gpu
   !
@@ -509,6 +517,9 @@ module mod_solver_gpu
     !
     ! transpose to gather reduced subdomain boundary systems along z
     !
+    nn   = nr_z(3)
+    ny_r = nr_z(2)
+    nx_r = nr_z(1)
     if(present(is_update) .and. present(aa_z_save) .and. present(cc_z_save)) then
       if(is_update) then
         is_update = .false.
@@ -517,10 +528,15 @@ module mod_solver_gpu
         istat = cudecompTransposeYtoZ(ch,gd_ptdma,cc_y,cc_z_save,work,dtype_rp,stream=istream)
         !$acc end host_data
       end if
-      !$acc kernels default(present) async(1)
-      aa_z(:,:,:) = aa_z_save(:,:,:)
-      cc_z(:,:,:) = cc_z_save(:,:,:)
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present) async(1)
+      do k=1,nn
+        do j=1,ny_r
+          do i=1,nx_r
+            aa_z(i,j,k) = aa_z_save(i,j,k)
+            cc_z(i,j,k) = cc_z_save(i,j,k)
+          end do
+        end do
+      end do
     else
       !$acc host_data use_device(aa_y,cc_y,aa_z,cc_z,work)
       istat = cudecompTransposeYtoZ(ch,gd_ptdma,aa_y,aa_z,work,dtype_rp,stream=istream)
@@ -533,14 +549,16 @@ module mod_solver_gpu
     !
     ! solve reduced systems
     !
-    nn   = nr_z(3)
-    ny_r = nr_z(2)
-    nx_r = nr_z(1)
     if(is_periodic) then
       nn = nn-1
-      !$acc kernels default(present) async(1)
-      cc_z_0(:,:,:) = cc_z(:,:,:)
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present) async(1)
+      do k=1,nn+1
+        do j=1,ny_r
+          do i=1,nx_r
+            cc_z_0(i,j,k) = cc_z(i,j,k)
+          end do
+        end do
+      end do
     end if
     !$acc parallel loop gang vector collapse(2) default(present) private(z) async(1)
     do j=1,ny_r
@@ -727,9 +745,10 @@ module mod_solver_gpu
     dk_g = lo-1
     if(is_periodic) then
       nn = nn-1
-      !$acc kernels default(present) async(1)
-      pp_z_2(:) = 0.
-      !$acc end kernels
+      !$acc parallel loop default(present) async(1)
+      do k=1,nn+1
+        pp_z_2(k) = 0._rp
+      end do
       !$acc parallel default(present) async(1)
       pp_z_2(1 ) = -aa_z(1 )
       pp_z_2(nn) = pp_z_2(nn) - cc_z(nn)
@@ -744,9 +763,10 @@ module mod_solver_gpu
       cc_z(k) = cc_z(k)/(bb_z(k) - aa_z(k)*cc_z(k-1))
     end do
     !$acc end parallel
-    !$acc kernels default(present) async(1)
-    bb(:) = bb(:)**(-1)
-    !$acc end kernels
+    !$acc parallel loop default(present) async(1)
+    do k=1,n
+      bb(k) = bb(k)**(-1)
+    end do
     !
     if(is_periodic) then
       !$acc parallel loop seq default(present) async(1)
@@ -853,7 +873,7 @@ module mod_solver_gpu
     real(rp), intent(in) :: norm
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
     real(rp), pointer, contiguous, dimension(:,:,:) :: px,py,pz
-    integer :: q
+    integer :: i,j,k,q
     logical :: is_periodic_z
     integer, dimension(3) :: n_x,n_y,n_z,n_z_0
     integer               :: lo_z,hi_z
@@ -881,31 +901,32 @@ module mod_solver_gpu
       if(.not.is_no_decomp_z) then
         select case(ipencil_axis)
         case(1)
-          !$acc kernels default(present) async(1)
-          !$OMP PARALLEL WORKSHARE
-          px(:,:,:) = p(1:n(1),1:n(2),1:n(3))
-          !$OMP END PARALLEL WORKSHARE
-          !$acc end kernels
+           !$acc parallel loop collapse(3) default(present) async(1)
+           !$OMP parallel do   collapse(3) DEFAULT(shared)
+           do k=1,n(3)
+             do j=1,n(2)
+               do i=1,n(1)
+                 px(i,j,k) = p(i,j,k)
+               end do
+             end do
+           end do
           !$acc host_data use_device(px,py,pz,work)
           istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_rp,stream=istream)
           istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
           !$acc end host_data
         case(2)
-          block
-            integer :: i,j,k
-            !
-            ! transpose p -> py to axis-contiguous layout
-            !
-            !$acc parallel loop collapse(3) default(present) async(1)
-            !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
-            do k=1,n(3)
-              do j=1,n(2)
-                do i=1,n(1)
-                  py(j,k,i) = p(i,j,k)
-                end do
+          !
+          ! transpose p -> py to axis-contiguous layout
+          !
+          !$acc parallel loop collapse(3) default(present) async(1)
+          !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+          do k=1,n(3)
+            do j=1,n(2)
+              do i=1,n(1)
+                py(j,k,i) = p(i,j,k)
               end do
             end do
-          end block
+          end do
           !$acc host_data use_device(py,pz,work)
           istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
           !$acc end host_data
@@ -933,30 +954,31 @@ module mod_solver_gpu
         istat = cudecompTransposeZtoY(ch,gd,pz,py,work,dtype_rp,stream=istream)
         istat = cudecompTransposeYtoX(ch,gd,py,px,work,dtype_rp,stream=istream)
         !$acc end host_data
-        !$acc kernels default(present) async(1)
-        !$OMP PARALLEL WORKSHARE
-        p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)
-        !$OMP END PARALLEL WORKSHARE
-        !$acc end kernels
+        !$acc parallel loop collapse(3) default(present) async(1)
+        !$OMP parallel do   collapse(3) DEFAULT(shared)
+        do k=1,n(3)
+          do j=1,n(2)
+            do i=1,n(1)
+              p(i,j,k) = px(i,j,k)
+            end do
+          end do
+        end do
       case(2)
         !$acc host_data use_device(pz,py,work)
         istat = cudecompTransposeZtoY(ch,gd,pz,py,work,dtype_rp,stream=istream)
         !$acc end host_data
-        block
-          integer :: i,j,k
-          !
-          ! transpose py -> p to default layout
-          !
-          !$acc parallel loop collapse(3) default(present) async(1)
-          !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
-          do k=1,n(3)
-            do j=1,n(2)
-              do i=1,n(1)
-                p(i,j,k) = py(j,k,i)
-              end do
+        !
+        ! transpose py -> p to default layout
+        !
+        !$acc parallel loop collapse(3) default(present) async(1)
+        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+        do k=1,n(3)
+          do j=1,n(2)
+            do i=1,n(1)
+              p(i,j,k) = py(j,k,i)
             end do
           end do
-        end block
+        end do
       case(3)
       end select
     end if
@@ -1067,9 +1089,14 @@ module mod_solver_gpu
       !$acc end host_data
       !
       if(is_periodic) then
-        !$acc kernels default(present) async(1)
-        pp_z_2(:,:,:) = 0.
-        !$acc end kernels
+        !$acc parallel loop collapse(3) default(present) async(1)
+        do k=1,nn+1
+          do j=1,ny_r
+            do i=1,nx_r
+              pp_z_2(i,j,k) = 0._rp
+            end do
+          end do
+        end do
         !$acc parallel loop gang vector collapse(2) default(present) async(1)
         do j=1,ny_r
           do i=1,nx_r
@@ -1090,9 +1117,14 @@ module mod_solver_gpu
           end do
         end do
       end do
-      !$acc kernels default(present) async(1)
-      bb(:,:,:) = bb(:,:,:)**(-1)
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present) async(1)
+      do k=1,n
+        do j=1,ny
+          do i=1,nx
+            bb(i,j,k) = bb(i,j,k)**(-1)
+          end do
+        end do
+      end do
       !
       if(is_periodic) then
         !$acc parallel loop gang vector collapse(2) default(present) async(1)

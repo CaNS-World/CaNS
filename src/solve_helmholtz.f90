@@ -46,6 +46,7 @@ module mod_solve_helmholtz
     real(rp),    intent(inout), dimension(:,:,:)            :: p
     real(rp), allocatable, dimension(:), save :: bb
     real(rp) :: alphai
+    integer :: k
     !
     logical, save :: is_first = .true.
     !
@@ -60,11 +61,12 @@ module mod_solve_helmholtz
     call updt_rhs_b(c_or_f,cbc,n,is_bound,rhsbx,rhsby,rhsbz,p,alpha)
     !
     alphai = alpha**(-1)
-    !$acc kernels default(present) async(1)
-    !$OMP PARALLEL WORKSHARE
-    bb(:) = b(:) + alphai
-    !$OMP END PARALLEL WORKSHARE
-    !$acc end kernels
+    !$acc parallel loop default(present) async(1)
+    !$OMP PARALLEL DO   DEFAULT(shared)
+    do k=1,size(b)
+      bb(k) = b(k) + alphai
+    end do
+    !
     if(.not.is_impdiff_1d) then
       call solver(n,ng,arrplan,normfft*alphai,lambdaxy,a,bb,c,cbc,c_or_f,p)
     else

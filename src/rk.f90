@@ -65,11 +65,17 @@ module mod_rk
       allocate(dudtrko_t(n(1),n(2),n(3)),dvdtrko_t(n(1),n(2),n(3)),dwdtrko_t(n(1),n(2),n(3)))
       !$acc enter data create(dudtrk_t ,dvdtrk_t ,dwdtrk_t ) async(1)
       !$acc enter data create(dudtrko_t,dvdtrko_t,dwdtrko_t) async(1)
-      !$acc kernels default(present) async(1) ! not really necessary
-      dudtrko_t(:,:,:) = 0._rp
-      dvdtrko_t(:,:,:) = 0._rp
-      dwdtrko_t(:,:,:) = 0._rp
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present) async(1) ! not really necessary
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            dudtrko_t(i,j,k) = 0._rp
+            dvdtrko_t(i,j,k) = 0._rp
+            dwdtrko_t(i,j,k) = 0._rp
+          end do
+        end do
+      end do
       if(is_impdiff) then
         allocate(dudtrkd(n(1),n(2),n(3)),dvdtrkd(n(1),n(2),n(3)),dwdtrkd(n(1),n(2),n(3)))
         !$acc enter data create(dudtrkd,dvdtrkd,dwdtrkd) async(1)
@@ -85,25 +91,33 @@ module mod_rk
     if(is_fast_mom_kernels) then
       call mom_xyz_ad(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,u,v,w,dudtrk,dvdtrk,dwdtrk,dudtrkd,dvdtrkd,dwdtrkd)
     else
-      !$acc kernels default(present) async(1)
-      !$OMP PARALLEL WORKSHARE
-      dudtrk(:,:,:) = 0._rp
-      dvdtrk(:,:,:) = 0._rp
-      dwdtrk(:,:,:) = 0._rp
-      !$OMP END PARALLEL WORKSHARE
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            dudtrk(i,j,k) = 0._rp
+            dvdtrk(i,j,k) = 0._rp
+            dwdtrk(i,j,k) = 0._rp
+          end do
+        end do
+      end do
       if(.not.is_impdiff) then
         call momx_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,u,dudtrk)
         call momy_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,v,dvdtrk)
         call momz_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,w,dwdtrk)
       else
-        !$acc kernels default(present) async(1)
-        !$OMP PARALLEL WORKSHARE
-        dudtrkd(:,:,:) = 0._rp
-        dvdtrkd(:,:,:) = 0._rp
-        dwdtrkd(:,:,:) = 0._rp
-        !$OMP END PARALLEL WORKSHARE
-        !$acc end kernels
+        !$acc parallel loop collapse(3) default(present) async(1)
+        !$OMP parallel do   collapse(3) DEFAULT(shared)
+        do k=1,n(3)
+          do j=1,n(2)
+            do i=1,n(1)
+              dudtrkd(i,j,k) = 0._rp
+              dvdtrkd(i,j,k) = 0._rp
+              dwdtrkd(i,j,k) = 0._rp
+            end do
+          end do
+        end do
         if(.not.is_impdiff_1d) then
           call momx_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,u,dudtrkd)
           call momy_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,v,dvdtrkd)
@@ -236,13 +250,17 @@ module mod_rk
     call swap(dvdtrk,dvdtrko)
     call swap(dwdtrk,dwdtrko)
 !#if 0 /*pressure gradient term treated explicitly above */
-!    !$acc kernels
-!    !$OMP PARALLEL WORKSHARE
-!    dudtrk(:,:,:) = 0._rp
-!    dvdtrk(:,:,:) = 0._rp
-!    dwdtrk(:,:,:) = 0._rp
-!    !$OMP END PARALLEL WORKSHARE
-!    !$acc end kernels
+!    !$acc parallel loop collapse(3) default(present) async(1)
+!    !$OMP parallel do   collapse(3) DEFAULT(shared)
+!    do k=1,n(3)
+!      do j=1,n(2)
+!        do i=1,n(1)
+!          dudtrk(i,j,k) = 0._rp
+!          dvdtrk(i,j,k) = 0._rp
+!          dwdtrk(i,j,k) = 0._rp
+!        end do
+!      end do
+!    end do
 !    call momx_p(n(1),n(2),n(3),dli(1),bforce(1),p,dudtrk)
 !    call momy_p(n(1),n(2),n(3),dli(2),bforce(2),p,dvdtrk)
 !    call momz_p(n(1),n(2),n(3),dzci  ,bforce(3),p,dwdtrk)
@@ -336,9 +354,15 @@ module mod_rk
       end if
       allocate(dsdtrk_t(iscal)%s(n(1),n(2),n(3)),dsdtrko_t(iscal)%s(n(1),n(2),n(3)))
       !$acc enter data create(dsdtrk_t(iscal)%s,dsdtrko_t(iscal)%s) async(1)
-      !$acc kernels default(present) async(1) ! not really necessary
-      dsdtrko_t(iscal)%s(:,:,:) = 0._rp
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            dsdtrko_t(iscal)%s(i,j,k) = 0._rp
+          end do
+        end do
+      end do
       dsdtrk(iscal)%s  => dsdtrk_t(iscal)%s
       dsdtrko(iscal)%s => dsdtrko_t(iscal)%s
       !$acc enter data attach(dsdtrk(iscal)%s,dsdtrko(iscal)%s) async(1)
@@ -352,9 +376,15 @@ module mod_rk
         allocate(dsdtrkd(iscal)%s(0,0,0))
       end if
       !$acc enter data create(dsdtrkd(iscal)%s) async(1)
-      !$acc kernels default(present) async(1)
-      dsdtrkd(iscal)%s(:,:,:) = 0._rp
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=1,size(dsdtrkd(iscal)%s,3)
+        do j=1,size(dsdtrkd(iscal)%s,2)
+          do i=1,size(dsdtrkd(iscal)%s,1)
+            dsdtrkd(iscal)%s(i,j,k) = 0._rp
+          end do
+        end do
+      end do
     end if
     !
     call scal(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,alpha,u,v,w,s,dsdtrk(iscal)%s, &

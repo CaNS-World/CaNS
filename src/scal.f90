@@ -302,12 +302,17 @@ module mod_scal
     logical , intent(in   )               :: is_forced
     real(rp), intent(in   )               :: ff
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
+    integer :: i,j,k
     if(is_forced) then
-      !$acc kernels default(present) async(1)
-      !$OMP PARALLEL WORKSHARE
-      p(1:n(1),1:n(2),1:n(3)) = p(1:n(1),1:n(2),1:n(3)) + ff
-      !$OMP END PARALLEL WORKSHARE
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            p(i,j,k) = p(i,j,k) + ff
+          end do
+        end do
+      end do
     end if
   end subroutine bulk_forcing_s
   !
