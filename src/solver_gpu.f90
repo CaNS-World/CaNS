@@ -907,14 +907,14 @@ module mod_solver_gpu
     !
     q = merge(1,0,c_or_f(3) == 'f'.and.bcz(1) == 'D'.and.hi_z == ng(3))
     is_periodic_z = bcz(0)//bcz(1) == 'PP'
-    if(ipencil_axis /= 3) then
+    if(.not.is_no_decomp_z) then
       if(.not.is_poisson_pcr_tdma) then
         call gaussel_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,0,a,b,c,is_periodic_z,pz,work,pz_aux_1)
       else
         call gaussel_ptdma_gpu_fast_1d(n(1),n(2),n(3)-q,lo_z,1,a,b,c,is_periodic_z,p)
       end if
     else
-        call gaussel_gpu(n(1),n(2),n(3)-q,1,a,b,c,is_periodic_z,p,work,pz_aux_1)
+      call gaussel_gpu(n(1),n(2),n(3)-q,1,a,b,c,is_periodic_z,p,work,pz_aux_1)
     end if
     !
     if(.not.is_poisson_pcr_tdma .and. .not.is_no_decomp_z) then
