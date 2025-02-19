@@ -651,8 +651,9 @@ module mod_solver_gpu
     real(rp), pointer    , dimension(:,:,:)        :: pp_x,pp_y
     real(rp), allocatable, dimension(:,:,:), save  :: pp_z
     real(rp), allocatable, dimension(:    ), save  :: aa,bb,cc,aa_z,bb_z,cc_z,pp_z_2
+    real(rp), pointer    , dimension(:,:) :: aa_all,bb_all,cc_all
     integer :: i,j,k,dk_g,nn
-    integer :: islab,myslab,irank,nranks_z,kg,llo
+    integer :: islab,myslab,nranks_z,kg,llo
     integer , dimension(3) :: nr_z,nr_y
     integer :: nx_r,ny_r,nng
     integer :: istat
@@ -680,9 +681,11 @@ module mod_solver_gpu
     nng      = size(b_g)
     nranks_z = dims(2)
     myslab   = mod(myid,nranks_z)
-    do irank=0,nranks_z ! n.b.: myid treated in the last iteration, to save aa,bb,cc
-      if(irank == myslab) cycle
-      islab = merge(myslab,irank,irank == nranks_z)
+    aa_all(1:n+1,0:nranks_z-1) => work(0*(n+1)*nranks_z+1:1*(n+1)*nranks_z)
+    bb_all(1:n+1,0:nranks_z-1) => work(1*(n+1)*nranks_z+1:2*(n+1)*nranks_z)
+    cc_all(1:n+1,0:nranks_z-1) => work(2*(n+1)*nranks_z+1:3*(n+1)*nranks_z)
+    !$acc parallel loop gang default(present) private(nn,llo,k) async(1)
+    do islab=0,nranks_z-1
       !
       ! manual partitioning to avoid an MPI_ALLGATHER
       ! initialization step and storing the result
@@ -693,8 +696,8 @@ module mod_solver_gpu
       !  call MPI_ALLGATHER(lo_y,3,MPI_INTEGER,lo_all,3,MPI_INTEGER,MPI_COMM_WORLD)
       !  call MPI_ALLGATHER(hi_y,3,MPI_INTEGER,hi_all,3,MPI_INTEGER,MPI_COMM_WORLD)
       !
-      !  lo = lo_y_all(islab,3)
-      !  hi = hi_y_all(islab,3)
+      !  lo = lo_y_all(3,islab)
+      !  hi = hi_y_all(3,islab)
       !  ```
       !
       nn  = nng/nranks_z
@@ -704,39 +707,42 @@ module mod_solver_gpu
         llo = llo + mod(nng,nranks_z)
       end if
       !
-      !$acc parallel loop default(present) private(kg) async(1)
+      !$acc loop private(kg)
       do k=1,nn
         kg = k + llo-1
-        aa(k) = a_g(kg)
-        bb(k) = b_g(kg)
-        cc(k) = c_g(kg)
+        aa_all(k,islab) = a_g(kg)
+        bb_all(k,islab) = b_g(kg)
+        cc_all(k,islab) = c_g(kg)
       end do
-      !$acc parallel loop seq default(present) async(1)
+      !$acc loop seq
       do k=3,nn
-        bb(k) = bb(k) - aa(k)/bb(k-1)*cc(k-1)
-        aa(k) =       - aa(k)/bb(k-1)*aa(k-1)
+        bb_all(k,islab) = bb_all(k,islab) - aa_all(k,islab)/bb_all(k-1,islab)*cc_all(k-1,islab)
+        aa_all(k,islab) =                 - aa_all(k,islab)/bb_all(k-1,islab)*aa_all(k-1,islab)
       end do
-      !$acc parallel loop seq default(present) async(1)
+      !$acc loop seq
       do k=nn-2,2,-1
-        aa(k) = aa(k) - cc(k)/bb(k+1)*aa(k+1)
-        cc(k) =       - cc(k)/bb(k+1)*cc(k+1)
+        aa_all(k,islab) = aa_all(k,islab) - cc_all(k,islab)/bb_all(k+1,islab)*aa_all(k+1,islab)
+        cc_all(k,islab) =                 - cc_all(k,islab)/bb_all(k+1,islab)*cc_all(k+1,islab)
       end do
       if(nn > 1) then
-        !$acc parallel default(present) async(1)
-        bb(1) = bb(1) - cc(1)/bb(2)*aa(2)
-        cc(1) =       - cc(1)/bb(2)*cc(2)
-        !$acc end parallel
+        bb_all(1,islab) = bb_all(1,islab) - cc_all(1,islab)/bb_all(2,islab)*aa_all(2,islab)
+        cc_all(1,islab) =                 - cc_all(1,islab)/bb_all(2,islab)*cc_all(2,islab)
       end if
       !
       k = 2*islab + 1
-      !$acc parallel default(present) async(1)
-      aa_z(k  ) = aa(1 )
-      aa_z(k+1) = aa(nn)
-      bb_z(k  ) = bb(1 )
-      bb_z(k+1) = bb(nn)
-      cc_z(k  ) = cc(1 )
-      cc_z(k+1) = cc(nn)
-      !$acc end parallel
+      aa_z(k  ) = aa_all(1 ,islab)
+      aa_z(k+1) = aa_all(nn,islab)
+      bb_z(k  ) = bb_all(1 ,islab)
+      bb_z(k+1) = bb_all(nn,islab)
+      cc_z(k  ) = cc_all(1 ,islab)
+      cc_z(k+1) = cc_all(nn,islab)
+    end do
+    !
+    !$acc parallel loop default(present) async(1)
+    do k=1,n+1
+      aa(k) = aa_all(k,myslab)
+      bb(k) = bb_all(k,myslab)
+      cc(k) = cc_all(k,myslab)
     end do
     !
     nn   = nr_z(3)

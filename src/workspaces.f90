@@ -20,7 +20,7 @@ contains
                                    ap_z,pz_aux_1, &
                                    istream_acc_queue_1
     use mod_fft            , only: wsize_fft
-    use mod_param          , only: cudecomp_is_t_in_place,cbcpre,ipencil => ipencil_axis,is_poisson_pcr_tdma
+    use mod_param          , only: ng,cudecomp_is_t_in_place,cbcpre,ipencil => ipencil_axis,is_poisson_pcr_tdma
     use cudecomp
     use openacc
     implicit none
@@ -72,6 +72,7 @@ contains
       ! allocate pcr-tdma transpose workspaces: separate buffer is needed because work is used along with work_ptdma
       !
       istat = cudecompGetTransposeWorkspaceSize(handle,gd_ptdma,wsize)
+      wsize = max(wsize,(3*(ng(3)+1))) ! work_ptdma also use as a buffer with this size in `gaussel_ptdma_gpu_fast_1d`
       allocate(work_ptdma(wsize))
       istat = cudecompMalloc(handle,gd_ptdma,work_ptdma_cuda,wsize)
       call acc_map_data(work_ptdma,work_ptdma_cuda,wsize*f_sizeof(work_ptdma(1)))
