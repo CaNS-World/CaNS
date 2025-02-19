@@ -12,30 +12,30 @@ module mod_fftw_param
   implicit none
   !
   type, bind(C) :: fftw_iodim
-     integer(C_INT) n, is, os
+    integer(C_INT) n,is,os
   end type fftw_iodim
   !
   interface
-     type(C_PTR) function fftw_plan_guru_r2r(rank,dims, &
-       howmany_rank,howmany_dims,in,out,kind,flags)  &
+    type(C_PTR) function fftw_plan_guru_r2r(rank,dims,howmany_rank,howmany_dims, &
+                                            in,out,kind,flags) &
 #if defined(_SINGLE_PRECISION)
-       bind(C, name='fftwf_plan_guru_r2r')
+      bind(C, name='fftwf_plan_guru_r2r')
 #else
-       bind(C, name='fftw_plan_guru_r2r')
+      bind(C, name='fftw_plan_guru_r2r')
 #endif
-       import
-       integer(C_INT), value :: rank
-       type(fftw_iodim), dimension(*), intent(in) :: dims
-       integer(C_INT), value :: howmany_rank
-       type(fftw_iodim), dimension(*), intent(in) :: howmany_dims
+      import
+      integer(C_INT), value :: rank
+      type(fftw_iodim), dimension(*), intent(in) :: dims
+      integer(C_INT), value :: howmany_rank
+      type(fftw_iodim), dimension(*), intent(in) :: howmany_dims
 #if defined(_SINGLE_PRECISION)
-       real(C_FLOAT ), dimension(*), intent(out) :: in,out
+      real(C_FLOAT ), dimension(*), intent(out) :: in,out
 #else
-       real(C_DOUBLE), dimension(*), intent(out) :: in,out
+      real(C_DOUBLE), dimension(*), intent(out) :: in,out
 #endif
-       integer(C_INT) :: kind
-       integer(C_INT), value :: flags
-     end function fftw_plan_guru_r2r
+      integer(C_INT) :: kind
+      integer(C_INT), value :: flags
+    end function fftw_plan_guru_r2r
   end interface
   !
   integer :: FFTW_PATIENT,FFTW_ESTIMATE
@@ -68,11 +68,11 @@ module mod_fftw_param
   logical :: planned=.false.
 #if defined(_OPENACC)
 #if defined(_SINGLE_PRECISION)
-    integer, parameter :: CUFFT_FWD_TYPE = CUFFT_R2C
-    integer, parameter :: CUFFT_BWD_TYPE = CUFFT_C2R
+  integer, parameter :: CUFFT_FWD_TYPE = CUFFT_R2C
+  integer, parameter :: CUFFT_BWD_TYPE = CUFFT_C2R
 #else
-    integer, parameter :: CUFFT_FWD_TYPE = CUFFT_D2Z
-    integer, parameter :: CUFFT_BWD_TYPE = CUFFT_Z2D
+  integer, parameter :: CUFFT_FWD_TYPE = CUFFT_D2Z
+  integer, parameter :: CUFFT_BWD_TYPE = CUFFT_Z2D
 #endif
 #endif
 end module mod_fftw_param
