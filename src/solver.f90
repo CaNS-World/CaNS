@@ -132,7 +132,7 @@ module mod_solver
       !$OMP DO COLLAPSE(2)
       do j=1,ny
         do i=1,nx
-          bb(:) = b(:) + lambdaxy(i,j)
+          bb(:) = b(1:n) + lambdaxy(i,j)
           call dgtsv_homebrewed(nn,a,bb,c,norm,p(i,j,1:nn))
         end do
       end do
@@ -156,7 +156,7 @@ module mod_solver
             p2(:) = 0.
             p2(1 ) = -a(1 )
             p2(nn) = p2(nn) - c(nn)
-            bb(:) = b(:) + lambdaxy(i,j)
+            bb(:) = b(1:n) + lambdaxy(i,j)
             call dgtsv_homebrewed(nn,a,bb,c,1._rp,p2(1:nn))
             p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn)) / &
                           (bb(   nn+1)      + c(nn+1)*p2(   1) + a(nn+1)*p2(   nn)+eps)
@@ -228,7 +228,7 @@ module mod_solver
       do j=1,ny
         do i=1,nx
           !
-          bb(:) = b(:) + lambdaxy(i,j)
+          bb(:) = b(1:n) + lambdaxy(i,j)
           zz(:) = 1./(bb(1:2)+eps)
           aa(i,j,1:2) = a(1:2)*zz(:)
           cc(i,j,1:2) = c(1:2)*zz(:)
