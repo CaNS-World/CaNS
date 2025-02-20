@@ -56,8 +56,7 @@ contains
     ! allocate transpose buffers
     !
     wsize = max(ap_x_poi%size,ap_y_poi%size,ap_z_poi%size)
-    allocate(solver_buf_0(wsize))
-    if(.not.cudecomp_is_t_in_place) allocate(solver_buf_1,mold=solver_buf_0)
+    allocate(solver_buf_0(wsize),solver_buf_1(wsize))
     !$acc enter data create(solver_buf_0,solver_buf_1)
     if(cbcpre(0,3)//cbcpre(1,3) == 'PP') then
       allocate(pz_aux_1(ap_z%shape(1),ap_z%shape(2),ap_z%shape(3)))

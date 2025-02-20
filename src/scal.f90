@@ -16,6 +16,7 @@ module mod_scal
   !
   type scalar
     real(rp), allocatable, dimension(:,:,:) :: val
+    real(rp), allocatable, dimension(:,:,:) :: dsdtrko
     real(rp) :: alpha
     character(len=100) :: ini
     character(len=1), dimension(0:1,3) :: cbc
@@ -328,6 +329,7 @@ module mod_scal
     integer :: iscal
     do iscal=1,nscal
       allocate(scalars(iscal)%val(0:n(1)+1,0:n(2)+1,0:n(3)+1))
+      allocate(scalars(iscal)%dsdtrko(n(1),n(2),n(3)))
       if(is_impdiff) then
         allocate(scalars(iscal)%lambdaxy(n_z(1),n_z(2)))
         allocate(scalars(iscal)%a(n_z(3)), &
