@@ -46,7 +46,7 @@ module mod_rk
     real(rp), intent(inout), dimension(1:,1:,1:) :: dudtrko,dvdtrko,dwdtrko
     real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
     real(rp), intent(out  ), dimension(3)        :: f
-    real(rp), pointer, dimension(:,:,:) :: s
+    real(rp), pointer, contiguous, dimension(:,:,:) :: s
 #if !defined(_OPENACC)
     real(rp), target       , allocatable, dimension(:,:,:), save :: dudtrk_t,dvdtrk_t,dwdtrk_t
 #endif

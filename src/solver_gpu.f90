@@ -648,10 +648,10 @@ module mod_solver_gpu
     logical , intent(in) :: is_periodic
     real(rp), intent(in) :: norm
     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
-    real(rp), pointer    , dimension(:,:,:)        :: pp_x,pp_y
-    real(rp), allocatable, dimension(:,:,:), save  :: pp_z
-    real(rp), allocatable, dimension(:    ), save  :: aa,bb,cc,aa_z,bb_z,cc_z,pp_z_2
-    real(rp), pointer    , dimension(:,:) :: aa_all,bb_all,cc_all
+    real(rp), pointer, contiguous, dimension(:,:,:) :: pp_x,pp_y
+    real(rp), allocatable, dimension(:,:,:), save :: pp_z
+    real(rp), allocatable, dimension(:    ), save :: aa,bb,cc,aa_z,bb_z,cc_z,pp_z_2
+    real(rp), pointer, contiguous, dimension(:,:) :: aa_all,bb_all,cc_all
     integer :: i,j,k,dk_g,nn
     integer :: islab,myslab,nranks_z,kg,llo
     integer , dimension(3) :: nr_z,nr_y
