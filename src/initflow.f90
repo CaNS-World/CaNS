@@ -49,9 +49,10 @@ module mod_initflow
     if(is_forced(1)) ubulk = velf(1)
     select case(trim(inivel))
     case('cou')
-      uref = (bcvel(0,3,1)-bcvel(1,3,1)) ! uref = (ubot - utop)
-      call couette(   n(3),zc/l(3),uref ,u1d)
-      uref = abs(uref)
+      call couette(   n(3),zc/l(3),1._rp,u1d)
+      u1d(:) = u1d(:) + 0.5 ! from 1 to 0
+      u1d(:) = bcvel(0,3,1)*(u1d(:)) + bcvel(1,3,1)*(1.-u1d(:))
+      uref = abs(bcvel(1,3,1)-bcvel(0,3,1))
     case('poi')
       call poiseuille(n(3),zc/l(3),ubulk,u1d)
       is_mean = .true.
@@ -297,8 +298,9 @@ module mod_initflow
       s1d(:) = sref
     case('cou')
       call couette(   n(3),zc/l(3),1._rp,s1d)
-      s1d(:) = s1d(:) + 0.5 ! from 0 to 1
-      s1d(:) = bcscal(0,3)*(1.-s1d(:)) + bcscal(1,3)*(s1d(:))
+      s1d(:) = s1d(:) + 0.5 ! from 1 to 0
+      s1d(:) = bcscal(0,3)*(s1d(:)) + bcscal(1,3)*(1.-s1d(:))
+      sref = abs(bcscal(1,3) - bcscal(0,3))
     case('dhc')
       s1d(:) = 0._rp
     case('tbl')
