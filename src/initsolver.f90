@@ -130,6 +130,7 @@ module mod_initsolver
         do l=1,n-1 ! point at n is a boundary and is excluded here
           lambda(l)   = -2.*(1.-cos((l    )*pi/(1.*(n+1-1))))
         end do
+        lambda(n) = 0.
       end if
     case('ND','DN')
       do l=1,n

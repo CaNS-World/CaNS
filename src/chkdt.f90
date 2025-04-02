@@ -12,7 +12,7 @@ module mod_chkdt
   private
   public chkdt
   contains
-  subroutine chkdt(n,dl,dzci,dzfi,visc,u,v,w,dtmax)
+  subroutine chkdt(n,dl,dzci,dzfi,visc,alpha,u,v,w,dtmax)
     !
     ! computes maximum allowed time step
     !
@@ -20,7 +20,7 @@ module mod_chkdt
     integer , intent(in), dimension(3) :: n
     real(rp), intent(in), dimension(3) :: dl
     real(rp), intent(in), dimension(0:) :: dzci,dzfi
-    real(rp), intent(in) :: visc
+    real(rp), intent(in) :: visc,alpha
     real(rp), intent(in), dimension(0:,0:,0:) :: u,v,w
     real(rp), intent(out) :: dtmax
     real(rp) :: dxi,dyi,dzi
@@ -72,7 +72,7 @@ module mod_chkdt
 #if defined(_IMPDIFF) && !defined(_IMPDIFF_1D)
     dtmax = sqrt(3.)/dti
 #else
-    dtmax = min(1.65/12./visc*dlmin**2,sqrt(3.)/dti)
+    dtmax = min(1.65/12./max(visc,alpha)*dlmin**2,sqrt(3.)/dti)
 #endif
   end subroutine chkdt
 end module mod_chkdt

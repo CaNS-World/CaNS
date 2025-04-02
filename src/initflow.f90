@@ -11,7 +11,7 @@ module mod_initflow
   use mod_types
   implicit none
   private
-  public initflow,add_noise
+  public initflow,initscal,add_noise
   contains
   subroutine initflow(inivel,bcvel,ng,lo,l,dl,zc,zf,dzc,dzf,visc, &
                       is_forced,velf,bforce,is_wallturb,u,v,w,p)
@@ -257,6 +257,89 @@ module mod_initflow
       !end do
     end if
   end subroutine initflow
+  !
+  subroutine initscal(iniscal,bcscal,ng,lo,l,dl,zc,zf,dzc,dzf,salpha, &
+                      is_sforced,scalf,ssource,is_wallturb,s)
+    !
+    ! computes initial conditions for the scalar field
+    !
+    implicit none
+    character(len=3), intent(in)                 :: iniscal
+    real(rp), intent(in   ), dimension(0:1,3)    :: bcscal
+    integer , intent(in   ), dimension(3)        :: ng,lo
+    real(rp), intent(in   ), dimension(3)        :: l,dl
+    real(rp), intent(in   ), dimension(0:)       :: dzc,dzf,zc,zf
+    real(rp), intent(in   )                      :: salpha
+    logical , intent(in   )                      :: is_sforced
+    real(rp), intent(in   )                      :: scalf,ssource
+    logical , intent(in   )                      :: is_wallturb
+    real(rp), intent(inout), dimension(0:,0:,0:) :: s
+    real(rp), allocatable, dimension(:) :: s1d
+    integer :: i,j,k
+    logical :: is_noise,is_mean
+    real(rp) :: sref,lref
+    integer, dimension(3) :: n
+    integer  :: ii
+    real(rp) :: xx
+    !
+    n(:) = shape(s) - 2*1
+    allocate(s1d(n(3)))
+    is_noise = .false.
+    is_mean  = .false.
+    !sref = 0.
+    sref = 0.5*(bcscal(0,3)+bcscal(1,3)) ! bottom and top bcs
+    if(is_sforced) sref = scalf
+    select case(trim(iniscal))
+    case('zer')
+      s1d(:) = 0._rp
+    case('uni')
+      s1d(:) = sref
+    case('cou')
+      call couette(   n(3),zc/l(3),1._rp,s1d)
+      s1d(:) = s1d(:) + 0.5 ! from 0 to 1
+      s1d(:) = bcscal(0,3)*(1.-s1d(:)) + bcscal(1,3)*(s1d(:))
+    case('dhc')
+      s1d(:) = 0._rp
+    case('tbl')
+      sref = 1.
+      call temporal_bl(n(3),zc,1._rp,salpha,sref,s1d)
+      is_noise = .true.
+    case default
+      if(myid == 0) print*, 'ERROR: invalid name for initial scalar field'
+      if(myid == 0) print*, ''
+      if(myid == 0) print*, '*** Simulation aborted due to errors in the case file ***'
+      if(myid == 0) print*, '    check INFO_INPUT.md'
+      call MPI_FINALIZE(ierr)
+      error stop
+    end select
+    !
+    do k=1,n(3)
+      do j=1,n(2)
+        do i=1,n(1)
+          s(i,j,k) = s1d(k)
+        end do
+      end do
+    end do
+    !
+    if(trim(iniscal) == 'dhc') then
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            ii = i+lo(1)-1
+            xx = (ii-0.5)*dl(1)/l(1)
+            s(i,j,k) = ((1.-xx)*bcscal(0,1) + xx*bcscal(1,1))
+          end do
+        end do
+      end do
+    end if
+    !
+    if(is_noise) then
+      call add_noise(ng,lo,123,.05_rp,s(1:n(1),1:n(2),1:n(3)))
+    end if
+    if(is_mean) then
+      call set_mean(n,sref,dzf/l(3)*(dl(1)/l(1))*(dl(2)/l(2)),s(1:n(1),1:n(2),1:n(3)))
+    end if
+  end subroutine initscal
   !
   subroutine add_noise(ng,lo,iseed,norm,p)
     implicit none
