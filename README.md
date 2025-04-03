@@ -20,6 +20,8 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 ## News
 
+**[08/02/2025]:** A new approach for solving the Poisson equation based on a Parallel Cyclic Reduction -- Tridiagonal Matrix Algorithm (PCR-TDMA) approach. See [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details.
+
 **[31/01/2025]:** CaNS now can solve the transport equations associated with an arbritrary number of scalars :tada:, with a versatile discretization of the diffusion term. Thermal convection under the Boussinesq approximation is also supported. See the updated [`docs/INFO_INPUT.md`](docs/INFO_INPUT.md) and [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) files for more details, and some of the new cases under `examples/`.
 
 **[29/01/2025]:** To avoid having the `build.conf` and `configs/*.mk` files - often changed by the user - tracked by git, the compiling behavior has changed slightly; see Compilation below.
@@ -92,6 +94,7 @@ The `Makefile` in root directory is used to compile the code, and is expected to
  * `IMPDIFF`                  : diffusion terms are integrated implicitly in time (thereby improving the stability of the numerical algorithm for viscous-dominated flows)
  * `IMPDIFF_1D`               : same as above, but with implicit diffusion *only* along Z; *for optimal parallel performance, the domain should not be decomposed along Z*
  * `PENCIL_AXIS`              : sets the default pencil direction, one of [1,2,3] for [X,Y,Z]-aligned pencils; X-aligned is the default and should be optimal for all cases except for Z implicit diffusion, where using Z-pencils is recommended if `dims(2) > 1` in the input file
+ * `POISSON_PCR_TDMA`         : Poisson/Helmhotlz equations solved along Z with the PCR-TDMA method
  * `SINGLE_PRECISION`         : calculation will be carried out in single precision (the default precision is double)
  * `GPU`                      : enable GPU-accelerated runs
 

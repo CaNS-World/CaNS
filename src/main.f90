@@ -36,6 +36,9 @@ program cans
   use mod_chkdiv         , only: chkdiv
   use mod_chkdt          , only: chkdt
   use mod_common_mpi     , only: myid,ierr
+#if defined(_POISSON_PCR_TDMA)
+  use mod_common_mpi     , only: dinfo_ptdma
+#endif
   use mod_correc         , only: correc
   use mod_fft            , only: fftini,fftend
   use mod_fillps         , only: fillps
@@ -72,6 +75,9 @@ program cans
   use mod_solver_gpu     , only: solver => solver_gpu
   use mod_workspaces     , only: init_wspace_arrays,set_cufft_wspace
   use mod_common_cudecomp, only: istream_acc_queue_1
+#if defined(_POISSON_PCR_TDMA)
+  use mod_common_cudecomp, only: ap_z_ptdma
+#endif
 #endif
   use mod_timer          , only: timer_tic,timer_toc,timer_print
   use mod_updatep        , only: updatep
@@ -93,6 +99,11 @@ program cans
 #endif
   real(rp), allocatable, dimension(:,:) :: lambdaxyp
   real(rp), allocatable, dimension(:) :: ap,bp,cp
+#if defined(_POISSON_PCR_TDMA)
+  integer , dimension(3) :: n_z_d
+#endif
+  real(rp), allocatable, dimension(:,:,:) :: ap_d,cp_d
+  logical :: is_ptdma_update_p
   real(rp) :: normfftp
   type(rhs_bound) :: rhsbp
   real(rp) :: alpha
@@ -165,6 +176,15 @@ program cans
            pp(0:n(1)+1,0:n(2)+1,0:n(3)+1))
   allocate(lambdaxyp(n_z(1),n_z(2)))
   allocate(ap(n_z(3)),bp(n_z(3)),cp(n_z(3)))
+#if defined(_POISSON_PCR_TDMA)
+#if defined(_OPENACC)
+  n_z_d(:) = ap_z_ptdma%shape(:)
+#else
+  n_z_d(:) = dinfo_ptdma%zsz(:)
+#endif
+  allocate(ap_d(n_z_d(1),n_z_d(2),n_z_d(3)), &
+           cp_d(n_z_d(1),n_z_d(2),n_z_d(3)))
+#endif
   allocate(dzc( 0:n(3)+1), &
            dzf( 0:n(3)+1), &
            zc(  0:n(3)+1), &
@@ -274,6 +294,9 @@ program cans
                   lambdaxyp,['c','c','c'],ap,bp,cp,arrplanp,normfftp,rhsbp%x,rhsbp%y,rhsbp%z)
   !$acc enter data copyin(lambdaxyp,ap,bp,cp) async
   !$acc enter data copyin(rhsbp,rhsbp%x,rhsbp%y,rhsbp%z) async
+#if defined(_POISSON_PCR_TDMA)
+  !$acc enter data create(ap_d,cp_d) async
+#endif
   !$acc wait
 #if defined(_IMPDIFF)
   call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1), &
@@ -331,6 +354,7 @@ program cans
                           nb,is_bound,cbcvel,cbcpre,bcvel,bcpre)
 #endif
   !
+  is_ptdma_update_p = .true.
   if(.not.restart) then
     istep = 0
     time = 0.
@@ -405,7 +429,7 @@ program cans
         call bulk_forcing_s(n,s%is_forced,s%f,s%val)
         fs(iscal) = fs(iscal) + s%f
 #if defined(_IMPDIFF)
-        call solve_helmholtz(n,ng,s%arrplan,s%normfft,-0.5*s%alpha*dtrk, &
+        call solve_helmholtz(n,ng,hi,s%arrplan,s%normfft,-0.5*s%alpha*dtrk, &
                              s%lambdaxy,s%a,s%b,s%c,s%rhsb%x,s%rhsb%y,s%rhsb%z,is_bound,s%cbc,['c','c','c'],s%val)
 #endif
         call boundp(s%cbc,n,s%bc,nb,is_bound,dl,dzc,s%val)
@@ -416,17 +440,17 @@ program cans
       dpdl(:) = dpdl(:) + f(:)
 #if defined(_IMPDIFF)
       alpha = -.5*visc*dtrk
-      call solve_helmholtz(n,ng,arrplanu,normfftu,alpha, &
+      call solve_helmholtz(n,ng,hi,arrplanu,normfftu,alpha, &
                            lambdaxyu,au,bu,cu,rhsbu%x,rhsbu%y,rhsbu%z,is_bound,cbcvel(:,:,1),['f','c','c'],u)
-      call solve_helmholtz(n,ng,arrplanv,normfftv,alpha, &
+      call solve_helmholtz(n,ng,hi,arrplanv,normfftv,alpha, &
                            lambdaxyv,av,bv,cv,rhsbv%x,rhsbv%y,rhsbv%z,is_bound,cbcvel(:,:,2),['c','f','c'],v)
-      call solve_helmholtz(n,ng,arrplanw,normfftw,alpha, &
+      call solve_helmholtz(n,ng,hi,arrplanw,normfftw,alpha, &
                            lambdaxyw,aw,bw,cw,rhsbw%x,rhsbw%y,rhsbw%z,is_bound,cbcvel(:,:,3),['c','c','f'],w)
 #endif
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
       call fillps(n,dli,dzfi,dtrki,u,v,w,pp)
       call updt_rhs_b(['c','c','c'],cbcpre,n,is_bound,rhsbp%x,rhsbp%y,rhsbp%z,pp)
-      call solver(n,ng,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre,['c','c','c'],pp)
+      call solver(n,ng,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre,['c','c','c'],pp,is_ptdma_update_p,ap_d,cp_d)
       call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,pp)
       call correc(n,dli,dzci,dtrk,pp,u,v,w)
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.true.,dl,dzc,dzf,u,v,w)

@@ -16,12 +16,13 @@ FFLAGS_DEBUG_MAX=0  # for thorough debugging
 #
 # defines
 #
-DEBUG=1                    # best = 1 (no significant performance penalty)
-TIMING=1                   # best = 1
-IMPDIFF=0                  #
-IMPDIFF_1D=0               #
-PENCIL_AXIS=1              # = 1/2/3 for X/Y/Z-aligned pencils
-SINGLE_PRECISION=0         # perform the whole calculation in single precision
+DEBUG=1             # best = 1 (no significant performance penalty)
+TIMING=1            # best = 1
+IMPDIFF=0           #
+IMPDIFF_1D=0        #
+PENCIL_AXIS=1       # = 1/2/3 for X/Y/Z-aligned pencils
+SINGLE_PRECISION=0  # perform the whole calculation in single precision
+POISSON_PCR_TDMA=0  # use PCR-TDMA method to solve Poisson/Helmholtz problems
 #
 # GPU-related
 #
@@ -36,6 +37,7 @@ In this file, `FCOMP` can be one of `GNU` (`gfortran`), `INTEL` (`ifort`), `NVID
  * `IMPDIFF_1D`               : same as above, but with implicit diffusion *only* along Z; *for optimal parallel performance, the domain should not be decomposed along Z* (`PENCIL_AXIS=3`, or other pencil orientations with `dims(2) = 1` in the input file).
  * `PENCIL_AXIS`              : sets the default pencil direction, one of [1,2,3] for [X,Y,Z]-aligned pencils; X-aligned is the default and should be optimal for all cases except for Z implicit diffusion, where using Z-pencils is recommended if `dims(2) > 1` in the input file
  * `SINGLE_PRECISION`         : calculation will be carried out in single precision (the default precision is double)
+ * `POISSON_PCR_TDMA`         : Poisson/Helmhotlz equations solved along Z with the PCR-TDMA method
  * `GPU`                      : enable GPU accelerated runs (requires the `FCOMP=NVIDIA`)
  * `BOUSSINESQ_BUOYANCY`      : enable buoyancy effects
 

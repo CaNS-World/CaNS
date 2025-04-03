@@ -28,12 +28,12 @@ module mod_solve_helmholtz
   end type rhs_bound
   public solve_helmholtz,rhs_bound
   contains
-  subroutine solve_helmholtz(n,ng,arrplan,normfft,alpha, &
+  subroutine solve_helmholtz(n,ng,hi,arrplan,normfft,alpha, &
                              lambdaxyi,ai,bi,ci,rhsbxi,rhsbyi,rhsbzi,is_bound,cbc,c_or_f,p)
     !
     ! this is a wrapper subroutine to solve 1D/3D helmholtz problems: p/alpha + lap(p) = rhs
     !
-    integer ,    intent(in   ), dimension(3)                :: n,ng
+    integer ,    intent(in   ), dimension(3)                :: n,ng,hi
 #if !defined(_OPENACC)
     type(C_PTR), intent(in   ), dimension(2,2),    optional :: arrplan
 #else
@@ -89,9 +89,9 @@ module mod_solve_helmholtz
     !$OMP END PARALLEL WORKSHARE
     !$acc end kernels
 #if !defined(_IMPDIFF_1D)
-    call solver(          n,ng,arrplan,normfft,lambdaxy,a,b,c,cbc     ,c_or_f,p)
+    call solver(n,ng,arrplan,normfft,lambdaxy,a,b,c,cbc,c_or_f,p)
 #else
-    call solver_gaussel_z(n                            ,a,b,c,cbc(:,3),c_or_f,p)
+    call solver_gaussel_z(n,ng,hi,a,b,c,cbc(:,3),c_or_f,p)
 #endif
   end subroutine solve_helmholtz
 end module mod_solve_helmholtz
