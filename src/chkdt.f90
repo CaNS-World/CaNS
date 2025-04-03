@@ -7,6 +7,7 @@
 module mod_chkdt
   use mpi
   use mod_common_mpi, only:ierr
+  use mod_param     , only:is_impdiff,is_impdiff_1d
   use mod_types
   implicit none
   private
@@ -35,10 +36,10 @@ module mod_chkdt
     dzi = 1./dl(3)
     if(is_first) then ! calculate dlmin only once
       is_first = .false.
-      dlmin     = minval(dl(1:2))
-#if !defined(_IMPDIFF_1D)
-      dlmin     = min(dlmin,minval(1./dzfi))
-#endif
+      dlmin = minval(dl(1:2))
+      if(.not.is_impdiff_1d) then
+        dlmin = min(dlmin,minval(1./dzfi))
+      end if
       call MPI_ALLREDUCE(MPI_IN_PLACE,dlmin,1,MPI_REAL_RP,MPI_MIN,MPI_COMM_WORLD,ierr)
     end if
     !
@@ -68,11 +69,11 @@ module mod_chkdt
     !$acc end data
     !$acc wait(1)
     call MPI_ALLREDUCE(MPI_IN_PLACE,dti,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
-    if(dti == 0.) dti = 1.
-#if defined(_IMPDIFF) && !defined(_IMPDIFF_1D)
-    dtmax = sqrt(3.)/dti
-#else
-    dtmax = min(1.65/12./max(visc,alpha)*dlmin**2,sqrt(3.)/dti)
-#endif
+    if(dti < epsilon(0._rp)) dti = 1.
+    if(is_impdiff .and. .not.is_impdiff_1d) then
+      dtmax = sqrt(3.)/dti
+    else
+      dtmax = min(1.65/12./max(visc,alpha)*dlmin**2,sqrt(3.)/dti)
+    end if
   end subroutine chkdt
 end module mod_chkdt

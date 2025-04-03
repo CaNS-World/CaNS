@@ -34,7 +34,7 @@ module mod_output
     real(rp), intent(in), dimension(:) :: var
     integer :: iunit
     !
-    if (myid == 0) then
+    if(myid == 0) then
       open(newunit=iunit,file=fname,position='append')
       write(iunit,fmt_rp) var(1:n)
       close(iunit)
@@ -155,7 +155,7 @@ module mod_output
   end subroutine out1d
   !
   subroutine out2d(fname,inorm,islice,p)
-    use mod_common_mpi, only: ipencil => ipencil_axis
+    use mod_param, only: ipencil => ipencil_axis
     !
     ! saves a planar slice of a scalar field into a binary file
     !
@@ -182,7 +182,7 @@ module mod_output
   end subroutine out2d
   !
   subroutine out3d(fname,nskip,p)
-    use mod_common_mpi, only: ipencil => ipencil_axis
+    use mod_param, only: ipencil => ipencil_axis
     !
     ! saves a 3D scalar field into a binary file
     !
@@ -257,7 +257,7 @@ module mod_output
     integer :: iunit
     !
     write(cfmt, '(A)') '(A,A,A,9i5,E16.7e3,i7)'
-    if (myid  ==  0) then
+    if(myid  ==  0) then
       open(newunit=iunit,file=fname,position='append')
       write(iunit,trim(cfmt)) trim(fname_fld),' ',trim(varname),nmin,nmax,nskip,time,istep
       close(iunit)

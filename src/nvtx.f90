@@ -97,7 +97,7 @@ contains
     else if(present(id)) then
       icolor = mod(id-1,size(col))+1
     end if
-    if (present(id).or.present(color)) then
+    if(present(id).or.present(color)) then
       event%color=col(icolor)
       event%message=c_loc(tempName)
       call nvtxRangePushEx(event)

@@ -71,7 +71,7 @@ module mod_load
         ! I/O over x-aligned pencils
         !
         use decomp_2d
-        use mod_common_mpi, only: ipencil => ipencil_axis
+        use mod_param, only: ipencil => ipencil_axis
         real(rp), allocatable, dimension(:,:,:) :: tmp_x,tmp_y,tmp_z
         select case(ipencil)
         case(1)
@@ -131,7 +131,7 @@ module mod_load
         ! I/O over x-aligned pencils
         !
         use decomp_2d
-        use mod_common_mpi, only: ipencil => ipencil_axis
+        use mod_param, only: ipencil => ipencil_axis
         real(rp), allocatable, dimension(:,:,:) :: tmp_x,tmp_y,tmp_z
         select case(ipencil)
         case(1)
@@ -409,7 +409,7 @@ module mod_load
         ! I/O over x-aligned pencils
         !
         use decomp_2d
-        use mod_common_mpi, only: ipencil => ipencil_axis
+        use mod_param, only: ipencil => ipencil_axis
         real(rp), allocatable, dimension(:,:,:) :: tmp_x,tmp_y,tmp_z
         select case(ipencil)
         case(1)
@@ -455,7 +455,7 @@ module mod_load
         ! I/O over x-aligned pencils
         !
         use decomp_2d
-        use mod_common_mpi, only: ipencil => ipencil_axis
+        use mod_param, only: ipencil => ipencil_axis
         real(rp), allocatable, dimension(:,:,:) :: tmp_x,tmp_y,tmp_z
         select case(ipencil)
         case(1)
