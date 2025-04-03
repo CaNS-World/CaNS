@@ -110,10 +110,6 @@ endif
 
 DEFINES := $(sort $(DEFINES)) # remove duplicates
 
-ifeq ($(strip $(BOUSSINESQ_BUOYANCY)),1)
-DEFINES += -D_BOUSSINESQ_BUOYANCY
-endif
-
 ifeq ($(strip $(OPENMP)),1)
 ifeq      ($(strip $(FCOMP)),GNU)
 override FFLAGS += -fopenmp
