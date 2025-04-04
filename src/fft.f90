@@ -406,9 +406,7 @@ module mod_fft
           end do
         end do
       end do
-      !$acc kernels default(present) async(1)
-      arr(:,:,:) = arr_tmp(:,:,:)
-      !$acc end kernels
+      call copy(arr_tmp,arr)
       if(is_swap_order ) call swap_order( nn,n(2),n(3),arr)
       if(is_negate_even) call negate_even(nn,n(2),n(3),arr)
     end select
@@ -462,9 +460,7 @@ module mod_fft
           end do
         end do
       end do
-      !$acc kernels default(present) async(1)
-      arr(:,:,:) = arr_tmp(:,:,:)
-      !$acc end kernels
+      call copy(arr_tmp,arr)
     end select
   end subroutine prep_dctiib
   subroutine posp_dctiib(nn,n,idir,arr,is_swap_order,is_negate_even)
@@ -643,13 +639,9 @@ module mod_fft
           end do
         end do
       end do
-      !$acc kernels default(present) async(1)
-      arr(:,:,:) = arr_tmp(:,:,:)
-      !$acc end kernels
+      call copy(arr_tmp,arr)
     case(1)
-      !$acc kernels default(present) async(1)
-      arr_tmp(:,:,:) = arr(:,:,:)
-      !$acc end kernels
+      call copy(arr,arr_tmp)
       !$acc parallel loop collapse(3) default(present) async(1)
       do k=1,n3
         do j=1,n2
@@ -668,5 +660,21 @@ module mod_fft
       end do
     end select
   end subroutine remap
+  subroutine copy(a,b)
+    real(rp), intent(in ), dimension(:,:,:) :: a
+    real(rp), intent(out), dimension(:,:,:) :: b
+    integer :: i,j,k,n1,n2,n3
+    n1 = min(size(a,1),size(b,1))
+    n2 = min(size(a,2),size(b,2))
+    n3 = min(size(a,3),size(b,3))
+    !$acc parallel loop collapse(3) default(present) async(1)
+    do k=1,n3
+      do j=1,n2
+        do i=1,n1
+          b(i,j,k) = a(i,j,k)
+        end do
+      end do
+    end do
+  end subroutine copy
 #endif
 end module mod_fft
