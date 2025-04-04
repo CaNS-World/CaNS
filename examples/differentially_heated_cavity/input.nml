@@ -41,7 +41,6 @@ is_boussinesq_buoyancy = T
 &cudecomp
 cudecomp_t_comm_backend = 0, cudecomp_is_t_enable_nccl = T, cudecomp_is_t_enable_nvshmem = T
 cudecomp_h_comm_backend = 0, cudecomp_is_h_enable_nccl = T, cudecomp_is_h_enable_nvshmem = T
-cudecomp_is_t_in_place = F
 /
 
 &numerics

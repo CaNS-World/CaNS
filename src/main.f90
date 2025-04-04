@@ -87,6 +87,7 @@ program cans
   implicit none
   integer , dimension(3) :: lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z
   real(rp), allocatable, dimension(:,:,:) :: u,v,w,p,pp
+  real(rp), allocatable, dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
   real(rp), dimension(0:1,3) :: tauxo,tauyo,tauzo
   real(rp), dimension(3) :: f
 #if !defined(_OPENACC)
@@ -161,6 +162,9 @@ program cans
            w( 0:n(1)+1,0:n(2)+1,0:n(3)+1), &
            p( 0:n(1)+1,0:n(2)+1,0:n(3)+1), &
            pp(0:n(1)+1,0:n(2)+1,0:n(3)+1))
+  allocate(dudtrko(n(1),n(2),n(3)), &
+           dvdtrko(n(1),n(2),n(3)), &
+           dwdtrko(n(1),n(2),n(3)))
   allocate(lambdaxyp(n_z(1),n_z(2)))
   allocate(ap(n_z(3)),bp(n_z(3)),cp(n_z(3)))
   if(is_poisson_pcr_tdma) then
@@ -258,15 +262,19 @@ program cans
     dzci(k) = dzc(k)**(-1)
     dzfi(k) = dzf(k)**(-1)
   end do
-  !$acc kernels default(present) async
-  dzci_g(:) = dzc_g(:)**(-1)
-  dzfi_g(:) = dzf_g(:)**(-1)
-  !$acc end kernels
+  !$acc data copy(ng) async
+  !$acc parallel loop default(present) async
+  do k=0,ng(3)+1
+    dzci_g(k) = dzc_g(k)**(-1)
+    dzfi_g(k) = dzf_g(k)**(-1)
+  end do
+  !$acc end data
   !$acc enter data create(grid_vol_ratio_c,grid_vol_ratio_f) async
-  !$acc kernels default(present) async
-  grid_vol_ratio_c(:) = dl(1)*dl(2)*dzc(:)/(l(1)*l(2)*l(3))
-  grid_vol_ratio_f(:) = dl(1)*dl(2)*dzf(:)/(l(1)*l(2)*l(3))
-  !$acc end kernels
+  !$acc parallel loop default(present) async
+  do k=0,n(3)+1
+    grid_vol_ratio_c(k) = dl(1)*dl(2)*dzc(k)/(l(1)*l(2)*l(3))
+    grid_vol_ratio_f(k) = dl(1)*dl(2)*dzf(k)/(l(1)*l(2)*l(3))
+  end do
   !$acc update self(zc,zf,dzc,dzf,dzci,dzfi) async
   !$acc exit data copyout(zc_g,zf_g,dzc_g,dzf_g,dzci_g,dzfi_g) async ! not needed on the device
   !$acc wait
@@ -355,12 +363,12 @@ program cans
     call load_all('r',trim(datadir)//'fld.bin',MPI_COMM_WORLD,ng,[1,1,1],lo,hi,nscal,u,v,w,p,scalars,time,istep)
     if(myid == 0) print*, '*** Checkpoint loaded at time = ', time, 'time step = ', istep, '. ***'
   end if
-  !$acc enter data copyin(u,v,w,p) create(pp)
+  !$acc enter data copyin(u,v,w,p,dudtrko,dvdtrko,dwdtrko) create(pp)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
   call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
   do iscal=1,nscal
     s => scalars(iscal)
-    !$acc enter data copyin(s%val) async(1)
+    !$acc enter data copyin(s%val,s%dsdtrko) async(1)
     call boundp(s%cbc,n,s%bc,nb,is_bound,dl,dzc,s%val)
   end do
   !$acc wait
@@ -409,8 +417,8 @@ program cans
       dtrki = dtrk**(-1)
       do iscal=1,nscal
         s => scalars(iscal)
-        call rk_scal(rkcoeff(:,irk),iscal,nscal,n,dli,l,dzci,dzfi,grid_vol_ratio_f,s%alpha,dt,is_bound,u,v,w, &
-                     s%is_forced,s%scalf,s%source,s%fluxo,s%val,s%f)
+        call rk_scal(rkcoeff(:,irk),n,dli,l,dzci,dzfi,grid_vol_ratio_f,s%alpha,dt,is_bound,u,v,w, &
+                     s%is_forced,s%scalf,s%source,s%fluxo,s%dsdtrko,s%val,s%f)
         call bulk_forcing_s(n,s%is_forced,s%f,s%val)
         fs(iscal) = fs(iscal) + s%f
         if(is_impdiff) then
@@ -420,7 +428,7 @@ program cans
         call boundp(s%cbc,n,s%bc,nb,is_bound,dl,dzc,s%val)
       end do
       call rk(rkcoeff(:,irk),n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,visc,dt,p, &
-              is_forced,velf,bforce,gacc,beta,scalars,u,v,w,f)
+              is_forced,velf,bforce,gacc,beta,scalars,dudtrko,dvdtrko,dwdtrko,u,v,w,f)
       call bulk_forcing(n,is_forced,f,u,v,w)
       dpdl(:) = dpdl(:) + f(:)
       if(is_impdiff) then

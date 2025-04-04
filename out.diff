@@ -1,0 +1,2589 @@
+diff --git a/configs/defaults/flags-default.mk b/configs/defaults/flags-default.mk
+index 1db8fe5..3fb987f 100644
+--- a/configs/defaults/flags-default.mk
++++ b/configs/defaults/flags-default.mk
+@@ -11,7 +11,7 @@ override FFLAGS += -acc -cuda -Minfo=accel -gpu=cc60,cc70,cc80
+ endif
+ endif
+ ifeq ($(strip $(FCOMP)),CRAY)
+-FFLAGS_MOD_DIR := -J
++FFLAGS_MOD_DIR := -Q
+ endif
+ 
+ ifeq ($(strip $(FFLAGS_DEBUG)),1)
+diff --git a/dependencies/external.mk b/dependencies/external.mk
+index e63605f..4777e15 100644
+--- a/dependencies/external.mk
++++ b/dependencies/external.mk
+@@ -7,7 +7,7 @@ libs: $(wildcard $(LIBS_DIR)/2decomp-fft/src/*.f90)
+ 	cd $(LIBS_DIR)/cuDecomp && mkdir -p build && cd build && cmake .. && make -j
+ libsclean: $(wildcard $(LIBS_DIR)/2decomp-fft/src/*.f90)
+ 	cd $(LIBS_DIR)/2decomp-fft && make clean
+-	cd $(LIBS_DIR)/cuDecomp/build && make clean
++	cd $(LIBS_DIR)/cuDecomp/build && make clean; cd .. && rm -rf build
+ else
+ libs: $(wildcard $(LIBS_DIR)/2decomp-fft/src/*.f90)
+ 	cd $(LIBS_DIR)/2decomp-fft && make
+diff --git a/examples/differentially_heated_cavity/input.nml b/examples/differentially_heated_cavity/input.nml
+index 97bea85..0954784 100644
+--- a/examples/differentially_heated_cavity/input.nml
++++ b/examples/differentially_heated_cavity/input.nml
+@@ -41,7 +41,6 @@ is_boussinesq_buoyancy = T
+ &cudecomp
+ cudecomp_t_comm_backend = 0, cudecomp_is_t_enable_nccl = T, cudecomp_is_t_enable_nvshmem = T
+ cudecomp_h_comm_backend = 0, cudecomp_is_h_enable_nccl = T, cudecomp_is_h_enable_nvshmem = T
+-cudecomp_is_t_in_place = F
+ /
+ 
+ &numerics
+diff --git a/src/bound.f90 b/src/bound.f90
+index 425224b..20d173e 100644
+--- a/src/bound.f90
++++ b/src/bound.f90
+@@ -133,6 +133,7 @@ module mod_bound
+     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
+     real(rp) :: factor,sgn
+     integer  :: n,dh
++    integer  :: i,j,k
+     !
+     n = size(p,idir) - 2*nh
+     factor = rvalue
+@@ -161,173 +162,215 @@ module mod_bound
+         !
+         select case(idir)
+         case(1)
+-          !$acc kernels default(present) async(1)
+-          !$OMP PARALLEL WORKSHARE
+-          p(  0-dh,:,:) = p(n-dh,:,:)
+-          p(n+1+dh,:,:) = p(1+dh,:,:)
+-          !$OMP END PARALLEL WORKSHARE
+-          !$acc end kernels
++          !$acc parallel loop collapse(2) default(present) async(1)
++          !$OMP parallel do   collapse(2) DEFAULT(shared)
++         do k=1-nh,size(p,3)-nh
++           do j=1-nh,size(p,2)-nh
++              p(  0-dh,j,k) = p(n-dh,j,k)
++              p(n+1+dh,j,k) = p(1+dh,j,k)
++            end do
++          end do
+         case(2)
+-          !$acc kernels default(present) async(1)
+-          !$OMP PARALLEL WORKSHARE
+-          p(:,  0-dh,:) = p(:,n-dh,:)
+-          p(:,n+1+dh,:) = p(:,1+dh,:)
+-          !$OMP END PARALLEL WORKSHARE
+-          !$acc end kernels
++          !$acc parallel loop collapse(2) default(present) async(1)
++          !$OMP parallel do   collapse(2) DEFAULT(shared)
++          do k=1-nh,size(p,3)-nh
++            do i=1-nh,size(p,1)-nh
++              p(i,  0-dh,k) = p(i,n-dh,k)
++              p(i,n+1+dh,k) = p(i,1+dh,k)
++            end do
++          end do
+         case(3)
+-          !$acc kernels default(present) async(1)
+-          !$OMP PARALLEL WORKSHARE
+-          p(:,:,  0-dh) = p(:,:,n-dh)
+-          p(:,:,n+1+dh) = p(:,:,1+dh)
+-          !$OMP END PARALLEL WORKSHARE
+-          !$acc end kernels
++          !$acc parallel loop collapse(2) default(present) async(1)
++          !$OMP parallel do   collapse(2) DEFAULT(shared)
++          do j=1-nh,size(p,2)-nh
++            do i=1-nh,size(p,1)-nh
++              p(i,j,  0-dh) = p(i,j,n-dh)
++              p(i,j,n+1+dh) = p(i,j,1+dh)
++            end do
++          end do
+         end select
+       case('D','N')
+         if(centered) then
+           select case(idir)
+           case(1)
+             if     (ibound == 0) then
+-              !$acc kernels default(present) async(1)
+-              !$OMP PARALLEL WORKSHARE
+-              p(  0-dh,:,:) = factor+sgn*p(1+dh,:,:)
+-              !$OMP END PARALLEL WORKSHARE
+-              !$acc end kernels
++              !$acc parallel loop collapse(2) default(present) async(1)
++              !$OMP parallel do   collapse(2) DEFAULT(shared)
++              do k=1-nh,size(p,3)-nh
++                do j=1-nh,size(p,2)-nh
++                  p(  0-dh,j,k) = factor+sgn*p(1+dh,j,k)
++                end do
++              end do
+             else if(ibound == 1) then
+-              !$acc kernels default(present) async(1)
+-              !$OMP PARALLEL WORKSHARE
+-              p(n+1+dh,:,:) = factor+sgn*p(n-dh,:,:)
+-              !$OMP END PARALLEL WORKSHARE
+-              !$acc end kernels
++              !$acc parallel loop collapse(2) default(present) async(1)
++              !$OMP parallel do   collapse(2) DEFAULT(shared)
++              do k=1-nh,size(p,3)-nh
++                do j=1-nh,size(p,2)-nh
++                  p(n+1+dh,j,k) = factor+sgn*p(n-dh,j,k)
++                end do
++              end do
+             end if
+           case(2)
+             if     (ibound == 0) then
+-              !$acc kernels default(present) async(1)
+-              !$OMP PARALLEL WORKSHARE
+-              p(:,  0-dh,:) = factor+sgn*p(:,1+dh,:)
+-              !$OMP END PARALLEL WORKSHARE
+-              !$acc end kernels
++              !$acc parallel loop collapse(2) default(present) async(1)
++              !$OMP parallel do   collapse(2) DEFAULT(shared)
++              do k=1-nh,size(p,3)-nh
++                do i=1-nh,size(p,1)-nh
++                  p(i,  0-dh,k) = factor+sgn*p(i,1+dh,k)
++                end do
++              end do
+             else if(ibound == 1) then
+-              !$acc kernels default(present) async(1)
+-              !$OMP PARALLEL WORKSHARE
+-              p(:,n+1+dh,:) = factor+sgn*p(:,n-dh,:)
+-              !$OMP END PARALLEL WORKSHARE
+-              !$acc end kernels
++              !$acc parallel loop collapse(2) default(present) async(1)
++              !$OMP parallel do   collapse(2) DEFAULT(shared)
++              do k=1-nh,size(p,3)-nh
++                do i=1-nh,size(p,1)-nh
++                  p(i,n+1+dh,k) = factor+sgn*p(i,n-dh,k)
++                end do
++              end do
+             end if
+           case(3)
+             if     (ibound == 0) then
+-              !$acc kernels default(present) async(1)
+-              !$OMP PARALLEL WORKSHARE
+-              p(:,:,  0-dh) = factor+sgn*p(:,:,1+dh)
+-              !$OMP END PARALLEL WORKSHARE
+-              !$acc end kernels
++              !$acc parallel loop collapse(2) default(present) async(1)
++              !$OMP parallel do   collapse(2) DEFAULT(shared)
++              do j=1-nh,size(p,2)-nh
++                do i=1-nh,size(p,1)-nh
++                  p(i,j,  0-dh) = factor+sgn*p(i,j,1+dh)
++                end do
++              end do
+             else if(ibound == 1) then
+-              !$acc kernels default(present) async(1)
+-              !$OMP PARALLEL WORKSHARE
+-              p(:,:,n+1+dh) = factor+sgn*p(:,:,n-dh)
+-              !$OMP END PARALLEL WORKSHARE
+-              !$acc end kernels
++              !$acc parallel loop collapse(2) default(present) async(1)
++              !$OMP parallel do   collapse(2) DEFAULT(shared)
++              do j=1-nh,size(p,2)-nh
++                do i=1-nh,size(p,1)-nh
++                  p(i,j,n+1+dh) = factor+sgn*p(i,j,n-dh)
++                end do
++              end do
+             end if
+           end select
+         else if(.not.centered.and.ctype == 'D') then
+           select case(idir)
+           case(1)
+             if     (ibound == 0) then
+-              !$acc kernels default(present) async(1)
+-              !$OMP PARALLEL WORKSHARE
+-              p(0-dh,:,:) = factor
+-              !$OMP END PARALLEL WORKSHARE
+-              !$acc end kernels
++              !$acc parallel loop collapse(2) default(present) async(1)
++              !$OMP parallel do   collapse(2) DEFAULT(shared)
++              do k=1-nh,size(p,3)-nh
++                do j=1-nh,size(p,2)-nh
++                  p(0-dh,j,k) = factor
++                end do
++              end do
+             else if(ibound == 1) then
+-              !$acc kernels default(present) async(1)
+-              !$OMP PARALLEL WORKSHARE
+-              p(n+1 ,:,:) = p(n-1,:,:) ! unused
+-              p(n+dh,:,:) = factor
+-              !$OMP END PARALLEL WORKSHARE
+-              !$acc end kernels
++              !$acc parallel loop collapse(2) default(present) async(1)
++              !$OMP parallel do   collapse(2) DEFAULT(shared)
++              do k=1-nh,size(p,3)-nh
++                do j=1-nh,size(p,2)-nh
++                  p(n+1,j,k) = p(n-1,j,k) ! unused
++                  p(n+dh,j,k) = factor
++                end do
++              end do
+             end if
+           case(2)
+             if     (ibound == 0) then
+-              !$acc kernels default(present) async(1)
+-              !$OMP PARALLEL WORKSHARE
+-              p(:,0-dh,:) = factor
+-              !$OMP END PARALLEL WORKSHARE
+-              !$acc end kernels
++              !$acc parallel loop collapse(2) default(present) async(1)
++              !$OMP parallel do   collapse(2) DEFAULT(shared)
++              do k=1-nh,size(p,3)-nh
++                do i=1-nh,size(p,1)-nh
++                  p(i,0-dh,k) = factor
++                end do
++              end do
+             else if(ibound == 1) then
+-              !$acc kernels default(present) async(1)
+-              !$OMP PARALLEL WORKSHARE
+-              p(:,n+1 ,:) = p(:,n-1,:) ! unused
+-              p(:,n+dh,:) = factor
+-              !$OMP END PARALLEL WORKSHARE
+-              !$acc end kernels
++              !$acc parallel loop collapse(2) default(present) async(1)
++              !$OMP parallel do   collapse(2) DEFAULT(shared)
++              do k=1-nh,size(p,3)-nh
++                do i=1-nh,size(p,1)-nh
++                  p(i,n+1,k) = p(i,n-1,k) ! unused
++                  p(i,n+dh,k) = factor
++                end do
++              end do
+             end if
+           case(3)
+             if     (ibound == 0) then
+-              !$acc kernels default(present) async(1)
+-              !$OMP PARALLEL WORKSHARE
+-              p(:,:,0-dh) = factor
+-              !$OMP END PARALLEL WORKSHARE
+-              !$acc end kernels
++              !$acc parallel loop collapse(2) default(present) async(1)
++              !$OMP parallel do   collapse(2) DEFAULT(shared)
++              do j=1-nh,size(p,2)-nh
++                do i=1-nh,size(p,1)-nh
++                  p(i,j,0-dh) = factor
++                end do
++              end do
+             else if(ibound == 1) then
+-              !$acc kernels default(present) async(1)
+-              !$OMP PARALLEL WORKSHARE
+-              p(:,:,n+1 ) = p(:,:,n-1) ! unused
+-              p(:,:,n+dh) = factor
+-              !$OMP END PARALLEL WORKSHARE
+-              !$acc end kernels
++              !$acc parallel loop collapse(2) default(present) async(1)
++              !$OMP parallel do   collapse(2) DEFAULT(shared)
++              do j=1-nh,size(p,2)-nh
++                do i=1-nh,size(p,1)-nh
++                  p(i,j,n+1) = p(i,j,n-1) ! unused
++                  p(i,j,n+dh) = factor
++                end do
++              end do
+             end if
+           end select
+         else if(.not.centered.and.ctype == 'N') then
+           select case(idir)
+           case(1)
+             if     (ibound == 0) then
+-              !$acc kernels default(present) async(1)
+-              !$OMP PARALLEL WORKSHARE
+-              !p(0,:,:) = 1./3.*(-2.*factor+4.*p(1  ,:,:)-p(2  ,:,:))
+-              p(0-dh,:,:) = 1.*factor + p(  1+dh,:,:)
+-              !$OMP END PARALLEL WORKSHARE
+-              !$acc end kernels
++              !$acc parallel loop collapse(2) default(present) async(1)
++              !$OMP parallel do   collapse(2) DEFAULT(shared)
++              do k=1-nh,size(p,3)-nh
++                do j=1-nh,size(p,2)-nh
++                  !p(0-dh,j,k) = 1./3.*(-2.*factor+4.*p(1+dh,j,k)-p(2+dh,j,k))
++                  p(0-dh,j,k) = 1.*factor + p(  1+dh,j,k)
++                end do
++              end do
+             else if(ibound == 1) then
+-              !$acc kernels default(present) async(1)
+-              !$OMP PARALLEL WORKSHARE
+-              !p(n,:,:) = 1./3.*(-2.*factor+4.*p(n-1,:,:)-p(n-2,:,:))
+-              p(n+1,:,:) = p(n,:,:) ! unused
+-              p(n+dh,:,:) = 1.*factor + p(n-1-dh,:,:)
+-              !$OMP END PARALLEL WORKSHARE
+-              !$acc end kernels
++              !$acc parallel loop collapse(2) default(present) async(1)
++              !$OMP parallel do   collapse(2) DEFAULT(shared)
++              do k=1-nh,size(p,3)-nh
++                do j=1-nh,size(p,2)-nh
++                  !p(n+1,j,k) = 1./3.*(-2.*factor+4.*p(n-1,j,k)-p(n-2,j,k))
++                  p(n+1,j,k) = p(n,j,k) ! unused
++                  p(n+dh,j,k) = 1.*factor + p(n-1-dh,j,k)
++                end do
++              end do
+             end if
+           case(2)
+             if     (ibound == 0) then
+-              !$acc kernels default(present) async(1)
+-              !$OMP PARALLEL WORKSHARE
+-              !p(:,0  ,:) = 1./3.*(-2.*factor+4.*p(:,1,:)-p(:,2  ,:))
+-              p(:,0-dh,:) = 1.*factor + p(:,  1+dh,:)
+-              !$OMP END PARALLEL WORKSHARE
+-              !$acc end kernels
++              !$acc parallel loop collapse(2) default(present) async(1)
++              !$OMP parallel do   collapse(2) DEFAULT(shared)
++              do k=1-nh,size(p,3)-nh
++                do i=1-nh,size(p,1)-nh
++                  !p(i,0-dh,k) = 1./3.*(-2.*factor+4.*p(i,1+dh,k)-p(i,2+dh,k))
++                  p(i,0-dh,k) = 1.*factor + p(i,  1+dh,k)
++                end do
++              end do
+             else if(ibound == 1) then
+-              !$acc kernels default(present) async(1)
+-              !$OMP PARALLEL WORKSHARE
+-              !p(:,n,:) = 1./3.*(-2.*factor+4.*p(:,n-1,:)-p(:,n-2,:))
+-              p(:,n+1,:) = p(:,n,:) ! unused
+-              p(:,n+dh,:) = 1.*factor + p(:,n-1-dh,:)
+-              !$OMP END PARALLEL WORKSHARE
+-              !$acc end kernels
++              !$acc parallel loop collapse(2) default(present) async(1)
++              !$OMP parallel do   collapse(2) DEFAULT(shared)
++              do k=1-nh,size(p,3)-nh
++                do i=1-nh,size(p,1)-nh
++                  !p(i,n+1,k) = 1./3.*(-2.*factor+4.*p(i,n-1,k)-p(i,n-2,k))
++                  p(i,n+1,k) = p(i,n,k) ! unused
++                  p(i,n+dh,k) = 1.*factor + p(i,n-1-dh,k)
++                end do
++              end do
+             end if
+           case(3)
+             if     (ibound == 0) then
+-              !$acc kernels default(present) async(1)
+-              !$OMP PARALLEL WORKSHARE
+-              !p(:,:,0) = 1./3.*(-2.*factor+4.*p(:,:,1  )-p(:,:,2  ))
+-              p(:,:,0-dh) = 1.*factor + p(:,:,  1+dh)
+-              !$OMP END PARALLEL WORKSHARE
+-              !$acc end kernels
++              !$acc parallel loop collapse(2) default(present) async(1)
++              !$OMP parallel do   collapse(2) DEFAULT(shared)
++              do j=1-nh,size(p,2)-nh
++                do i=1-nh,size(p,1)-nh
++                  !p(i,j,0-dh) = 1./3.*(-2.*factor+4.*p(i,j,1+dh)-p(i,j,2+dh))
++                  p(i,j,0-dh) = 1.*factor + p(i,j,  1+dh)
++                end do
++              end do
+             else if(ibound == 1) then
+-              !$acc kernels default(present) async(1)
+-              !$OMP PARALLEL WORKSHARE
+-              !p(:,:,n) = 1./3.*(-2.*factor+4.*p(:,:,n-1)-p(:,:,n-2))
+-              p(:,:,n+1) = p(:,:,n) ! unused
+-              p(:,:,n+dh) = 1.*factor + p(:,:,n-1-dh)
+-              !$OMP END PARALLEL WORKSHARE
+-              !$acc end kernels
++              !$acc parallel loop collapse(2) default(present) async(1)
++              !$OMP parallel do   collapse(2) DEFAULT(shared)
++              do j=1-nh,size(p,2)-nh
++                do i=1-nh,size(p,1)-nh
++                  !p(i,j,n+1) = 1./3.*(-2.*factor+4.*p(i,j,n-1)-p(i,j,n-2))
++                  p(i,j,n+1) = p(i,j,n) ! unused
++                  p(i,j,n+dh) = 1.*factor + p(i,j,n-1-dh)
++                end do
++              end do
+             end if
+           end select
+         end if
+@@ -349,7 +392,8 @@ module mod_bound
+         if(is_bound(0,1)) then
+           n(:) = shape(u) - 2*1
+           i = 0
+-          !$acc parallel loop collapse(2) default(present)
++          !$acc parallel loop collapse(2) default(present) async(1)
++          !$OMP parallel do   collapse(2) DEFAULT(shared)
+           do k=1,n(3)
+             do j=1,n(2)
+               u(i,j,k) = vel2d(j,k)
+@@ -360,7 +404,8 @@ module mod_bound
+         if(is_bound(0,2)) then
+           n(:) = shape(v) - 2*1
+           j = 0
+-          !$acc parallel loop collapse(2) default(present)
++          !$acc parallel loop collapse(2) default(present) async(1)
++          !$OMP parallel do   collapse(2) DEFAULT(shared)
+           do k=1,n(3)
+             do i=1,n(1)
+               v(i,j,k) = vel2d(i,k)
+@@ -371,7 +416,8 @@ module mod_bound
+         if(is_bound(0,3)) then
+           n(:) = shape(w) - 2*1
+           k = 0
+-          !$acc parallel loop collapse(2) default(present)
++          !$acc parallel loop collapse(2) default(present) async(1)
++          !$OMP parallel do   collapse(2) DEFAULT(shared)
+           do j=1,n(2)
+             do i=1,n(1)
+               w(i,j,k) = vel2d(i,j)
+@@ -381,7 +427,7 @@ module mod_bound
+     end select
+   end subroutine inflow
+   !
+-  subroutine updt_rhs_b(c_or_f,cbc,n,is_bound,rhsbx,rhsby,rhsbz,p)
++  subroutine updt_rhs_b(c_or_f,cbc,n,is_bound,rhsbx,rhsby,rhsbz,p,alpha)
+     implicit none
+     character(len=1), intent(in), dimension(3    ) :: c_or_f
+     character(len=1), intent(in), dimension(0:1,3) :: cbc
+@@ -389,63 +435,80 @@ module mod_bound
+     logical , intent(in), dimension(0:1,3) :: is_bound
+     real(rp), intent(in), dimension(:,:,0:), optional :: rhsbx,rhsby,rhsbz
+     real(rp), intent(inout), dimension(0:,0:,0:) :: p
++    real(rp), intent(in), optional :: alpha
+     integer , dimension(3) :: q
+     integer :: idir
+     integer :: nn
++    integer :: i,j,k
++    real(rp) :: norm
+     q(:) = 0
+     do idir = 1,3
+       if(c_or_f(idir) == 'f'.and.cbc(1,idir) == 'D') q(idir) = 1
+     end do
++    norm = 1.
++    if(present(alpha)) norm = alpha
+     !
+     if(present(rhsbx)) then
+       if(is_bound(0,1)) then
+-        !$acc kernels default(present) async(1)
+-        !$OMP PARALLEL WORKSHARE
+-        p(1 ,1:n(2),1:n(3)) = p(1 ,1:n(2),1:n(3)) + rhsbx(:,:,0)
+-        !$OMP END PARALLEL WORKSHARE
+-        !$acc end kernels
++        !$acc parallel loop collapse(2) default(present) async(1)
++        !$OMP parallel do   collapse(2) DEFAULT(shared)
++        do k=1,n(3)
++          do j=1,n(2)
++            p(1 ,j,k) = p(1 ,j,k) + rhsbx(j,k,0)*norm
++          end do
++        end do
+       end if
+       if(is_bound(1,1)) then
+         nn = n(1)-q(1)
+-        !$acc kernels default(present) async(1)
+-        !$OMP PARALLEL WORKSHARE
+-        p(nn,1:n(2),1:n(3)) = p(nn,1:n(2),1:n(3)) + rhsbx(:,:,1)
+-        !$OMP END PARALLEL WORKSHARE
+-        !$acc end kernels
++        !$acc parallel loop collapse(2) default(present) async(1)
++        !$OMP parallel do   collapse(2) DEFAULT(shared)
++        do k=1,n(3)
++          do j=1,n(2)
++            p(nn,j,k) = p(nn,j,k) + rhsbx(j,k,1)*norm
++          end do
++        end do
+       end if
+     end if
+     if(present(rhsby)) then
+       if(is_bound(0,2)) then
+-        !$acc kernels default(present) async(1)
+-        !$OMP PARALLEL WORKSHARE
+-        p(1:n(1),1 ,1:n(3)) = p(1:n(1),1 ,1:n(3)) + rhsby(:,:,0)
+-        !$OMP END PARALLEL WORKSHARE
+-        !$acc end kernels
++        !$acc parallel loop collapse(2) default(present) async(1)
++        !$OMP parallel do   collapse(2) DEFAULT(shared)
++        do k=1,n(3)
++          do i=1,n(1)
++            p(i,1 ,k) = p(i,1 ,k) + rhsby(i,k,0)*norm
++          end do
++        end do
+       end if
+       if(is_bound(1,2)) then
+         nn = n(2)-q(2)
+-        !$acc kernels default(present) async(1)
+-        !$OMP PARALLEL WORKSHARE
+-        p(1:n(1),nn,1:n(3)) = p(1:n(1),nn,1:n(3)) + rhsby(:,:,1)
+-        !$OMP END PARALLEL WORKSHARE
+-        !$acc end kernels
++        !$acc parallel loop collapse(2) default(present) async(1)
++        !$OMP parallel do   collapse(2) DEFAULT(shared)
++        do k=1,n(3)
++          do i=1,n(1)
++            p(i,nn,k) = p(i,nn,k) + rhsby(i,k,1)*norm
++          end do
++        end do
+       end if
+     end if
+     if(present(rhsbz)) then
+       if(is_bound(0,3)) then
+-        !$acc kernels default(present) async(1)
+-        !$OMP PARALLEL WORKSHARE
+-        p(1:n(1),1:n(2),1 ) = p(1:n(1),1:n(2),1 ) + rhsbz(:,:,0)
+-        !$OMP END PARALLEL WORKSHARE
+-        !$acc end kernels
++        !$acc parallel loop collapse(2) default(present) async(1)
++        !$OMP parallel do   collapse(2) DEFAULT(shared)
++        do j=1,n(2)
++          do i=1,n(1)
++            p(i,j,1 ) = p(i,j,1 ) + rhsbz(i,j,0)*norm
++          end do
++        end do
+       end if
+       if(is_bound(1,3)) then
+         nn = n(3)-q(3)
+-        !$acc kernels default(present) async(1)
+-        !$OMP PARALLEL WORKSHARE
+-        p(1:n(1),1:n(2),nn) = p(1:n(1),1:n(2),nn) + rhsbz(:,:,1)
+-        !$OMP END PARALLEL WORKSHARE
+-        !$acc end kernels
++        !$acc parallel loop collapse(2) default(present) async(1)
++        !$OMP parallel do   collapse(2) DEFAULT(shared)
++        do j=1,n(2)
++          do i=1,n(1)
++            p(i,j,nn) = p(i,j,nn) + rhsbz(i,j,1)*norm
++          end do
++        end do
+       end if
+     end if
+   end subroutine updt_rhs_b
+diff --git a/src/fft.f90 b/src/fft.f90
+index b783c86..620d79a 100644
+--- a/src/fft.f90
++++ b/src/fft.f90
+@@ -406,9 +406,7 @@ module mod_fft
+           end do
+         end do
+       end do
+-      !$acc kernels default(present) async(1)
+-      arr(:,:,:) = arr_tmp(:,:,:)
+-      !$acc end kernels
++      call copy(arr_tmp,arr)
+       if(is_swap_order ) call swap_order( nn,n(2),n(3),arr)
+       if(is_negate_even) call negate_even(nn,n(2),n(3),arr)
+     end select
+@@ -462,9 +460,7 @@ module mod_fft
+           end do
+         end do
+       end do
+-      !$acc kernels default(present) async(1)
+-      arr(:,:,:) = arr_tmp(:,:,:)
+-      !$acc end kernels
++      call copy(arr_tmp,arr)
+     end select
+   end subroutine prep_dctiib
+   subroutine posp_dctiib(nn,n,idir,arr,is_swap_order,is_negate_even)
+@@ -643,13 +639,9 @@ module mod_fft
+           end do
+         end do
+       end do
+-      !$acc kernels default(present) async(1)
+-      arr(:,:,:) = arr_tmp(:,:,:)
+-      !$acc end kernels
++      call copy(arr_tmp,arr)
+     case(1)
+-      !$acc kernels default(present) async(1)
+-      arr_tmp(:,:,:) = arr(:,:,:)
+-      !$acc end kernels
++      call copy(arr,arr_tmp)
+       !$acc parallel loop collapse(3) default(present) async(1)
+       do k=1,n3
+         do j=1,n2
+@@ -668,5 +660,21 @@ module mod_fft
+       end do
+     end select
+   end subroutine remap
++  subroutine copy(a,b)
++    real(rp), intent(in ), dimension(:,:,:) :: a
++    real(rp), intent(out), dimension(:,:,:) :: b
++    integer :: i,j,k,n1,n2,n3
++    n1 = min(size(a,1),size(b,1))
++    n2 = min(size(a,2),size(b,2))
++    n3 = min(size(a,3),size(b,3))
++    !$acc parallel loop collapse(3) default(present) async(1)
++    do k=1,n3
++      do j=1,n2
++        do i=1,n1
++          b(i,j,k) = a(i,j,k)
++        end do
++      end do
++    end do
++  end subroutine copy
+ #endif
+ end module mod_fft
+diff --git a/src/fftw.f90 b/src/fftw.f90
+index e03c579..08bd892 100644
+--- a/src/fftw.f90
++++ b/src/fftw.f90
+@@ -12,30 +12,30 @@ module mod_fftw_param
+   implicit none
+   !
+   type, bind(C) :: fftw_iodim
+-     integer(C_INT) n, is, os
++    integer(C_INT) n,is,os
+   end type fftw_iodim
+   !
+   interface
+-     type(C_PTR) function fftw_plan_guru_r2r(rank,dims, &
+-       howmany_rank,howmany_dims,in,out,kind,flags)  &
++    type(C_PTR) function fftw_plan_guru_r2r(rank,dims,howmany_rank,howmany_dims, &
++                                            in,out,kind,flags) &
+ #if defined(_SINGLE_PRECISION)
+-       bind(C, name='fftwf_plan_guru_r2r')
++      bind(C, name='fftwf_plan_guru_r2r')
+ #else
+-       bind(C, name='fftw_plan_guru_r2r')
++      bind(C, name='fftw_plan_guru_r2r')
+ #endif
+-       import
+-       integer(C_INT), value :: rank
+-       type(fftw_iodim), dimension(*), intent(in) :: dims
+-       integer(C_INT), value :: howmany_rank
+-       type(fftw_iodim), dimension(*), intent(in) :: howmany_dims
++      import
++      integer(C_INT), value :: rank
++      type(fftw_iodim), dimension(*), intent(in) :: dims
++      integer(C_INT), value :: howmany_rank
++      type(fftw_iodim), dimension(*), intent(in) :: howmany_dims
+ #if defined(_SINGLE_PRECISION)
+-       real(C_FLOAT ), dimension(*), intent(out) :: in,out
++      real(C_FLOAT ), dimension(*), intent(out) :: in,out
+ #else
+-       real(C_DOUBLE), dimension(*), intent(out) :: in,out
++      real(C_DOUBLE), dimension(*), intent(out) :: in,out
+ #endif
+-       integer(C_INT) :: kind
+-       integer(C_INT), value :: flags
+-     end function fftw_plan_guru_r2r
++      integer(C_INT) :: kind
++      integer(C_INT), value :: flags
++    end function fftw_plan_guru_r2r
+   end interface
+   !
+   integer :: FFTW_PATIENT,FFTW_ESTIMATE
+@@ -68,11 +68,11 @@ module mod_fftw_param
+   logical :: planned=.false.
+ #if defined(_OPENACC)
+ #if defined(_SINGLE_PRECISION)
+-    integer, parameter :: CUFFT_FWD_TYPE = CUFFT_R2C
+-    integer, parameter :: CUFFT_BWD_TYPE = CUFFT_C2R
++  integer, parameter :: CUFFT_FWD_TYPE = CUFFT_R2C
++  integer, parameter :: CUFFT_BWD_TYPE = CUFFT_C2R
+ #else
+-    integer, parameter :: CUFFT_FWD_TYPE = CUFFT_D2Z
+-    integer, parameter :: CUFFT_BWD_TYPE = CUFFT_Z2D
++  integer, parameter :: CUFFT_FWD_TYPE = CUFFT_D2Z
++  integer, parameter :: CUFFT_BWD_TYPE = CUFFT_Z2D
+ #endif
+ #endif
+ end module mod_fftw_param
+diff --git a/src/initflow.f90 b/src/initflow.f90
+index 476e247..46c5cb3 100644
+--- a/src/initflow.f90
++++ b/src/initflow.f90
+@@ -49,9 +49,10 @@ module mod_initflow
+     if(is_forced(1)) ubulk = velf(1)
+     select case(trim(inivel))
+     case('cou')
+-      uref = (bcvel(0,3,1)-bcvel(1,3,1)) ! uref = (ubot - utop)
+-      call couette(   n(3),zc/l(3),uref ,u1d)
+-      uref = abs(uref)
++      call couette(   n(3),zc/l(3),1._rp,u1d)
++      u1d(:) = u1d(:) + 0.5 ! from 1 to 0
++      u1d(:) = bcvel(0,3,1)*(u1d(:)) + bcvel(1,3,1)*(1.-u1d(:))
++      uref = abs(bcvel(1,3,1)-bcvel(0,3,1))
+     case('poi')
+       call poiseuille(n(3),zc/l(3),ubulk,u1d)
+       is_mean = .true.
+@@ -297,8 +298,9 @@ module mod_initflow
+       s1d(:) = sref
+     case('cou')
+       call couette(   n(3),zc/l(3),1._rp,s1d)
+-      s1d(:) = s1d(:) + 0.5 ! from 0 to 1
+-      s1d(:) = bcscal(0,3)*(1.-s1d(:)) + bcscal(1,3)*(s1d(:))
++      s1d(:) = s1d(:) + 0.5 ! from 1 to 0
++      s1d(:) = bcscal(0,3)*(s1d(:)) + bcscal(1,3)*(1.-s1d(:))
++      sref = abs(bcscal(1,3) - bcscal(0,3))
+     case('dhc')
+       s1d(:) = 0._rp
+     case('tbl')
+diff --git a/src/main.f90 b/src/main.f90
+index 0bb47a9..a565f67 100644
+--- a/src/main.f90
++++ b/src/main.f90
+@@ -87,6 +87,7 @@ program cans
+   implicit none
+   integer , dimension(3) :: lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z
+   real(rp), allocatable, dimension(:,:,:) :: u,v,w,p,pp
++  real(rp), allocatable, dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
+   real(rp), dimension(0:1,3) :: tauxo,tauyo,tauzo
+   real(rp), dimension(3) :: f
+ #if !defined(_OPENACC)
+@@ -161,6 +162,9 @@ program cans
+            w( 0:n(1)+1,0:n(2)+1,0:n(3)+1), &
+            p( 0:n(1)+1,0:n(2)+1,0:n(3)+1), &
+            pp(0:n(1)+1,0:n(2)+1,0:n(3)+1))
++  allocate(dudtrko(n(1),n(2),n(3)), &
++           dvdtrko(n(1),n(2),n(3)), &
++           dwdtrko(n(1),n(2),n(3)))
+   allocate(lambdaxyp(n_z(1),n_z(2)))
+   allocate(ap(n_z(3)),bp(n_z(3)),cp(n_z(3)))
+   if(is_poisson_pcr_tdma) then
+@@ -258,15 +262,19 @@ program cans
+     dzci(k) = dzc(k)**(-1)
+     dzfi(k) = dzf(k)**(-1)
+   end do
+-  !$acc kernels default(present) async
+-  dzci_g(:) = dzc_g(:)**(-1)
+-  dzfi_g(:) = dzf_g(:)**(-1)
+-  !$acc end kernels
++  !$acc data copy(ng) async
++  !$acc parallel loop default(present) async
++  do k=0,ng(3)+1
++    dzci_g(k) = dzc_g(k)**(-1)
++    dzfi_g(k) = dzf_g(k)**(-1)
++  end do
++  !$acc end data
+   !$acc enter data create(grid_vol_ratio_c,grid_vol_ratio_f) async
+-  !$acc kernels default(present) async
+-  grid_vol_ratio_c(:) = dl(1)*dl(2)*dzc(:)/(l(1)*l(2)*l(3))
+-  grid_vol_ratio_f(:) = dl(1)*dl(2)*dzf(:)/(l(1)*l(2)*l(3))
+-  !$acc end kernels
++  !$acc parallel loop default(present) async
++  do k=0,n(3)+1
++    grid_vol_ratio_c(k) = dl(1)*dl(2)*dzc(k)/(l(1)*l(2)*l(3))
++    grid_vol_ratio_f(k) = dl(1)*dl(2)*dzf(k)/(l(1)*l(2)*l(3))
++  end do
+   !$acc update self(zc,zf,dzc,dzf,dzci,dzfi) async
+   !$acc exit data copyout(zc_g,zf_g,dzc_g,dzf_g,dzci_g,dzfi_g) async ! not needed on the device
+   !$acc wait
+@@ -355,12 +363,12 @@ program cans
+     call load_all('r',trim(datadir)//'fld.bin',MPI_COMM_WORLD,ng,[1,1,1],lo,hi,nscal,u,v,w,p,scalars,time,istep)
+     if(myid == 0) print*, '*** Checkpoint loaded at time = ', time, 'time step = ', istep, '. ***'
+   end if
+-  !$acc enter data copyin(u,v,w,p) create(pp)
++  !$acc enter data copyin(u,v,w,p,dudtrko,dvdtrko,dwdtrko) create(pp)
+   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
+   call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
+   do iscal=1,nscal
+     s => scalars(iscal)
+-    !$acc enter data copyin(s%val) async(1)
++    !$acc enter data copyin(s%val,s%dsdtrko) async(1)
+     call boundp(s%cbc,n,s%bc,nb,is_bound,dl,dzc,s%val)
+   end do
+   !$acc wait
+@@ -409,8 +417,8 @@ program cans
+       dtrki = dtrk**(-1)
+       do iscal=1,nscal
+         s => scalars(iscal)
+-        call rk_scal(rkcoeff(:,irk),iscal,nscal,n,dli,l,dzci,dzfi,grid_vol_ratio_f,s%alpha,dt,is_bound,u,v,w, &
+-                     s%is_forced,s%scalf,s%source,s%fluxo,s%val,s%f)
++        call rk_scal(rkcoeff(:,irk),n,dli,l,dzci,dzfi,grid_vol_ratio_f,s%alpha,dt,is_bound,u,v,w, &
++                     s%is_forced,s%scalf,s%source,s%fluxo,s%dsdtrko,s%val,s%f)
+         call bulk_forcing_s(n,s%is_forced,s%f,s%val)
+         fs(iscal) = fs(iscal) + s%f
+         if(is_impdiff) then
+@@ -420,7 +428,7 @@ program cans
+         call boundp(s%cbc,n,s%bc,nb,is_bound,dl,dzc,s%val)
+       end do
+       call rk(rkcoeff(:,irk),n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,visc,dt,p, &
+-              is_forced,velf,bforce,gacc,beta,scalars,u,v,w,f)
++              is_forced,velf,bforce,gacc,beta,scalars,dudtrko,dvdtrko,dwdtrko,u,v,w,f)
+       call bulk_forcing(n,is_forced,f,u,v,w)
+       dpdl(:) = dpdl(:) + f(:)
+       if(is_impdiff) then
+diff --git a/src/mom.f90 b/src/mom.f90
+index 3b074e3..6a6cb35 100644
+--- a/src/mom.f90
++++ b/src/mom.f90
+@@ -607,23 +607,42 @@ module mod_mom
+     real(rp), intent(in   ), dimension(3) :: f
+     real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
+     real(rp) :: ff
++    integer  :: i,j,k
+     if(is_forced(1)) then
+       ff = f(1)
+-      !$acc kernels default(present) async(1)
+-      u(1:n(1),1:n(2),1:n(3)) = u(1:n(1),1:n(2),1:n(3)) + ff
+-      !$acc end kernels
++      !$acc parallel loop collapse(3) default(present) async(1)
++      !$OMP parallel do   collapse(3) DEFAULT(shared)
++      do k=1,n(3)
++        do j=1,n(2)
++          do i=1,n(1)
++            u(i,j,k) = u(i,j,k) + ff
++          end do
++        end do
++      end do
+     end if
+     if(is_forced(2)) then
+       ff = f(2)
+-      !$acc kernels default(present) async(1)
+-      v(1:n(1),1:n(2),1:n(3)) = v(1:n(1),1:n(2),1:n(3)) + ff
+-      !$acc end kernels
++      !$acc parallel loop collapse(3) default(present) async(1)
++      !$OMP parallel do   collapse(3) DEFAULT(shared)
++      do k=1,n(3)
++        do j=1,n(2)
++          do i=1,n(1)
++            v(i,j,k) = v(i,j,k) + ff
++          end do
++        end do
++      end do
+     end if
+     if(is_forced(3)) then
+       ff = f(3)
+-      !$acc kernels default(present) async(1)
+-      w(1:n(1),1:n(2),1:n(3)) = w(1:n(1),1:n(2),1:n(3)) + ff
+-      !$acc end kernels
++      !$acc parallel loop collapse(3) default(present) async(1)
++      !$OMP parallel do   collapse(3) DEFAULT(shared)
++      do k=1,n(3)
++        do j=1,n(2)
++          do i=1,n(1)
++            w(i,j,k) = w(i,j,k) + ff
++          end do
++        end do
++      end do
+     end if
+   end subroutine bulk_forcing
+   !
+diff --git a/src/output.f90 b/src/output.f90
+index 11b4263..811f754 100644
+--- a/src/output.f90
++++ b/src/output.f90
+@@ -81,9 +81,10 @@ module mod_output
+     !
+     allocate(p1d(ng(idir)))
+     !$acc enter data create(p1d)
+-    !$acc kernels default(present)
+-    p1d(:) = 0._rp
+-    !$acc end kernels
++    !$acc parallel loop default(present)
++    do k=1,size(p1d)
++      p1d(k) = 0._rp
++    end do
+     select case(idir)
+     case(3)
+       grid_area_ratio = dl(1)*dl(2)/(l(1)*l(2))
+@@ -204,7 +205,7 @@ module mod_output
+     filesize = 0_MPI_OFFSET_KIND
+     call MPI_FILE_SET_SIZE(fh,filesize,ierr)
+     disp = 0_MPI_OFFSET_KIND
+-#if 1
++#if 0
+     call decomp_2d_write_every(ipencil,p,nskip(1),nskip(2),nskip(3),fname,.true.)
+ #else
+     !
+diff --git a/src/rk.f90 b/src/rk.f90
+index de03041..7ab4806 100644
+--- a/src/rk.f90
++++ b/src/rk.f90
+@@ -14,13 +14,18 @@ module mod_rk
+                        mom_xyz_ad
+   use mod_param, only: is_impdiff,is_impdiff_1d,is_boussinesq_buoyancy,is_fast_mom_kernels
+   use mod_scal , only: scal,cmpt_scalflux,scalar
+-  use mod_utils, only: bulk_mean,swap
++  use mod_utils, only: bulk_mean
+   use mod_types
+   implicit none
+   public rk,rk_scal
+   contains
+   subroutine rk(rkpar,n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,visc,dt,p, &
+-                is_forced,velf,bforce,gacc,beta,scalars,u,v,w,f)
++                is_forced,velf,bforce,gacc,beta,scalars,dudtrko,dvdtrko,dwdtrko,u,v,w,f)
++#if defined(_OPENACC)
++    use mod_common_cudecomp, only: dudtrk_t => work, &
++                                   dvdtrk_t => solver_buf_0, &
++                                   dwdtrk_t => solver_buf_1
++#endif
+     !
+     ! low-storage 3rd-order Runge-Kutta scheme
+     ! for time integration of the momentum equations.
+@@ -37,23 +42,30 @@ module mod_rk
+     real(rp), intent(in   ), dimension(3)        :: velf,bforce
+     real(rp), intent(in   ), dimension(3)        :: gacc
+     real(rp), intent(in   )                      :: beta
+-    type(scalar), intent(in   ), target, dimension(:) :: scalars
++    type(scalar), intent(in   ), target, dimension(:), optional :: scalars
++    real(rp), intent(inout), dimension(1:,1:,1:) :: dudtrko,dvdtrko,dwdtrko
+     real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
+     real(rp), intent(out  ), dimension(3)        :: f
+-    real(rp), pointer, dimension(:,:,:) :: s
+-    real(rp), target       , allocatable, dimension(:,:,:), save :: dudtrk_t ,dvdtrk_t ,dwdtrk_t , &
+-                                                                    dudtrko_t,dvdtrko_t,dwdtrko_t
+-    real(rp), pointer      , contiguous , dimension(:,:,:), save :: dudtrk   ,dvdtrk   ,dwdtrk   , &
+-                                                                    dudtrko  ,dvdtrko  ,dwdtrko
+-    real(rp),                allocatable, dimension(:,:,:), save :: dudtrkd  ,dvdtrkd  ,dwdtrkd
++    real(rp), pointer, contiguous, dimension(:,:,:) :: s
++#if !defined(_OPENACC)
++    real(rp), target       , allocatable, dimension(:,:,:), save :: dudtrk_t,dvdtrk_t,dwdtrk_t
++#endif
++    real(rp), pointer      , contiguous , dimension(:,:,:), save :: dudtrk  ,dvdtrk  ,dwdtrk
++    real(rp),                allocatable, dimension(:,:,:), save :: dudtrkd ,dvdtrkd ,dwdtrkd
+     logical, save :: is_first = .true.
+     real(rp) :: factor1,factor2,factor12
++    logical :: is_buoyancy
+     integer  :: i,j,k
+     !
+     factor1 = rkpar(1)*dt
+     factor2 = rkpar(2)*dt
+     factor12 = factor1 + factor2
+-    if(is_boussinesq_buoyancy) then
++    !
++    ! is_boussinesq_buoyancy = T will always imply present(scalars), as we do not allow for
++    ! nscal = 0 with buoyancy on (see `param.f90`)
++    !
++    is_buoyancy = present(scalars).and.is_boussinesq_buoyancy
++    if(is_buoyancy) then
+       s => scalars(1)%val
+     end if
+     !
+@@ -61,49 +73,65 @@ module mod_rk
+     !
+     if(is_first) then ! leverage save attribute to allocate these arrays on the device only once
+       is_first = .false.
+-      allocate(dudtrk_t( n(1),n(2),n(3)),dvdtrk_t( n(1),n(2),n(3)),dwdtrk_t( n(1),n(2),n(3)))
+-      allocate(dudtrko_t(n(1),n(2),n(3)),dvdtrko_t(n(1),n(2),n(3)),dwdtrko_t(n(1),n(2),n(3)))
+-      !$acc enter data create(dudtrk_t ,dvdtrk_t ,dwdtrk_t ) async(1)
+-      !$acc enter data create(dudtrko_t,dvdtrko_t,dwdtrko_t) async(1)
+-      !$acc kernels default(present) async(1) ! not really necessary
+-      dudtrko_t(:,:,:) = 0._rp
+-      dvdtrko_t(:,:,:) = 0._rp
+-      dwdtrko_t(:,:,:) = 0._rp
+-      !$acc end kernels
++#if !defined(_OPENACC)
++      allocate(dudtrk_t(n(1),n(2),n(3)),dvdtrk_t(n(1),n(2),n(3)),dwdtrk_t(n(1),n(2),n(3)))
++#endif
++      !$acc parallel loop collapse(3) default(present) async(1)
++      !$OMP parallel do   collapse(3) DEFAULT(shared)
++      do k=1,n(3)
++        do j=1,n(2)
++          do i=1,n(1)
++            dudtrko(i,j,k) = 0._rp
++            dvdtrko(i,j,k) = 0._rp
++            dwdtrko(i,j,k) = 0._rp
++          end do
++        end do
++      end do
+       if(is_impdiff) then
+         allocate(dudtrkd(n(1),n(2),n(3)),dvdtrkd(n(1),n(2),n(3)),dwdtrkd(n(1),n(2),n(3)))
+         !$acc enter data create(dudtrkd,dvdtrkd,dwdtrkd) async(1)
+       end if
++#if defined(_OPENACC)
++      dudtrk(1:n(1),1:n(2),1:n(3)) => dudtrk_t(1:product(n(:)))
++      dvdtrk(1:n(1),1:n(2),1:n(3)) => dvdtrk_t(1:product(n(:)))
++      dwdtrk(1:n(1),1:n(2),1:n(3)) => dwdtrk_t(1:product(n(:)))
++#else
+       dudtrk  => dudtrk_t
+       dvdtrk  => dvdtrk_t
+       dwdtrk  => dwdtrk_t
+-      dudtrko => dudtrko_t
+-      dvdtrko => dvdtrko_t
+-      dwdtrko => dwdtrko_t
++#endif
+     end if
+     !
+     if(is_fast_mom_kernels) then
+       call mom_xyz_ad(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,u,v,w,dudtrk,dvdtrk,dwdtrk,dudtrkd,dvdtrkd,dwdtrkd)
+     else
+-      !$acc kernels default(present) async(1)
+-      !$OMP PARALLEL WORKSHARE
+-      dudtrk(:,:,:) = 0._rp
+-      dvdtrk(:,:,:) = 0._rp
+-      dwdtrk(:,:,:) = 0._rp
+-      !$OMP END PARALLEL WORKSHARE
+-      !$acc end kernels
++      !$acc parallel loop collapse(3) default(present) async(1)
++      !$OMP parallel do   collapse(3) DEFAULT(shared)
++      do k=1,n(3)
++        do j=1,n(2)
++          do i=1,n(1)
++            dudtrk(i,j,k) = 0._rp
++            dvdtrk(i,j,k) = 0._rp
++            dwdtrk(i,j,k) = 0._rp
++          end do
++        end do
++      end do
+       if(.not.is_impdiff) then
+         call momx_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,u,dudtrk)
+         call momy_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,v,dvdtrk)
+         call momz_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,w,dwdtrk)
+       else
+-        !$acc kernels default(present) async(1)
+-        !$OMP PARALLEL WORKSHARE
+-        dudtrkd(:,:,:) = 0._rp
+-        dvdtrkd(:,:,:) = 0._rp
+-        dwdtrkd(:,:,:) = 0._rp
+-        !$OMP END PARALLEL WORKSHARE
+-        !$acc end kernels
++        !$acc parallel loop collapse(3) default(present) async(1)
++        !$OMP parallel do   collapse(3) DEFAULT(shared)
++        do k=1,n(3)
++          do j=1,n(2)
++            do i=1,n(1)
++              dudtrkd(i,j,k) = 0._rp
++              dvdtrkd(i,j,k) = 0._rp
++              dwdtrkd(i,j,k) = 0._rp
++            end do
++          end do
++        end do
+         if(.not.is_impdiff_1d) then
+           call momx_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,u,dudtrkd)
+           call momy_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,v,dvdtrkd)
+@@ -130,19 +158,19 @@ module mod_rk
+         do i=1,n(1)
+           u(i,j,k) = u(i,j,k) + factor1*dudtrk(i,j,k) + factor2*dudtrko(i,j,k) + &
+                                 factor12*(bforce(1) - dli(1)*( p(i+1,j,k)-p(i,j,k)))
+-          if(is_boussinesq_buoyancy) then
++          if(is_buoyancy) then
+             u(i,j,k) = u(i,j,k) - factor12*gacc(1)*beta*0.5*(s(i+1,j,k)+s(i,j,k))
+           end if
+           !
+           v(i,j,k) = v(i,j,k) + factor1*dvdtrk(i,j,k) + factor2*dvdtrko(i,j,k) + &
+                                 factor12*(bforce(2) - dli(2)*( p(i,j+1,k)-p(i,j,k)))
+-          if(is_boussinesq_buoyancy) then
++          if(is_buoyancy) then
+             v(i,j,k) = v(i,j,k) - factor12*gacc(2)*beta*0.5*(s(i,j+1,k)+s(i,j,k))
+           end if
+           !
+           w(i,j,k) = w(i,j,k) + factor1*dwdtrk(i,j,k) + factor2*dwdtrko(i,j,k) + &
+                                 factor12*(bforce(3) - dzci(k)*(p(i,j,k+1)-p(i,j,k)))
+-          if(is_boussinesq_buoyancy) then
++          if(is_buoyancy) then
+             w(i,j,k) = w(i,j,k) - factor12*gacc(3)*beta*0.5*(s(i,j,k+1)+s(i,j,k))
+           end if
+           !
+@@ -155,7 +183,7 @@ module mod_rk
+       end do
+     end do
+ #else
+-    if(.not.is_impdiff .and. .not.is_boussinesq_buoyancy) then
++    if(.not.is_impdiff .and. .not.is_buoyancy) then
+       !$acc parallel loop collapse(3) default(present) async(1)
+       !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+       do k=1,n(3)
+@@ -170,7 +198,7 @@ module mod_rk
+           end do
+         end do
+       end do
+-    else if(is_impdiff .and. .not.is_boussinesq_buoyancy) then
++    else if(is_impdiff .and. .not.is_buoyancy) then
+       !$acc parallel loop collapse(3) default(present) async(1)
+       !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+       do k=1,n(3)
+@@ -188,7 +216,7 @@ module mod_rk
+           end do
+         end do
+       end do
+-    else if(.not.is_impdiff .and. is_boussinesq_buoyancy) then
++    else if(.not.is_impdiff .and. is_buoyancy) then
+       !$acc parallel loop collapse(3) default(present) async(1)
+       !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+       do k=1,n(3)
+@@ -230,19 +258,32 @@ module mod_rk
+     end if
+ #endif
+     !
+-    ! swap d?dtrk <-> d?dtrko
++    ! replaced previous pointer swap to save memory on GPUs by using already allocated
++    ! buffers
+     !
+-    call swap(dudtrk,dudtrko)
+-    call swap(dvdtrk,dvdtrko)
+-    call swap(dwdtrk,dwdtrko)
++    !$acc parallel loop collapse(3) default(present) async(1)
++    !$OMP parallel do   collapse(3) DEFAULT(shared)
++    do k=1,n(3)
++      do j=1,n(2)
++        do i=1,n(1)
++          dudtrko(i,j,k) = dudtrk(i,j,k)
++          dvdtrko(i,j,k) = dvdtrk(i,j,k)
++          dwdtrko(i,j,k) = dwdtrk(i,j,k)
++        end do
++      end do
++    end do
+ !#if 0 /*pressure gradient term treated explicitly above */
+-!    !$acc kernels
+-!    !$OMP PARALLEL WORKSHARE
+-!    dudtrk(:,:,:) = 0._rp
+-!    dvdtrk(:,:,:) = 0._rp
+-!    dwdtrk(:,:,:) = 0._rp
+-!    !$OMP END PARALLEL WORKSHARE
+-!    !$acc end kernels
++!    !$acc parallel loop collapse(3) default(present) async(1)
++!    !$OMP parallel do   collapse(3) DEFAULT(shared)
++!    do k=1,n(3)
++!      do j=1,n(2)
++!        do i=1,n(1)
++!          dudtrk(i,j,k) = 0._rp
++!          dvdtrk(i,j,k) = 0._rp
++!          dwdtrk(i,j,k) = 0._rp
++!        end do
++!      end do
++!    end do
+ !    call momx_p(n(1),n(2),n(3),dli(1),bforce(1),p,dudtrk)
+ !    call momy_p(n(1),n(2),n(3),dli(2),bforce(2),p,dvdtrk)
+ !    call momz_p(n(1),n(2),n(3),dzci  ,bforce(3),p,dwdtrk)
+@@ -281,8 +322,11 @@ module mod_rk
+     end if
+   end subroutine rk
+   !
+-  subroutine rk_scal(rkpar,iscal,nscal,n,dli,l,dzci,dzfi,grid_vol_ratio_f,alpha,dt,is_bound,u,v,w, &
+-                     is_forced,scalf,ssource,fluxo,s,f)
++  subroutine rk_scal(rkpar,n,dli,l,dzci,dzfi,grid_vol_ratio_f,alpha,dt,is_bound,u,v,w, &
++                     is_forced,scalf,ssource,fluxo,dsdtrko,s,f)
++#if defined(_OPENACC)
++    use mod_common_cudecomp, only: dsdtrk_t => work
++#endif
+     !
+     ! low-storage 3rd-order Runge-Kutta scheme
+     ! for time integration of the scalar field.
+@@ -290,7 +334,6 @@ module mod_rk
+     implicit none
+     logical , parameter :: is_cmpt_wallflux = .false.
+     real(rp), intent(in   ), dimension(2) :: rkpar
+-    integer , intent(in   )               :: iscal,nscal
+     integer , intent(in   ), dimension(3) :: n
+     real(rp), intent(in   ), dimension(3) :: dli,l
+     real(rp), intent(in   ), dimension(0:) :: dzci,dzfi
+@@ -301,19 +344,17 @@ module mod_rk
+     logical , intent(in   ) :: is_forced
+     real(rp), intent(in   ) :: scalf,ssource
+     real(rp), intent(inout), dimension(0:1,3) :: fluxo
++    real(rp), intent(inout), dimension(1:,1:,1:) :: dsdtrko
+     real(rp), intent(inout), dimension(0:,0:,0:) :: s
+     real(rp), intent(out  ) :: f
+     !
+-    type :: arr
+-      real(rp),          allocatable, dimension(:,:,:) :: s
+-    end type arr
+-    type :: arr_ptr
+-      real(rp), pointer, contiguous , dimension(:,:,:) :: s
+-    end type arr_ptr
+-    type(arr    ), target, allocatable, dimension(:), save :: dsdtrk_t,dsdtrko_t,dsdtrkd
+-    type(arr_ptr),         allocatable, dimension(:), save :: dsdtrk  ,dsdtrko
+-    !
++#if !defined(_OPENACC)
++    real(rp), target       , allocatable, dimension(:,:,:), save :: dsdtrk_t
++#endif
++    real(rp), pointer      , contiguous , dimension(:,:,:), save :: dsdtrk
++    real(rp), target       , allocatable, dimension(:,:,:), save :: dsdtrkd
+     logical, save :: is_first = .true.
++    !
+     real(rp) :: factor1,factor2,factor12
+     real(rp), dimension(0:1,3) :: flux
+     integer :: i,j,k
+@@ -323,51 +364,49 @@ module mod_rk
+     factor2 = rkpar(2)*dt
+     factor12 = factor1 + factor2
+     if(is_first) then ! leverage save attribute to allocate these arrays on the device only once
+-      if(iscal == nscal) is_first = .false.
+-      if(.not.allocated(dsdtrk_t)) then
+-        allocate(dsdtrk(  nscal))
+-        allocate(dsdtrk_t(nscal))
+-        !$acc enter data create(dsdtrk,dsdtrk_t) async(1)
+-      end if
+-      if(.not.allocated(dsdtrko_t)) then
+-        allocate(dsdtrko(  nscal))
+-        allocate(dsdtrko_t(nscal))
+-        !$acc enter data create(dsdtrko,dsdtrko_t) async(1)
+-      end if
+-      allocate(dsdtrk_t(iscal)%s(n(1),n(2),n(3)),dsdtrko_t(iscal)%s(n(1),n(2),n(3)))
+-      !$acc enter data create(dsdtrk_t(iscal)%s,dsdtrko_t(iscal)%s) async(1)
+-      !$acc kernels default(present) async(1) ! not really necessary
+-      dsdtrko_t(iscal)%s(:,:,:) = 0._rp
+-      !$acc end kernels
+-      dsdtrk(iscal)%s  => dsdtrk_t(iscal)%s
+-      dsdtrko(iscal)%s => dsdtrko_t(iscal)%s
+-      !$acc enter data attach(dsdtrk(iscal)%s,dsdtrko(iscal)%s) async(1)
+-      if(.not.allocated(dsdtrkd)) then
+-        allocate(dsdtrkd(nscal))
+-        !$acc enter data create(dsdtrkd) async(1)
+-      end if
++      is_first = .false.
++#if !defined(_OPENACC)
++      allocate(dsdtrk_t(1:n(1),1:n(2),1:n(3)))
++#endif
++      !$acc parallel loop collapse(3) default(present) async(1)
++      !$OMP parallel do   collapse(3) DEFAULT(shared)
++      do k=1,n(3)
++        do j=1,n(2)
++          do i=1,n(1)
++            dsdtrko(i,j,k) = 0._rp
++          end do
++        end do
++      end do
+       if(is_impdiff) then
+-        allocate(dsdtrkd(iscal)%s(n(1),n(2),n(3)))
+-      else
+-        allocate(dsdtrkd(iscal)%s(0,0,0))
++        allocate(dsdtrkd(n(1),n(2),n(3)))
++        !$acc enter data create(dsdtrkd) async(1)
++        !$acc parallel loop collapse(3) default(present) async(1)
++        !$OMP parallel do   collapse(3) DEFAULT(shared)
++        do k=1,n(3)
++          do j=1,n(2)
++            do i=1,n(1)
++              dsdtrkd(i,j,k) = 0._rp
++            end do
++          end do
++        end do
+       end if
+-      !$acc enter data create(dsdtrkd(iscal)%s) async(1)
+-      !$acc kernels default(present) async(1)
+-      dsdtrkd(iscal)%s(:,:,:) = 0._rp
+-      !$acc end kernels
+     end if
++#if defined(_OPENACC)
++    dsdtrk(1:n(1),1:n(2),1:n(3)) => dsdtrk_t(1:product(n(:)))
++#else
++    dsdtrk => dsdtrk_t
++#endif
+     !
+-    call scal(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,alpha,u,v,w,s,dsdtrk(iscal)%s, &
+-              dsdtrkd(iscal)%s)
++    call scal(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,alpha,u,v,w,s,dsdtrk,dsdtrkd)
+ #if !defined(_LOOP_UNSWITCHING)
+     !$acc parallel loop collapse(3) default(present) async(1)
+     !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+     do k=1,n(3)
+       do j=1,n(2)
+         do i=1,n(1)
+-          s(i,j,k) = s(i,j,k) + factor1*dsdtrk(iscal)%s(i,j,k) + factor2*dsdtrko(iscal)%s(i,j,k) + factor12*ssource
++          s(i,j,k) = s(i,j,k) + factor1*dsdtrk(i,j,k) + factor2*dsdtrko(i,j,k) + factor12*ssource
+           if(is_impdiff) then
+-            s(i,j,k) = s(i,j,k) + factor12*dsdtrkd(iscal)%s(i,j,k)
++            s(i,j,k) = s(i,j,k) + factor12*dsdtrkd(i,j,k)
+           end if
+         end do
+       end do
+@@ -379,7 +418,7 @@ module mod_rk
+       do k=1,n(3)
+         do j=1,n(2)
+           do i=1,n(1)
+-            s(i,j,k) = s(i,j,k) + factor1*dsdtrk(iscal)%s(i,j,k) + factor2*dsdtrko(iscal)%s(i,j,k) + factor12*ssource
++            s(i,j,k) = s(i,j,k) + factor1*dsdtrk(i,j,k) + factor2*dsdtrko(i,j,k) + factor12*ssource
+           end do
+         end do
+       end do
+@@ -389,8 +428,8 @@ module mod_rk
+       do k=1,n(3)
+         do j=1,n(2)
+           do i=1,n(1)
+-            s(i,j,k) = s(i,j,k) + factor1*dsdtrk(iscal)%s(i,j,k) + factor2*dsdtrko(iscal)%s(i,j,k) + &
+-                                  factor12*(ssource + dsdtrkd(iscal)%s(i,j,k))
++            s(i,j,k) = s(i,j,k) + factor1*dsdtrk(i,j,k) + factor2*dsdtrko(i,j,k) + &
++                                  factor12*(ssource + dsdtrkd(i,j,k))
+           end do
+         end do
+       end do
+@@ -421,15 +460,24 @@ module mod_rk
+       do k=1,n(3)
+         do j=1,n(2)
+           do i=1,n(1)
+-            s(i,j,k) = s(i,j,k) - .5_rp*factor12*dsdtrkd(iscal)%s(i,j,k)
++            s(i,j,k) = s(i,j,k) - .5_rp*factor12*dsdtrkd(i,j,k)
+           end do
+         end do
+       end do
+     end if
+     !
+-    ! swap dsdtrk <-> dsdtrko
++    ! replaced previous pointer swap to save memory on GPUs by using already allocated
++    ! buffers
+     !
+-    call swap(dsdtrk(iscal)%s,dsdtrko(iscal)%s)
++    !$acc parallel loop collapse(3) default(present) async(1) ! not really necessary
++    !$OMP parallel do   collapse(3) DEFAULT(shared)
++    do k=1,n(3)
++      do j=1,n(2)
++        do i=1,n(1)
++          dsdtrko(i,j,k) = dsdtrk(i,j,k)
++        end do
++      end do
++    end do
+   end subroutine rk_scal
+   !
+   subroutine cmpt_bulk_forcing(n,is_forced,velf,grid_vol_ratio_c,grid_vol_ratio_f,u,v,w,f)
+diff --git a/src/sanity.f90 b/src/sanity.f90
+index 7661fd5..32b9cbb 100644
+--- a/src/sanity.f90
++++ b/src/sanity.f90
+@@ -230,6 +230,7 @@ module mod_sanity
+     real(rp), dimension(3) :: dl
+     real(rp) :: dt,dti,alpha
+     real(rp) :: divtot,divmax,resmax
++    integer :: i,j,k
+     logical :: passed,passed_loc
+     passed = .true.
+     !$acc wait
+@@ -242,6 +243,7 @@ module mod_sanity
+              rhsbx(n(2),n(3),0:1), &
+              rhsby(n(1),n(3),0:1), &
+              rhsbz(n(1),n(2),0:1))
++    !$acc enter data copyin(n,n_z)
+     !
+     ! initialize velocity below with some random noise
+     !
+@@ -281,11 +283,17 @@ module mod_sanity
+     if(is_impdiff .and. .not.is_impdiff_1d) then
+       allocate(bb(n_z(3)))
+       alpha = acos(-1.) ! irrelevant
+-      !$acc kernels default(present)
+-      u(:,:,:) = 0.
+-      v(:,:,:) = 0.
+-      w(:,:,:) = 0.
+-      !$acc end kernels
++      !$acc parallel loop collapse(3) default(present)
++      !$OMP parallel do   collapse(3) DEFAULT(shared)
++      do k=0,n(3)+1
++        do j=0,n(2)+1
++          do i=0,n(1)+1
++            u(i,j,k) = 0.
++            v(i,j,k) = 0.
++            w(i,j,k) = 0.
++          end do
++        end do
++      end do
+       !$acc update self(u,v,w)
+       call add_noise(ng,lo,123,.5_rp,u(1:n(1),1:n(2),1:n(3)))
+       call add_noise(ng,lo,456,.5_rp,v(1:n(1),1:n(2),1:n(3)))
+@@ -299,11 +307,21 @@ module mod_sanity
+       call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
+ #endif
+       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
+-      !$acc kernels default(present)
+-      u(:,:,:) = u(:,:,:)*alpha
+-      p(:,:,:) = u(:,:,:)
+-      bb(:) = b(:) + alpha
+-      !$acc end kernels
++      !$acc parallel loop collapse(3) default(present)
++      !$OMP parallel do   collapse(3) DEFAULT(shared)
++      do k=0,n(3)+1
++        do j=0,n(2)+1
++          do i=0,n(1)+1
++            u(i,j,k) = u(i,j,k)*alpha
++            p(i,j,k) = u(i,j,k)
++          end do
++        end do
++      end do
++      !$acc parallel loop default(present)
++      !$OMP parallel do   DEFAULT(shared)
++      do k=1,n_z(3)
++        bb(k) = b(k) + alpha
++      end do
+       call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,is_bound,rhsbx,rhsby,rhsbz,u)
+       call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,1),['f','c','c'],u)
+       call fftend(arrplan)
+@@ -321,11 +339,21 @@ module mod_sanity
+       call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
+ #endif
+       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
+-      !$acc kernels default(present)
+-      v(:,:,:) = v(:,:,:)*alpha
+-      p(:,:,:) = v(:,:,:)
+-      bb(:) = b(:) + alpha
+-      !$acc end kernels
++      !$acc parallel loop collapse(3) default(present)
++      !$OMP parallel do   collapse(3) DEFAULT(shared)
++      do k=0,n(3)+1
++        do j=0,n(2)+1
++          do i=0,n(1)+1
++            v(i,j,k) = v(i,j,k)*alpha
++            p(i,j,k) = v(i,j,k)
++          end do
++        end do
++      end do
++      !$acc parallel loop default(present)
++      !$OMP parallel do   DEFAULT(shared)
++      do k=1,n_z(3)
++        bb(k) = b(k) + alpha
++      end do
+       call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,is_bound,rhsbx,rhsby,rhsbz,v)
+       call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,2),['c','f','c'],v)
+       call fftend(arrplan)
+@@ -343,11 +371,21 @@ module mod_sanity
+       call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
+ #endif
+       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
+-      !$acc kernels default(present)
+-      w(:,:,:) = w(:,:,:)*alpha
+-      p(:,:,:) = w(:,:,:)
+-      bb(:) = b(:) + alpha
+-      !$acc end kernels
++      !$acc parallel loop collapse(3) default(present)
++      !$OMP parallel do   collapse(3) DEFAULT(shared)
++      do k=0,n(3)+1
++        do j=0,n(2)+1
++          do i=0,n(1)+1
++            w(i,j,k) = w(i,j,k)*alpha
++            p(i,j,k) = w(i,j,k)
++          end do
++        end do
++      end do
++      !$acc parallel loop default(present)
++      !$OMP parallel do   DEFAULT(shared)
++      do k=1,n_z(3)
++        bb(k) = b(k) + alpha
++      end do
+       call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,is_bound,rhsbx,rhsby,rhsbz,w)
+       call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,3),['c','c','f'],w)
+       call fftend(arrplan)
+diff --git a/src/scal.f90 b/src/scal.f90
+index 40f43f9..5934dee 100644
+--- a/src/scal.f90
++++ b/src/scal.f90
+@@ -16,6 +16,7 @@ module mod_scal
+   !
+   type scalar
+     real(rp), allocatable, dimension(:,:,:) :: val
++    real(rp), allocatable, dimension(:,:,:) :: dsdtrko
+     real(rp) :: alpha
+     character(len=100) :: ini
+     character(len=1), dimension(0:1,3) :: cbc
+@@ -302,12 +303,17 @@ module mod_scal
+     logical , intent(in   )               :: is_forced
+     real(rp), intent(in   )               :: ff
+     real(rp), intent(inout), dimension(0:,0:,0:) :: p
++    integer :: i,j,k
+     if(is_forced) then
+-      !$acc kernels default(present) async(1)
+-      !$OMP PARALLEL WORKSHARE
+-      p(1:n(1),1:n(2),1:n(3)) = p(1:n(1),1:n(2),1:n(3)) + ff
+-      !$OMP END PARALLEL WORKSHARE
+-      !$acc end kernels
++      !$acc parallel loop collapse(3) default(present) async(1)
++      !$OMP parallel do   collapse(3) DEFAULT(shared)
++      do k=1,n(3)
++        do j=1,n(2)
++          do i=1,n(1)
++            p(i,j,k) = p(i,j,k) + ff
++          end do
++        end do
++      end do
+     end if
+   end subroutine bulk_forcing_s
+   !
+@@ -323,6 +329,7 @@ module mod_scal
+     integer :: iscal
+     do iscal=1,nscal
+       allocate(scalars(iscal)%val(0:n(1)+1,0:n(2)+1,0:n(3)+1))
++      allocate(scalars(iscal)%dsdtrko(n(1),n(2),n(3)))
+       if(is_impdiff) then
+         allocate(scalars(iscal)%lambdaxy(n_z(1),n_z(2)))
+         allocate(scalars(iscal)%a(n_z(3)), &
+diff --git a/src/solve_helmholtz.f90 b/src/solve_helmholtz.f90
+index e111589..24e8c60 100644
+--- a/src/solve_helmholtz.f90
++++ b/src/solve_helmholtz.f90
+@@ -25,8 +25,7 @@ module mod_solve_helmholtz
+   end type rhs_bound
+   public solve_helmholtz,rhs_bound
+   contains
+-  subroutine solve_helmholtz(n,ng,hi,arrplan,normfft,alpha, &
+-                             lambdaxyi,ai,bi,ci,rhsbxi,rhsbyi,rhsbzi,is_bound,cbc,c_or_f,p)
++  subroutine solve_helmholtz(n,ng,hi,arrplan,normfft,alpha,lambdaxy,a,b,c,rhsbx,rhsby,rhsbz,is_bound,cbc,c_or_f,p)
+     !
+     ! this is a wrapper subroutine to solve 1D/3D helmholtz problems: p/alpha + lap(p) = rhs
+     !
+@@ -38,16 +37,16 @@ module mod_solve_helmholtz
+ #endif
+     real(rp),    intent(in   ),                    optional :: normfft
+     real(rp),    intent(in   )                              :: alpha
+-    real(rp),    intent(in   ), dimension(:,:),    optional :: lambdaxyi
+-    real(rp),    intent(in   ), dimension(:)                :: ai,bi,ci
+-    real(rp),    intent(in   ), dimension(:,:,0:), optional :: rhsbxi,rhsbyi,rhsbzi
++    real(rp),    intent(in   ), dimension(:,:),    optional :: lambdaxy
++    real(rp),    intent(in   ), dimension(:)                :: a,b,c
++    real(rp),    intent(in   ), dimension(:,:,0:), optional :: rhsbx,rhsby,rhsbz
+     logical ,    intent(in   ), dimension(2,3)              :: is_bound
+     character(len=1), intent(in), dimension(0:1,3)          :: cbc
+     character(len=1), intent(in), dimension(3)              :: c_or_f
+     real(rp),    intent(inout), dimension(:,:,:)            :: p
+-    real(rp), allocatable, dimension(:,:)  , save :: lambdaxy
+-    real(rp), allocatable, dimension(:)    , save :: a,b,c
+-    real(rp), allocatable, dimension(:,:,:), save :: rhsbx,rhsby,rhsbz
++    real(rp), allocatable, dimension(:), save :: bb
++    real(rp) :: alphai
++    integer :: k
+     !
+     logical, save :: is_first = .true.
+     !
+@@ -55,50 +54,23 @@ module mod_solve_helmholtz
+     !
+     if(is_first) then ! leverage save attribute to allocate these arrays on the device only once
+       is_first = .false.
+-      if(present(lambdaxyi)) allocate(lambdaxy,mold=lambdaxyi)
+-      allocate(a,mold=ai)
+-      allocate(b,mold=bi)
+-      allocate(c,mold=ci)
+-      if(present(rhsbxi)) allocate(rhsbx(n(2),n(3),0:1)) ! allocate(rhsbx,mold=rhsbxi) ! gfortran 11.4.0 bug
+-      if(present(rhsbyi)) allocate(rhsby(n(1),n(3),0:1)) ! allocate(rhsby,mold=rhsbyi) ! gfortran 11.4.0 bug
+-      if(present(rhsbzi)) allocate(rhsbz(n(1),n(2),0:1)) ! allocate(rhsbz,mold=rhsbzi) ! gfortran 11.4.0 bug
+-      !$acc enter data create(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz) async(1)
++      allocate(bb,mold=b)
++      !$acc enter data create(bb) async(1)
+     end if
+     !
++    call updt_rhs_b(c_or_f,cbc,n,is_bound,rhsbx,rhsby,rhsbz,p,alpha)
++    !
++    alphai = alpha**(-1)
++    !$acc parallel loop default(present) async(1)
++    !$OMP PARALLEL DO   DEFAULT(shared)
++    do k=1,size(b)
++      bb(k) = b(k) + alphai
++    end do
++    !
+     if(.not.is_impdiff_1d) then
+-      !$acc kernels default(present) async(1)
+-      !$OMP PARALLEL WORKSHARE
+-      rhsbx(:,:,0:1) = rhsbxi(:,:,0:1)*alpha
+-      rhsby(:,:,0:1) = rhsbyi(:,:,0:1)*alpha
+-      rhsbz(:,:,0:1) = rhsbzi(:,:,0:1)*alpha
+-      !$OMP END PARALLEL WORKSHARE
+-      !$acc end kernels
+-    else
+-      !$acc kernels default(present) async(1)
+-      !$OMP PARALLEL WORKSHARE
+-      rhsbz(:,:,0:1) = rhsbzi(:,:,0:1)*alpha
+-      !$OMP END PARALLEL WORKSHARE
+-      !$acc end kernels
+-    end if
+-    call updt_rhs_b(c_or_f,cbc,n,is_bound,rhsbx,rhsby,rhsbz,p)
+-    !$acc kernels default(present) async(1)
+-    !$OMP PARALLEL WORKSHARE
+-    a(:) = ai(:)*alpha
+-    b(:) = bi(:)*alpha + 1.
+-    c(:) = ci(:)*alpha
+-    !$OMP END PARALLEL WORKSHARE
+-    !$acc end kernels
+-    if(.not.is_impdiff_1d) then
+-      !$acc kernels default(present) async(1)
+-      !$OMP PARALLEL WORKSHARE
+-      lambdaxy(:,:) = lambdaxyi(:,:)*alpha
+-      !$OMP END PARALLEL WORKSHARE
+-      !$acc end kernels
+-    end if
+-    if(.not.is_impdiff_1d) then
+-      call solver(n,ng,arrplan,normfft,lambdaxy,a,b,c,cbc,c_or_f,p)
++      call solver(n,ng,arrplan,normfft*alphai,lambdaxy,a,bb,c,cbc,c_or_f,p)
+     else
+-      call solver_gaussel_z(n,ng,hi,a,b,c,cbc(:,3),c_or_f,p)
++      call solver_gaussel_z(n,ng,hi,a,bb,c,cbc(:,3),c_or_f,alphai,p)
+     end if
+   end subroutine solve_helmholtz
+ end module mod_solve_helmholtz
+diff --git a/src/solver.f90 b/src/solver.f90
+index a21b1ee..3e27551 100644
+--- a/src/solver.f90
++++ b/src/solver.f90
+@@ -35,6 +35,9 @@ module mod_solver
+     logical :: is_periodic_z
+     integer, dimension(3) :: n_z,hi_z
+     logical :: is_ptdma_update_
++    real(rp) :: norm
++    !
++    norm = normfft
+     !
+     is_ptdma_update_ = .true.
+     if(present(is_ptdma_update)) is_ptdma_update_ = is_ptdma_update
+@@ -76,11 +79,11 @@ module mod_solver
+     if(.not.is_poisson_pcr_tdma) then
+       call transpose_y_to_z(py,pz)
+       !
+-      call gaussel(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,pz,lambdaxy)
++      call gaussel(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,norm,pz,lambdaxy)
+       !
+       call transpose_z_to_y(pz,py)
+     else
+-      call gaussel_ptdma(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,py,lambdaxy,is_ptdma_update_,aa_z,cc_z)
++      call gaussel_ptdma(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,norm,py,lambdaxy,is_ptdma_update_,aa_z,cc_z)
+       if(present(is_ptdma_update)) is_ptdma_update = is_ptdma_update_
+     end if
+     call fft(arrplan(2,2),py) ! bwd transform in y
+@@ -91,29 +94,30 @@ module mod_solver
+     select case(ipencil_axis)
+     case(1)
+       !$OMP PARALLEL WORKSHARE
+-      p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)*normfft
++      p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)
+       !$OMP END PARALLEL WORKSHARE
+     case(2)
+       call transpose_x_to_y(px,py)
+       !$OMP PARALLEL WORKSHARE
+-      p(1:n(1),1:n(2),1:n(3)) = py(:,:,:)*normfft
++      p(1:n(1),1:n(2),1:n(3)) = py(:,:,:)
+       !$OMP END PARALLEL WORKSHARE
+     case(3)
+       !call transpose_x_to_z(px,pz)
+       call transpose_x_to_y(px,py)
+       call transpose_y_to_z(py,pz)
+       !$OMP PARALLEL WORKSHARE
+-      p(1:n(1),1:n(2),1:n(3)) = pz(:,:,:)*normfft
++      p(1:n(1),1:n(2),1:n(3)) = pz(:,:,:)
+       !$OMP END PARALLEL WORKSHARE
+     end select
+   end subroutine solver
+   !
+-  subroutine gaussel(nx,ny,n,nh,a,b,c,is_periodic,p,lambdaxy)
++  subroutine gaussel(nx,ny,n,nh,a,b,c,is_periodic,norm,p,lambdaxy)
+     use mod_param, only: eps
+     implicit none
+     integer , intent(in) :: nx,ny,n,nh
+     real(rp), intent(in), dimension(:) :: a,b,c
+     logical , intent(in) :: is_periodic
++    real(rp), intent(in) :: norm
+     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
+     real(rp), intent(in), dimension(nx,ny), optional :: lambdaxy
+     real(rp), dimension(n) :: bb,p2
+@@ -128,8 +132,8 @@ module mod_solver
+       !$OMP DO COLLAPSE(2)
+       do j=1,ny
+         do i=1,nx
+-          bb(:) = b(:) + lambdaxy(i,j)
+-          call dgtsv_homebrewed(nn,a,bb,c,p(i,j,1:nn))
++          bb(:) = b(1:n) + lambdaxy(i,j)
++          call dgtsv_homebrewed(nn,a,bb,c,norm,p(i,j,1:nn))
+         end do
+       end do
+       !$OMP END PARALLEL
+@@ -138,7 +142,7 @@ module mod_solver
+       !$OMP DO COLLAPSE(2)
+       do j=1,ny
+         do i=1,nx
+-          call dgtsv_homebrewed(nn,a,b,c,p(i,j,1:nn))
++          call dgtsv_homebrewed(nn,a,b,c,norm,p(i,j,1:nn))
+         end do
+       end do
+       !$OMP END PARALLEL
+@@ -152,10 +156,10 @@ module mod_solver
+             p2(:) = 0.
+             p2(1 ) = -a(1 )
+             p2(nn) = p2(nn) - c(nn)
+-            bb(:) = b(:) + lambdaxy(i,j)
+-            call dgtsv_homebrewed(nn,a,bb,c,p2(1:nn))
+-            p(i,j,nn+1) = (p(i,j,nn+1) - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn)) / &
+-                          (bb(   nn+1) + c(nn+1)*p2(   1) + a(nn+1)*p2(   nn)+eps)
++            bb(:) = b(1:n) + lambdaxy(i,j)
++            call dgtsv_homebrewed(nn,a,bb,c,1._rp,p2(1:nn))
++            p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn)) / &
++                          (bb(   nn+1)      + c(nn+1)*p2(   1) + a(nn+1)*p2(   nn)+eps)
+             p(i,j,1:nn) = p(i,j,1:nn) + p2(1:nn)*p(i,j,nn+1)
+           end do
+         end do
+@@ -168,9 +172,9 @@ module mod_solver
+             p2(:) = 0.
+             p2(1 ) = -a(1 )
+             p2(nn) = p2(nn) - c(nn)
+-            call dgtsv_homebrewed(nn,a,b,c,p2(1:nn))
+-            p(i,j,nn+1) = (p(i,j,nn+1) - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn)) / &
+-                          (b(    nn+1) + c(nn+1)*p2(   1) + a(nn+1)*p2(   nn)+eps)
++            call dgtsv_homebrewed(nn,a,b,c,1._rp,p2(1:nn))
++            p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn)) / &
++                          (b(    nn+1)      + c(nn+1)*p2(   1) + a(nn+1)*p2(   nn)+eps)
+             p(i,j,1:nn) = p(i,j,1:nn) + p2(1:nn)*p(i,j,nn+1)
+           end do
+         end do
+@@ -179,7 +183,7 @@ module mod_solver
+     end if
+   end subroutine gaussel
+   !
+-  subroutine gaussel_ptdma(nx,ny,n,nh,a,b,c,is_periodic,p,lambdaxy,is_update,aa_z_save,cc_z_save)
++  subroutine gaussel_ptdma(nx,ny,n,nh,a,b,c,is_periodic,norm,p,lambdaxy,is_update,aa_z_save,cc_z_save)
+     !
+     ! distributed TDMA solver
+     !
+@@ -190,6 +194,7 @@ module mod_solver
+     integer , intent(in) :: nx,ny,n,nh
+     real(rp), intent(in), dimension(:) :: a,b,c
+     logical , intent(in) :: is_periodic
++    real(rp), intent(in) :: norm
+     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
+     real(rp), intent(in), dimension(:,:), optional :: lambdaxy
+     logical , intent(inout), optional :: is_update
+@@ -223,17 +228,17 @@ module mod_solver
+       do j=1,ny
+         do i=1,nx
+           !
+-          bb(:) = b(:) + lambdaxy(i,j)
++          bb(:) = b(1:n) + lambdaxy(i,j)
+           zz(:) = 1./(bb(1:2)+eps)
+           aa(i,j,1:2) = a(1:2)*zz(:)
+           cc(i,j,1:2) = c(1:2)*zz(:)
+-          p( i,j,1:2) = p(i,j,1:2)*zz(:)
++          p( i,j,1:2) = p(i,j,1:2)*norm*zz(:)
+           !
+           ! elimination of lower diagonals
+           !
+           do k=3,n
+             z = 1./(bb(k)-a(k)*cc(i,j,k-1)+eps)
+-            p(i,j,k) = (p(i,j,k)-a(k)*p(i,j,k-1))*z
++            p(i,j,k) = (p(i,j,k)*norm-a(k)*p(i,j,k-1))*z
+             aa(i,j,k) = -a(k)*aa(i,j,k-1)*z
+             cc(i,j,k) = c(k)*z
+           end do
+@@ -266,13 +271,13 @@ module mod_solver
+           zz(:) = 1./(b(1:2)+eps)
+           aa(i,j,1:2) = a(1:2)*zz(:)
+           cc(i,j,1:2) = c(1:2)*zz(:)
+-          p( i,j,1:2) = p(i,j,1:2)*zz(:)
++          p( i,j,1:2) = p(i,j,1:2)*norm*zz(:)
+           !
+           ! elimination of lower diagonals
+           !
+           do k=3,n
+             z = 1./(b(k)-a(k)*cc(i,j,k-1)+eps)
+-            p(i,j,k) = (p(i,j,k)-a(k)*p(i,j,k-1))*z
++            p(i,j,k) = (p(i,j,k)*norm-a(k)*p(i,j,k-1))*z
+             aa(i,j,k) = -a(k)*aa(i,j,k-1)*z
+             cc(i,j,k) = c(k)*z
+           end do
+@@ -389,11 +394,12 @@ module mod_solver
+     !$OMP END PARALLEL
+   end subroutine gaussel_ptdma
+   !
+-  subroutine dgtsv_homebrewed(n,a,b,c,p)
++  subroutine dgtsv_homebrewed(n,a,b,c,norm,p)
+     use mod_param, only: eps
+     implicit none
+     integer , intent(in) :: n
+     real(rp), intent(in   ), dimension(:) :: a,b,c
++    real(rp), intent(in   )               :: norm
+     real(rp), intent(inout), dimension(:) :: p
+     real(rp), dimension(n) :: d
+     real(rp) :: z
+@@ -403,11 +409,11 @@ module mod_solver
+     !
+     z = 1./(b(1)+eps)
+     d(1) = c(1)*z
+-    p(1) = p(1)*z
++    p(1) = p(1)*norm*z
+     do l=2,n
+       z    = 1./(b(l)-a(l)*d(l-1)+eps)
+       d(l) = c(l)*z
+-      p(l) = (p(l)-a(l)*p(l-1))*z
++      p(l) = (p(l)*norm-a(l)*p(l-1))*z
+     end do
+     !
+     ! backward substitution
+@@ -417,12 +423,13 @@ module mod_solver
+     end do
+   end subroutine dgtsv_homebrewed
+   !
+-  subroutine solver_gaussel_z(n,ng,hi,a,b,c,bcz,c_or_f,p)
++  subroutine solver_gaussel_z(n,ng,hi,a,b,c,bcz,c_or_f,norm,p)
+     implicit none
+     integer , intent(in), dimension(3) :: n,ng,hi
+     real(rp), intent(in), dimension(:) :: a,b,c
+     character(len=1), dimension(0:1), intent(in) :: bcz
+     character(len=1), intent(in), dimension(3) :: c_or_f
++    real(rp), intent(in) :: norm
+     real(rp), intent(inout), dimension(0:,0:,0:) :: p
+     real(rp), allocatable, dimension(:,:,:) :: px,py,pz
+     integer :: q
+@@ -461,12 +468,12 @@ module mod_solver
+     is_periodic_z = bcz(0)//bcz(1) == 'PP'
+     if(.not.is_no_decomp_z) then
+       if(.not.is_poisson_pcr_tdma) then
+-        call gaussel(      n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,pz)
++        call gaussel(      n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,norm,pz)
+       else
+-        call gaussel_ptdma(n_z(1),n_z(2),n_z(3)-q,1,a,b,c,is_periodic_z,p)
++        call gaussel_ptdma(n_z(1),n_z(2),n_z(3)-q,1,a,b,c,is_periodic_z,norm,p)
+       end if
+     else
+-      call gaussel(n(1),n(2),n(3)-q,1,a,b,c,is_periodic_z,p)
++      call gaussel(n(1),n(2),n(3)-q,1,a,b,c,is_periodic_z,norm,p)
+     end if
+     !
+     if(.not.is_poisson_pcr_tdma .and. .not.is_no_decomp_z) then
+diff --git a/src/solver_gpu.f90 b/src/solver_gpu.f90
+index dec62f4..ecacffd 100644
+--- a/src/solver_gpu.f90
++++ b/src/solver_gpu.f90
+@@ -38,11 +38,14 @@ module mod_solver_gpu
+     logical , intent(inout), target, optional :: is_ptdma_update
+     real(rp), intent(inout), dimension(:,:,:), optional :: aa_z,cc_z
+     real(rp), pointer, contiguous, dimension(:,:,:) :: px,py,pz
+-    integer :: q
++    integer :: i,j,k,q
+     logical :: is_periodic_z
+     integer, dimension(3) :: n_x,n_y,n_z,n_z_0,lo_z_0,hi_z_0
+     integer :: istat
+     logical :: is_ptdma_update_
++    real(rp) :: norm
++    !
++    norm = normfft
+     !
+     is_ptdma_update_ = .true.
+     if(present(is_ptdma_update)) is_ptdma_update_ = is_ptdma_update
+@@ -66,36 +69,41 @@ module mod_solver_gpu
+     !
+     select case(ipencil_axis)
+     case(1)
+-      !$acc kernels default(present) async(1)
+-      !$OMP PARALLEL WORKSHARE
+-      px(1:n(1),1:n(2),1:n(3)) = p(1:n(1),1:n(2),1:n(3))
+-      !$OMP END PARALLEL WORKSHARE
+-      !$acc end kernels
++      !$acc parallel loop collapse(3) default(present) async(1)
++      !$OMP parallel do   collapse(3) DEFAULT(shared)
++      do k=1,n(3)
++        do j=1,n(2)
++          do i=1,n(1)
++            px(i,j,k) = p(i,j,k)
++          end do
++        end do
++      end do
+     case(2)
+-      block
+-        integer :: i,j,k
+-        !
+-        ! transpose p -> py to axis-contiguous layout
+-        !
+-        !$acc parallel loop collapse(3) default(present) async(1)
+-        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+-        do k=1,n(3)
+-          do j=1,n(2)
+-            do i=1,n(1)
+-              py(j,k,i) = p(i,j,k)
+-            end do
++      !
++      ! transpose p -> py to axis-contiguous layout
++      !
++      !$acc parallel loop collapse(3) default(present) async(1)
++      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
++      do k=1,n(3)
++        do j=1,n(2)
++          do i=1,n(1)
++            py(j,k,i) = p(i,j,k)
+           end do
+         end do
+-      end block
++      end do
+       !$acc host_data use_device(py,px,work)
+       istat = cudecompTransposeYtoX(ch,gd,py,px,work,dtype_rp,stream=istream)
+       !$acc end host_data
+     case(3)
+-      !$acc kernels default(present) async(1)
+-      !$OMP PARALLEL WORKSHARE
+-      pz(1:n(1),1:n(2),1:n(3)) = p(1:n(1),1:n(2),1:n(3))
+-      !$OMP END PARALLEL WORKSHARE
+-      !$acc end kernels
++      !$acc parallel loop collapse(3) default(present) async(1)
++      !$OMP parallel do   collapse(3) DEFAULT(shared)
++      do k=1,n(3)
++        do j=1,n(2)
++          do i=1,n(1)
++            pz(i,j,k) = p(i,j,k)
++          end do
++        end do
++      end do
+       !$acc host_data use_device(pz,py,px,work)
+       istat = cudecompTransposeZtoY(ch,gd,pz,py,work,dtype_rp,stream=istream)
+       istat = cudecompTransposeYtoX(ch,gd,py,px,work,dtype_rp,stream=istream)
+@@ -121,7 +129,7 @@ module mod_solver_gpu
+       istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
+       !$acc end host_data
+       !
+-      call gaussel_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,0,a,b,c,is_periodic_z,pz,work,pz_aux_1,lambdaxy)
++      call gaussel_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,0,a,b,c,is_periodic_z,norm,pz,work,pz_aux_1,lambdaxy)
+       !
+       !$acc host_data use_device(pz,py,work)
+       istat = cudecompTransposeZtoY(ch,gd,pz,py,work,dtype_rp,stream=istream)
+@@ -129,7 +137,6 @@ module mod_solver_gpu
+     else
+       block
+         use mod_common_cudecomp, only: ap_y
+-        integer :: i,j,k
+         integer :: n_y_1,n_y_2,n_y_3
+         !
+         ! transpose py -> pz with non-axis-contiguous layout
+@@ -148,12 +155,11 @@ module mod_solver_gpu
+         end do
+       end block
+       !
+-      call gaussel_ptdma_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,lo_z_0(3),0,a,b,c,is_periodic_z,pz,work,pz_aux_1,is_ptdma_update_,lambdaxy,aa_z,cc_z)
++      call gaussel_ptdma_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,lo_z_0(3),0,a,b,c,is_periodic_z,norm,pz,work,pz_aux_1,is_ptdma_update_,lambdaxy,aa_z,cc_z)
+       if(present(is_ptdma_update)) is_ptdma_update = is_ptdma_update_
+       !
+       block
+         use mod_common_cudecomp, only: ap_y
+-        integer :: i,j,k
+         integer :: n_y_1,n_y_2,n_y_3
+         !
+         ! transpose pz -> py with axis-contiguous layout
+@@ -187,49 +193,55 @@ module mod_solver_gpu
+     !
+     select case(ipencil_axis)
+     case(1)
+-      !$acc kernels default(present) async(1)
+-      !$OMP PARALLEL WORKSHARE
+-      p(1:n(1),1:n(2),1:n(3)) = px(1:n(1),1:n(2),1:n(3))*normfft
+-      !$OMP END PARALLEL WORKSHARE
+-      !$acc end kernels
++      !$acc parallel loop collapse(3) default(present) async(1)
++      !$OMP parallel do   collapse(3) DEFAULT(shared)
++      do k=1,n(3)
++        do j=1,n(2)
++          do i=1,n(1)
++            p(i,j,k) = px(i,j,k)
++          end do
++        end do
++      end do
+     case(2)
+       !$acc host_data use_device(px,py,work)
+       istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_rp,stream=istream)
+       !$acc end host_data
+-      block
+-        integer :: i,j,k
+-        !
+-        ! transpose py -> p to default layout
+-        !
+-        !$acc parallel loop collapse(3) default(present) async(1)
+-        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+-        do k=1,n(3)
+-          do j=1,n(2)
+-            do i=1,n(1)
+-              p(i,j,k) = py(j,k,i)*normfft
+-            end do
++      !
++      ! transpose py -> p to default layout
++      !
++      !$acc parallel loop collapse(3) default(present) async(1)
++      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
++      do k=1,n(3)
++        do j=1,n(2)
++          do i=1,n(1)
++            p(i,j,k) = py(j,k,i)
+           end do
+         end do
+-      end block
++      end do
+     case(3)
+       !$acc host_data use_device(px,py,pz,work)
+       istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_rp,stream=istream)
+       istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
+       !$acc end host_data
+-      !$acc kernels default(present) async(1)
+-      !$OMP PARALLEL WORKSHARE
+-      p(1:n(1),1:n(2),1:n(3)) = pz(1:n(1),1:n(2),1:n(3))*normfft
+-      !$OMP END PARALLEL WORKSHARE
+-      !$acc end kernels
++      !$acc parallel loop collapse(3) default(present) async(1)
++      !$OMP parallel do   collapse(3) DEFAULT(shared)
++      do k=1,n(3)
++        do j=1,n(2)
++          do i=1,n(1)
++            p(i,j,k) = pz(i,j,k)
++          end do
++        end do
++      end do
+     end select
+   end subroutine solver_gpu
+   !
+-  subroutine gaussel_gpu(nx,ny,n,nh,a,b,c,is_periodic,p,d,p2,lambdaxy)
++  subroutine gaussel_gpu(nx,ny,n,nh,a,b,c,is_periodic,norm,p,d,p2,lambdaxy)
+     use mod_param, only: eps
+     implicit none
+     integer , intent(in) :: nx,ny,n,nh
+     real(rp), intent(in), dimension(:) :: a,b,c
+     logical , intent(in) :: is_periodic
++    real(rp), intent(in) :: norm
+     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
+     real(rp),                dimension(nx,ny,n) :: d,p2
+     real(rp), intent(in), dimension(:,:), optional :: lambdaxy
+@@ -249,11 +261,11 @@ module mod_solver_gpu
+           !
+           z = 1./(b(1)+lxy+eps)
+           d(i,j,1) = c(1)*z
+-          p(i,j,1) = p(i,j,1)*z
++          p(i,j,1) = p(i,j,1)*norm*z
+           !$acc loop seq
+           do k=2,nn
+             z        = 1./(b(k)+lxy-a(k)*d(i,j,k-1)+eps)
+-            p(i,j,k) = (p(i,j,k)-a(k)*p(i,j,k-1))*z
++            p(i,j,k) = (p(i,j,k)*norm-a(k)*p(i,j,k-1))*z
+             d(i,j,k) = c(k)*z
+           end do
+           !
+@@ -291,8 +303,8 @@ module mod_solver_gpu
+               p2(i,j,k) = p2(i,j,k) - d(i,j,k)*p2(i,j,k+1)
+             end do
+             !
+-            p(i,j,nn+1) = (p(i,j,nn+1)       - c(nn+1)*p( i,j,1) - a(nn+1)*p( i,j,nn)) / &
+-                          (b(    nn+1) + lxy + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn)+eps)
++            p(i,j,nn+1) = (p(i,j,nn+1)*norm       - c(nn+1)*p( i,j,1) - a(nn+1)*p( i,j,nn)) / &
++                          (b(    nn+1)      + lxy + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn)+eps)
+             !$acc loop seq
+             do k=1,nn
+               p(i,j,k) = p(i,j,k) + p2(i,j,k)*p(i,j,nn+1)
+@@ -310,11 +322,11 @@ module mod_solver_gpu
+         do i=1,nx
+           z = 1./(b(1)+eps)
+           dd(1) = c(1)*z
+-          p(i,j,1) = p(i,j,1)*z
++          p(i,j,1) = p(i,j,1)*norm*z
+           !$acc loop seq
+           do k=2,nn
+             z        = 1./(b(k)-a(k)*dd(k-1)+eps)
+-            p(i,j,k) = (p(i,j,k)-a(k)*p(i,j,k-1))*z
++            p(i,j,k) = (p(i,j,k)*norm-a(k)*p(i,j,k-1))*z
+             dd(k)    = c(k)*z
+           end do
+           !
+@@ -354,8 +366,8 @@ module mod_solver_gpu
+               pp2(k) = pp2(k) - dd(k)*pp2(k+1)
+             end do
+             !
+-            p(i,j,nn+1) = (p(i,j,nn+1)       - c(nn+1)*p( i,j,1) - a(nn+1)*p( i,j,nn)) / &
+-                          (b(    nn+1) + lxy + c(nn+1)*pp2(   1) + a(nn+1)*pp2(   nn)+eps)
++            p(i,j,nn+1) = (p(i,j,nn+1)*norm       - c(nn+1)*p( i,j,1) - a(nn+1)*p( i,j,nn)) / &
++                          (b(    nn+1)      + lxy + c(nn+1)*pp2(   1) + a(nn+1)*pp2(   nn)+eps)
+             !$acc loop seq
+             do k=1,nn-1
+               p(i,j,k) = p(i,j,k) + pp2(k)*p(i,j,nn+1)
+@@ -366,7 +378,7 @@ module mod_solver_gpu
+     end if
+   end subroutine gaussel_gpu
+   !
+-  subroutine gaussel_ptdma_gpu(nx,ny,n,lo,nh,a,b,c,is_periodic,p,aa,cc,is_update,lambdaxy,aa_z_save,cc_z_save)
++  subroutine gaussel_ptdma_gpu(nx,ny,n,lo,nh,a,b,c,is_periodic,norm,p,aa,cc,is_update,lambdaxy,aa_z_save,cc_z_save)
+     !
+     ! distributed TDMA solver
+     !
+@@ -377,6 +389,7 @@ module mod_solver_gpu
+     integer , intent(in) :: nx,ny,n,lo,nh
+     real(rp), intent(in), dimension(:) :: a,b,c
+     logical , intent(in) :: is_periodic
++    real(rp), intent(in) :: norm
+     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
+     real(rp),                dimension(nx,ny,n) :: aa,cc
+     logical , intent(inout), optional :: is_update
+@@ -421,15 +434,15 @@ module mod_solver_gpu
+           aa(i,j,2) = a(2+dk_g)*z2
+           cc(i,j,1) = c(1+dk_g)*z1
+           cc(i,j,2) = c(2+dk_g)*z2
+-          p(i,j,1) = p(i,j,1)*z1
+-          p(i,j,2) = p(i,j,2)*z2
++          p(i,j,1) = p(i,j,1)*norm*z1
++          p(i,j,2) = p(i,j,2)*norm*z2
+           !
+           ! elimination of lower diagonals
+           !
+           !$acc loop seq
+           do k=3,n
+             z = 1./(b(k+dk_g)+lxy-a(k+dk_g)*cc(i,j,k-1)+eps)
+-            p(i,j,k) = (p(i,j,k)-a(k+dk_g)*p(i,j,k-1))*z
++            p(i,j,k) = (p(i,j,k)*norm-a(k+dk_g)*p(i,j,k-1))*z
+             aa(i,j,k) = -a(k+dk_g)*aa(i,j,k-1)*z
+             cc(i,j,k) = c(k+dk_g)*z
+           end do
+@@ -467,15 +480,15 @@ module mod_solver_gpu
+           aa(i,j,2) = a(2+dk_g)*z2
+           cc(i,j,1) = c(1+dk_g)*z1
+           cc(i,j,2) = c(2+dk_g)*z2
+-          p(i,j,1) = p(i,j,1)*z1
+-          p(i,j,2) = p(i,j,2)*z2
++          p(i,j,1) = p(i,j,1)*norm*z1
++          p(i,j,2) = p(i,j,2)*norm*z2
+           !
+           ! elimination of lower diagonals
+           !
+           !$acc loop seq
+           do k=3,n
+             z = 1./(b(k+dk_g)-a(k+dk_g)*cc(i,j,k-1)+eps)
+-            p(i,j,k) = (p(i,j,k)-a(k+dk_g)*p(i,j,k-1))*z
++            p(i,j,k) = (p(i,j,k)*norm-a(k+dk_g)*p(i,j,k-1))*z
+             aa(i,j,k) = -a(k+dk_g)*aa(i,j,k-1)*z
+             cc(i,j,k) = c(k+dk_g)*z
+           end do
+@@ -504,6 +517,9 @@ module mod_solver_gpu
+     !
+     ! transpose to gather reduced subdomain boundary systems along z
+     !
++    nn   = nr_z(3)
++    ny_r = nr_z(2)
++    nx_r = nr_z(1)
+     if(present(is_update) .and. present(aa_z_save) .and. present(cc_z_save)) then
+       if(is_update) then
+         is_update = .false.
+@@ -512,10 +528,15 @@ module mod_solver_gpu
+         istat = cudecompTransposeYtoZ(ch,gd_ptdma,cc_y,cc_z_save,work,dtype_rp,stream=istream)
+         !$acc end host_data
+       end if
+-      !$acc kernels default(present) async(1)
+-      aa_z(:,:,:) = aa_z_save(:,:,:)
+-      cc_z(:,:,:) = cc_z_save(:,:,:)
+-      !$acc end kernels
++      !$acc parallel loop collapse(3) default(present) async(1)
++      do k=1,nn
++        do j=1,ny_r
++          do i=1,nx_r
++            aa_z(i,j,k) = aa_z_save(i,j,k)
++            cc_z(i,j,k) = cc_z_save(i,j,k)
++          end do
++        end do
++      end do
+     else
+       !$acc host_data use_device(aa_y,cc_y,aa_z,cc_z,work)
+       istat = cudecompTransposeYtoZ(ch,gd_ptdma,aa_y,aa_z,work,dtype_rp,stream=istream)
+@@ -528,14 +549,16 @@ module mod_solver_gpu
+     !
+     ! solve reduced systems
+     !
+-    nn   = nr_z(3)
+-    ny_r = nr_z(2)
+-    nx_r = nr_z(1)
+     if(is_periodic) then
+       nn = nn-1
+-      !$acc kernels default(present) async(1)
+-      cc_z_0(:,:,:) = cc_z(:,:,:)
+-      !$acc end kernels
++      !$acc parallel loop collapse(3) default(present) async(1)
++      do k=1,nn+1
++        do j=1,ny_r
++          do i=1,nx_r
++            cc_z_0(i,j,k) = cc_z(i,j,k)
++          end do
++        end do
++      end do
+     end if
+     !$acc parallel loop gang vector collapse(2) default(present) private(z) async(1)
+     do j=1,ny_r
+@@ -607,7 +630,7 @@ module mod_solver_gpu
+     end do
+   end subroutine gaussel_ptdma_gpu
+   !
+-  subroutine gaussel_ptdma_gpu_fast_1d(nx,ny,n,lo,nh,a_g,b_g,c_g,is_periodic,p)
++  subroutine gaussel_ptdma_gpu_fast_1d(nx,ny,n,lo,nh,a_g,b_g,c_g,is_periodic,norm,p)
+     !
+     ! distributed TDMA solver for many 1D systems on GPUs
+     !
+@@ -623,12 +646,14 @@ module mod_solver_gpu
+     integer , intent(in) :: nx,ny,n,lo,nh
+     real(rp), intent(in), dimension(:) :: a_g,b_g,c_g
+     logical , intent(in) :: is_periodic
++    real(rp), intent(in) :: norm
+     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
+-    real(rp), pointer    , dimension(:,:,:)        :: pp_x,pp_y
+-    real(rp), allocatable, dimension(:,:,:), save  :: pp_z
+-    real(rp), allocatable, dimension(:    ), save  :: aa,bb,cc,aa_z,bb_z,cc_z,pp_z_2
++    real(rp), pointer, contiguous, dimension(:,:,:) :: pp_x,pp_y
++    real(rp), allocatable, dimension(:,:,:), save :: pp_z
++    real(rp), allocatable, dimension(:    ), save :: aa,bb,cc,aa_z,bb_z,cc_z,pp_z_2
++    real(rp), pointer, contiguous, dimension(:,:) :: aa_all,bb_all,cc_all
+     integer :: i,j,k,dk_g,nn
+-    integer :: islab,myslab,irank,nranks_z,kg,llo
++    integer :: islab,myslab,nranks_z,kg,llo
+     integer , dimension(3) :: nr_z,nr_y
+     integer :: nx_r,ny_r,nng
+     integer :: istat
+@@ -656,9 +681,11 @@ module mod_solver_gpu
+     nng      = size(b_g)
+     nranks_z = dims(2)
+     myslab   = mod(myid,nranks_z)
+-    do irank=0,nranks_z ! n.b.: myid treated in the last iteration, to save aa,bb,cc
+-      if(irank == myslab) cycle
+-      islab = merge(myslab,irank,irank == nranks_z)
++    aa_all(1:n+1,0:nranks_z-1) => work(0*(n+1)*nranks_z+1:1*(n+1)*nranks_z)
++    bb_all(1:n+1,0:nranks_z-1) => work(1*(n+1)*nranks_z+1:2*(n+1)*nranks_z)
++    cc_all(1:n+1,0:nranks_z-1) => work(2*(n+1)*nranks_z+1:3*(n+1)*nranks_z)
++    !$acc parallel loop gang default(present) private(nn,llo,k) async(1)
++    do islab=0,nranks_z-1
+       !
+       ! manual partitioning to avoid an MPI_ALLGATHER
+       ! initialization step and storing the result
+@@ -669,8 +696,8 @@ module mod_solver_gpu
+       !  call MPI_ALLGATHER(lo_y,3,MPI_INTEGER,lo_all,3,MPI_INTEGER,MPI_COMM_WORLD)
+       !  call MPI_ALLGATHER(hi_y,3,MPI_INTEGER,hi_all,3,MPI_INTEGER,MPI_COMM_WORLD)
+       !
+-      !  lo = lo_y_all(islab,3)
+-      !  hi = hi_y_all(islab,3)
++      !  lo = lo_y_all(3,islab)
++      !  hi = hi_y_all(3,islab)
+       !  ```
+       !
+       nn  = nng/nranks_z
+@@ -680,39 +707,42 @@ module mod_solver_gpu
+         llo = llo + mod(nng,nranks_z)
+       end if
+       !
+-      !$acc parallel loop default(present) private(kg) async(1)
++      !$acc loop private(kg)
+       do k=1,nn
+         kg = k + llo-1
+-        aa(k) = a_g(kg)
+-        bb(k) = b_g(kg)
+-        cc(k) = c_g(kg)
++        aa_all(k,islab) = a_g(kg)
++        bb_all(k,islab) = b_g(kg)
++        cc_all(k,islab) = c_g(kg)
+       end do
+-      !$acc parallel loop seq default(present) async(1)
++      !$acc loop seq
+       do k=3,nn
+-        bb(k) = bb(k) - aa(k)/bb(k-1)*cc(k-1)
+-        aa(k) =       - aa(k)/bb(k-1)*aa(k-1)
++        bb_all(k,islab) = bb_all(k,islab) - aa_all(k,islab)/bb_all(k-1,islab)*cc_all(k-1,islab)
++        aa_all(k,islab) =                 - aa_all(k,islab)/bb_all(k-1,islab)*aa_all(k-1,islab)
+       end do
+-      !$acc parallel loop seq default(present) async(1)
++      !$acc loop seq
+       do k=nn-2,2,-1
+-        aa(k) = aa(k) - cc(k)/bb(k+1)*aa(k+1)
+-        cc(k) =       - cc(k)/bb(k+1)*cc(k+1)
++        aa_all(k,islab) = aa_all(k,islab) - cc_all(k,islab)/bb_all(k+1,islab)*aa_all(k+1,islab)
++        cc_all(k,islab) =                 - cc_all(k,islab)/bb_all(k+1,islab)*cc_all(k+1,islab)
+       end do
+       if(nn > 1) then
+-        !$acc parallel default(present) async(1)
+-        bb(1) = bb(1) - cc(1)/bb(2)*aa(2)
+-        cc(1) =       - cc(1)/bb(2)*cc(2)
+-        !$acc end parallel
++        bb_all(1,islab) = bb_all(1,islab) - cc_all(1,islab)/bb_all(2,islab)*aa_all(2,islab)
++        cc_all(1,islab) =                 - cc_all(1,islab)/bb_all(2,islab)*cc_all(2,islab)
+       end if
+       !
+       k = 2*islab + 1
+-      !$acc parallel default(present) async(1)
+-      aa_z(k  ) = aa(1 )
+-      aa_z(k+1) = aa(nn)
+-      bb_z(k  ) = bb(1 )
+-      bb_z(k+1) = bb(nn)
+-      cc_z(k  ) = cc(1 )
+-      cc_z(k+1) = cc(nn)
+-      !$acc end parallel
++      aa_z(k  ) = aa_all(1 ,islab)
++      aa_z(k+1) = aa_all(nn,islab)
++      bb_z(k  ) = bb_all(1 ,islab)
++      bb_z(k+1) = bb_all(nn,islab)
++      cc_z(k  ) = cc_all(1 ,islab)
++      cc_z(k+1) = cc_all(nn,islab)
++    end do
++    !
++    !$acc parallel loop default(present) async(1)
++    do k=1,n+1
++      aa(k) = aa_all(k,myslab)
++      bb(k) = bb_all(k,myslab)
++      cc(k) = cc_all(k,myslab)
+     end do
+     !
+     nn   = nr_z(3)
+@@ -721,9 +751,10 @@ module mod_solver_gpu
+     dk_g = lo-1
+     if(is_periodic) then
+       nn = nn-1
+-      !$acc kernels default(present) async(1)
+-      pp_z_2(:) = 0.
+-      !$acc end kernels
++      !$acc parallel loop default(present) async(1)
++      do k=1,nn+1
++        pp_z_2(k) = 0._rp
++      end do
+       !$acc parallel default(present) async(1)
+       pp_z_2(1 ) = -aa_z(1 )
+       pp_z_2(nn) = pp_z_2(nn) - cc_z(nn)
+@@ -738,9 +769,10 @@ module mod_solver_gpu
+       cc_z(k) = cc_z(k)/(bb_z(k) - aa_z(k)*cc_z(k-1))
+     end do
+     !$acc end parallel
+-    !$acc kernels default(present) async(1)
+-    bb(:) = bb(:)**(-1)
+-    !$acc end kernels
++    !$acc parallel loop default(present) async(1)
++    do k=1,n
++      bb(k) = bb(k)**(-1)
++    end do
+     !
+     if(is_periodic) then
+       !$acc parallel loop seq default(present) async(1)
+@@ -759,13 +791,15 @@ module mod_solver_gpu
+     !$acc parallel loop gang vector collapse(2) default(present) async(1)
+     do j=1,ny
+       do i=1,nx
++        p(i,j,1) = p(i,j,1)*norm
++        p(i,j,2) = p(i,j,2)*norm
+         !$acc loop seq
+         do k=3,n
+-          p(i,j,k) = p(i,j,k) - a_g(k+dk_g)*bb(k-1)*p(i,j,k-1)
++          p(i,j,k) = p(i,j,k)*norm - a_g(k+dk_g)*bb(k-1)*p(i,j,k-1)
+         end do
+         !$acc loop seq
+         do k=n-2,1,-1
+-          p(i,j,k) = p(i,j,k) - c_g(k+dk_g)*bb(k+1)*p(i,j,k+1)
++          p(i,j,k) = p(i,j,k)      - c_g(k+dk_g)*bb(k+1)*p(i,j,k+1)
+         end do
+       end do
+     end do
+@@ -835,16 +869,17 @@ module mod_solver_gpu
+       end do
+     end do
+   end subroutine gaussel_ptdma_gpu_fast_1d
+-  subroutine solver_gaussel_z_gpu(n,ng,hi,a,b,c,bcz,c_or_f,p)
++  subroutine solver_gaussel_z_gpu(n,ng,hi,a,b,c,bcz,c_or_f,norm,p)
+     use mod_param, only: eps
+     implicit none
+     integer , intent(in), dimension(3) :: ng,n,hi
+     real(rp), intent(in), dimension(:) :: a,b,c
+     character(len=1), dimension(0:1), intent(in) :: bcz
+     character(len=1), intent(in), dimension(3) :: c_or_f
++    real(rp), intent(in) :: norm
+     real(rp), intent(inout), dimension(0:,0:,0:) :: p
+     real(rp), pointer, contiguous, dimension(:,:,:) :: px,py,pz
+-    integer :: q
++    integer :: i,j,k,q
+     logical :: is_periodic_z
+     integer, dimension(3) :: n_x,n_y,n_z,n_z_0
+     integer               :: lo_z,hi_z
+@@ -872,31 +907,32 @@ module mod_solver_gpu
+       if(.not.is_no_decomp_z) then
+         select case(ipencil_axis)
+         case(1)
+-          !$acc kernels default(present) async(1)
+-          !$OMP PARALLEL WORKSHARE
+-          px(:,:,:) = p(1:n(1),1:n(2),1:n(3))
+-          !$OMP END PARALLEL WORKSHARE
+-          !$acc end kernels
++           !$acc parallel loop collapse(3) default(present) async(1)
++           !$OMP parallel do   collapse(3) DEFAULT(shared)
++           do k=1,n(3)
++             do j=1,n(2)
++               do i=1,n(1)
++                 px(i,j,k) = p(i,j,k)
++               end do
++             end do
++           end do
+           !$acc host_data use_device(px,py,pz,work)
+           istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_rp,stream=istream)
+           istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
+           !$acc end host_data
+         case(2)
+-          block
+-            integer :: i,j,k
+-            !
+-            ! transpose p -> py to axis-contiguous layout
+-            !
+-            !$acc parallel loop collapse(3) default(present) async(1)
+-            !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+-            do k=1,n(3)
+-              do j=1,n(2)
+-                do i=1,n(1)
+-                  py(j,k,i) = p(i,j,k)
+-                end do
++          !
++          ! transpose p -> py to axis-contiguous layout
++          !
++          !$acc parallel loop collapse(3) default(present) async(1)
++          !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
++          do k=1,n(3)
++            do j=1,n(2)
++              do i=1,n(1)
++                py(j,k,i) = p(i,j,k)
+               end do
+             end do
+-          end block
++          end do
+           !$acc host_data use_device(py,pz,work)
+           istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
+           !$acc end host_data
+@@ -909,12 +945,12 @@ module mod_solver_gpu
+     is_periodic_z = bcz(0)//bcz(1) == 'PP'
+     if(.not.is_no_decomp_z) then
+       if(.not.is_poisson_pcr_tdma) then
+-        call gaussel_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,0,a,b,c,is_periodic_z,pz,work,pz_aux_1)
++        call gaussel_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,0,a,b,c,is_periodic_z,norm,pz,work,pz_aux_1)
+       else
+-        call gaussel_ptdma_gpu_fast_1d(n(1),n(2),n(3)-q,lo_z,1,a,b,c,is_periodic_z,p)
++        call gaussel_ptdma_gpu_fast_1d(n(1),n(2),n(3)-q,lo_z,1,a,b,c,is_periodic_z,norm,p)
+       end if
+     else
+-      call gaussel_gpu(n(1),n(2),n(3)-q,1,a,b,c,is_periodic_z,p,work,pz_aux_1)
++      call gaussel_gpu(n(1),n(2),n(3)-q,1,a,b,c,is_periodic_z,norm,p,work,pz_aux_1)
+     end if
+     !
+     if(.not.is_poisson_pcr_tdma .and. .not.is_no_decomp_z) then
+@@ -924,36 +960,37 @@ module mod_solver_gpu
+         istat = cudecompTransposeZtoY(ch,gd,pz,py,work,dtype_rp,stream=istream)
+         istat = cudecompTransposeYtoX(ch,gd,py,px,work,dtype_rp,stream=istream)
+         !$acc end host_data
+-        !$acc kernels default(present) async(1)
+-        !$OMP PARALLEL WORKSHARE
+-        p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)
+-        !$OMP END PARALLEL WORKSHARE
+-        !$acc end kernels
++        !$acc parallel loop collapse(3) default(present) async(1)
++        !$OMP parallel do   collapse(3) DEFAULT(shared)
++        do k=1,n(3)
++          do j=1,n(2)
++            do i=1,n(1)
++              p(i,j,k) = px(i,j,k)
++            end do
++          end do
++        end do
+       case(2)
+         !$acc host_data use_device(pz,py,work)
+         istat = cudecompTransposeZtoY(ch,gd,pz,py,work,dtype_rp,stream=istream)
+         !$acc end host_data
+-        block
+-          integer :: i,j,k
+-          !
+-          ! transpose py -> p to default layout
+-          !
+-          !$acc parallel loop collapse(3) default(present) async(1)
+-          !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+-          do k=1,n(3)
+-            do j=1,n(2)
+-              do i=1,n(1)
+-                p(i,j,k) = py(j,k,i)
+-              end do
++        !
++        ! transpose py -> p to default layout
++        !
++        !$acc parallel loop collapse(3) default(present) async(1)
++        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
++        do k=1,n(3)
++          do j=1,n(2)
++            do i=1,n(1)
++              p(i,j,k) = py(j,k,i)
+             end do
+           end do
+-        end block
++        end do
+       case(3)
+       end select
+     end if
+   end subroutine solver_gaussel_z_gpu
+ #if 0
+-  subroutine gaussel_ptdma_gpu_fast(nx,ny,n,lo,nh,a_g,b_g,c_g,is_periodic,p,is_update,lambdaxy,aa,bb,cc,aa_z,bb_z,cc_z,pp_z_2)
++  subroutine gaussel_ptdma_gpu_fast(nx,ny,n,lo,nh,a_g,b_g,c_g,is_periodic,norm,p,is_update,lambdaxy,aa,bb,cc,aa_z,bb_z,cc_z,pp_z_2)
+     !
+     ! distributed TDMA solver using pre-computed coefficients
+     !
+@@ -966,6 +1003,7 @@ module mod_solver_gpu
+     integer , intent(in) :: nx,ny,n,lo,nh
+     real(rp), intent(in), dimension(:) :: a_g,b_g,c_g
+     logical , intent(in) :: is_periodic
++    real(rp), intent(in) :: norm
+     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
+     logical , intent(inout) :: is_update
+     real(rp), intent(in), dimension(:,:), optional :: lambdaxy
+@@ -1057,9 +1095,14 @@ module mod_solver_gpu
+       !$acc end host_data
+       !
+       if(is_periodic) then
+-        !$acc kernels default(present) async(1)
+-        pp_z_2(:,:,:) = 0.
+-        !$acc end kernels
++        !$acc parallel loop collapse(3) default(present) async(1)
++        do k=1,nn+1
++          do j=1,ny_r
++            do i=1,nx_r
++              pp_z_2(i,j,k) = 0._rp
++            end do
++          end do
++        end do
+         !$acc parallel loop gang vector collapse(2) default(present) async(1)
+         do j=1,ny_r
+           do i=1,nx_r
+@@ -1080,9 +1123,14 @@ module mod_solver_gpu
+           end do
+         end do
+       end do
+-      !$acc kernels default(present) async(1)
+-      bb(:,:,:) = bb(:,:,:)**(-1)
+-      !$acc end kernels
++      !$acc parallel loop collapse(3) default(present) async(1)
++      do k=1,n
++        do j=1,ny
++          do i=1,nx
++            bb(i,j,k) = bb(i,j,k)**(-1)
++          end do
++        end do
++      end do
+       !
+       if(is_periodic) then
+         !$acc parallel loop gang vector collapse(2) default(present) async(1)
+@@ -1107,13 +1155,15 @@ module mod_solver_gpu
+     !$acc parallel loop gang vector collapse(2) default(present) async(1)
+     do j=1,ny
+       do i=1,nx
++        p(i,j,1) = p(i,j,1)*norm
++        p(i,j,2) = p(i,j,2)*norm
+         !$acc loop seq
+         do k=3,n
+-          p(i,j,k) = p(i,j,k) - a_g(k+dk_g)*bb(i,j,k-1)*p(i,j,k-1)
++          p(i,j,k) = p(i,j,k)*norm - a_g(k+dk_g)*bb(i,j,k-1)*p(i,j,k-1)
+         end do
+         !$acc loop seq
+         do k=n-2,1,-1
+-          p(i,j,k) = p(i,j,k) - c_g(k+dk_g)*bb(i,j,k+1)*p(i,j,k+1)
++          p(i,j,k) = p(i,j,k)      - c_g(k+dk_g)*bb(i,j,k+1)*p(i,j,k+1)
+         end do
+       end do
+     end do
+diff --git a/src/updatep.f90 b/src/updatep.f90
+index ea6943d..3776370 100644
+--- a/src/updatep.f90
++++ b/src/updatep.f90
+@@ -75,11 +75,15 @@ module mod_updatep
+       end if
+ #endif
+     else
+-      !$acc kernels default(present) async(1)
+-      !$OMP PARALLEL WORKSHARE
+-      p(1:n(1),1:n(2),1:n(3)) = p(1:n(1),1:n(2),1:n(3)) + pp(1:n(1),1:n(2),1:n(3))
+-      !$OMP END PARALLEL WORKSHARE
+-      !$acc end kernels
++      !$acc parallel loop collapse(3) default(present) async(1)
++      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
++      do k=1,n(3)
++        do j=1,n(2)
++          do i=1,n(1)
++            p(i,j,k) = p(i,j,k) + pp(i,j,k)
++          end do
++        end do
++      end do
+     end if
+   end subroutine updatep
+ end module mod_updatep
+diff --git a/src/workspaces.f90 b/src/workspaces.f90
+index 3f47abb..0a9b592 100644
+--- a/src/workspaces.f90
++++ b/src/workspaces.f90
+@@ -20,7 +20,7 @@ contains
+                                    ap_z,pz_aux_1, &
+                                    istream_acc_queue_1
+     use mod_fft            , only: wsize_fft
+-    use mod_param          , only: cudecomp_is_t_in_place,cbcpre,ipencil => ipencil_axis,is_poisson_pcr_tdma
++    use mod_param          , only: ng,cudecomp_is_t_in_place,cbcpre,ipencil => ipencil_axis,is_poisson_pcr_tdma
+     use cudecomp
+     use openacc
+     implicit none
+@@ -56,8 +56,7 @@ contains
+     ! allocate transpose buffers
+     !
+     wsize = max(ap_x_poi%size,ap_y_poi%size,ap_z_poi%size)
+-    allocate(solver_buf_0(wsize))
+-    if(.not.cudecomp_is_t_in_place) allocate(solver_buf_1,mold=solver_buf_0)
++    allocate(solver_buf_0(wsize),solver_buf_1(wsize))
+     !$acc enter data create(solver_buf_0,solver_buf_1)
+     if(cbcpre(0,3)//cbcpre(1,3) == 'PP') then
+       allocate(pz_aux_1(ap_z%shape(1),ap_z%shape(2),ap_z%shape(3)))
+@@ -72,6 +71,7 @@ contains
+       ! allocate pcr-tdma transpose workspaces: separate buffer is needed because work is used along with work_ptdma
+       !
+       istat = cudecompGetTransposeWorkspaceSize(handle,gd_ptdma,wsize)
++      wsize = max(wsize,(3*(ng(3)+1))) ! work_ptdma also use as a buffer with this size in `gaussel_ptdma_gpu_fast_1d`
+       allocate(work_ptdma(wsize))
+       istat = cudecompMalloc(handle,gd_ptdma,work_ptdma_cuda,wsize)
+       call acc_map_data(work_ptdma,work_ptdma_cuda,wsize*f_sizeof(work_ptdma(1)))
+diff --git a/tests/differentially_heated_cavity/input.nml b/tests/differentially_heated_cavity/input.nml
+index 9fa9f9f..9fd06e3 100644
+--- a/tests/differentially_heated_cavity/input.nml
++++ b/tests/differentially_heated_cavity/input.nml
+@@ -29,7 +29,7 @@ dims(1:2) = 0, 0, ipencil_axis = 1
+ &scalar
+ iniscal(:)             = 'dhc'
+ alphai(:)              = 842.614977318
+-beta(:)                = 1.
++beta                   = 1.
+ cbcscal(0:1,1:3,:)     = 'D'  ,'D' ,  'P','P',  'N','N'
+ bcscal(0:1,1:3,:)      =  -0.5,0.5 ,   0.,0. ,   0.,0.
+ ssource(:)             = 0.
+@@ -41,7 +41,6 @@ is_boussinesq_buoyancy = T
+ &cudecomp
+ cudecomp_t_comm_backend = 0, cudecomp_is_t_enable_nccl = T, cudecomp_is_t_enable_nvshmem = T
+ cudecomp_h_comm_backend = 0, cudecomp_is_h_enable_nccl = T, cudecomp_is_h_enable_nvshmem = T
+-cudecomp_is_t_in_place = F
+ /
+ 
+ &numerics

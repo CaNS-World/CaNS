@@ -607,23 +607,42 @@ module mod_mom
     real(rp), intent(in   ), dimension(3) :: f
     real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
     real(rp) :: ff
+    integer  :: i,j,k
     if(is_forced(1)) then
       ff = f(1)
-      !$acc kernels default(present) async(1)
-      u(1:n(1),1:n(2),1:n(3)) = u(1:n(1),1:n(2),1:n(3)) + ff
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            u(i,j,k) = u(i,j,k) + ff
+          end do
+        end do
+      end do
     end if
     if(is_forced(2)) then
       ff = f(2)
-      !$acc kernels default(present) async(1)
-      v(1:n(1),1:n(2),1:n(3)) = v(1:n(1),1:n(2),1:n(3)) + ff
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            v(i,j,k) = v(i,j,k) + ff
+          end do
+        end do
+      end do
     end if
     if(is_forced(3)) then
       ff = f(3)
-      !$acc kernels default(present) async(1)
-      w(1:n(1),1:n(2),1:n(3)) = w(1:n(1),1:n(2),1:n(3)) + ff
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            w(i,j,k) = w(i,j,k) + ff
+          end do
+        end do
+      end do
     end if
   end subroutine bulk_forcing
   !

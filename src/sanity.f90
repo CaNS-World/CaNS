@@ -230,6 +230,7 @@ module mod_sanity
     real(rp), dimension(3) :: dl
     real(rp) :: dt,dti,alpha
     real(rp) :: divtot,divmax,resmax
+    integer :: i,j,k
     logical :: passed,passed_loc
     passed = .true.
     !$acc wait
@@ -242,6 +243,7 @@ module mod_sanity
              rhsbx(n(2),n(3),0:1), &
              rhsby(n(1),n(3),0:1), &
              rhsbz(n(1),n(2),0:1))
+    !$acc enter data copyin(n,n_z)
     !
     ! initialize velocity below with some random noise
     !
@@ -281,11 +283,17 @@ module mod_sanity
     if(is_impdiff .and. .not.is_impdiff_1d) then
       allocate(bb(n_z(3)))
       alpha = acos(-1.) ! irrelevant
-      !$acc kernels default(present)
-      u(:,:,:) = 0.
-      v(:,:,:) = 0.
-      w(:,:,:) = 0.
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present)
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=0,n(3)+1
+        do j=0,n(2)+1
+          do i=0,n(1)+1
+            u(i,j,k) = 0.
+            v(i,j,k) = 0.
+            w(i,j,k) = 0.
+          end do
+        end do
+      end do
       !$acc update self(u,v,w)
       call add_noise(ng,lo,123,.5_rp,u(1:n(1),1:n(2),1:n(3)))
       call add_noise(ng,lo,456,.5_rp,v(1:n(1),1:n(2),1:n(3)))
@@ -299,11 +307,21 @@ module mod_sanity
       call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
 #endif
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
-      !$acc kernels default(present)
-      u(:,:,:) = u(:,:,:)*alpha
-      p(:,:,:) = u(:,:,:)
-      bb(:) = b(:) + alpha
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present)
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=0,n(3)+1
+        do j=0,n(2)+1
+          do i=0,n(1)+1
+            u(i,j,k) = u(i,j,k)*alpha
+            p(i,j,k) = u(i,j,k)
+          end do
+        end do
+      end do
+      !$acc parallel loop default(present)
+      !$OMP parallel do   DEFAULT(shared)
+      do k=1,n_z(3)
+        bb(k) = b(k) + alpha
+      end do
       call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,is_bound,rhsbx,rhsby,rhsbz,u)
       call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,1),['f','c','c'],u)
       call fftend(arrplan)
@@ -321,11 +339,21 @@ module mod_sanity
       call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
 #endif
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
-      !$acc kernels default(present)
-      v(:,:,:) = v(:,:,:)*alpha
-      p(:,:,:) = v(:,:,:)
-      bb(:) = b(:) + alpha
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present)
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=0,n(3)+1
+        do j=0,n(2)+1
+          do i=0,n(1)+1
+            v(i,j,k) = v(i,j,k)*alpha
+            p(i,j,k) = v(i,j,k)
+          end do
+        end do
+      end do
+      !$acc parallel loop default(present)
+      !$OMP parallel do   DEFAULT(shared)
+      do k=1,n_z(3)
+        bb(k) = b(k) + alpha
+      end do
       call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,is_bound,rhsbx,rhsby,rhsbz,v)
       call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,2),['c','f','c'],v)
       call fftend(arrplan)
@@ -343,11 +371,21 @@ module mod_sanity
       call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
 #endif
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
-      !$acc kernels default(present)
-      w(:,:,:) = w(:,:,:)*alpha
-      p(:,:,:) = w(:,:,:)
-      bb(:) = b(:) + alpha
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present)
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=0,n(3)+1
+        do j=0,n(2)+1
+          do i=0,n(1)+1
+            w(i,j,k) = w(i,j,k)*alpha
+            p(i,j,k) = w(i,j,k)
+          end do
+        end do
+      end do
+      !$acc parallel loop default(present)
+      !$OMP parallel do   DEFAULT(shared)
+      do k=1,n_z(3)
+        bb(k) = b(k) + alpha
+      end do
       call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,is_bound,rhsbx,rhsby,rhsbz,w)
       call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,3),['c','c','f'],w)
       call fftend(arrplan)

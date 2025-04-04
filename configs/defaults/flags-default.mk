@@ -11,7 +11,7 @@ override FFLAGS += -acc -cuda -Minfo=accel -gpu=cc60,cc70,cc80
 endif
 endif
 ifeq ($(strip $(FCOMP)),CRAY)
-FFLAGS_MOD_DIR := -J
+FFLAGS_MOD_DIR := -Q
 endif
 
 ifeq ($(strip $(FFLAGS_DEBUG)),1)

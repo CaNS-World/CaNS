@@ -35,6 +35,9 @@ module mod_solver
     logical :: is_periodic_z
     integer, dimension(3) :: n_z,hi_z
     logical :: is_ptdma_update_
+    real(rp) :: norm
+    !
+    norm = normfft
     !
     is_ptdma_update_ = .true.
     if(present(is_ptdma_update)) is_ptdma_update_ = is_ptdma_update
@@ -76,11 +79,11 @@ module mod_solver
     if(.not.is_poisson_pcr_tdma) then
       call transpose_y_to_z(py,pz)
       !
-      call gaussel(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,pz,lambdaxy)
+      call gaussel(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,norm,pz,lambdaxy)
       !
       call transpose_z_to_y(pz,py)
     else
-      call gaussel_ptdma(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,py,lambdaxy,is_ptdma_update_,aa_z,cc_z)
+      call gaussel_ptdma(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,norm,py,lambdaxy,is_ptdma_update_,aa_z,cc_z)
       if(present(is_ptdma_update)) is_ptdma_update = is_ptdma_update_
     end if
     call fft(arrplan(2,2),py) ! bwd transform in y
@@ -91,29 +94,30 @@ module mod_solver
     select case(ipencil_axis)
     case(1)
       !$OMP PARALLEL WORKSHARE
-      p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)*normfft
+      p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)
       !$OMP END PARALLEL WORKSHARE
     case(2)
       call transpose_x_to_y(px,py)
       !$OMP PARALLEL WORKSHARE
-      p(1:n(1),1:n(2),1:n(3)) = py(:,:,:)*normfft
+      p(1:n(1),1:n(2),1:n(3)) = py(:,:,:)
       !$OMP END PARALLEL WORKSHARE
     case(3)
       !call transpose_x_to_z(px,pz)
       call transpose_x_to_y(px,py)
       call transpose_y_to_z(py,pz)
       !$OMP PARALLEL WORKSHARE
-      p(1:n(1),1:n(2),1:n(3)) = pz(:,:,:)*normfft
+      p(1:n(1),1:n(2),1:n(3)) = pz(:,:,:)
       !$OMP END PARALLEL WORKSHARE
     end select
   end subroutine solver
   !
-  subroutine gaussel(nx,ny,n,nh,a,b,c,is_periodic,p,lambdaxy)
+  subroutine gaussel(nx,ny,n,nh,a,b,c,is_periodic,norm,p,lambdaxy)
     use mod_param, only: eps
     implicit none
     integer , intent(in) :: nx,ny,n,nh
     real(rp), intent(in), dimension(:) :: a,b,c
     logical , intent(in) :: is_periodic
+    real(rp), intent(in) :: norm
     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
     real(rp), intent(in), dimension(nx,ny), optional :: lambdaxy
     real(rp), dimension(n) :: bb,p2
@@ -128,8 +132,8 @@ module mod_solver
       !$OMP DO COLLAPSE(2)
       do j=1,ny
         do i=1,nx
-          bb(:) = b(:) + lambdaxy(i,j)
-          call dgtsv_homebrewed(nn,a,bb,c,p(i,j,1:nn))
+          bb(:) = b(1:n) + lambdaxy(i,j)
+          call dgtsv_homebrewed(nn,a,bb,c,norm,p(i,j,1:nn))
         end do
       end do
       !$OMP END PARALLEL
@@ -138,7 +142,7 @@ module mod_solver
       !$OMP DO COLLAPSE(2)
       do j=1,ny
         do i=1,nx
-          call dgtsv_homebrewed(nn,a,b,c,p(i,j,1:nn))
+          call dgtsv_homebrewed(nn,a,b,c,norm,p(i,j,1:nn))
         end do
       end do
       !$OMP END PARALLEL
@@ -152,10 +156,10 @@ module mod_solver
             p2(:) = 0.
             p2(1 ) = -a(1 )
             p2(nn) = p2(nn) - c(nn)
-            bb(:) = b(:) + lambdaxy(i,j)
-            call dgtsv_homebrewed(nn,a,bb,c,p2(1:nn))
-            p(i,j,nn+1) = (p(i,j,nn+1) - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn)) / &
-                          (bb(   nn+1) + c(nn+1)*p2(   1) + a(nn+1)*p2(   nn)+eps)
+            bb(:) = b(1:n) + lambdaxy(i,j)
+            call dgtsv_homebrewed(nn,a,bb,c,1._rp,p2(1:nn))
+            p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn)) / &
+                          (bb(   nn+1)      + c(nn+1)*p2(   1) + a(nn+1)*p2(   nn)+eps)
             p(i,j,1:nn) = p(i,j,1:nn) + p2(1:nn)*p(i,j,nn+1)
           end do
         end do
@@ -168,9 +172,9 @@ module mod_solver
             p2(:) = 0.
             p2(1 ) = -a(1 )
             p2(nn) = p2(nn) - c(nn)
-            call dgtsv_homebrewed(nn,a,b,c,p2(1:nn))
-            p(i,j,nn+1) = (p(i,j,nn+1) - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn)) / &
-                          (b(    nn+1) + c(nn+1)*p2(   1) + a(nn+1)*p2(   nn)+eps)
+            call dgtsv_homebrewed(nn,a,b,c,1._rp,p2(1:nn))
+            p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn)) / &
+                          (b(    nn+1)      + c(nn+1)*p2(   1) + a(nn+1)*p2(   nn)+eps)
             p(i,j,1:nn) = p(i,j,1:nn) + p2(1:nn)*p(i,j,nn+1)
           end do
         end do
@@ -179,7 +183,7 @@ module mod_solver
     end if
   end subroutine gaussel
   !
-  subroutine gaussel_ptdma(nx,ny,n,nh,a,b,c,is_periodic,p,lambdaxy,is_update,aa_z_save,cc_z_save)
+  subroutine gaussel_ptdma(nx,ny,n,nh,a,b,c,is_periodic,norm,p,lambdaxy,is_update,aa_z_save,cc_z_save)
     !
     ! distributed TDMA solver
     !
@@ -190,6 +194,7 @@ module mod_solver
     integer , intent(in) :: nx,ny,n,nh
     real(rp), intent(in), dimension(:) :: a,b,c
     logical , intent(in) :: is_periodic
+    real(rp), intent(in) :: norm
     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
     real(rp), intent(in), dimension(:,:), optional :: lambdaxy
     logical , intent(inout), optional :: is_update
@@ -223,17 +228,17 @@ module mod_solver
       do j=1,ny
         do i=1,nx
           !
-          bb(:) = b(:) + lambdaxy(i,j)
+          bb(:) = b(1:n) + lambdaxy(i,j)
           zz(:) = 1./(bb(1:2)+eps)
           aa(i,j,1:2) = a(1:2)*zz(:)
           cc(i,j,1:2) = c(1:2)*zz(:)
-          p( i,j,1:2) = p(i,j,1:2)*zz(:)
+          p( i,j,1:2) = p(i,j,1:2)*norm*zz(:)
           !
           ! elimination of lower diagonals
           !
           do k=3,n
             z = 1./(bb(k)-a(k)*cc(i,j,k-1)+eps)
-            p(i,j,k) = (p(i,j,k)-a(k)*p(i,j,k-1))*z
+            p(i,j,k) = (p(i,j,k)*norm-a(k)*p(i,j,k-1))*z
             aa(i,j,k) = -a(k)*aa(i,j,k-1)*z
             cc(i,j,k) = c(k)*z
           end do
@@ -266,13 +271,13 @@ module mod_solver
           zz(:) = 1./(b(1:2)+eps)
           aa(i,j,1:2) = a(1:2)*zz(:)
           cc(i,j,1:2) = c(1:2)*zz(:)
-          p( i,j,1:2) = p(i,j,1:2)*zz(:)
+          p( i,j,1:2) = p(i,j,1:2)*norm*zz(:)
           !
           ! elimination of lower diagonals
           !
           do k=3,n
             z = 1./(b(k)-a(k)*cc(i,j,k-1)+eps)
-            p(i,j,k) = (p(i,j,k)-a(k)*p(i,j,k-1))*z
+            p(i,j,k) = (p(i,j,k)*norm-a(k)*p(i,j,k-1))*z
             aa(i,j,k) = -a(k)*aa(i,j,k-1)*z
             cc(i,j,k) = c(k)*z
           end do
@@ -389,11 +394,12 @@ module mod_solver
     !$OMP END PARALLEL
   end subroutine gaussel_ptdma
   !
-  subroutine dgtsv_homebrewed(n,a,b,c,p)
+  subroutine dgtsv_homebrewed(n,a,b,c,norm,p)
     use mod_param, only: eps
     implicit none
     integer , intent(in) :: n
     real(rp), intent(in   ), dimension(:) :: a,b,c
+    real(rp), intent(in   )               :: norm
     real(rp), intent(inout), dimension(:) :: p
     real(rp), dimension(n) :: d
     real(rp) :: z
@@ -403,11 +409,11 @@ module mod_solver
     !
     z = 1./(b(1)+eps)
     d(1) = c(1)*z
-    p(1) = p(1)*z
+    p(1) = p(1)*norm*z
     do l=2,n
       z    = 1./(b(l)-a(l)*d(l-1)+eps)
       d(l) = c(l)*z
-      p(l) = (p(l)-a(l)*p(l-1))*z
+      p(l) = (p(l)*norm-a(l)*p(l-1))*z
     end do
     !
     ! backward substitution
@@ -417,12 +423,13 @@ module mod_solver
     end do
   end subroutine dgtsv_homebrewed
   !
-  subroutine solver_gaussel_z(n,ng,hi,a,b,c,bcz,c_or_f,p)
+  subroutine solver_gaussel_z(n,ng,hi,a,b,c,bcz,c_or_f,norm,p)
     implicit none
     integer , intent(in), dimension(3) :: n,ng,hi
     real(rp), intent(in), dimension(:) :: a,b,c
     character(len=1), dimension(0:1), intent(in) :: bcz
     character(len=1), intent(in), dimension(3) :: c_or_f
+    real(rp), intent(in) :: norm
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
     real(rp), allocatable, dimension(:,:,:) :: px,py,pz
     integer :: q
@@ -461,12 +468,12 @@ module mod_solver
     is_periodic_z = bcz(0)//bcz(1) == 'PP'
     if(.not.is_no_decomp_z) then
       if(.not.is_poisson_pcr_tdma) then
-        call gaussel(      n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,pz)
+        call gaussel(      n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,norm,pz)
       else
-        call gaussel_ptdma(n_z(1),n_z(2),n_z(3)-q,1,a,b,c,is_periodic_z,p)
+        call gaussel_ptdma(n_z(1),n_z(2),n_z(3)-q,1,a,b,c,is_periodic_z,norm,p)
       end if
     else
-      call gaussel(n(1),n(2),n(3)-q,1,a,b,c,is_periodic_z,p)
+      call gaussel(n(1),n(2),n(3)-q,1,a,b,c,is_periodic_z,norm,p)
     end if
     !
     if(.not.is_poisson_pcr_tdma .and. .not.is_no_decomp_z) then
