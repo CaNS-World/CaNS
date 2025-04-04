@@ -59,7 +59,7 @@ module mod_initsolver
     !
     ! compute and distribute coefficients for tridiagonal solver
     !
-    call tridmatrix(cbc(:,3),ng(3),dli(3),dzci_g,dzfi_g,c_or_f(3),a_g,b_g,c_g)
+    call tridmatrix(cbc(:,3),ng(3),dzci_g,dzfi_g,c_or_f(3),a_g,b_g,c_g)
     a(:) = a_g(lo_z(3):hi_z(3))
     b(:) = b_g(lo_z(3):hi_z(3))
     c(:) = c_g(lo_z(3):hi_z(3))
@@ -143,11 +143,10 @@ module mod_initsolver
     end select
   end subroutine eigenvalues
   !
-  subroutine tridmatrix(bc,n,dzi,dzci,dzfi,c_or_f,a,b,c)
+  subroutine tridmatrix(bc,n,dzci,dzfi,c_or_f,a,b,c)
     implicit none
     character(len=1), intent(in), dimension(0:1) :: bc
     integer , intent(in) :: n
-    real(rp), intent(in) :: dzi
     real(rp), intent(in), dimension(0:) :: dzci,dzfi
     character(len=1), intent(in) :: c_or_f ! c -> cell-centered; f-face-centered
     real(rp), intent(out), dimension(n) :: a,b,c

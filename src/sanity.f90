@@ -10,7 +10,7 @@ module mod_sanity
   use decomp_2d
   use mod_bound     , only: boundp,bounduvw,updt_rhs_b
   use mod_chkdiv    , only: chkdiv
-  use mod_common_mpi, only: myid,ierr,ipencil_axis
+  use mod_common_mpi, only: myid,ierr
   use mod_correc    , only: correc
   use mod_debug     , only: chk_helmholtz
   use mod_fft       , only: fftend
@@ -18,7 +18,7 @@ module mod_sanity
   use mod_initflow  , only: add_noise
   use mod_initmpi   , only: initmpi
   use mod_initsolver, only: initsolver
-  use mod_param     , only: small
+  use mod_param     , only: ipencil_axis,is_impdiff,is_impdiff_1d,is_poisson_pcr_tdma,small
 #if !defined(_OPENACC)
   use mod_solver    , only: solver
 #else
@@ -48,18 +48,18 @@ module mod_sanity
     call chk_stop_type(stop_type,passed);          if(.not.passed) call abortit
     call chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed); if(.not.passed) call abortit
     call chk_forcing(cbcpre,is_forced,passed);     if(.not.passed) call abortit
-#if defined(_IMPDIFF_1D) && !defined(_IMPDIFF)
-    if(myid == 0)  print*, 'ERROR: `_IMPDIFF_1D` cpp macro requires building with `_IMPDIFF` too.'; call abortit
-#endif
-#if defined(_IMPDIFF_1D) && !defined(_DECOMP_Z) && !defined(_POISSON_PCR_TDMA)
-    if(dims(2) > 1) then
-      if(myid == 0)  print*, 'WARNING: a run with implicit Z diffusion (`_IMPDIFF_1D`) is much more efficient &
-                                     & when the flow is not decomposed along the Z direction.'
+    if(is_impdiff_1d .and. .not.is_impdiff) then
+      if(myid == 0)  print*, 'ERROR: `is_impdiff_1d = T` requires `is_impdiff = T` (forced in `param.f90`).'; call abortit
     end if
-#endif
-#if defined(_IMPDIFF_1D) && defined(_POISSON_PCR_TDMA) && defined(_DECOMP_Z) && !defined(_OPENACC)
-    if(myid == 0)  print*, 'ERROR: `_IMPDIFF_1D` w/ `_POISSON_PCR_TDMA` requires X/Y-aligned pencils.'; call abortit
-#endif
+    if(is_impdiff_1d .and. .not.(ipencil_axis == 3) .and. .not.is_poisson_pcr_tdma) then
+      if(dims(2) > 1) then
+        if(myid == 0)  print*, 'WARNING: a run with implicit Z diffusion (`is_impdiff_1d = T`) is much more efficient &
+                                       & when the flow is not decomposed along the Z direction.'
+      end if
+    end if
+    if(is_poisson_pcr_tdma .and. (ipencil_axis == 3)) then
+      if(myid == 0)  print*, 'ERROR: `is_poisson_pcr_tdma = T` requires X/Y-aligned pencils.'; call abortit
+    end if
   end subroutine test_sanity_input
   !
   subroutine chk_stop_type(stop_type,passed)
@@ -149,28 +149,28 @@ module mod_sanity
     if(myid == 0.and.(.not.passed_loc)) &
       print*, 'ERROR: pressure BCs in directions x and y must be homogeneous (value = 0.).'
     passed = passed.and.passed_loc
-#if defined(_IMPDIFF)
-    passed_loc = .true.
-    do ivel = 1,3
-      do idir=1,2
-        bc01v = cbcvel(0,idir,ivel)//cbcvel(1,idir,ivel)
-        passed_loc = passed_loc.and.(bc01v /= 'NN')
+    if(is_impdiff) then
+      passed_loc = .true.
+      do ivel = 1,3
+        do idir=1,2
+          bc01v = cbcvel(0,idir,ivel)//cbcvel(1,idir,ivel)
+          passed_loc = passed_loc.and.(bc01v /= 'NN')
+        end do
       end do
-    end do
-    if(myid == 0.and.(.not.passed_loc)) &
-      print*, 'ERROR: Neumann-Neumann velocity BCs with implicit diffusion currently not supported in x and y; only in z.'
-    passed = passed.and.passed_loc
-    !
-    passed_loc = .true.
-    do ivel = 1,3
-      do idir=1,2
-        passed_loc = passed_loc.and.((bcvel(0,idir,ivel) == 0.).and.(bcvel(1,idir,ivel) == 0.))
+      if(myid == 0.and.(.not.passed_loc)) &
+        print*, 'ERROR: Neumann-Neumann velocity BCs with implicit diffusion currently not supported in x and y; only in z.'
+      passed = passed.and.passed_loc
+      !
+      passed_loc = .true.
+      do ivel = 1,3
+        do idir=1,2
+          passed_loc = passed_loc.and.((bcvel(0,idir,ivel) == 0.).and.(bcvel(1,idir,ivel) == 0.))
+        end do
       end do
-    end do
-    if(myid == 0.and.(.not.passed_loc)) &
-      print*, 'ERROR: velocity BCs with implicit diffusion in directions x and y must be homogeneous (value = 0.).'
-    passed = passed.and.passed_loc
-#endif
+      if(myid == 0.and.(.not.passed_loc)) &
+        print*, 'ERROR: velocity BCs with implicit diffusion in directions x and y must be homogeneous (value = 0.).'
+      passed = passed.and.passed_loc
+    end if
 #if defined(_OPENACC)
     do idir=1,2
       bc01p = cbcpre(0,idir)//cbcpre(1,idir)
@@ -278,87 +278,87 @@ module mod_sanity
     print*, 'ERROR: Pressure correction: Divergence is too large, with maximum = ', divmax
     passed = passed.and.passed_loc
     call fftend(arrplan)
-#if defined(_IMPDIFF) && !defined(_IMPDIFF_1D)
-    allocate(bb(n_z(3)))
-    alpha = acos(-1.) ! irrelevant
-    !$acc kernels default(present)
-    u(:,:,:) = 0.
-    v(:,:,:) = 0.
-    w(:,:,:) = 0.
-    !$acc end kernels
-    !$acc update self(u,v,w)
-    call add_noise(ng,lo,123,.5_rp,u(1:n(1),1:n(2),1:n(3)))
-    call add_noise(ng,lo,456,.5_rp,v(1:n(1),1:n(2),1:n(3)))
-    call add_noise(ng,lo,789,.5_rp,w(1:n(1),1:n(2),1:n(3)))
-    !$acc update device(u,v,w)
-    !$acc enter data create(bb)
-    call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1), &
-                    lambdaxy,['f','c','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
-    !$acc update device(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
+    if(is_impdiff .and. .not.is_impdiff_1d) then
+      allocate(bb(n_z(3)))
+      alpha = acos(-1.) ! irrelevant
+      !$acc kernels default(present)
+      u(:,:,:) = 0.
+      v(:,:,:) = 0.
+      w(:,:,:) = 0.
+      !$acc end kernels
+      !$acc update self(u,v,w)
+      call add_noise(ng,lo,123,.5_rp,u(1:n(1),1:n(2),1:n(3)))
+      call add_noise(ng,lo,456,.5_rp,v(1:n(1),1:n(2),1:n(3)))
+      call add_noise(ng,lo,789,.5_rp,w(1:n(1),1:n(2),1:n(3)))
+      !$acc update device(u,v,w)
+      !$acc enter data create(bb)
+      call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1), &
+                      lambdaxy,['f','c','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
+      !$acc update device(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
 #if defined(_OPENACC)
-    call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
+      call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
 #endif
-    call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
-    !$acc kernels default(present)
-    u(:,:,:) = u(:,:,:)*alpha
-    p(:,:,:) = u(:,:,:)
-    bb(:) = b(:) + alpha
-    !$acc end kernels
-    call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,is_bound,rhsbx,rhsby,rhsbz,u)
-    call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,1),['f','c','c'],u)
-    call fftend(arrplan)
-    call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w) ! actually we are only interested in boundary condition in u
-    call chk_helmholtz(lo,hi,dli,dzci,dzfi,alpha,p,u,cbcvel(:,:,1),is_bound,['f','c','c'],resmax)
-    passed_loc = resmax < small
-    if(myid == 0.and.(.not.passed_loc)) &
-    print*, 'ERROR: wrong solution of Helmholtz equation in x direction.'
-    passed = passed.and.passed_loc
-    !
-    call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2), &
-                    lambdaxy,['c','f','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
-    !$acc update device(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
+      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
+      !$acc kernels default(present)
+      u(:,:,:) = u(:,:,:)*alpha
+      p(:,:,:) = u(:,:,:)
+      bb(:) = b(:) + alpha
+      !$acc end kernels
+      call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,is_bound,rhsbx,rhsby,rhsbz,u)
+      call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,1),['f','c','c'],u)
+      call fftend(arrplan)
+      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w) ! actually we are only interested in boundary condition in u
+      call chk_helmholtz(lo,hi,dli,dzci,dzfi,alpha,p,u,cbcvel(:,:,1),is_bound,['f','c','c'],resmax)
+      passed_loc = resmax < small
+      if(myid == 0.and.(.not.passed_loc)) &
+      print*, 'ERROR: wrong solution of Helmholtz equation in x direction.'
+      passed = passed.and.passed_loc
+      !
+      call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2), &
+                      lambdaxy,['c','f','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
+      !$acc update device(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
 #if defined(_OPENACC)
-    call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
+      call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
 #endif
-    call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
-    !$acc kernels default(present)
-    v(:,:,:) = v(:,:,:)*alpha
-    p(:,:,:) = v(:,:,:)
-    bb(:) = b(:) + alpha
-    !$acc end kernels
-    call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,is_bound,rhsbx,rhsby,rhsbz,v)
-    call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,2),['c','f','c'],v)
-    call fftend(arrplan)
-    call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w) ! actually we are only interested in boundary condition in v
-    call chk_helmholtz(lo,hi,dli,dzci,dzfi,alpha,p,v,cbcvel(:,:,2),is_bound,['c','f','c'],resmax)
-    passed_loc = resmax < small
-    if(myid == 0.and.(.not.passed_loc)) &
-    print*, 'ERROR: wrong solution of Helmholtz equation in y direction.'
-    passed = passed.and.passed_loc
-    !
-    call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3), &
-                    lambdaxy,['c','c','f'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
-    !$acc update device(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
+      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
+      !$acc kernels default(present)
+      v(:,:,:) = v(:,:,:)*alpha
+      p(:,:,:) = v(:,:,:)
+      bb(:) = b(:) + alpha
+      !$acc end kernels
+      call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,is_bound,rhsbx,rhsby,rhsbz,v)
+      call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,2),['c','f','c'],v)
+      call fftend(arrplan)
+      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w) ! actually we are only interested in boundary condition in v
+      call chk_helmholtz(lo,hi,dli,dzci,dzfi,alpha,p,v,cbcvel(:,:,2),is_bound,['c','f','c'],resmax)
+      passed_loc = resmax < small
+      if(myid == 0.and.(.not.passed_loc)) &
+      print*, 'ERROR: wrong solution of Helmholtz equation in y direction.'
+      passed = passed.and.passed_loc
+      !
+      call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3), &
+                      lambdaxy,['c','c','f'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
+      !$acc update device(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
 #if defined(_OPENACC)
-    call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
+      call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
 #endif
-    call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
-    !$acc kernels default(present)
-    w(:,:,:) = w(:,:,:)*alpha
-    p(:,:,:) = w(:,:,:)
-    bb(:) = b(:) + alpha
-    !$acc end kernels
-    call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,is_bound,rhsbx,rhsby,rhsbz,w)
-    call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,3),['c','c','f'],w)
-    call fftend(arrplan)
-    call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w) ! actually we are only interested in boundary condition in w
-    call chk_helmholtz(lo,hi,dli,dzci,dzfi,alpha,p,w,cbcvel(:,:,3),is_bound,['c','c','f'],resmax)
-    passed_loc = resmax < small
-    if(myid == 0.and.(.not.passed_loc)) &
-    print*, 'ERROR: wrong solution of Helmholtz equation in z direction.'
-    passed = passed.and.passed_loc
-    !$acc exit data delete(bb)
-#endif
+      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
+      !$acc kernels default(present)
+      w(:,:,:) = w(:,:,:)*alpha
+      p(:,:,:) = w(:,:,:)
+      bb(:) = b(:) + alpha
+      !$acc end kernels
+      call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,is_bound,rhsbx,rhsby,rhsbz,w)
+      call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,3),['c','c','f'],w)
+      call fftend(arrplan)
+      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w) ! actually we are only interested in boundary condition in w
+      call chk_helmholtz(lo,hi,dli,dzci,dzfi,alpha,p,w,cbcvel(:,:,3),is_bound,['c','c','f'],resmax)
+      passed_loc = resmax < small
+      if(myid == 0.and.(.not.passed_loc)) &
+      print*, 'ERROR: wrong solution of Helmholtz equation in z direction.'
+      passed = passed.and.passed_loc
+      !$acc exit data delete(bb)
+    end if
     !$acc exit data delete(u,v,w,p,lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
     if(.not.passed) then
       call decomp_2d_finalize

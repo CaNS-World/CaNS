@@ -27,8 +27,8 @@ bcpre(0:1,1:3  ) =  0.,0.,   0.,0.,   0.,0.
 bforce(1:3) = 0., 0., 0.
 is_forced(1:3) = T, F, F
 velf(1:3) = 1., 0., 0.
-dims(1:2) = 2, 2
-\
+dims(1:2) = 2, 2, ipecil_axis = 1
+/
 ```
 <details>
 
@@ -208,12 +208,14 @@ These lines set the flow forcing.
 ---
 
 ```fortran
-dims(1:2) = 2, 2
+dims(1:2) = 2, 2, ipencil_axis = 1
 ```
 
-This line set the grid of computational subdomains.
+This line set the domain decomposition and orientation of the computational subdomains.
 
 `dims` is the **processor grid**, the number of domain partitions along the first and second decomposed directions (which depend on the selected default pencil orientation). `dims(1)*dims(2)` corresponds therefore to the total number of computational subdomains. Setting `dims(:) = [0,0]` will trigger a runtime autotuning step to find the processor grid that minimizes transpose times. Note, however, that other components of the algorithm (e.g., collective I/O) may also be affected by the choice of processor grid.
+
+`ipencil_axis` sets the **orientation of the computational subdomains** (or pencils), being one of [1,2,3] for [X,Y,Z]-aligned pencils. X-aligned is the default if this option is not set, and should be optimal for all cases except for Z-implicit diffusion, where using Z-pencils are recommended if `dims(2) > 1` in the input file; see the description of the `&numerics` namelist below.
 
 # about the `&cudecomp` namelist under `input.nml`
 
@@ -269,15 +271,16 @@ The default value of `nscal` is zero.
 The following example namelist defines the parameters needed for the differentially heated cavity case that may be found under `examples/`.
 ```fortran
 &scalar
-alphai(1)          = 842.61498
-beta               = 1
-iniscal(1)         = 'dhc'
-cbcscal(0:1,1:3,1) = 'D'  ,'D' ,  'P','P',  'N','N'
-bcscal(0:1,1:3,1)  =  -0.5,0.5 ,   0.,0. ,   0.,0.
-ssource(1)         = 0.
-is_sforced(1)      = F
-scalf(1)           = 0.
-\
+alphai(1)              = 842.61498
+beta                   = 1
+iniscal(1)             = 'dhc'
+cbcscal(0:1,1:3,1)     = 'D'  ,'D' ,  'P','P',  'N','N'
+bcscal(0:1,1:3,1)      =  -0.5,0.5 ,   0.,0. ,   0.,0.
+ssource(1)             = 0.
+is_sforced(1)          = F
+scalf(1)               = 0.
+is_boussinesq_buoyancy = T
+/
 ```
 
 ---
@@ -338,8 +341,40 @@ The input value `beta` above is the thermal expansion coefficient that relates d
 ! (...)
 gacc(1:3) = 0., 0., -1.
 nscal = 1
-\
+/
 ```
 which, in this example, defines a negative gravitational acceleration along `z` with unit magnitude. Its default value is `[0., 0., 0.]`.
 
-Finally, **to activate the buoyancy term**, the `BOUSSINESQ_BUOYANCY` pre-processor macro must be set to `1` in `build.conf` (see [`INFO_COMPILING.md`](INFO_COMPILING.md)).
+Finally, **activate the buoyancy term** with `is_boussinesq_buoyancy = T` in the `&scalar` namelist.
+
+# about the `&numerics` namelist under `input.nml`
+
+This namelist defines parameters related to the numerical discretization and computational method. The values below are the default ones, in case the namelist is not specified in the input file.
+
+```fortran
+&numerics
+is_impdiff = F, is_impdiff_1d = F
+is_poisson_pcr_tdma = F
+/
+```
+
+In these lines, `is_impdiff` and `is_impdiff_1d` enable the (semi-) **implicit temporal integration of diffusion terms**:
+
+* `is_impdiff`, if `.true.`, the diffusion term of the Navier-Stokes and scalar equations is integrated in time implicitly, which may improve the stability of the numerical algorithm for viscous-dominated flows.
+* `is_impdiff_1d`, is similar to `is_impdiff`, but with implicit diffusion *only* along Z, which may be advantageous when the grid along Z is much finer than along the other directions; *for optimal parallel performance, the domain should not be decomposed along Z* (`ipencil_axis=3`, or `ipencil_axis = 1/2` with `dims(2) = 1`)
+
+Finally, `is_poisson_pcr_tdma`, if `.true.`, allows for solving the Poisson/Helmhotlz equations along Z with a parallel cyclic reduction--tridiagonal matrix algorithm (PCR-TDMA) method. This approach may result in major gains in scalability for pencil-distributed simulations at scale, on many GPUs.
+
+# about the `&other_options` namelist under `input.nml`
+
+This namelist defines other parameters related to the monitoring, debugging, or benchmarking of a computation. The values below are the default ones, in case the namelist is not specified in the input file.
+
+```fortran
+&other_options
+is_debug = T, is_timing = T
+/
+```
+
+In these lines, `is_debug` performs some **sanity checks for debugging purposes** that do not introduce computational overhead, and `is_timing` reports the wall-clock time per step.
+
+Note: other parameters for `&numerics` and `&other_options` are not exposed here, as they are meant for very specific, advanced use or developers. They can be found in `param.f90`.

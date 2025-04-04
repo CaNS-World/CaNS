@@ -82,18 +82,10 @@ endif
   
 endif
 
-CUSTOM_DEFINES =  DEBUG \
-				  DEBUG_SOLVER \
-				  TIMING \
-				  IMPDIFF IMPDIFF_1D \
-				  DECOMP_X DECOMP_Y DECOMP_Z \
-				  SINGLE_PRECISION \
-				  POISSON_PCR_TDMA \
+CUSTOM_DEFINES =  SINGLE_PRECISION \
+				  LOOP_UNSWITCHING \
 				  DECOMP_X_IO \
                   USE_NVTX \
-				  GRIDPOINT_NATURAL_CHANNEL \
-				  MASK_DIVERGENCE_CHECK \
-				  BOUSSINESQ_BUOYANCY
 
 DEFINES += $(foreach var,$(CUSTOM_DEFINES),$(if $(filter 1,$(strip $($(var)))), -D_$(var)))
 
@@ -109,10 +101,6 @@ DEFINES += -D_DECOMP_Z
 endif
 
 DEFINES := $(sort $(DEFINES)) # remove duplicates
-
-ifeq ($(strip $(BOUSSINESQ_BUOYANCY)),1)
-DEFINES += -D_BOUSSINESQ_BUOYANCY
-endif
 
 ifeq ($(strip $(OPENMP)),1)
 ifeq      ($(strip $(FCOMP)),GNU)

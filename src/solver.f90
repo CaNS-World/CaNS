@@ -7,15 +7,12 @@
 module mod_solver
   use, intrinsic :: iso_c_binding, only: C_PTR
   use decomp_2d
-  use mod_common_mpi, only: ipencil_axis
   use mod_fft       , only: fft
+  use mod_param     , only: ipencil_axis,is_poisson_pcr_tdma
   use mod_types
   implicit none
   private
-  public solver
-#if defined(_IMPDIFF_1D)
-  public solver_gaussel_z
-#endif
+  public solver,solver_gaussel_z
   contains
   subroutine solver(n,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p,is_ptdma_update,aa_z,cc_z)
     !
@@ -43,10 +40,10 @@ module mod_solver
     if(present(is_ptdma_update)) is_ptdma_update_ = is_ptdma_update
     n_z(:)  = zsize(:)
     hi_z(:) = zend(:)
-#if defined(_POISSON_PCR_TDMA)
-    n_z(:)  = ysize(:)
-    hi_z(:) = yend(:)
-#endif
+    if(is_poisson_pcr_tdma) then
+      n_z(:)  = ysize(:)
+      hi_z(:) = yend(:)
+    end if
     allocate(px(xsize(1),xsize(2),xsize(3)))
     allocate(py(ysize(1),ysize(2),ysize(3)))
     allocate(pz(zsize(1),zsize(2),zsize(3)))
@@ -76,16 +73,16 @@ module mod_solver
     !
     q = merge(1,0,c_or_f(3) == 'f'.and.bc(1,3) == 'D'.and.hi_z(3) == ng(3))
     is_periodic_z = bc(0,3)//bc(1,3) == 'PP'
-#if !defined(_POISSON_PCR_TDMA)
-    call transpose_y_to_z(py,pz)
-    !
-    call gaussel(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,pz,lambdaxy)
-    !
-    call transpose_z_to_y(pz,py)
-#else
-    call gaussel_ptdma(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,py,lambdaxy,is_ptdma_update_,aa_z,cc_z)
-    if(present(is_ptdma_update)) is_ptdma_update = is_ptdma_update_
-#endif
+    if(.not.is_poisson_pcr_tdma) then
+      call transpose_y_to_z(py,pz)
+      !
+      call gaussel(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,pz,lambdaxy)
+      !
+      call transpose_z_to_y(pz,py)
+    else
+      call gaussel_ptdma(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,py,lambdaxy,is_ptdma_update_,aa_z,cc_z)
+      if(present(is_ptdma_update)) is_ptdma_update = is_ptdma_update_
+    end if
     call fft(arrplan(2,2),py) ! bwd transform in y
     !
     call transpose_y_to_x(py,px)
@@ -182,7 +179,6 @@ module mod_solver
     end if
   end subroutine gaussel
   !
-#if defined(_POISSON_PCR_TDMA)
   subroutine gaussel_ptdma(nx,ny,n,nh,a,b,c,is_periodic,p,lambdaxy,is_update,aa_z_save,cc_z_save)
     !
     ! distributed TDMA solver
@@ -201,11 +197,10 @@ module mod_solver
     real(rp),              dimension(nx,ny,n) :: aa,cc
     real(rp), allocatable, dimension(: ,: ,:) :: aa_y,cc_y,pp_y,aa_z,cc_z,pp_z
     real(rp), allocatable, dimension(: ,: ,:) :: pp_z_2,cc_z_0
-    real(rp) :: z,zz(2),lxy,bb(n)
+    real(rp) :: z,zz(2),bb(n)
     integer :: i,j,k
     integer , dimension(3) :: nr_z
     integer :: nx_r,ny_r,nn
-    integer :: istat,wsize
     !
     nr_z(:) = dinfo_ptdma%zsz(:)
     allocate(aa_y(nx,ny,2), &
@@ -262,6 +257,7 @@ module mod_solver
           pp_y(i,j,1) = p(i,j,1) ; pp_y(i,j,2) = p(i,j,n)
         end do
       end do
+      !$OMP END PARALLEL
     else
       !$OMP PARALLEL DEFAULT(shared) PRIVATE(zz,z)
       !$OMP DO COLLAPSE(2)
@@ -300,6 +296,7 @@ module mod_solver
           pp_y(i,j,1) = p(i,j,1) ; pp_y(i,j,2) = p(i,j,n)
         end do
       end do
+      !$OMP END PARALLEL
     end if
     !
     ! transpose to gather reduced subdomain boundary systems along z
@@ -341,6 +338,7 @@ module mod_solver
         end do
       end do
     end do
+    !$OMP END PARALLEL
     if(is_periodic) then
       associate(cc_z => cc_z_0)
       !$OMP PARALLEL DEFAULT(shared) PRIVATE(z)
@@ -367,6 +365,7 @@ module mod_solver
           end do
         end do
       end do
+      !$OMP END PARALLEL
       end associate
     end if
     !
@@ -387,8 +386,8 @@ module mod_solver
         end do
       end do
     end do
+    !$OMP END PARALLEL
   end subroutine gaussel_ptdma
-#endif
   !
   subroutine dgtsv_homebrewed(n,a,b,c,p)
     use mod_param, only: eps
@@ -418,9 +417,7 @@ module mod_solver
     end do
   end subroutine dgtsv_homebrewed
   !
-#if defined(_IMPDIFF_1D)
   subroutine solver_gaussel_z(n,ng,hi,a,b,c,bcz,c_or_f,p)
-    use mod_param, only: eps
     implicit none
     integer , intent(in), dimension(3) :: n,ng,hi
     real(rp), intent(in), dimension(:) :: a,b,c
@@ -435,13 +432,12 @@ module mod_solver
     !
     n_z(:)  = zsize(:)
     hi_z(:) = zend(:)
-#if defined(_POISSON_PCR_TDMA)
-    n_z(:)  = ysize(:)
-    hi_z(:) = yend(:)
-#endif
-#if !defined(_POISSON_PCR_TDMA)
+    if(is_poisson_pcr_tdma) then
+      n_z(:)  = ysize(:)
+      hi_z(:) = yend(:)
+    end if
     is_no_decomp_z = xsize(3) == n_z(3).or.ipencil_axis == 3 ! not decomposed along z: xsize(3) == ysize(3) == ng(3) when dims(2) = 1
-    if(.not.is_no_decomp_z) then
+    if(.not.is_poisson_pcr_tdma .and. .not.is_no_decomp_z) then
       allocate(px(xsize(1),xsize(2),xsize(3)))
       allocate(py(ysize(1),ysize(2),ysize(3)))
       allocate(pz(zsize(1),zsize(2),zsize(3)))
@@ -460,22 +456,20 @@ module mod_solver
         call transpose_y_to_z(py,pz)
       end select
     end if
-#endif
     !
     q = merge(1,0,c_or_f(3) == 'f'.and.bcz(1) == 'D'.and.hi_z(3) == ng(3))
     is_periodic_z = bcz(0)//bcz(1) == 'PP'
     if(.not.is_no_decomp_z) then
-#if !defined(_POISSON_PCR_TDMA)
-      call gaussel(      n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,pz)
-#else
-      call gaussel_ptdma(n_z(1),n_z(2),n_z(3)-q,1,a,b,c,is_periodic_z,p)
-#endif
+      if(.not.is_poisson_pcr_tdma) then
+        call gaussel(      n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,pz)
+      else
+        call gaussel_ptdma(n_z(1),n_z(2),n_z(3)-q,1,a,b,c,is_periodic_z,p)
+      end if
     else
       call gaussel(n(1),n(2),n(3)-q,1,a,b,c,is_periodic_z,p)
     end if
     !
-#if !defined(_POISSON_PCR_TDMA)
-    if(.not.is_no_decomp_z) then
+    if(.not.is_poisson_pcr_tdma .and. .not.is_no_decomp_z) then
       select case(ipencil_axis)
       case(1)
         !call transpose_z_to_x(pz,px)
@@ -491,7 +485,6 @@ module mod_solver
         !$OMP END PARALLEL WORKSHARE
       end select
     end if
-#endif
   end subroutine solver_gaussel_z
   !
 #if 0
@@ -526,6 +519,5 @@ module mod_solver
     !call gttrs('N',n,nx*ny,aa,bb,cc,ccc,ipiv,p_t(1:n,:,:),n,info)
     !p(1:nx,1:ny,1:n) = reshape(p_t,shape(p(1:nx,1:ny,1:n)),order=[3,1,2])
   end subroutine gaussel_lapack
-#endif
 #endif
 end module mod_solver

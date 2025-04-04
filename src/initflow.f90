@@ -239,27 +239,29 @@ module mod_initflow
       ! for the cross-stream velocity components
       ! (commented below)
       !
-      !do k=1,n(3)
-      !  zcc = (zc(k)/l(3)                )*2.*pi
-      !  zff = (zc(k)/l(3)+0.5*dzc(k)/l(3))*2.*pi
-      !  do j=1,n(2)
-      !    yc = (j+lo(2)-1-.5)*dl(2)/l(2)*2.*pi
-      !    yf = (j+lo(2)-1-.0)*dl(2)/l(2)*2.*pi
-      !    do i=1,n(1)
-      !      xc = (i+lo(1)-1-.5)*dl(1)/l(1)*2.*pi
-      !      xf = (i+lo(1)-1-.0)*dl(1)/l(1)*2.*pi
-      !      !u(i,j,k) = u1d(k)
-      !      v(i,j,k) =  sin(xc)*cos(yf)*cos(zcc)*ubulk
-      !      w(i,j,k) = -cos(xc)*sin(yc)*cos(zff)*ubulk
-      !      p(i,j,k) = 0.!(cos(2.*xc)+cos(2.*yc))*(cos(2.*zcc)+2.)/16.
-      !    end do
-      !  end do
-      !end do
+      if(.false.) then
+        do k=1,n(3)
+          zcc = (zc(k)/l(3)                )*2.*pi
+          zff = (zc(k)/l(3)+0.5*dzc(k)/l(3))*2.*pi
+          do j=1,n(2)
+            yc = (j+lo(2)-1-.5)*dl(2)/l(2)*2.*pi
+            yf = (j+lo(2)-1-.0)*dl(2)/l(2)*2.*pi
+            do i=1,n(1)
+              xc = (i+lo(1)-1-.5)*dl(1)/l(1)*2.*pi
+              xf = (i+lo(1)-1-.0)*dl(1)/l(1)*2.*pi
+              !u(i,j,k) = u1d(k)
+              v(i,j,k) =  sin(xc)*cos(yf)*cos(zcc)*ubulk
+              w(i,j,k) = -cos(xc)*sin(yc)*cos(zff)*ubulk
+              p(i,j,k) = 0.!(cos(2.*xc)+cos(2.*yc))*(cos(2.*zcc)+2.)/16.
+            end do
+          end do
+        end do
+      end if
     end if
   end subroutine initflow
   !
-  subroutine initscal(iniscal,bcscal,ng,lo,l,dl,zc,zf,dzc,dzf,salpha, &
-                      is_sforced,scalf,ssource,is_wallturb,s)
+  subroutine initscal(iniscal,bcscal,ng,lo,l,dl,zc,dzf,salpha, &
+                      is_sforced,scalf,s)
     !
     ! computes initial conditions for the scalar field
     !
@@ -268,16 +270,15 @@ module mod_initflow
     real(rp), intent(in   ), dimension(0:1,3)    :: bcscal
     integer , intent(in   ), dimension(3)        :: ng,lo
     real(rp), intent(in   ), dimension(3)        :: l,dl
-    real(rp), intent(in   ), dimension(0:)       :: dzc,dzf,zc,zf
+    real(rp), intent(in   ), dimension(0:)       :: zc,dzf
     real(rp), intent(in   )                      :: salpha
     logical , intent(in   )                      :: is_sforced
-    real(rp), intent(in   )                      :: scalf,ssource
-    logical , intent(in   )                      :: is_wallturb
+    real(rp), intent(in   )                      :: scalf
     real(rp), intent(inout), dimension(0:,0:,0:) :: s
     real(rp), allocatable, dimension(:) :: s1d
     integer :: i,j,k
     logical :: is_noise,is_mean
-    real(rp) :: sref,lref
+    real(rp) :: sref
     integer, dimension(3) :: n
     integer  :: ii
     real(rp) :: xx
@@ -392,7 +393,7 @@ module mod_initflow
   end do
   call MPI_ALLREDUCE(MPI_IN_PLACE,meanold,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
   !
-  if(meanold /= 0.) then
+  if(abs(meanold) > epsilon(0._rp)) then
     !$OMP PARALLEL WORKSHARE
     p(:,:,:) = p(:,:,:)/meanold*mean
     !$OMP END PARALLEL WORKSHARE
@@ -464,7 +465,7 @@ module mod_initflow
       z = zc(k)*2.*retau
       if(z >= retau) z = 2.*retau-z
       p(k) = 2.5*log(z) + 5.5
-      if (z <= 11.6) p(k)=z
+      if(z <= 11.6 ) p(k)=z
     end do
   end subroutine log_profile
   !

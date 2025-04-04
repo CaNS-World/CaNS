@@ -13,12 +13,10 @@ module mod_mom
   public momx_a,momy_a,momz_a, &
          momx_d,momy_d,momz_d, &
          momx_p,momy_p,momz_p, &
-         cmpt_wallshear,bulk_forcing
-#if defined(_IMPDIFF_1D)
-  public momx_d_xy,momy_d_xy,momz_d_xy, &
-         momx_d_z ,momy_d_z ,momz_d_z
-#endif
-  public mom_xyz_ad
+         cmpt_wallshear,bulk_forcing, &
+         momx_d_xy,momy_d_xy,momz_d_xy, &
+         momx_d_z ,momy_d_z ,momz_d_z, &
+         mom_xyz_ad
   contains
   !
   subroutine momx_a(nx,ny,nz,dxi,dyi,dzfi,u,v,w,dudt)
@@ -270,7 +268,6 @@ module mod_mom
     end do
   end subroutine momz_p
   !
-#if defined(_IMPDIFF_1D)
   subroutine momx_d_z(nx,ny,nz,dzci,dzfi,visc,u,dudt)
     implicit none
     integer , intent(in) :: nx,ny,nz
@@ -420,7 +417,6 @@ module mod_mom
       end do
     end do
   end subroutine momz_d_xy
-#endif
   !
   subroutine cmpt_wallshear(n,is_cmpt,is_bound,l,dli,dzci,dzfi,visc,u,v,w,taux,tauy,tauz)
     use mod_param, only: cbcpre
@@ -632,6 +628,7 @@ module mod_mom
   end subroutine bulk_forcing
   !
   subroutine mom_xyz_ad(nx,ny,nz,dxi,dyi,dzci,dzfi,visc,u,v,w,dudt,dvdt,dwdt,dudtd,dvdtd,dwdtd)
+    use mod_param, only: is_impdiff,is_impdiff_1d
     !
     ! lump all r.h.s. of momentum terms (excluding pressure) into a single fast kernel
     !
@@ -658,6 +655,8 @@ module mod_mom
                 dudtd_xy_s,dudtd_z_s   , &
                 dvdtd_xy_s,dvdtd_z_s   , &
                 dwdtd_xy_s,dwdtd_z_s
+    !
+#if !defined(_LOOP_UNSWITCHING)
     !$acc parallel loop collapse(3) default(present) async(1) &
     !$acc private(u_ccm,u_pcm,u_cpm,u_cmc,u_pmc,u_mcc,u_ccc,u_pcc,u_mpc,u_cpc,u_cmp,u_mcp,u_ccp) &
     !$acc private(v_ccm,v_pcm,v_cpm,v_cmc,v_pmc,v_mcc,v_ccc,v_pcc,v_mpc,v_cpc,v_cmp,v_mcp,v_ccp) &
@@ -819,35 +818,428 @@ module mod_mom
                               -(uwip -uwim )*dxi - &
                                (vwjp -vwjm )*dyi - &
                                (wwkp -wwkm )*dzci(k)
-#if defined(_IMPDIFF)
-#if defined(_IMPDIFF_1D)
-          dudt_s = dudt_s + dudtd_xy_s
-          dvdt_s = dvdt_s + dvdtd_xy_s
-          dwdt_s = dwdt_s + dwdtd_xy_s
-          dudtd_s = dudtd_z_s
-          dvdtd_s = dvdtd_z_s
-          dwdtd_s = dwdtd_z_s
-#else
-          dudtd_s = dudtd_xy_s + dudtd_z_s
-          dvdtd_s = dvdtd_xy_s + dvdtd_z_s
-          dwdtd_s = dwdtd_xy_s + dwdtd_z_s
-#endif
-          dudt( i,j,k) = dudt_s
-          dvdt( i,j,k) = dvdt_s
-          dwdt( i,j,k) = dwdt_s
-          dudtd(i,j,k) = dudtd_s
-          dvdtd(i,j,k) = dvdtd_s
-          dwdtd(i,j,k) = dwdtd_s
-#else
-          dudt_s = dudt_s + dudtd_xy_s + dudtd_z_s
-          dvdt_s = dvdt_s + dvdtd_xy_s + dvdtd_z_s
-          dwdt_s = dwdt_s + dwdtd_xy_s + dwdtd_z_s
-          dudt(i,j,k) = dudt_s
-          dvdt(i,j,k) = dvdt_s
-          dwdt(i,j,k) = dwdt_s
-#endif
+          if(is_impdiff) then
+            if(is_impdiff_1d) then
+              dudt_s = dudt_s + dudtd_xy_s
+              dvdt_s = dvdt_s + dvdtd_xy_s
+              dwdt_s = dwdt_s + dwdtd_xy_s
+              dudtd_s = dudtd_z_s
+              dvdtd_s = dvdtd_z_s
+              dwdtd_s = dwdtd_z_s
+            else
+              dudtd_s = dudtd_xy_s + dudtd_z_s
+              dvdtd_s = dvdtd_xy_s + dvdtd_z_s
+              dwdtd_s = dwdtd_xy_s + dwdtd_z_s
+            end if
+            dudt( i,j,k) = dudt_s
+            dvdt( i,j,k) = dvdt_s
+            dwdt( i,j,k) = dwdt_s
+            dudtd(i,j,k) = dudtd_s
+            dvdtd(i,j,k) = dvdtd_s
+            dwdtd(i,j,k) = dwdtd_s
+          else
+            dudt_s = dudt_s + dudtd_xy_s + dudtd_z_s
+            dvdt_s = dvdt_s + dvdtd_xy_s + dvdtd_z_s
+            dwdt_s = dwdt_s + dwdtd_xy_s + dwdtd_z_s
+            dudt(i,j,k) = dudt_s
+            dvdt(i,j,k) = dvdt_s
+            dwdt(i,j,k) = dwdt_s
+          endif
         end do
       end do
     end do
+#else
+    if(.not.is_impdiff) then
+      !$acc parallel loop collapse(3) default(present) async(1) &
+      !$acc private(u_ccm,u_pcm,u_cpm,u_cmc,u_pmc,u_mcc,u_ccc,u_pcc,u_mpc,u_cpc,u_cmp,u_mcp,u_ccp) &
+      !$acc private(v_ccm,v_pcm,v_cpm,v_cmc,v_pmc,v_mcc,v_ccc,v_pcc,v_mpc,v_cpc,v_cmp,v_mcp,v_ccp) &
+      !$acc private(w_ccm,w_pcm,w_cpm,w_cmc,w_pmc,w_mcc,w_ccc,w_pcc,w_mpc,w_cpc,w_cmp,w_mcp,w_ccp) &
+      !$acc private(uuip,uuim,vujp,vujm,wukp,wukm) &
+      !$acc private(uvip,uvim,vvjp,vvjm,wvkp,wvkm) &
+      !$acc private(uwip,uwim,vwjp,vwjm,wwkp,wwkm) &
+      !$acc private(dudxp,dudxm,dudyp,dudym,dudzp,dudzm) &
+      !$acc private(dvdxp,dvdxm,dvdyp,dvdym,dvdzp,dvdzm) &
+      !$acc private(dwdxp,dwdxm,dwdyp,dwdym,dwdzp,dwdzm) &
+      !$acc private(dudt_s,dvdt_s,dwdt_s) &
+      !$acc private(dudtd_s,dvdtd_s,dwdtd_s) &
+      !$acc private(dudtd_xy_s,dudtd_z_s) &
+      !$acc private(dvdtd_xy_s,dvdtd_z_s) &
+      !$acc private(dwdtd_xy_s,dwdtd_z_s)
+      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared) &
+      !$OMP PRIVATE(u_ccm,u_pcm,u_cpm,u_cmc,u_pmc,u_mcc,u_ccc,u_pcc,u_mpc,u_cpc,u_cmp,u_mcp,u_ccp) &
+      !$OMP PRIVATE(v_ccm,v_pcm,v_cpm,v_cmc,v_pmc,v_mcc,v_ccc,v_pcc,v_mpc,v_cpc,v_cmp,v_mcp,v_ccp) &
+      !$OMP PRIVATE(w_ccm,w_pcm,w_cpm,w_cmc,w_pmc,w_mcc,w_ccc,w_pcc,w_mpc,w_cpc,w_cmp,w_mcp,w_ccp) &
+      !$OMP PRIVATE(uuip,uuim,vujp,vujm,wukp,wukm) &
+      !$OMP PRIVATE(uvip,uvim,vvjp,vvjm,wvkp,wvkm) &
+      !$OMP PRIVATE(uwip,uwim,vwjp,vwjm,wwkp,wwkm) &
+      !$OMP PRIVATE(dudxp,dudxm,dudyp,dudym,dudzp,dudzm) &
+      !$OMP PRIVATE(dvdxp,dvdxm,dvdyp,dvdym,dvdzp,dvdzm) &
+      !$OMP PRIVATE(dwdxp,dwdxm,dwdyp,dwdym,dwdzp,dwdzm) &
+      !$OMP PRIVATE(dudt_s,dvdt_s,dwdt_s) &
+      !$OMP PRIVATE(dudtd_s,dvdtd_s,dwdtd_s) &
+      !$OMP PRIVATE(dudtd_xy_s,dudtd_z_s) &
+      !$OMP PRIVATE(dvdtd_xy_s,dvdtd_z_s) &
+      !$OMP PRIVATE(dwdtd_xy_s,dwdtd_z_s)
+      do k=1,nz
+        do j=1,ny
+          do i=1,nx
+            u_ccm = u(i  ,j  ,k-1)
+            u_pcm = u(i+1,j  ,k-1)
+            u_cpm = u(i  ,j+1,k-1)
+            u_cmc = u(i  ,j-1,k  )
+            u_pmc = u(i+1,j-1,k  )
+            u_mcc = u(i-1,j  ,k  )
+            u_ccc = u(i  ,j  ,k  )
+            u_pcc = u(i+1,j  ,k  )
+            u_mpc = u(i-1,j+1,k  )
+            u_cpc = u(i  ,j+1,k  )
+            u_cmp = u(i  ,j-1,k+1)
+            u_mcp = u(i-1,j  ,k+1)
+            u_ccp = u(i  ,j  ,k+1)
+            v_ccm = v(i  ,j  ,k-1)
+            v_pcm = v(i+1,j  ,k-1)
+            v_cpm = v(i  ,j+1,k-1)
+            v_cmc = v(i  ,j-1,k  )
+            v_pmc = v(i+1,j-1,k  )
+            v_mcc = v(i-1,j  ,k  )
+            v_ccc = v(i  ,j  ,k  )
+            v_pcc = v(i+1,j  ,k  )
+            v_mpc = v(i-1,j+1,k  )
+            v_cpc = v(i  ,j+1,k  )
+            v_cmp = v(i  ,j-1,k+1)
+            v_mcp = v(i-1,j  ,k+1)
+            v_ccp = v(i  ,j  ,k+1)
+            w_ccm = w(i  ,j  ,k-1)
+            w_pcm = w(i+1,j  ,k-1)
+            w_cpm = w(i  ,j+1,k-1)
+            w_cmc = w(i  ,j-1,k  )
+            w_pmc = w(i+1,j-1,k  )
+            w_mcc = w(i-1,j  ,k  )
+            w_ccc = w(i  ,j  ,k  )
+            w_pcc = w(i+1,j  ,k  )
+            w_mpc = w(i-1,j+1,k  )
+            w_cpc = w(i  ,j+1,k  )
+            w_cmp = w(i  ,j-1,k+1)
+            w_mcp = w(i-1,j  ,k+1)
+            w_ccp = w(i  ,j  ,k+1)
+            dudxp = (u_pcc-u_ccc)*dxi
+            dudxm = (u_ccc-u_mcc)*dxi
+            dudyp = (u_cpc-u_ccc)*dyi
+            dudym = (u_ccc-u_cmc)*dyi
+            dudzp = (u_ccp-u_ccc)*dzci(k)
+            dudzm = (u_ccc-u_ccm)*dzci(k-1)
+            uuip  = 0.25*(u_pcc+u_ccc)*(u_ccc+u_pcc)
+            uuim  = 0.25*(u_mcc+u_ccc)*(u_ccc+u_mcc)
+            vujp  = 0.25*(v_pcc+v_ccc)*(u_ccc+u_cpc)
+            vujm  = 0.25*(v_pmc+v_cmc)*(u_ccc+u_cmc)
+            wukp  = 0.25*(w_pcc+w_ccc)*(u_ccc+u_ccp)
+            wukm  = 0.25*(w_pcm+w_ccm)*(u_ccc+u_ccm)
+            dudtd_xy_s = visc*(dudxp-dudxm)*dxi + visc*(dudyp-dudym)*dyi
+            dudtd_z_s  = visc*(dudzp-dudzm)*dzfi(k)
+            dudt_s     = -(uuip-uuim)*dxi - (vujp-vujm)*dyi - (wukp-wukm)*dzfi(k)
+            dvdxp = (v_pcc-v_ccc)*dxi
+            dvdxm = (v_ccc-v_mcc)*dxi
+            dvdyp = (v_cpc-v_ccc)*dyi
+            dvdym = (v_ccc-v_cmc)*dyi
+            dvdzp = (v_ccp-v_ccc)*dzci(k)
+            dvdzm = (v_ccc-v_ccm)*dzci(k-1)
+            uvip  = 0.25*(u_ccc+u_cpc)*(v_ccc+v_pcc)
+            uvim  = 0.25*(u_mcc+u_mpc)*(v_ccc+v_mcc)
+            vvjp  = 0.25*(v_ccc+v_cpc)*(v_ccc+v_cpc)
+            vvjm  = 0.25*(v_ccc+v_cmc)*(v_ccc+v_cmc)
+            wvkp  = 0.25*(w_ccc+w_cpc)*(v_ccc+v_ccp)
+            wvkm  = 0.25*(w_ccm+w_cpm)*(v_ccc+v_ccm)
+            dvdtd_xy_s = visc*(dvdxp-dvdxm)*dxi + visc*(dvdyp-dvdym)*dyi
+            dvdtd_z_s  = visc*(dvdzp-dvdzm)*dzfi(k)
+            dvdt_s     = -(uvip-uvim)*dxi - (vvjp-vvjm)*dyi - (wvkp-wvkm)*dzfi(k)
+            dwdxp = (w_pcc-w_ccc)*dxi
+            dwdxm = (w_ccc-w_mcc)*dxi
+            dwdyp = (w_cpc-w_ccc)*dyi
+            dwdym = (w_ccc-w_cmc)*dyi
+            dwdzp = (w_ccp-w_ccc)*dzfi(k+1)
+            dwdzm = (w_ccc-w_ccm)*dzfi(k)
+            uwip  = 0.25*(u_ccc+u_ccp)*(w_ccc+w_pcc)
+            uwim  = 0.25*(u_mcc+u_mcp)*(w_ccc+w_mcc)
+            vwjp  = 0.25*(v_ccc+v_ccp)*(w_ccc+w_cpc)
+            vwjm  = 0.25*(v_cmc+v_cmp)*(w_ccc+w_cmc)
+            wwkp  = 0.25*(w_ccc+w_ccp)*(w_ccc+w_ccp)
+            wwkm  = 0.25*(w_ccc+w_ccm)*(w_ccc+w_ccm)
+            dwdtd_xy_s = visc*(dwdxp-dwdxm)*dxi + visc*(dwdyp-dwdym)*dyi
+            dwdtd_z_s  = visc*(dwdzp-dwdzm)*dzci(k)
+            dwdt_s     = -(uwip-uwim)*dxi - (vwjp-vwjm)*dyi - (wwkp-wwkm)*dzfi(k)
+            dudt_s = dudt_s + dudtd_xy_s + dudtd_z_s
+            dvdt_s = dvdt_s + dvdtd_xy_s + dvdtd_z_s
+            dwdt_s = dwdt_s + dwdtd_xy_s + dwdtd_z_s
+            dudt(i,j,k) = dudt_s
+            dvdt(i,j,k) = dvdt_s
+            dwdt(i,j,k) = dwdt_s
+          end do
+        end do
+      end do
+    else if(is_impdiff .and. is_impdiff_1d) then
+      !$acc parallel loop collapse(3) default(present) async(1) &
+      !$acc private(u_ccm,u_pcm,u_cpm,u_cmc,u_pmc,u_mcc,u_ccc,u_pcc,u_mpc,u_cpc,u_cmp,u_mcp,u_ccp) &
+      !$acc private(v_ccm,v_pcm,v_cpm,v_cmc,v_pmc,v_mcc,v_ccc,v_pcc,v_mpc,v_cpc,v_cmp,v_mcp,v_ccp) &
+      !$acc private(w_ccm,w_pcm,w_cpm,w_cmc,w_pmc,w_mcc,w_ccc,w_pcc,w_mpc,w_cpc,w_cmp,w_mcp,w_ccp) &
+      !$acc private(uuip,uuim,vujp,vujm,wukp,wukm) &
+      !$acc private(uvip,uvim,vvjp,vvjm,wvkp,wvkm) &
+      !$acc private(uwip,uwim,vwjp,vwjm,wwkp,wwkm) &
+      !$acc private(dudxp,dudxm,dudyp,dudym,dudzp,dudzm) &
+      !$acc private(dvdxp,dvdxm,dvdyp,dvdym,dvdzp,dvdzm) &
+      !$acc private(dwdxp,dwdxm,dwdyp,dwdym,dwdzp,dwdzm) &
+      !$acc private(dudt_s,dvdt_s,dwdt_s) &
+      !$acc private(dudtd_s,dvdtd_s,dwdtd_s) &
+      !$acc private(dudtd_xy_s,dudtd_z_s) &
+      !$acc private(dvdtd_xy_s,dvdtd_z_s) &
+      !$acc private(dwdtd_xy_s,dwdtd_z_s)
+      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared) &
+      !$OMP PRIVATE(u_ccm,u_pcm,u_cpm,u_cmc,u_pmc,u_mcc,u_ccc,u_pcc,u_mpc,u_cpc,u_cmp,u_mcp,u_ccp) &
+      !$OMP PRIVATE(v_ccm,v_pcm,v_cpm,v_cmc,v_pmc,v_mcc,v_ccc,v_pcc,v_mpc,v_cpc,v_cmp,v_mcp,v_ccp) &
+      !$OMP PRIVATE(w_ccm,w_pcm,w_cpm,w_cmc,w_pmc,w_mcc,w_ccc,w_pcc,w_mpc,w_cpc,w_cmp,w_mcp,w_ccp) &
+      !$OMP PRIVATE(uuip,uuim,vujp,vujm,wukp,wukm) &
+      !$OMP PRIVATE(uvip,uvim,vvjp,vvjm,wvkp,wvkm) &
+      !$OMP PRIVATE(uwip,uwim,vwjp,vwjm,wwkp,wwkm) &
+      !$OMP PRIVATE(dudxp,dudxm,dudyp,dudym,dudzp,dudzm) &
+      !$OMP PRIVATE(dvdxp,dvdxm,dvdyp,dvdym,dvdzp,dvdzm) &
+      !$OMP PRIVATE(dwdxp,dwdxm,dwdyp,dwdym,dwdzp,dwdzm) &
+      !$OMP PRIVATE(dudt_s,dvdt_s,dwdt_s) &
+      !$OMP PRIVATE(dudtd_s,dvdtd_s,dwdtd_s) &
+      !$OMP PRIVATE(dudtd_xy_s,dudtd_z_s) &
+      !$OMP PRIVATE(dvdtd_xy_s,dvdtd_z_s) &
+      !$OMP PRIVATE(dwdtd_xy_s,dwdtd_z_s)
+      do k=1,nz
+        do j=1,ny
+          do i=1,nx
+            u_ccm = u(i  ,j  ,k-1)
+            u_pcm = u(i+1,j  ,k-1)
+            u_cpm = u(i  ,j+1,k-1)
+            u_cmc = u(i  ,j-1,k  )
+            u_pmc = u(i+1,j-1,k  )
+            u_mcc = u(i-1,j  ,k  )
+            u_ccc = u(i  ,j  ,k  )
+            u_pcc = u(i+1,j  ,k  )
+            u_mpc = u(i-1,j+1,k  )
+            u_cpc = u(i  ,j+1,k  )
+            u_cmp = u(i  ,j-1,k+1)
+            u_mcp = u(i-1,j  ,k+1)
+            u_ccp = u(i  ,j  ,k+1)
+            v_ccm = v(i  ,j  ,k-1)
+            v_pcm = v(i+1,j  ,k-1)
+            v_cpm = v(i  ,j+1,k-1)
+            v_cmc = v(i  ,j-1,k  )
+            v_pmc = v(i+1,j-1,k  )
+            v_mcc = v(i-1,j  ,k  )
+            v_ccc = v(i  ,j  ,k  )
+            v_pcc = v(i+1,j  ,k  )
+            v_mpc = v(i-1,j+1,k  )
+            v_cpc = v(i  ,j+1,k  )
+            v_cmp = v(i  ,j-1,k+1)
+            v_mcp = v(i-1,j  ,k+1)
+            v_ccp = v(i  ,j  ,k+1)
+            w_ccm = w(i  ,j  ,k-1)
+            w_pcm = w(i+1,j  ,k-1)
+            w_cpm = w(i  ,j+1,k-1)
+            w_cmc = w(i  ,j-1,k  )
+            w_pmc = w(i+1,j-1,k  )
+            w_mcc = w(i-1,j  ,k  )
+            w_ccc = w(i  ,j  ,k  )
+            w_pcc = w(i+1,j  ,k  )
+            w_mpc = w(i-1,j+1,k  )
+            w_cpc = w(i  ,j+1,k  )
+            w_cmp = w(i  ,j-1,k+1)
+            w_mcp = w(i-1,j  ,k+1)
+            w_ccp = w(i  ,j  ,k+1)
+            dudxp = (u_pcc-u_ccc)*dxi
+            dudxm = (u_ccc-u_mcc)*dxi
+            dudyp = (u_cpc-u_ccc)*dyi
+            dudym = (u_ccc-u_cmc)*dyi
+            dudzp = (u_ccp-u_ccc)*dzci(k)
+            dudzm = (u_ccc-u_ccm)*dzci(k-1)
+            uuip  = 0.25*(u_pcc+u_ccc)*(u_ccc+u_pcc)
+            uuim  = 0.25*(u_mcc+u_ccc)*(u_ccc+u_mcc)
+            vujp  = 0.25*(v_pcc+v_ccc)*(u_ccc+u_cpc)
+            vujm  = 0.25*(v_pmc+v_cmc)*(u_ccc+u_cmc)
+            wukp  = 0.25*(w_pcc+w_ccc)*(u_ccc+u_ccp)
+            wukm  = 0.25*(w_pcm+w_ccm)*(u_ccc+u_ccm)
+            dudtd_xy_s = visc*(dudxp-dudxm)*dxi + visc*(dudyp-dudym)*dyi
+            dudtd_z_s  = visc*(dudzp-dudzm)*dzfi(k)
+            dudt_s     = -(uuip-uuim)*dxi - (vujp-vujm)*dyi - (wukp-wukm)*dzfi(k)
+            dvdxp = (v_pcc-v_ccc)*dxi
+            dvdxm = (v_ccc-v_mcc)*dxi
+            dvdyp = (v_cpc-v_ccc)*dyi
+            dvdym = (v_ccc-v_cmc)*dyi
+            dvdzp = (v_ccp-v_ccc)*dzci(k)
+            dvdzm = (v_ccc-v_ccm)*dzci(k-1)
+            uvip  = 0.25*(u_ccc+u_cpc)*(v_ccc+v_pcc)
+            uvim  = 0.25*(u_mcc+u_mpc)*(v_ccc+v_mcc)
+            vvjp  = 0.25*(v_ccc+v_cpc)*(v_ccc+v_cpc)
+            vvjm  = 0.25*(v_ccc+v_cmc)*(v_ccc+v_cmc)
+            wvkp  = 0.25*(w_ccc+w_cpc)*(v_ccc+v_ccp)
+            wvkm  = 0.25*(w_ccm+w_cpm)*(v_ccc+v_ccm)
+            dvdtd_xy_s = visc*(dvdxp-dvdxm)*dxi + visc*(dvdyp-dvdym)*dyi
+            dvdtd_z_s  = visc*(dvdzp-dvdzm)*dzfi(k)
+            dvdt_s     = -(uvip-uvim)*dxi - (vvjp-vvjm)*dyi - (wvkp-wvkm)*dzfi(k)
+            dwdxp = (w_pcc-w_ccc)*dxi
+            dwdxm = (w_ccc-w_mcc)*dxi
+            dwdyp = (w_cpc-w_ccc)*dyi
+            dwdym = (w_ccc-w_cmc)*dyi
+            dwdzp = (w_ccp-w_ccc)*dzfi(k+1)
+            dwdzm = (w_ccc-w_ccm)*dzfi(k)
+            uwip  = 0.25*(u_ccc+u_ccp)*(w_ccc+w_pcc)
+            uwim  = 0.25*(u_mcc+u_mcp)*(w_ccc+w_mcc)
+            vwjp  = 0.25*(v_ccc+v_ccp)*(w_ccc+w_cpc)
+            vwjm  = 0.25*(v_cmc+v_cmp)*(w_ccc+w_cmc)
+            wwkp  = 0.25*(w_ccc+w_ccp)*(w_ccc+w_ccp)
+            wwkm  = 0.25*(w_ccc+w_ccm)*(w_ccc+w_ccm)
+            dwdtd_xy_s = visc*(dwdxp-dwdxm)*dxi + visc*(dwdyp-dwdym)*dyi
+            dwdtd_z_s  = visc*(dwdzp-dwdzm)*dzfi(k)
+            dwdt_s     = -(uwip-uwim)*dxi - (vwjp-vwjm)*dyi - (wwkp-wwkm)*dzfi(k)
+            dudt_s = dudt_s + dudtd_xy_s
+            dvdt_s = dvdt_s + dvdtd_xy_s
+            dwdt_s = dwdt_s + dwdtd_xy_s
+            dudtd_s = dudtd_z_s
+            dvdtd_s = dvdtd_z_s
+            dwdtd_s = dwdtd_z_s
+            dudt(i,j,k) = dudt_s
+            dvdt(i,j,k) = dvdt_s
+            dwdt(i,j,k) = dwdt_s
+            dudtd(i,j,k) = dudtd_s
+            dvdtd(i,j,k) = dvdtd_s
+            dwdtd(i,j,k) = dwdtd_s
+          end do
+        end do
+      end do
+    else if(is_impdiff) then
+      !$acc parallel loop collapse(3) default(present) async(1) &
+      !$acc private(u_ccm,u_pcm,u_cpm,u_cmc,u_pmc,u_mcc,u_ccc,u_pcc,u_mpc,u_cpc,u_cmp,u_mcp,u_ccp) &
+      !$acc private(v_ccm,v_pcm,v_cpm,v_cmc,v_pmc,v_mcc,v_ccc,v_pcc,v_mpc,v_cpc,v_cmp,v_mcp,v_ccp) &
+      !$acc private(w_ccm,w_pcm,w_cpm,w_cmc,w_pmc,w_mcc,w_ccc,w_pcc,w_mpc,w_cpc,w_cmp,w_mcp,w_ccp) &
+      !$acc private(uuip,uuim,vujp,vujm,wukp,wukm) &
+      !$acc private(uvip,uvim,vvjp,vvjm,wvkp,wvkm) &
+      !$acc private(uwip,uwim,vwjp,vwjm,wwkp,wwkm) &
+      !$acc private(dudxp,dudxm,dudyp,dudym,dudzp,dudzm) &
+      !$acc private(dvdxp,dvdxm,dvdyp,dvdym,dvdzp,dvdzm) &
+      !$acc private(dwdxp,dwdxm,dwdyp,dwdym,dwdzp,dwdzm) &
+      !$acc private(dudt_s,dvdt_s,dwdt_s) &
+      !$acc private(dudtd_s,dvdtd_s,dwdtd_s) &
+      !$acc private(dudtd_xy_s,dudtd_z_s) &
+      !$acc private(dvdtd_xy_s,dvdtd_z_s) &
+      !$acc private(dwdtd_xy_s,dwdtd_z_s)
+      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared) &
+      !$OMP PRIVATE(u_ccm,u_pcm,u_cpm,u_cmc,u_pmc,u_mcc,u_ccc,u_pcc,u_mpc,u_cpc,u_cmp,u_mcp,u_ccp) &
+      !$OMP PRIVATE(v_ccm,v_pcm,v_cpm,v_cmc,v_pmc,v_mcc,v_ccc,v_pcc,v_mpc,v_cpc,v_cmp,v_mcp,v_ccp) &
+      !$OMP PRIVATE(w_ccm,w_pcm,w_cpm,w_cmc,w_pmc,w_mcc,w_ccc,w_pcc,w_mpc,w_cpc,w_cmp,w_mcp,w_ccp) &
+      !$OMP PRIVATE(uuip,uuim,vujp,vujm,wukp,wukm) &
+      !$OMP PRIVATE(uvip,uvim,vvjp,vvjm,wvkp,wvkm) &
+      !$OMP PRIVATE(uwip,uwim,vwjp,vwjm,wwkp,wwkm) &
+      !$OMP PRIVATE(dudxp,dudxm,dudyp,dudym,dudzp,dudzm) &
+      !$OMP PRIVATE(dvdxp,dvdxm,dvdyp,dvdym,dvdzp,dvdzm) &
+      !$OMP PRIVATE(dwdxp,dwdxm,dwdyp,dwdym,dwdzp,dwdzm) &
+      !$OMP PRIVATE(dudt_s,dvdt_s,dwdt_s) &
+      !$OMP PRIVATE(dudtd_s,dvdtd_s,dwdtd_s) &
+      !$OMP PRIVATE(dudtd_xy_s,dudtd_z_s) &
+      !$OMP PRIVATE(dvdtd_xy_s,dvdtd_z_s) &
+      !$OMP PRIVATE(dwdtd_xy_s,dwdtd_z_s)
+      do k=1,nz
+        do j=1,ny
+          do i=1,nx
+            u_ccm = u(i  ,j  ,k-1)
+            u_pcm = u(i+1,j  ,k-1)
+            u_cpm = u(i  ,j+1,k-1)
+            u_cmc = u(i  ,j-1,k  )
+            u_pmc = u(i+1,j-1,k  )
+            u_mcc = u(i-1,j  ,k  )
+            u_ccc = u(i  ,j  ,k  )
+            u_pcc = u(i+1,j  ,k  )
+            u_mpc = u(i-1,j+1,k  )
+            u_cpc = u(i  ,j+1,k  )
+            u_cmp = u(i  ,j-1,k+1)
+            u_mcp = u(i-1,j  ,k+1)
+            u_ccp = u(i  ,j  ,k+1)
+            v_ccm = v(i  ,j  ,k-1)
+            v_pcm = v(i+1,j  ,k-1)
+            v_cpm = v(i  ,j+1,k-1)
+            v_cmc = v(i  ,j-1,k  )
+            v_pmc = v(i+1,j-1,k  )
+            v_mcc = v(i-1,j  ,k  )
+            v_ccc = v(i  ,j  ,k  )
+            v_pcc = v(i+1,j  ,k  )
+            v_mpc = v(i-1,j+1,k  )
+            v_cpc = v(i  ,j+1,k  )
+            v_cmp = v(i  ,j-1,k+1)
+            v_mcp = v(i-1,j  ,k+1)
+            v_ccp = v(i  ,j  ,k+1)
+            w_ccm = w(i  ,j  ,k-1)
+            w_pcm = w(i+1,j  ,k-1)
+            w_cpm = w(i  ,j+1,k-1)
+            w_cmc = w(i  ,j-1,k  )
+            w_pmc = w(i+1,j-1,k  )
+            w_mcc = w(i-1,j  ,k  )
+            w_ccc = w(i  ,j  ,k  )
+            w_pcc = w(i+1,j  ,k  )
+            w_mpc = w(i-1,j+1,k  )
+            w_cpc = w(i  ,j+1,k  )
+            w_cmp = w(i  ,j-1,k+1)
+            w_mcp = w(i-1,j  ,k+1)
+            w_ccp = w(i  ,j  ,k+1)
+            dudxp = (u_pcc-u_ccc)*dxi
+            dudxm = (u_ccc-u_mcc)*dxi
+            dudyp = (u_cpc-u_ccc)*dyi
+            dudym = (u_ccc-u_cmc)*dyi
+            dudzp = (u_ccp-u_ccc)*dzci(k)
+            dudzm = (u_ccc-u_ccm)*dzci(k-1)
+            uuip  = 0.25*(u_pcc+u_ccc)*(u_ccc+u_pcc)
+            uuim  = 0.25*(u_mcc+u_ccc)*(u_ccc+u_mcc)
+            vujp  = 0.25*(v_pcc+v_ccc)*(u_ccc+u_cpc)
+            vujm  = 0.25*(v_pmc+v_cmc)*(u_ccc+u_cmc)
+            wukp  = 0.25*(w_pcc+w_ccc)*(u_ccc+u_ccp)
+            wukm  = 0.25*(w_pcm+w_ccm)*(u_ccc+u_ccm)
+            dudtd_xy_s = visc*(dudxp-dudxm)*dxi + visc*(dudyp-dudym)*dyi
+            dudtd_z_s  = visc*(dudzp-dudzm)*dzfi(k)
+            dudt_s     = -(uuip-uuim)*dxi - (vujp-vujm)*dyi - (wukp-wukm)*dzfi(k)
+            dvdxp = (v_pcc-v_ccc)*dxi
+            dvdxm = (v_ccc-v_mcc)*dxi
+            dvdyp = (v_cpc-v_ccc)*dyi
+            dvdym = (v_ccc-v_cmc)*dyi
+            dvdzp = (v_ccp-v_ccc)*dzci(k)
+            dvdzm = (v_ccc-v_ccm)*dzci(k-1)
+            uvip  = 0.25*(u_ccc+u_cpc)*(v_ccc+v_pcc)
+            uvim  = 0.25*(u_mcc+u_mpc)*(v_ccc+v_mcc)
+            vvjp  = 0.25*(v_ccc+v_cpc)*(v_ccc+v_cpc)
+            vvjm  = 0.25*(v_ccc+v_cmc)*(v_ccc+v_cmc)
+            wvkp  = 0.25*(w_ccc+w_cpc)*(v_ccc+v_ccp)
+            wvkm  = 0.25*(w_ccm+w_cpm)*(v_ccc+v_ccm)
+            dvdtd_xy_s = visc*(dvdxp-dvdxm)*dxi + visc*(dvdyp-dvdym)*dyi
+            dvdtd_z_s  = visc*(dvdzp-dvdzm)*dzfi(k)
+            dvdt_s     = -(uvip-uvim)*dxi - (vvjp-vvjm)*dyi - (wvkp-wvkm)*dzfi(k)
+            dwdxp = (w_pcc-w_ccc)*dxi
+            dwdxm = (w_ccc-w_mcc)*dxi
+            dwdyp = (w_cpc-w_ccc)*dyi
+            dwdym = (w_ccc-w_cmc)*dyi
+            dwdzp = (w_ccp-w_ccc)*dzfi(k+1)
+            dwdzm = (w_ccc-w_ccm)*dzfi(k)
+            uwip  = 0.25*(u_ccc+u_ccp)*(w_ccc+w_pcc)
+            uwim  = 0.25*(u_mcc+u_mcp)*(w_ccc+w_mcc)
+            vwjp  = 0.25*(v_ccc+v_ccp)*(w_ccc+w_cpc)
+            vwjm  = 0.25*(v_cmc+v_cmp)*(w_ccc+w_cmc)
+            wwkp  = 0.25*(w_ccc+w_ccp)*(w_ccc+w_ccp)
+            wwkm  = 0.25*(w_ccc+w_ccm)*(w_ccc+w_ccm)
+            dwdtd_xy_s = visc*(dwdxp-dwdxm)*dxi + visc*(dwdyp-dwdym)*dyi
+            dwdtd_z_s  = visc*(dwdzp-dwdzm)*dzfi(k)
+            dwdt_s     = -(uwip-uwim)*dxi - (vwjp-vwjm)*dyi - (wwkp-wwkm)*dzfi(k)
+            dudtd_s = dudtd_xy_s + dudtd_z_s
+            dvdtd_s = dvdtd_xy_s + dvdtd_z_s
+            dwdtd_s = dwdtd_xy_s + dwdtd_z_s
+            dudt(i,j,k) = dudt_s
+            dvdt(i,j,k) = dvdt_s
+            dwdt(i,j,k) = dwdt_s
+            dudtd(i,j,k) = dudtd_s
+            dvdtd(i,j,k) = dvdtd_s
+            dwdtd(i,j,k) = dwdtd_s
+          end do
+        end do
+      end do
+    end if
+#endif
   end subroutine mom_xyz_ad
 end module mod_mom

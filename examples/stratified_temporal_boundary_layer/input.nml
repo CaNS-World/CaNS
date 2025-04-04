@@ -23,20 +23,30 @@ is_forced(1:3) = F, F, F
 velf(1:3) = 0., 0., 0.
 gacc(1:3) = 0., 0., -1.
 nscal = 1
-dims(1:2) = 0, 0
+dims(1:2) = 0, 0, ipencil_axis = 1
 /
 
 &scalar
-iniscal(:)         = 'tbl'
-alphai(:)          = 355   ! = Pr/nu = 500 * 0.71
-beta               = 0.004 ! = Gr/Re_D^2, Gr = 1e3, Re_D=500
-cbcscal(0:1,1:3,:) = 'P'  ,'P' ,  'P','P',  'D','N'
-bcscal(0:1,1:3,:)  =  0.,0. ,   0.,0. ,   1.,0.
-is_sforced(:)      = F
-scalf(:)           = 0.
+iniscal(:)             = 'tbl'
+alphai(:)              = 355   ! = Pr/nu = 500 * 0.71
+beta                   = 0.004 ! = Gr/Re_D^2, Gr = 1e3, Re_D=500
+cbcscal(0:1,1:3,:)     = 'P'  ,'P' ,  'P','P',  'D','N'
+bcscal(0:1,1:3,:)      =  0.,0. ,   0.,0. ,   1.,0.
+is_sforced(:)          = F
+scalf(:)               = 0.
+is_boussinesq_buoyancy = T
 /
 
 &cudecomp
 cudecomp_t_comm_backend = 0, cudecomp_is_t_enable_nccl = T, cudecomp_is_t_enable_nvshmem = T
 cudecomp_h_comm_backend = 0, cudecomp_is_h_enable_nccl = T, cudecomp_is_h_enable_nvshmem = T
+/
+
+&numerics
+is_impdiff = F, is_impdiff_1d = F
+is_poisson_pcr_tdma = F
+/
+
+&other_options
+is_debug = T,is_timing = T
 /
