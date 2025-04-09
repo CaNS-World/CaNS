@@ -20,7 +20,10 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 ## News
 
-**[09/04/2025]:** The writing of checkpoint files has changed. To allow for more flexibility, CaNS now writes one file per scalar field, where each velocity component, pressure, and scalar fields is stored in a different checkpoint file.
+### _Major Update:_ `CaNS 3.0` _is out!_ :tada:
+See the [Release Notes](https://github.com/CaNS-World/CaNS/releases/tag/v3.0.0) for more details.
+
+**[10/04/2025]:** The writing of checkpoint files has changed. To allow for more flexibility, CaNS now writes one file per scalar field, where each velocity component, pressure, and scalar fields is stored in a different checkpoint file.
 
 **[14/02/2025]:** Most pre-processor macros have been turned into runtime arguments, which allow for a much simpler control of the computational setup without re-compiling the source. See the updated [`docs/INFO_INPUT.md`](docs/INFO_INPUT.md) and [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details.
 
@@ -31,9 +34,6 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 **[29/01/2025]:** To avoid having the `build.conf` and `configs/*.mk` files - often changed by the user - tracked by git, the compiling behavior has changed slightly; see Compilation below.
 
 **[28/01/2025]:** Input file `input.nml` has changed slightly, to allow for prescribing a fixed time step size `dt_f`.
-
-### _Major Update:_ [`CaNS 2.0`](docs/CaNS-2.0.md) _is finally out!_ :tada:
-**`CaNS 2.0` has many new features, being the result of the most significant revision effort undertaken so far.** It includes major improvements in performance and robustness, and a fresh hardware-adaptive many-GPU parallelization using the [*cuDecomp*](https://github.com/NVIDIA/cuDecomp) library. See [`docs/CaNS-2.0.md`](docs/CaNS-2.0.md) for a detailed description of all new features. CaNS 2.0 has been tested and observed to run efficiently on some major GPU-accelerated clusters such as Perlmutter, Summit, and Marconi 100.
 
 ## Features
 
