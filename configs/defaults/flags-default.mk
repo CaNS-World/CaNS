@@ -88,6 +88,7 @@ CUSTOM_DEFINES =  DEBUG \
 				  IMPDIFF IMPDIFF_1D \
 				  DECOMP_X DECOMP_Y DECOMP_Z \
 				  SINGLE_PRECISION \
+				  POISSON_PCR_TDMA \
 				  DECOMP_X_IO \
                   USE_NVTX \
 				  GRIDPOINT_NATURAL_CHANNEL \
@@ -108,6 +109,10 @@ DEFINES += -D_DECOMP_Z
 endif
 
 DEFINES := $(sort $(DEFINES)) # remove duplicates
+
+ifeq ($(strip $(BOUSSINESQ_BUOYANCY)),1)
+DEFINES += -D_BOUSSINESQ_BUOYANCY
+endif
 
 ifeq ($(strip $(OPENMP)),1)
 ifeq      ($(strip $(FCOMP)),GNU)

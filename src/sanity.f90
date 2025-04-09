@@ -51,11 +51,14 @@ module mod_sanity
 #if defined(_IMPDIFF_1D) && !defined(_IMPDIFF)
     if(myid == 0)  print*, 'ERROR: `_IMPDIFF_1D` cpp macro requires building with `_IMPDIFF` too.'; call abortit
 #endif
-#if defined(_IMPDIFF_1D) && !defined(_DECOMP_Z)
+#if defined(_IMPDIFF_1D) && !defined(_DECOMP_Z) && !defined(_POISSON_PCR_TDMA)
     if(dims(2) > 1) then
       if(myid == 0)  print*, 'WARNING: a run with implicit Z diffusion (`_IMPDIFF_1D`) is much more efficient &
                                      & when the flow is not decomposed along the Z direction.'
     end if
+#endif
+#if defined(_IMPDIFF_1D) && defined(_POISSON_PCR_TDMA) && defined(_DECOMP_Z) && !defined(_OPENACC)
+    if(myid == 0)  print*, 'ERROR: `_IMPDIFF_1D` w/ `_POISSON_PCR_TDMA` requires X/Y-aligned pencils.'; call abortit
 #endif
   end subroutine test_sanity_input
   !
@@ -81,7 +84,7 @@ module mod_sanity
     ii = pack([1,2,3],[1,2,3] /= ipencil_axis)
     passed_loc = all(dims(:)<=ng(ii)).and.all(dims(:)>=1)
     if(myid == 0.and.(.not.passed_loc)) &
-      print*, 'ERROR: 1 <= dims(:) <= [itot,jtot], or [itot,ktot], or [jtot ktot] depending on the decomposition.'
+      print*, 'ERROR: 1 <= dims(:) <= [ng(1),ng(2)], or [ng(1),ng(3)], or [ng(2),ng(3)] depending on the decomposition.'
     passed = passed.and.passed_loc
   end subroutine chk_dims
   !
