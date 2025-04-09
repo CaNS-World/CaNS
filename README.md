@@ -20,6 +20,8 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 ## News
 
+**[09/04/2025]:** The writing of checkpoint files has changed. To allow for more flexibility, CaNS now writes one file per scalar field, where each velocity component, pressure, and scalar fields is stored in a different checkpoint file.
+
 **[14/02/2025]:** Most pre-processor macros have been turned into runtime arguments, which allow for a much simpler control of the computational setup without re-compiling the source. See the updated [`docs/INFO_INPUT.md`](docs/INFO_INPUT.md) and [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details.
 
 **[08/02/2025]:** A new approach for solving the Poisson equation based on a Parallel Cyclic Reduction -- Tridiagonal Matrix Algorithm (PCR-TDMA) approach. See [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details.
