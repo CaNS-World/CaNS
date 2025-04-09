@@ -8,16 +8,13 @@ module mod_solve_helmholtz
   use, intrinsic :: iso_c_binding, only: C_PTR
   use mod_types
   use mod_bound, only: updt_rhs_b
+  use mod_param, only: is_impdiff_1d
 #if !defined(_OPENACC)
   use mod_solver    , only: solver
-#if defined(_IMPDIFF_1D)
   use mod_solver    , only: solver_gaussel_z
-#endif
 #else
   use mod_solver_gpu, only: solver => solver_gpu
-#if defined(_IMPDIFF_1D)
   use mod_solver_gpu, only: solver_gaussel_z => solver_gaussel_z_gpu
-#endif
 #endif
   implicit none
   private
@@ -68,30 +65,40 @@ module mod_solve_helmholtz
       !$acc enter data create(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz) async(1)
     end if
     !
-    !$acc kernels default(present) async(1)
-    !$OMP PARALLEL WORKSHARE
-#if !defined(_IMPDIFF_1D)
-    rhsbx(:,:,0:1) = rhsbxi(:,:,0:1)*alpha
-    rhsby(:,:,0:1) = rhsbyi(:,:,0:1)*alpha
-#endif
-    rhsbz(:,:,0:1) = rhsbzi(:,:,0:1)*alpha
-    !$OMP END PARALLEL WORKSHARE
-    !$acc end kernels
+    if(.not.is_impdiff_1d) then
+      !$acc kernels default(present) async(1)
+      !$OMP PARALLEL WORKSHARE
+      rhsbx(:,:,0:1) = rhsbxi(:,:,0:1)*alpha
+      rhsby(:,:,0:1) = rhsbyi(:,:,0:1)*alpha
+      rhsbz(:,:,0:1) = rhsbzi(:,:,0:1)*alpha
+      !$OMP END PARALLEL WORKSHARE
+      !$acc end kernels
+    else
+      !$acc kernels default(present) async(1)
+      !$OMP PARALLEL WORKSHARE
+      rhsbz(:,:,0:1) = rhsbzi(:,:,0:1)*alpha
+      !$OMP END PARALLEL WORKSHARE
+      !$acc end kernels
+    end if
     call updt_rhs_b(c_or_f,cbc,n,is_bound,rhsbx,rhsby,rhsbz,p)
     !$acc kernels default(present) async(1)
     !$OMP PARALLEL WORKSHARE
     a(:) = ai(:)*alpha
     b(:) = bi(:)*alpha + 1.
     c(:) = ci(:)*alpha
-#if !defined(_IMPDIFF_1D)
-    lambdaxy(:,:) = lambdaxyi(:,:)*alpha
-#endif
     !$OMP END PARALLEL WORKSHARE
     !$acc end kernels
-#if !defined(_IMPDIFF_1D)
-    call solver(n,ng,arrplan,normfft,lambdaxy,a,b,c,cbc,c_or_f,p)
-#else
-    call solver_gaussel_z(n,ng,hi,a,b,c,cbc(:,3),c_or_f,p)
-#endif
+    if(.not.is_impdiff_1d) then
+      !$acc kernels default(present) async(1)
+      !$OMP PARALLEL WORKSHARE
+      lambdaxy(:,:) = lambdaxyi(:,:)*alpha
+      !$OMP END PARALLEL WORKSHARE
+      !$acc end kernels
+    end if
+    if(.not.is_impdiff_1d) then
+      call solver(n,ng,arrplan,normfft,lambdaxy,a,b,c,cbc,c_or_f,p)
+    else
+      call solver_gaussel_z(n,ng,hi,a,b,c,cbc(:,3),c_or_f,p)
+    end if
   end subroutine solve_helmholtz
 end module mod_solve_helmholtz

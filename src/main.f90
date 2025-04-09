@@ -25,9 +25,7 @@
 ! CaNS -- Canonical Navier-Stokes Solver
 !-------------------------------------------------------------------------------------
 program cans
-#if defined(_DEBUG)
   use, intrinsic :: iso_fortran_env, only: compiler_version,compiler_options
-#endif
   use, intrinsic :: iso_c_binding  , only: C_PTR
   use, intrinsic :: ieee_arithmetic, only: is_nan => ieee_is_nan
   use mpi
@@ -35,10 +33,7 @@ program cans
   use mod_bound          , only: boundp,bounduvw,updt_rhs_b
   use mod_chkdiv         , only: chkdiv
   use mod_chkdt          , only: chkdt
-  use mod_common_mpi     , only: myid,ierr
-#if defined(_POISSON_PCR_TDMA)
-  use mod_common_mpi     , only: dinfo_ptdma
-#endif
+  use mod_common_mpi     , only: myid,ierr,dinfo_ptdma
   use mod_correc         , only: correc
   use mod_fft            , only: fftini,fftend
   use mod_fillps         , only: fillps
@@ -66,7 +61,12 @@ program cans
                                  nb,is_bound, &
                                  rkcoeff,small, &
                                  datadir, &
-                                 read_input
+                                 read_input, &
+                                 is_debug,is_debug_poisson, &
+                                 is_timing, &
+                                 is_impdiff,is_impdiff_1d, &
+                                 is_poisson_pcr_tdma, &
+                                 is_mask_divergence_check
   use mod_sanity         , only: test_sanity_input,test_sanity_solver
   use mod_scal           , only: scalar,initialize_scalars,bulk_forcing_s
 #if !defined(_OPENACC)
@@ -74,10 +74,7 @@ program cans
 #else
   use mod_solver_gpu     , only: solver => solver_gpu
   use mod_workspaces     , only: init_wspace_arrays,set_cufft_wspace
-  use mod_common_cudecomp, only: istream_acc_queue_1
-#if defined(_POISSON_PCR_TDMA)
-  use mod_common_cudecomp, only: ap_z_ptdma
-#endif
+  use mod_common_cudecomp, only: istream_acc_queue_1,ap_z_ptdma
 #endif
   use mod_timer          , only: timer_tic,timer_toc,timer_print
   use mod_updatep        , only: updatep
@@ -99,25 +96,22 @@ program cans
 #endif
   real(rp), allocatable, dimension(:,:) :: lambdaxyp
   real(rp), allocatable, dimension(:) :: ap,bp,cp
-#if defined(_POISSON_PCR_TDMA)
   integer , dimension(3) :: n_z_d
-#endif
   real(rp), allocatable, dimension(:,:,:) :: ap_d,cp_d
   logical :: is_ptdma_update_p
   real(rp) :: normfftp
   type(rhs_bound) :: rhsbp
   real(rp) :: alpha
-#if defined(_IMPDIFF)
 #if !defined(_OPENACC)
   type(C_PTR), dimension(2,2) :: arrplanu,arrplanv,arrplanw
 #else
   integer    , dimension(2,2) :: arrplanu,arrplanv,arrplanw
 #endif
-  real(rp), allocatable, dimension(:,:) :: lambdaxyu,lambdaxyv,lambdaxyw,lambdaxy
+  real(rp), allocatable, dimension(:,:) :: lambdaxyu,lambdaxyv,lambdaxyw
   real(rp), allocatable, dimension(:) :: au,av,aw,bu,bv,bw,cu,cv,cw
   real(rp) :: normfftu,normfftv,normfftw
   type(rhs_bound) :: rhsbu,rhsbv,rhsbw
-#endif
+  !
   real(rp) :: dt,dti,dt_cfl,time,dtrk,dtrki,divtot,divmax
   integer :: irk,istep
   real(rp), allocatable, dimension(:) :: dzc  ,dzf  ,zc  ,zf  ,dzci  ,dzfi, &
@@ -128,23 +122,16 @@ program cans
   !
   type(scalar), target, allocatable, dimension(:) :: scalars
   type(scalar), pointer :: s
-#if defined(_IMPDIFF)
-#if !defined(_OPENACC)
-  type(C_PTR), dimension(2,2) :: arrplans
-#else
-  integer    , dimension(2,2) :: arrplans
-#endif
-#endif
   real(rp) :: meanscal
   real(rp), allocatable, dimension(:) :: fs
   integer :: iscal
   !
   !real(rp), allocatable, dimension(:) :: var
   real(rp), dimension(42) :: var
-#if defined(_TIMING)
+  !
   real(rp) :: dt12,dt12av,dt12min,dt12max
-#endif
   real(rp) :: twi,tw
+  !
   integer  :: savecounter
   character(len=7  ) :: fldnum
   character(len=3  ) :: scalnum
@@ -176,15 +163,15 @@ program cans
            pp(0:n(1)+1,0:n(2)+1,0:n(3)+1))
   allocate(lambdaxyp(n_z(1),n_z(2)))
   allocate(ap(n_z(3)),bp(n_z(3)),cp(n_z(3)))
-#if defined(_POISSON_PCR_TDMA)
+  if(is_poisson_pcr_tdma) then
 #if defined(_OPENACC)
-  n_z_d(:) = ap_z_ptdma%shape(:)
+    n_z_d(:) = ap_z_ptdma%shape(:)
 #else
-  n_z_d(:) = dinfo_ptdma%zsz(:)
+    n_z_d(:) = dinfo_ptdma%zsz(:)
 #endif
-  allocate(ap_d(n_z_d(1),n_z_d(2),n_z_d(3)), &
-           cp_d(n_z_d(1),n_z_d(2),n_z_d(3)))
-#endif
+    allocate(ap_d(n_z_d(1),n_z_d(2),n_z_d(3)), &
+             cp_d(n_z_d(1),n_z_d(2),n_z_d(3)))
+  end if
   allocate(dzc( 0:n(3)+1), &
            dzf( 0:n(3)+1), &
            zc(  0:n(3)+1), &
@@ -202,40 +189,40 @@ program cans
   allocate(rhsbp%x(n(2),n(3),0:1), &
            rhsbp%y(n(1),n(3),0:1), &
            rhsbp%z(n(1),n(2),0:1))
-#if defined(_IMPDIFF)
-  allocate(lambdaxyu(n_z(1),n_z(2)), &
-           lambdaxyv(n_z(1),n_z(2)), &
-           lambdaxyw(n_z(1),n_z(2)))
-  allocate(au(n_z(3)),bu(n_z(3)),cu(n_z(3)), &
-           av(n_z(3)),bv(n_z(3)),cv(n_z(3)), &
-           aw(n_z(3)),bw(n_z(3)),cw(n_z(3)))
-  allocate(rhsbu%x(n(2),n(3),0:1), &
-           rhsbu%y(n(1),n(3),0:1), &
-           rhsbu%z(n(1),n(2),0:1), &
-           rhsbv%x(n(2),n(3),0:1), &
-           rhsbv%y(n(1),n(3),0:1), &
-           rhsbv%z(n(1),n(2),0:1), &
-           rhsbw%x(n(2),n(3),0:1), &
-           rhsbw%y(n(1),n(3),0:1), &
-           rhsbw%z(n(1),n(2),0:1))
-#endif
+  if(is_impdiff) then
+    allocate(lambdaxyu(n_z(1),n_z(2)), &
+             lambdaxyv(n_z(1),n_z(2)), &
+             lambdaxyw(n_z(1),n_z(2)))
+    allocate(au(n_z(3)),bu(n_z(3)),cu(n_z(3)), &
+             av(n_z(3)),bv(n_z(3)),cv(n_z(3)), &
+             aw(n_z(3)),bw(n_z(3)),cw(n_z(3)))
+    allocate(rhsbu%x(n(2),n(3),0:1), &
+             rhsbu%y(n(1),n(3),0:1), &
+             rhsbu%z(n(1),n(2),0:1), &
+             rhsbv%x(n(2),n(3),0:1), &
+             rhsbv%y(n(1),n(3),0:1), &
+             rhsbv%z(n(1),n(2),0:1), &
+             rhsbw%x(n(2),n(3),0:1), &
+             rhsbw%y(n(1),n(3),0:1), &
+             rhsbw%z(n(1),n(2),0:1))
+  end if
   !
   allocate(scalars(nscal))
   call initialize_scalars(scalars,nscal,n,n_z)
   allocate(fs(nscal))
   !$acc enter data copyin(scalars(:))
   !
-#if defined(_DEBUG)
-  if(myid == 0) print*, 'This executable of CaNS was built with compiler: ', compiler_version()
-  if(myid == 0) print*, 'Using the options: ', compiler_options()
-  block
-    character(len=MPI_MAX_LIBRARY_VERSION_STRING) :: mpi_version
-    integer :: ilen
-    call MPI_GET_LIBRARY_VERSION(mpi_version,ilen,ierr)
-    if(myid == 0) print*, 'MPI Version: ', trim(mpi_version)
-  end block
-  if(myid == 0) print*, ''
-#endif
+  if(is_debug) then
+    if(myid == 0) print*, 'This executable of CaNS was built with compiler: ', compiler_version()
+    if(myid == 0) print*, 'Using the options: ', compiler_options()
+    block
+      character(len=MPI_MAX_LIBRARY_VERSION_STRING) :: mpi_version
+      integer :: ilen
+      call MPI_GET_LIBRARY_VERSION(mpi_version,ilen,ierr)
+      if(myid == 0) print*, 'MPI Version: ', trim(mpi_version)
+    end block
+    if(myid == 0) print*, ''
+  end if
   if(myid == 0) print*, '*******************************'
   if(myid == 0) print*, '*** Beginning of simulation ***'
   if(myid == 0) print*, '*******************************'
@@ -294,76 +281,74 @@ program cans
                   lambdaxyp,['c','c','c'],ap,bp,cp,arrplanp,normfftp,rhsbp%x,rhsbp%y,rhsbp%z)
   !$acc enter data copyin(lambdaxyp,ap,bp,cp) async
   !$acc enter data copyin(rhsbp,rhsbp%x,rhsbp%y,rhsbp%z) async
-#if defined(_POISSON_PCR_TDMA)
-  !$acc enter data create(ap_d,cp_d) async
-#endif
+  if(is_poisson_pcr_tdma) then
+    !$acc enter data create(ap_d,cp_d) async
+  end if
   !$acc wait
-#if defined(_IMPDIFF)
-  call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1), &
-                  lambdaxyu,['f','c','c'],au,bu,cu,arrplanu,normfftu,rhsbu%x,rhsbu%y,rhsbu%z)
-  call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2), &
-                  lambdaxyv,['c','f','c'],av,bv,cv,arrplanv,normfftv,rhsbv%x,rhsbv%y,rhsbv%z)
-  call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3), &
-                  lambdaxyw,['c','c','f'],aw,bw,cw,arrplanw,normfftw,rhsbw%x,rhsbw%y,rhsbw%z)
-  do iscal=1,nscal
-    s => scalars(iscal)
-    call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,s%cbc,s%bc, &
-                    s%lambdaxy,['c','c','c'],s%a,s%b,s%c,s%arrplan,s%normfft, &
-                    s%rhsb%x,s%rhsb%y,s%rhsb%z)
-  end do
-#if defined(_IMPDIFF_1D)
-  deallocate(lambdaxyu,lambdaxyv,lambdaxyw)
-  call fftend(arrplanu)
-  call fftend(arrplanv)
-  call fftend(arrplanw)
-  deallocate(rhsbu%x,rhsbu%y,rhsbv%x,rhsbv%y,rhsbw%x,rhsbw%y)
-  do iscal=1,nscal
-    s => scalars(iscal)
-    deallocate(s%rhsb%x,s%rhsb%y)
-    deallocate(s%lambdaxy)
-    call fftend(s%arrplan)
-  end do
-#endif
-  !$acc enter data copyin(lambdaxyu,au,bu,cu,lambdaxyv,av,bv,cv,lambdaxyw,aw,bw,cw) async
-  !$acc enter data copyin(rhsbu,rhsbu%x,rhsbu%y,rhsbu%z) async
-  !$acc enter data copyin(rhsbv,rhsbv%x,rhsbv%y,rhsbv%z) async
-  !$acc enter data copyin(rhsbw,rhsbw%x,rhsbw%y,rhsbw%z) async
-  do iscal=1,nscal
-    s => scalars(iscal)
-    !$acc enter data copyin(s%lambdaxy,s%a,s%b,s%c) async
-    !$acc enter data copyin(s%rhsb,s%rhsb%x,s%rhsb%y,s%rhsb%z) async
-  end do
-  !$acc wait
-#endif
+  if(is_impdiff) then
+    call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1), &
+                    lambdaxyu,['f','c','c'],au,bu,cu,arrplanu,normfftu,rhsbu%x,rhsbu%y,rhsbu%z)
+    call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2), &
+                    lambdaxyv,['c','f','c'],av,bv,cv,arrplanv,normfftv,rhsbv%x,rhsbv%y,rhsbv%z)
+    call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3), &
+                    lambdaxyw,['c','c','f'],aw,bw,cw,arrplanw,normfftw,rhsbw%x,rhsbw%y,rhsbw%z)
+    do iscal=1,nscal
+      s => scalars(iscal)
+      call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,s%cbc,s%bc, &
+                      s%lambdaxy,['c','c','c'],s%a,s%b,s%c,s%arrplan,s%normfft, &
+                      s%rhsb%x,s%rhsb%y,s%rhsb%z)
+    end do
+    if(is_impdiff_1d) then
+      deallocate(lambdaxyu,lambdaxyv,lambdaxyw)
+      call fftend(arrplanu)
+      call fftend(arrplanv)
+      call fftend(arrplanw)
+      deallocate(rhsbu%x,rhsbu%y,rhsbv%x,rhsbv%y,rhsbw%x,rhsbw%y)
+      do iscal=1,nscal
+        s => scalars(iscal)
+        deallocate(s%rhsb%x,s%rhsb%y)
+        deallocate(s%lambdaxy)
+        call fftend(s%arrplan)
+      end do
+    end if
+    !$acc enter data copyin(lambdaxyu,au,bu,cu,lambdaxyv,av,bv,cv,lambdaxyw,aw,bw,cw) async
+    !$acc enter data copyin(rhsbu,rhsbu%x,rhsbu%y,rhsbu%z) async
+    !$acc enter data copyin(rhsbv,rhsbv%x,rhsbv%y,rhsbv%z) async
+    !$acc enter data copyin(rhsbw,rhsbw%x,rhsbw%y,rhsbw%z) async
+    do iscal=1,nscal
+      s => scalars(iscal)
+      !$acc enter data copyin(s%lambdaxy,s%a,s%b,s%c) async
+      !$acc enter data copyin(s%rhsb,s%rhsb%x,s%rhsb%y,s%rhsb%z) async
+    end do
+    !$acc wait
+  end if
 #if defined(_OPENACC)
   !
   ! determine workspace sizes and allocate the memory
   !
   call init_wspace_arrays()
   call set_cufft_wspace(pack(arrplanp,.true.),istream_acc_queue_1)
-#if defined(_IMPDIFF) && !defined(_IMPDIFF_1D)
-  call set_cufft_wspace(pack(arrplanu,.true.),istream_acc_queue_1)
-  call set_cufft_wspace(pack(arrplanv,.true.),istream_acc_queue_1)
-  call set_cufft_wspace(pack(arrplanw,.true.),istream_acc_queue_1)
-#endif
+  if(is_impdiff .and. .not.is_impdiff_1d) then
+    call set_cufft_wspace(pack(arrplanu,.true.),istream_acc_queue_1)
+    call set_cufft_wspace(pack(arrplanv,.true.),istream_acc_queue_1)
+    call set_cufft_wspace(pack(arrplanw,.true.),istream_acc_queue_1)
+  end if
   if(myid == 0) print*,'*** Device memory footprint (Gb): ', &
                   device_memory_footprint(n,n_z,nscal)/(1._sp*1024**3), ' ***'
 #endif
-#if defined(_DEBUG_SOLVER)
-  call test_sanity_solver(ng,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,dli,dzc,dzf,dzci,dzfi,dzci_g,dzfi_g, &
-                          nb,is_bound,cbcvel,cbcpre,bcvel,bcpre)
-#endif
+  if(is_debug_poisson) then
+    call test_sanity_solver(ng,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,dli,dzc,dzf,dzci,dzfi,dzci_g,dzfi_g, &
+                            nb,is_bound,cbcvel,cbcpre,bcvel,bcpre)
+  end if
   !
   is_ptdma_update_p = .true.
   if(.not.restart) then
     istep = 0
     time = 0.
-    call initflow(inivel,bcvel,ng,lo,l,dl,zc,zf,dzc,dzf,visc, &
-                  is_forced,velf,bforce,is_wallturb,u,v,w,p)
+    call initflow(inivel,bcvel,ng,lo,l,dl,zc,zf,dzc,dzf,visc,is_forced,velf,bforce,is_wallturb,u,v,w,p)
     do iscal=1,nscal
       s => scalars(iscal)
-      call initscal(s%ini,s%bc,ng,lo,l,dl,zc,zf,dzc,dzf,s%alpha, &
-                    s%is_forced,s%scalf,s%source,is_wallturb,s%val)
+      call initscal(s%ini,s%bc,ng,lo,l,dl,zc,dzf,s%alpha,s%is_forced,s%scalf,s%val)
     end do
     if(myid == 0) print*, '*** Initial condition succesfully set ***'
   else
@@ -409,10 +394,10 @@ program cans
   if(myid == 0) print*, '*** Calculation loop starts now ***'
   is_done = .false.
   do while(.not.is_done)
-#if defined(_TIMING)
-    !$acc wait(1)
-    dt12 = MPI_WTIME()
-#endif
+    if(is_timing) then
+      !$acc wait(1)
+      dt12 = MPI_WTIME()
+    end if
     istep = istep + 1
     time = time + dt
     if(myid == 0) print*, 'Time step #', istep, 'Time = ', time
@@ -428,25 +413,25 @@ program cans
                      s%is_forced,s%scalf,s%source,s%fluxo,s%val,s%f)
         call bulk_forcing_s(n,s%is_forced,s%f,s%val)
         fs(iscal) = fs(iscal) + s%f
-#if defined(_IMPDIFF)
-        call solve_helmholtz(n,ng,hi,s%arrplan,s%normfft,-0.5*s%alpha*dtrk, &
-                             s%lambdaxy,s%a,s%b,s%c,s%rhsb%x,s%rhsb%y,s%rhsb%z,is_bound,s%cbc,['c','c','c'],s%val)
-#endif
+        if(is_impdiff) then
+          call solve_helmholtz(n,ng,hi,s%arrplan,s%normfft,-0.5*s%alpha*dtrk, &
+                               s%lambdaxy,s%a,s%b,s%c,s%rhsb%x,s%rhsb%y,s%rhsb%z,is_bound,s%cbc,['c','c','c'],s%val)
+        end if
         call boundp(s%cbc,n,s%bc,nb,is_bound,dl,dzc,s%val)
       end do
       call rk(rkcoeff(:,irk),n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,visc,dt,p, &
               is_forced,velf,bforce,gacc,beta,scalars,u,v,w,f)
       call bulk_forcing(n,is_forced,f,u,v,w)
       dpdl(:) = dpdl(:) + f(:)
-#if defined(_IMPDIFF)
-      alpha = -.5*visc*dtrk
-      call solve_helmholtz(n,ng,hi,arrplanu,normfftu,alpha, &
-                           lambdaxyu,au,bu,cu,rhsbu%x,rhsbu%y,rhsbu%z,is_bound,cbcvel(:,:,1),['f','c','c'],u)
-      call solve_helmholtz(n,ng,hi,arrplanv,normfftv,alpha, &
-                           lambdaxyv,av,bv,cv,rhsbv%x,rhsbv%y,rhsbv%z,is_bound,cbcvel(:,:,2),['c','f','c'],v)
-      call solve_helmholtz(n,ng,hi,arrplanw,normfftw,alpha, &
-                           lambdaxyw,aw,bw,cw,rhsbw%x,rhsbw%y,rhsbw%z,is_bound,cbcvel(:,:,3),['c','c','f'],w)
-#endif
+      if(is_impdiff) then
+        alpha = -.5*visc*dtrk
+        call solve_helmholtz(n,ng,hi,arrplanu,normfftu,alpha, &
+                             lambdaxyu,au,bu,cu,rhsbu%x,rhsbu%y,rhsbu%z,is_bound,cbcvel(:,:,1),['f','c','c'],u)
+        call solve_helmholtz(n,ng,hi,arrplanv,normfftv,alpha, &
+                             lambdaxyv,av,bv,cv,rhsbv%x,rhsbv%y,rhsbv%z,is_bound,cbcvel(:,:,2),['c','f','c'],v)
+        call solve_helmholtz(n,ng,hi,arrplanw,normfftw,alpha, &
+                             lambdaxyw,aw,bw,cw,rhsbw%x,rhsbw%y,rhsbw%z,is_bound,cbcvel(:,:,3),['c','c','f'],w)
+      end if
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
       call fillps(n,dli,dzfi,dtrki,u,v,w,pp)
       call updt_rhs_b(['c','c','c'],cbcpre,n,is_bound,rhsbp%x,rhsbp%y,rhsbp%z,pp)
@@ -486,14 +471,14 @@ program cans
       dti = 1./dt
       call chkdiv(lo,hi,dli,dzfi,u,v,w,divtot,divmax)
       if(myid == 0) print*, 'Total divergence = ', divtot, '| Maximum divergence = ', divmax
-#if !defined(_MASK_DIVERGENCE_CHECK)
-      if(divmax > small.or.is_nan(divtot)) then
-        if(myid == 0) print*, 'ERROR: maximum divergence is too large.'
-        if(myid == 0) print*, 'Aborting...'
-        is_done = .true.
-        kill = .true.
+      if(.not.is_mask_divergence_check) then
+        if(divmax > small.or.is_nan(divtot)) then
+          if(myid == 0) print*, 'ERROR: maximum divergence is too large.'
+          if(myid == 0) print*, 'Aborting...'
+          is_done = .true.
+          kill = .true.
+        end if
       end if
-#endif
     end if
     !
     ! output routines below
@@ -592,7 +577,7 @@ program cans
       end if
       if(myid == 0) print*, '*** Checkpoint saved at time = ', time, 'time step = ', istep, '. ***'
     end if
-#if defined(_TIMING)
+    if(is_timing) then
       !$acc wait(1)
       dt12 = MPI_WTIME()-dt12
       call MPI_ALLREDUCE(dt12,dt12av ,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -600,17 +585,17 @@ program cans
       call MPI_ALLREDUCE(dt12,dt12max,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
       if(myid == 0) print*, 'Avrg, min & max elapsed time: '
       if(myid == 0) print*, dt12av/(1.*product(dims)),dt12min,dt12max
-#endif
+    end if
   end do
   !
   ! clear ffts
   !
   call fftend(arrplanp)
-#if defined(_IMPDIFF) && !defined(_IMPDIFF_1D)
-  call fftend(arrplanu)
-  call fftend(arrplanv)
-  call fftend(arrplanw)
-#endif
+  if(is_impdiff .and. .not.is_impdiff_1d) then
+    call fftend(arrplanu)
+    call fftend(arrplanv)
+    call fftend(arrplanw)
+  end if
   if(myid == 0.and.(.not.kill)) print*, '*** Fim ***'
   call decomp_2d_finalize
   call MPI_FINALIZE(ierr)

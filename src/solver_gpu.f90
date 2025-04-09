@@ -8,9 +8,6 @@ module mod_solver_gpu
 #if defined(_OPENACC)
   use, intrinsic :: iso_c_binding, only: C_PTR
   use cudecomp
-  use mod_fft  ,  only: signal_processing,fftf_gpu,fftb_gpu
-  use mod_types
-  use mod_common_mpi     , only: ipencil_axis
   use mod_common_cudecomp, only: dtype_rp => cudecomp_real_rp, &
                                  cudecomp_is_t_in_place, &
                                  solver_buf_0,solver_buf_1, &
@@ -21,12 +18,12 @@ module mod_solver_gpu
                                  ap_z_0 => ap_z    , &
                                  ch => handle,gd => gd_poi, &
                                  istream => istream_acc_queue_1
+  use mod_fft            , only: signal_processing,fftf_gpu,fftb_gpu
+  use mod_param          , only: ipencil_axis,is_poisson_pcr_tdma
+  use mod_types
   implicit none
   private
-  public solver_gpu
-#if defined(_IMPDIFF_1D)
-  public solver_gaussel_z_gpu
-#endif
+  public solver_gpu,solver_gaussel_z_gpu
   contains
   subroutine solver_gpu(n,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p,is_ptdma_update,aa_z,cc_z)
     implicit none
@@ -56,9 +53,9 @@ module mod_solver_gpu
     n_x(:) = ap_x%shape(:)
     n_y(:) = ap_y%shape(:)
     n_z(:) = ap_z%shape(:)
-#if defined(_POISSON_PCR_TDMA)
-    n_z(:) = n_z_0(:) ! equal to the (unpadded) ap_y%shape(:) under initmpi.f90
-#endif
+    if(is_poisson_pcr_tdma) then
+      n_z(:) = n_z_0(:) ! equal to the (unpadded) ap_y%shape(:) under initmpi.f90
+    end if
     px(1:n_x(1),1:n_x(2),1:n_x(3)) => solver_buf_0(1:product(n_x(:)))
     if(cudecomp_is_t_in_place) then
       py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_0(1:product(n_y(:)))
@@ -119,62 +116,62 @@ module mod_solver_gpu
     !
     q = merge(1,0,c_or_f(3) == 'f'.and.bc(1,3) == 'D'.and.hi_z_0(3) == ng(3))
     is_periodic_z = bc(0,3)//bc(1,3) == 'PP'
-#if !defined(_POISSON_PCR_TDMA)
-    !$acc host_data use_device(py,pz,work)
-    istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
-    !$acc end host_data
-    !
-    call gaussel_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,0,a,b,c,is_periodic_z,pz,work,pz_aux_1,lambdaxy)
-    !
-    !$acc host_data use_device(pz,py,work)
-    istat = cudecompTransposeZtoY(ch,gd,pz,py,work,dtype_rp,stream=istream)
-    !$acc end host_data
-#else
-    block
-      use mod_common_cudecomp, only: ap_y
-      integer :: i,j,k
-      integer :: n_y_1,n_y_2,n_y_3
+    if(.not.is_poisson_pcr_tdma) then
+      !$acc host_data use_device(py,pz,work)
+      istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
+      !$acc end host_data
       !
-      ! transpose py -> pz with non-axis-contiguous layout
+      call gaussel_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,0,a,b,c,is_periodic_z,pz,work,pz_aux_1,lambdaxy)
       !
-      n_y_3 = ap_y%shape(3)
-      n_y_2 = ap_y%shape(2)
-      n_y_1 = ap_y%shape(1)
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
-      do k=1,n_y_3
-        do j=1,n_y_2
-          do i=1,n_y_1
-            pz(i,j,k) = py(j,k,i)
+      !$acc host_data use_device(pz,py,work)
+      istat = cudecompTransposeZtoY(ch,gd,pz,py,work,dtype_rp,stream=istream)
+      !$acc end host_data
+    else
+      block
+        use mod_common_cudecomp, only: ap_y
+        integer :: i,j,k
+        integer :: n_y_1,n_y_2,n_y_3
+        !
+        ! transpose py -> pz with non-axis-contiguous layout
+        !
+        n_y_3 = ap_y%shape(3)
+        n_y_2 = ap_y%shape(2)
+        n_y_1 = ap_y%shape(1)
+        !$acc parallel loop collapse(3) default(present) async(1)
+        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+        do k=1,n_y_3
+          do j=1,n_y_2
+            do i=1,n_y_1
+              pz(i,j,k) = py(j,k,i)
+            end do
           end do
         end do
-      end do
-    end block
-    !
-    call gaussel_ptdma_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,lo_z_0(3),0,a,b,c,is_periodic_z,pz,work,pz_aux_1,is_ptdma_update_,lambdaxy,aa_z,cc_z)
-    if(present(is_ptdma_update)) is_ptdma_update = is_ptdma_update_
-    !
-    block
-      use mod_common_cudecomp, only: ap_y
-      integer :: i,j,k
-      integer :: n_y_1,n_y_2,n_y_3
+      end block
       !
-      ! transpose pz -> py with axis-contiguous layout
+      call gaussel_ptdma_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,lo_z_0(3),0,a,b,c,is_periodic_z,pz,work,pz_aux_1,is_ptdma_update_,lambdaxy,aa_z,cc_z)
+      if(present(is_ptdma_update)) is_ptdma_update = is_ptdma_update_
       !
-      n_y_3 = ap_y%shape(3)
-      n_y_2 = ap_y%shape(2)
-      n_y_1 = ap_y%shape(1)
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
-      do k=1,n_y_3
-        do j=1,n_y_2
-          do i=1,n_y_1
-            py(j,k,i) = pz(i,j,k)
+      block
+        use mod_common_cudecomp, only: ap_y
+        integer :: i,j,k
+        integer :: n_y_1,n_y_2,n_y_3
+        !
+        ! transpose pz -> py with axis-contiguous layout
+        !
+        n_y_3 = ap_y%shape(3)
+        n_y_2 = ap_y%shape(2)
+        n_y_1 = ap_y%shape(1)
+        !$acc parallel loop collapse(3) default(present) async(1)
+        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+        do k=1,n_y_3
+          do j=1,n_y_2
+            do i=1,n_y_1
+              py(j,k,i) = pz(i,j,k)
+            end do
           end do
         end do
-      end do
-    end block
-#endif
+      end block
+    end if
     !
     call signal_processing(0,'B',bc(0,2)//bc(1,2),c_or_f(2),ng(2),n_y,1,py)
     call fftb_gpu(arrplan(2,2),py)
@@ -369,7 +366,6 @@ module mod_solver_gpu
     end if
   end subroutine gaussel_gpu
   !
-#if defined(_POISSON_PCR_TDMA)
   subroutine gaussel_ptdma_gpu(nx,ny,n,lo,nh,a,b,c,is_periodic,p,aa,cc,is_update,lambdaxy,aa_z_save,cc_z_save)
     !
     ! distributed TDMA solver
@@ -395,7 +391,7 @@ module mod_solver_gpu
     integer :: istat
     !
     nr_z(:) = ap_z_ptdma%shape(:)
-    if(.not. allocated(pp_y)) then
+    if(.not.allocated(pp_y)) then
       allocate(aa_y(nx,ny,2), &
                cc_y(nx,ny,2), &
                pp_y(nx,ny,2), &
@@ -639,7 +635,7 @@ module mod_solver_gpu
     !
     nr_y(:) = ap_y_ptdma%shape(:)
     nr_z(:) = ap_z_ptdma%shape(:)
-    if(.not. allocated(pp_z)) then
+    if(.not.allocated(pp_z)) then
       allocate(aa(n+1), & ! n+1 just in case one solves for a boundary normal variable in the first call
                bb(n+1), &
                cc(n+1), &
@@ -839,8 +835,6 @@ module mod_solver_gpu
       end do
     end do
   end subroutine gaussel_ptdma_gpu_fast_1d
-#endif
-#if defined(_IMPDIFF_1D)
   subroutine solver_gaussel_z_gpu(n,ng,hi,a,b,c,bcz,c_or_f,p)
     use mod_param, only: eps
     implicit none
@@ -860,71 +854,70 @@ module mod_solver_gpu
     n_z_0(:) = ap_z_0%shape(:)
     hi_z = hi(3)
     lo_z = hi(3)-n(3)+1
-#if !defined(_POISSON_PCR_TDMA)
-    n_x(:) = ap_x%shape(:)
-    n_y(:) = ap_y%shape(:)
-    n_z(:) = ap_z%shape(:)
-    is_no_decomp_z = n_x(3) == n_z(3).or.ipencil_axis == 3 ! not decomposed along z: xsize(3) == ysize(3) == ng(3) when dims(2) = 1
-    if(.not.is_no_decomp_z) then
-      px(1:n_x(1),1:n_x(2),1:n_x(3)) => solver_buf_0(1:product(n_x(:)))
-      if(cudecomp_is_t_in_place) then
-        py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_0(1:product(n_y(:)))
-      else
-        py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_1(1:product(n_y(:)))
+    if(.not.is_poisson_pcr_tdma) then
+      n_x(:) = ap_x%shape(:)
+      n_y(:) = ap_y%shape(:)
+      n_z(:) = ap_z%shape(:)
+      is_no_decomp_z = n_x(3) == n_z(3).or.ipencil_axis == 3 ! not decomposed along z: xsize(3) == ysize(3) == ng(3) when dims(2) = 1
+      if(.not.is_no_decomp_z) then
+        px(1:n_x(1),1:n_x(2),1:n_x(3)) => solver_buf_0(1:product(n_x(:)))
+        if(cudecomp_is_t_in_place) then
+          py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_0(1:product(n_y(:)))
+        else
+          py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_1(1:product(n_y(:)))
+        end if
+        pz(1:n_z(1),1:n_z(2),1:n_z(3)) => solver_buf_0(1:product(n_z(:)))
       end if
-      pz(1:n_z(1),1:n_z(2),1:n_z(3)) => solver_buf_0(1:product(n_z(:)))
-    end if
-    !
-    if(.not.is_no_decomp_z) then
-      select case(ipencil_axis)
-      case(1)
-        !$acc kernels default(present) async(1)
-        !$OMP PARALLEL WORKSHARE
-        px(:,:,:) = p(1:n(1),1:n(2),1:n(3))
-        !$OMP END PARALLEL WORKSHARE
-        !$acc end kernels
-        !$acc host_data use_device(px,py,pz,work)
-        istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_rp,stream=istream)
-        istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
-        !$acc end host_data
-      case(2)
-        block
-          integer :: i,j,k
-          !
-          ! transpose p -> py to axis-contiguous layout
-          !
-          !$acc parallel loop collapse(3) default(present) async(1)
-          !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
-          do k=1,n(3)
-            do j=1,n(2)
-              do i=1,n(1)
-                py(j,k,i) = p(i,j,k)
+      !
+      if(.not.is_no_decomp_z) then
+        select case(ipencil_axis)
+        case(1)
+          !$acc kernels default(present) async(1)
+          !$OMP PARALLEL WORKSHARE
+          px(:,:,:) = p(1:n(1),1:n(2),1:n(3))
+          !$OMP END PARALLEL WORKSHARE
+          !$acc end kernels
+          !$acc host_data use_device(px,py,pz,work)
+          istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_rp,stream=istream)
+          istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
+          !$acc end host_data
+        case(2)
+          block
+            integer :: i,j,k
+            !
+            ! transpose p -> py to axis-contiguous layout
+            !
+            !$acc parallel loop collapse(3) default(present) async(1)
+            !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+            do k=1,n(3)
+              do j=1,n(2)
+                do i=1,n(1)
+                  py(j,k,i) = p(i,j,k)
+                end do
               end do
             end do
-          end do
-        end block
-        !$acc host_data use_device(py,pz,work)
-        istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
-        !$acc end host_data
-      case(3)
-      end select
+          end block
+          !$acc host_data use_device(py,pz,work)
+          istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
+          !$acc end host_data
+        case(3)
+        end select
+      end if
     end if
-#endif
     !
     q = merge(1,0,c_or_f(3) == 'f'.and.bcz(1) == 'D'.and.hi_z == ng(3))
     is_periodic_z = bcz(0)//bcz(1) == 'PP'
-    if(ipencil_axis /= 3) then
-#if !defined(_POISSON_PCR_TDMA)
+    if(.not.is_no_decomp_z) then
+      if(.not.is_poisson_pcr_tdma) then
         call gaussel_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,0,a,b,c,is_periodic_z,pz,work,pz_aux_1)
-#else
+      else
         call gaussel_ptdma_gpu_fast_1d(n(1),n(2),n(3)-q,lo_z,1,a,b,c,is_periodic_z,p)
-#endif
+      end if
     else
-        call gaussel_gpu(n(1),n(2),n(3)-q,1,a,b,c,is_periodic_z,p,work,pz_aux_1)
+      call gaussel_gpu(n(1),n(2),n(3)-q,1,a,b,c,is_periodic_z,p,work,pz_aux_1)
     end if
     !
-#if !defined(_POISSON_PCR_TDMA)
-    if(.not.is_no_decomp_z) then
+    if(.not.is_poisson_pcr_tdma .and. .not.is_no_decomp_z) then
       select case(ipencil_axis)
       case(1)
         !$acc host_data use_device(pz,py,px,work)
@@ -958,9 +951,7 @@ module mod_solver_gpu
       case(3)
       end select
     end if
-#endif
   end subroutine solver_gaussel_z_gpu
-#endif
 #if 0
   subroutine gaussel_ptdma_gpu_fast(nx,ny,n,lo,nh,a_g,b_g,c_g,is_periodic,p,is_update,lambdaxy,aa,bb,cc,aa_z,bb_z,cc_z,pp_z_2)
     !
@@ -987,7 +978,7 @@ module mod_solver_gpu
     integer :: istat
     !
     nr_z(:) = ap_z_ptdma%shape(:)
-    if(.not. allocated(pp_y)) then
+    if(.not.allocated(pp_y)) then
       allocate(aa_y(nx,ny,2), &
                bb_y(nx,ny,2), &
                cc_y(nx,ny,2), &

@@ -63,6 +63,7 @@ contains
     ! estimate GPU memory footprint, assuming one MPI task <-> one GPU
     !
     use mod_types, only: i8,rp
+    use mod_param, only: is_impdiff,is_impdiff_1d
     integer, intent(in), dimension(3) :: n,n_z
     integer, intent(in) :: nscal
     integer :: nh(3)
@@ -89,31 +90,31 @@ contains
       itemp1 = sum(itemp1_(:))   ! rhs
       itemp2 = product(n_z(1:2)) ! lambdaxy
       itemp3 = n_z(3)*3          ! a,b,c
-#if   !defined(_IMPDIFF)
-      !
-      ! rhsbp, lambdaxyp, ap,bp,cp
-      !
-      itotal = itotal + itemp1*rp_size                        + itemp2*rp_size           + itemp3*rp_size
-#elif  defined(_IMPDIFF_1D)
-      !
-      ! rhsbp,rhsb[u,v,w,scalars,buf]%z, lambdaxyp, a?,b?,c? [p,u,v,w,scalars,buf]
-      !
-      itotal = itotal + (itemp1+itemp1_(3)*(4+nscal))*rp_size + itemp2*rp_size           + itemp3*rp_size*(5+nscal)
-#else
-      !
-      ! rhsbp,rhsb[u,v,w,scalars,buf]%[x,y,z], lambdaxy[p,u,v,w,scalars], (a?,b?,c?)[p,u,v,w,scalars,buf]
-      !
-      itotal = itotal + itemp1*rp_size*(1+4+nscal)            + itemp2*rp_size*(5+nscal) + itemp3*rp_size*(5+nscal)
-#endif
+      if(.not.is_impdiff) then
+        !
+        ! rhsbp, lambdaxyp, ap,bp,cp
+        !
+        itotal = itotal + itemp1*rp_size                        + itemp2*rp_size           + itemp3*rp_size
+      else if(is_impdiff_1d) then
+        !
+        ! rhsbp,rhsb[u,v,w,scalars,buf]%z, lambdaxyp, a?,b?,c? [p,u,v,w,scalars,buf]
+        !
+        itotal = itotal + (itemp1+itemp1_(3)*(4+nscal))*rp_size + itemp2*rp_size           + itemp3*rp_size*(5+nscal)
+      else
+        !
+        ! rhsbp,rhsb[u,v,w,scalars,buf]%[x,y,z], lambdaxy[p,u,v,w,scalars], (a?,b?,c?)[p,u,v,w,scalars,buf]
+        !
+        itotal = itotal + itemp1*rp_size*(1+4+nscal)            + itemp2*rp_size*(5+nscal) + itemp3*rp_size*(5+nscal)
+      end if
     end block
     !
     ! 4. prediction velocity arrays arrays d[u,v,w]dtrk_t, d[u,v,w]dtrko_t + scalars equivalent
     !
     itemp  = product(n(:))*rp_size
     itotal = itotal + itemp*(2*(3+nscal))
-#if defined(_IMPDIFF)
-    itotal = itotal + itemp*(1*(3+nscal))
-#endif
+    if(is_impdiff) then
+      itotal = itotal + itemp*(1*(3+nscal))
+    end if
     !
     ! 5. transpose & FFT buffer arrays, halo buffer arrays, and solver arrays
     !    taken directly from `mod_common_cudecomp`

@@ -6,7 +6,8 @@
 ! -
 module mod_bound
   use mpi
-  use mod_common_mpi, only: ierr,halo,ipencil_axis
+  use mod_common_mpi, only: ierr,halo
+  use mod_param     , only: ipencil_axis
   use mod_types
   implicit none
   private

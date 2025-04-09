@@ -8,38 +8,22 @@ The `Makefile` in root directory is used to compiled the code, and is expected t
 #
 # compiler and compiling profile
 #
-FCOMP=GNU           # options: GNU, NVIDIA, INTEL
-FFLAGS_OPT=1        # for production runs
-FFLAGS_OPT_MAX=0    # for production runs (more aggressive optimization)
-FFLAGS_DEBUG=0      # for debugging
-FFLAGS_DEBUG_MAX=0  # for thorough debugging
+FCOMP=GNU          # options: GNU, NVIDIA, INTEL
+FFLAGS_OPT=1       # for production runs
+FFLAGS_OPT_MAX=0   # for production runs (more aggressive optimization)
+FFLAGS_DEBUG=0     # for debugging
+FFLAGS_DEBUG_MAX=0 # for thorough debugging
 #
 # defines
 #
-DEBUG=1             # best = 1 (no significant performance penalty)
-TIMING=1            # best = 1
-IMPDIFF=0           #
-IMPDIFF_1D=0        #
-PENCIL_AXIS=1       # = 1/2/3 for X/Y/Z-aligned pencils
-SINGLE_PRECISION=0  # perform the whole calculation in single precision
-POISSON_PCR_TDMA=0  # use PCR-TDMA method to solve Poisson/Helmholtz problems
-#
-# GPU-related
-#
-GPU=0
+SINGLE_PRECISION=0 # perform the whole calculation in single precision
+GPU=0              # GPU build
 ```
 
 In this file, `FCOMP` can be one of `GNU` (`gfortran`), `INTEL` (`ifort`), `NVIDIA` (`nvfortran`), or `CRAY` (`ftn`); the predefined profiles for compiler options can be selected by choosing one of the `FFLAGS_*` option; finer control of the compiler flags may be achieved by building with, e.g., `make FFLAGS+=[OTHER_FLAGS]`, or by tweaking the profiles directly under `configs/flags.mk`. Similarly, the library paths (e.g., for *FFTW*) may need to be adapted in the `Makefile` (`LIBS` variable) or by building with `make LIBS+='-L[PATH_TO_LIB] -l[NAME_OF_LIB]'`. Finally, the following pre-processing options are available:
 
- * `DEBUG`                    : performs some basic checks for debugging purposes
- * `TIMING`                   : wall-clock time per time step is computed
- * `IMPDIFF`                  : diffusion term of the N-S equations is integrated in time with an implicit discretization (thereby improving the stability of the numerical algorithm for viscous-dominated flows)
- * `IMPDIFF_1D`               : same as above, but with implicit diffusion *only* along Z; *for optimal parallel performance, the domain should not be decomposed along Z* (`PENCIL_AXIS=3`, or other pencil orientations with `dims(2) = 1` in the input file).
- * `PENCIL_AXIS`              : sets the default pencil direction, one of [1,2,3] for [X,Y,Z]-aligned pencils; X-aligned is the default and should be optimal for all cases except for Z implicit diffusion, where using Z-pencils is recommended if `dims(2) > 1` in the input file
- * `SINGLE_PRECISION`         : calculation will be carried out in single precision (the default precision is double)
- * `POISSON_PCR_TDMA`         : Poisson/Helmhotlz equations solved along Z with the PCR-TDMA method
- * `GPU`                      : enable GPU accelerated runs (requires the `FCOMP=NVIDIA`)
- * `BOUSSINESQ_BUOYANCY`      : enable buoyancy effects
+ * `SINGLE_PRECISION` : calculation will be carried out in single precision (the default precision is double)
+ * `GPU`              : enable GPU accelerated runs (requires the `FCOMP=NVIDIA`)
 
 Typing `make libs` will build the 2DECOMP&FFT/cuDecomp libraries; then typing `make` will compile the code and copy the executable `cans` to a `run/` folder; `make run` will also copy the default input files `*.in` under `src/` to the same `run/` folder.
 

@@ -46,7 +46,8 @@ logical , protected :: restart,is_overwrite_save
 integer , protected :: nsaves_max
 integer , protected :: icheck,iout0d,iout1d,iout2d,iout3d,isave
 !
-integer , dimension(2) :: dims
+integer , dimension(2) :: dims ! not protected -> overwritten when autotuning
+integer , protected :: ipencil_axis = 1
 !
 integer, dimension(0:1,3) :: nb
 logical, dimension(0:1,3) :: is_bound
@@ -74,6 +75,7 @@ real(rp)          , protected, allocatable, dimension(:,:,:) ::  bcscal ! size (
 real(rp), protected, allocatable, dimension(:) :: ssource
 logical , protected, allocatable, dimension(:) :: is_sforced
 real(rp), protected, allocatable, dimension(:) :: scalf
+logical , protected :: is_boussinesq_buoyancy = .false.
 real(rp), protected :: alpha_max
 !
 #if defined(_OPENACC)
@@ -86,8 +88,22 @@ logical, protected :: cudecomp_is_t_comm_autotune ,cudecomp_is_h_comm_autotune ,
                       cudecomp_is_t_enable_nvshmem,cudecomp_is_h_enable_nvshmem, &
                       cudecomp_is_t_in_place
 #endif
+!
+! other options: debugging/benchmarking
+!
+logical, protected :: is_debug = .true., is_debug_poisson = .false., &
+                      is_timing = .true., &
+                      is_mask_divergence_check = .false.
+!
+! other options: numerics
+!
+logical, protected :: is_impdiff = .false., is_impdiff_1d = .false., &
+                      is_poisson_pcr_tdma = .false., &
+                      is_fast_mom_kernels = .true., &
+                      is_gridpoint_natural_channel = .false.
 contains
   subroutine read_input(myid)
+    use, intrinsic :: iso_fortran_env, only: iostat_end
     use mpi
     implicit none
     character(len=*), parameter :: input_file = 'input.nml'
@@ -112,7 +128,7 @@ contains
                   velf, &
                   gacc, &
                   nscal, &
-                  dims
+                  dims,ipencil_axis
 #if defined(_OPENACC)
     namelist /cudecomp/ &
                        cudecomp_t_comm_backend,cudecomp_is_t_enable_nccl,cudecomp_is_t_enable_nvshmem, &
@@ -124,7 +140,16 @@ contains
                      cbcscal,bcscal, &
                      ssource, &
                      is_sforced, &
-                     scalf
+                     scalf, &
+                     is_boussinesq_buoyancy
+    namelist /numerics/ &
+                       is_impdiff,is_impdiff_1d, &
+                       is_poisson_pcr_tdma, &
+                       is_gridpoint_natural_channel
+    namelist /other_options/ &
+                            is_debug,is_debug_poisson, &
+                            is_timing, &
+                            is_mask_divergence_check
     !
     ! defaults
     !
@@ -141,7 +166,7 @@ contains
       end if
       read(iunit,nml=dns,iostat=ierr,iomsg=c_iomsg)
       if(ierr /= 0) then
-        if(myid == 0) print*, 'Error reading dns namelist: ', trim(c_iomsg)
+        if(myid == 0) print*, 'Error reading `dns` namelist: ', trim(c_iomsg)
         if(myid == 0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
         close(iunit)
@@ -151,6 +176,11 @@ contains
       dl(:) = l(:)/(1.*ng(:))
       dli(:) = dl(:)**(-1)
       visc = visci**(-1)
+      if(all([1,2,3] /= ipencil_axis)) then
+        ipencil_axis = 1 ! default to one
+        if(myid == 0) print*, 'Warning: prescribed value of `ipencil_axis` different than 1/2/3.', trim(c_iomsg)
+        if(myid == 0) print*, 'Defaulting to `ipencil_axis = 1` (x-aligned pencils)...'
+      end if
 #if defined(_OPENACC)
       !
       ! reading cuDecomp parameters, if these are set
@@ -234,7 +264,7 @@ contains
         is_sforced(:) = .false.
         scalf(:)      = 0.
         !
-        ! read scalar namelist
+        ! read `scalar` namelist
         !
         rewind(iunit)
         read(iunit,nml=scalar,iostat=ierr,iomsg=c_iomsg)
@@ -251,14 +281,39 @@ contains
       alpha_max = huge(1._rp)
       alpha_max = minval(alphai(1:nscal))
       alpha_max = alpha_max**(-1)
-#if defined(_BOUSSINESQ_BUOYANCY)
-      if (nscal == 0) then
-        if(myid == 0) print*, 'Error reading the input file: `BOUSSINESQ_BUOYANCY` requires `nscal > 0`.'
+      if(is_boussinesq_buoyancy) then
+        if(nscal == 0) then
+          if(myid == 0) print*, 'error reading the input file: `is_boussinesq_buoyancy = T` requires `nscal > 0`.'
+          if(myid == 0) print*, 'Aborting...'
+          call MPI_FINALIZE(ierr)
+          error stop
+        end if
+      end if
+      !
+      ! read `numerics` namelist
+      !
+      rewind(iunit)
+      read(iunit,nml=numerics,iostat=ierr,iomsg=c_iomsg)
+      if(ierr /= 0 .and. ierr /= iostat_end) then
+        if(myid == 0) print*, 'Error reading `numerics` namelist: ', trim(c_iomsg)
         if(myid == 0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
+        close(iunit)
         error stop
       end if
-#endif
+      if(is_impdiff_1d) is_impdiff = .true.
+      !
+      ! read `other_options` namelist
+      !
+      rewind(iunit)
+      read(iunit,nml=other_options,iostat=ierr,iomsg=c_iomsg)
+      if(ierr /= 0 .and. ierr /= iostat_end) then
+        if(myid == 0) print*, 'Error reading `other_options` namelist: ', trim(c_iomsg)
+        if(myid == 0) print*, 'Aborting...'
+        call MPI_FINALIZE(ierr)
+        close(iunit)
+        error stop
+      end if
     close(iunit)
   end subroutine read_input
 end module mod_param

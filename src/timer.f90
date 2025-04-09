@@ -35,7 +35,7 @@ contains
     real(dp), allocatable :: timing_results_acc(:,:), &
                              timing_results_min(:,:), &
                              timing_results_max(:,:)
-    integer  :: i,myid,nproc,ierr,iend
+    integer  :: i,myid,nproc,ierr
     !
     if(present(myid_arg)) then
       myid = myid_arg
@@ -159,7 +159,7 @@ contains
                timer_elapsed_max(0))
     end if
     idx = timer_search(timer_name)
-    if (idx <= 0) then
+    if(idx <= 0) then
       ntimers = ntimers + 1
       call concatenate_c(timer_names,timer_name)
       timer_counts      = [timer_counts     ,0          ]
@@ -208,7 +208,7 @@ contains
 #endif
     if(present(ierror)) ierror = 0
     idx = timer_search(timer_name)
-    if (idx > 0) then
+    if(idx > 0) then
       timer_tictoc(idx)      = MPI_WTIME() - timer_tictoc(idx)
       timer_elapsed_acc(idx) =    (timer_elapsed_acc(idx)+timer_tictoc(idx))
       timer_elapsed_min(idx) = min(timer_elapsed_min(idx),timer_tictoc(idx))
@@ -222,7 +222,7 @@ contains
 #if !defined(_TIMER)
     return
 #endif
-    if (.not.allocated(timer_names)) then
+    if(.not.allocated(timer_names)) then
       deallocate(timer_names,timer_counts,timer_elapsed_acc,timer_elapsed_min,timer_elapsed_max)
     end if
   end subroutine timer_cleanup
@@ -231,7 +231,7 @@ contains
     integer :: i
     timer_search = -1
     do i = 1,ntimers
-      if (timer_names(i) == timer_name) then
+      if(timer_names(i) == timer_name) then
         timer_search = i
       end if
     end do
@@ -243,7 +243,7 @@ contains
     if(present(ierror)) ierror = 0
     timer_time = -1._dp
     idx = timer_search(timer_name)
-    if (idx > 0) then
+    if(idx > 0) then
       timer_time = timer_elapsed_acc(idx)
     else
       if(present(ierror)) ierror = 1

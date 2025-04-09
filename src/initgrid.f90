@@ -5,7 +5,7 @@
 !
 ! -
 module mod_initgrid
-  use mod_param, only:pi
+  use mod_param, only:pi,is_gridpoint_natural_channel
   use mod_types
   implicit none
   private
@@ -42,15 +42,17 @@ module mod_initgrid
     ! step 1) determine coordinates of cell faces zf
     !
     zf(0) = 0.
-    do k=1,n
-      z0  = (k-0.)/(1.*n)
-#if !defined(_GRIDPOINT_NATURAL_CHANNEL)
-      call gridpoint(gr,z0,zf(k))
-#else
-      call gridpoint_natural(k,n,zf(k))
-#endif
-      zf(k) = zf(k)*lz
-    end do
+    if(.not.is_gridpoint_natural_channel) then
+      do k=1,n
+        z0  = (k-0.)/(1.*n)
+        call gridpoint(gr,z0,zf(k))
+      end do
+    else
+      do k=1,n
+        call gridpoint_natural(k,n,zf(k))
+      end do
+    end if
+    zf(1:n) = zf(1:n)*lz
     !
     ! step 2) determine grid spacing between faces dzf
     !
@@ -88,7 +90,7 @@ module mod_initgrid
     implicit none
     real(rp), intent(in) :: alpha,z0
     real(rp), intent(out) :: z
-    if(alpha /= 0.) then
+    if(alpha > epsilon(0._rp)) then
       z = 0.5*(1.+tanh((z0-0.5)*alpha)/tanh(alpha/2.))
       !z = 0.5*(1.+erf( (z0-0.5)*alpha)/erf( alpha/2.))
     else
@@ -102,7 +104,7 @@ module mod_initgrid
     implicit none
     real(rp), intent(in) :: alpha,z0
     real(rp), intent(out) :: z
-    if(alpha /= 0.) then
+    if(alpha > epsilon(0._rp)) then
       z = 1.0*(1.+tanh((z0-1.0)*alpha)/tanh(alpha/1.))
       !z = 1.0*(1.+erf( (z0-1.0)*alpha)/erf( alpha/1.))
     else
@@ -116,7 +118,7 @@ module mod_initgrid
     implicit none
     real(rp), intent(in ) :: alpha,r0
     real(rp), intent(out) :: r
-    if(alpha /= 0._rp) then
+    if(alpha > epsilon(0._rp)) then
       r = 1._rp-1.0_rp*(1._rp+tanh((1._rp-r0-1.0_rp)*alpha)/tanh(alpha/1._rp))
       !r = 1._rp-1.0_rp*(1._rp+erf( (1._rp-r0-1.0_rp)*alpha)/erf( alpha/1._rp))
     else
@@ -130,7 +132,7 @@ module mod_initgrid
     implicit none
     real(rp), intent(in) :: alpha,z0
     real(rp), intent(out) :: z
-    if(alpha /= 0.) then
+    if(alpha > epsilon(0._rp)) then
       if(     z0 <= 0.5) then
         z = 0.5*(1.-1.+tanh(2.*alpha*(z0-0.))/tanh(alpha))
         !z = 0.5*(1.-1.+erf( 2.*alpha*(z0-0.))/erf( alpha))
@@ -171,7 +173,7 @@ module mod_initgrid
     !
     n = nzg/2._rp
     retau = 1._rp/(1._rp+(n/kb)**2)*(dyp*n+(3._rp/4._rp*alpha*c_eta*n)**(4._rp/3._rp)*(n/kb)**2)
-#if defined(_DEBUG)
+#if 0
     if(kg==1) print*,'Grid targeting Retau = ',retau
 #endif
     k = 1._rp*min(kg,(nzg-kg))
