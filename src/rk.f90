@@ -14,13 +14,18 @@ module mod_rk
                        mom_xyz_ad
   use mod_param, only: is_impdiff,is_impdiff_1d,is_boussinesq_buoyancy,is_fast_mom_kernels
   use mod_scal , only: scal,cmpt_scalflux,scalar
-  use mod_utils, only: bulk_mean,swap
+  use mod_utils, only: bulk_mean
   use mod_types
   implicit none
   public rk,rk_scal
   contains
   subroutine rk(rkpar,n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,visc,dt,p, &
-                is_forced,velf,bforce,gacc,beta,scalars,u,v,w,f)
+                is_forced,velf,bforce,gacc,beta,scalars,dudtrko,dvdtrko,dwdtrko,u,v,w,f)
+#if defined(_OPENACC)
+    use mod_common_cudecomp, only: dudtrk_t => work, &
+                                   dvdtrk_t => solver_buf_0, &
+                                   dwdtrk_t => solver_buf_1
+#endif
     !
     ! low-storage 3rd-order Runge-Kutta scheme
     ! for time integration of the momentum equations.
@@ -37,23 +42,30 @@ module mod_rk
     real(rp), intent(in   ), dimension(3)        :: velf,bforce
     real(rp), intent(in   ), dimension(3)        :: gacc
     real(rp), intent(in   )                      :: beta
-    type(scalar), intent(in   ), target, dimension(:) :: scalars
+    type(scalar), intent(in   ), target, dimension(:), optional :: scalars
+    real(rp), intent(inout), dimension(1:,1:,1:) :: dudtrko,dvdtrko,dwdtrko
     real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
     real(rp), intent(out  ), dimension(3)        :: f
-    real(rp), pointer, dimension(:,:,:) :: s
-    real(rp), target       , allocatable, dimension(:,:,:), save :: dudtrk_t ,dvdtrk_t ,dwdtrk_t , &
-                                                                    dudtrko_t,dvdtrko_t,dwdtrko_t
-    real(rp), pointer      , contiguous , dimension(:,:,:), save :: dudtrk   ,dvdtrk   ,dwdtrk   , &
-                                                                    dudtrko  ,dvdtrko  ,dwdtrko
-    real(rp),                allocatable, dimension(:,:,:), save :: dudtrkd  ,dvdtrkd  ,dwdtrkd
+    real(rp), pointer, contiguous, dimension(:,:,:) :: s
+#if !defined(_OPENACC)
+    real(rp), target       , allocatable, dimension(:,:,:), save :: dudtrk_t,dvdtrk_t,dwdtrk_t
+#endif
+    real(rp), pointer      , contiguous , dimension(:,:,:), save :: dudtrk  ,dvdtrk  ,dwdtrk
+    real(rp),                allocatable, dimension(:,:,:), save :: dudtrkd ,dvdtrkd ,dwdtrkd
     logical, save :: is_first = .true.
     real(rp) :: factor1,factor2,factor12
+    logical :: is_buoyancy
     integer  :: i,j,k
     !
     factor1 = rkpar(1)*dt
     factor2 = rkpar(2)*dt
     factor12 = factor1 + factor2
-    if(is_boussinesq_buoyancy) then
+    !
+    ! is_boussinesq_buoyancy = T will always imply present(scalars), as we do not allow for
+    ! nscal = 0 with buoyancy on (see `param.f90`)
+    !
+    is_buoyancy = present(scalars).and.is_boussinesq_buoyancy
+    if(is_buoyancy) then
       s => scalars(1)%val
     end if
     !
@@ -61,49 +73,65 @@ module mod_rk
     !
     if(is_first) then ! leverage save attribute to allocate these arrays on the device only once
       is_first = .false.
-      allocate(dudtrk_t( n(1),n(2),n(3)),dvdtrk_t( n(1),n(2),n(3)),dwdtrk_t( n(1),n(2),n(3)))
-      allocate(dudtrko_t(n(1),n(2),n(3)),dvdtrko_t(n(1),n(2),n(3)),dwdtrko_t(n(1),n(2),n(3)))
-      !$acc enter data create(dudtrk_t ,dvdtrk_t ,dwdtrk_t ) async(1)
-      !$acc enter data create(dudtrko_t,dvdtrko_t,dwdtrko_t) async(1)
-      !$acc kernels default(present) async(1) ! not really necessary
-      dudtrko_t(:,:,:) = 0._rp
-      dvdtrko_t(:,:,:) = 0._rp
-      dwdtrko_t(:,:,:) = 0._rp
-      !$acc end kernels
+#if !defined(_OPENACC)
+      allocate(dudtrk_t(n(1),n(2),n(3)),dvdtrk_t(n(1),n(2),n(3)),dwdtrk_t(n(1),n(2),n(3)))
+#endif
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            dudtrko(i,j,k) = 0._rp
+            dvdtrko(i,j,k) = 0._rp
+            dwdtrko(i,j,k) = 0._rp
+          end do
+        end do
+      end do
       if(is_impdiff) then
         allocate(dudtrkd(n(1),n(2),n(3)),dvdtrkd(n(1),n(2),n(3)),dwdtrkd(n(1),n(2),n(3)))
         !$acc enter data create(dudtrkd,dvdtrkd,dwdtrkd) async(1)
       end if
+#if defined(_OPENACC)
+      dudtrk(1:n(1),1:n(2),1:n(3)) => dudtrk_t(1:product(n(:)))
+      dvdtrk(1:n(1),1:n(2),1:n(3)) => dvdtrk_t(1:product(n(:)))
+      dwdtrk(1:n(1),1:n(2),1:n(3)) => dwdtrk_t(1:product(n(:)))
+#else
       dudtrk  => dudtrk_t
       dvdtrk  => dvdtrk_t
       dwdtrk  => dwdtrk_t
-      dudtrko => dudtrko_t
-      dvdtrko => dvdtrko_t
-      dwdtrko => dwdtrko_t
+#endif
     end if
     !
     if(is_fast_mom_kernels) then
       call mom_xyz_ad(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,u,v,w,dudtrk,dvdtrk,dwdtrk,dudtrkd,dvdtrkd,dwdtrkd)
     else
-      !$acc kernels default(present) async(1)
-      !$OMP PARALLEL WORKSHARE
-      dudtrk(:,:,:) = 0._rp
-      dvdtrk(:,:,:) = 0._rp
-      dwdtrk(:,:,:) = 0._rp
-      !$OMP END PARALLEL WORKSHARE
-      !$acc end kernels
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            dudtrk(i,j,k) = 0._rp
+            dvdtrk(i,j,k) = 0._rp
+            dwdtrk(i,j,k) = 0._rp
+          end do
+        end do
+      end do
       if(.not.is_impdiff) then
         call momx_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,u,dudtrk)
         call momy_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,v,dvdtrk)
         call momz_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,w,dwdtrk)
       else
-        !$acc kernels default(present) async(1)
-        !$OMP PARALLEL WORKSHARE
-        dudtrkd(:,:,:) = 0._rp
-        dvdtrkd(:,:,:) = 0._rp
-        dwdtrkd(:,:,:) = 0._rp
-        !$OMP END PARALLEL WORKSHARE
-        !$acc end kernels
+        !$acc parallel loop collapse(3) default(present) async(1)
+        !$OMP parallel do   collapse(3) DEFAULT(shared)
+        do k=1,n(3)
+          do j=1,n(2)
+            do i=1,n(1)
+              dudtrkd(i,j,k) = 0._rp
+              dvdtrkd(i,j,k) = 0._rp
+              dwdtrkd(i,j,k) = 0._rp
+            end do
+          end do
+        end do
         if(.not.is_impdiff_1d) then
           call momx_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,u,dudtrkd)
           call momy_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,v,dvdtrkd)
@@ -130,19 +158,19 @@ module mod_rk
         do i=1,n(1)
           u(i,j,k) = u(i,j,k) + factor1*dudtrk(i,j,k) + factor2*dudtrko(i,j,k) + &
                                 factor12*(bforce(1) - dli(1)*( p(i+1,j,k)-p(i,j,k)))
-          if(is_boussinesq_buoyancy) then
+          if(is_buoyancy) then
             u(i,j,k) = u(i,j,k) - factor12*gacc(1)*beta*0.5*(s(i+1,j,k)+s(i,j,k))
           end if
           !
           v(i,j,k) = v(i,j,k) + factor1*dvdtrk(i,j,k) + factor2*dvdtrko(i,j,k) + &
                                 factor12*(bforce(2) - dli(2)*( p(i,j+1,k)-p(i,j,k)))
-          if(is_boussinesq_buoyancy) then
+          if(is_buoyancy) then
             v(i,j,k) = v(i,j,k) - factor12*gacc(2)*beta*0.5*(s(i,j+1,k)+s(i,j,k))
           end if
           !
           w(i,j,k) = w(i,j,k) + factor1*dwdtrk(i,j,k) + factor2*dwdtrko(i,j,k) + &
                                 factor12*(bforce(3) - dzci(k)*(p(i,j,k+1)-p(i,j,k)))
-          if(is_boussinesq_buoyancy) then
+          if(is_buoyancy) then
             w(i,j,k) = w(i,j,k) - factor12*gacc(3)*beta*0.5*(s(i,j,k+1)+s(i,j,k))
           end if
           !
@@ -155,7 +183,7 @@ module mod_rk
       end do
     end do
 #else
-    if(.not.is_impdiff .and. .not.is_boussinesq_buoyancy) then
+    if(.not.is_impdiff .and. .not.is_buoyancy) then
       !$acc parallel loop collapse(3) default(present) async(1)
       !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
       do k=1,n(3)
@@ -170,7 +198,7 @@ module mod_rk
           end do
         end do
       end do
-    else if(is_impdiff .and. .not.is_boussinesq_buoyancy) then
+    else if(is_impdiff .and. .not.is_buoyancy) then
       !$acc parallel loop collapse(3) default(present) async(1)
       !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
       do k=1,n(3)
@@ -188,7 +216,7 @@ module mod_rk
           end do
         end do
       end do
-    else if(.not.is_impdiff .and. is_boussinesq_buoyancy) then
+    else if(.not.is_impdiff .and. is_buoyancy) then
       !$acc parallel loop collapse(3) default(present) async(1)
       !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
       do k=1,n(3)
@@ -230,19 +258,32 @@ module mod_rk
     end if
 #endif
     !
-    ! swap d?dtrk <-> d?dtrko
+    ! replaced previous pointer swap to save memory on GPUs by using already allocated
+    ! buffers
     !
-    call swap(dudtrk,dudtrko)
-    call swap(dvdtrk,dvdtrko)
-    call swap(dwdtrk,dwdtrko)
+    !$acc parallel loop collapse(3) default(present) async(1)
+    !$OMP parallel do   collapse(3) DEFAULT(shared)
+    do k=1,n(3)
+      do j=1,n(2)
+        do i=1,n(1)
+          dudtrko(i,j,k) = dudtrk(i,j,k)
+          dvdtrko(i,j,k) = dvdtrk(i,j,k)
+          dwdtrko(i,j,k) = dwdtrk(i,j,k)
+        end do
+      end do
+    end do
 !#if 0 /*pressure gradient term treated explicitly above */
-!    !$acc kernels
-!    !$OMP PARALLEL WORKSHARE
-!    dudtrk(:,:,:) = 0._rp
-!    dvdtrk(:,:,:) = 0._rp
-!    dwdtrk(:,:,:) = 0._rp
-!    !$OMP END PARALLEL WORKSHARE
-!    !$acc end kernels
+!    !$acc parallel loop collapse(3) default(present) async(1)
+!    !$OMP parallel do   collapse(3) DEFAULT(shared)
+!    do k=1,n(3)
+!      do j=1,n(2)
+!        do i=1,n(1)
+!          dudtrk(i,j,k) = 0._rp
+!          dvdtrk(i,j,k) = 0._rp
+!          dwdtrk(i,j,k) = 0._rp
+!        end do
+!      end do
+!    end do
 !    call momx_p(n(1),n(2),n(3),dli(1),bforce(1),p,dudtrk)
 !    call momy_p(n(1),n(2),n(3),dli(2),bforce(2),p,dvdtrk)
 !    call momz_p(n(1),n(2),n(3),dzci  ,bforce(3),p,dwdtrk)
@@ -281,8 +322,11 @@ module mod_rk
     end if
   end subroutine rk
   !
-  subroutine rk_scal(rkpar,iscal,nscal,n,dli,l,dzci,dzfi,grid_vol_ratio_f,alpha,dt,is_bound,u,v,w, &
-                     is_forced,scalf,ssource,fluxo,s,f)
+  subroutine rk_scal(rkpar,n,dli,l,dzci,dzfi,grid_vol_ratio_f,alpha,dt,is_bound,u,v,w, &
+                     is_forced,scalf,ssource,fluxo,dsdtrko,s,f)
+#if defined(_OPENACC)
+    use mod_common_cudecomp, only: dsdtrk_t => work
+#endif
     !
     ! low-storage 3rd-order Runge-Kutta scheme
     ! for time integration of the scalar field.
@@ -290,7 +334,6 @@ module mod_rk
     implicit none
     logical , parameter :: is_cmpt_wallflux = .false.
     real(rp), intent(in   ), dimension(2) :: rkpar
-    integer , intent(in   )               :: iscal,nscal
     integer , intent(in   ), dimension(3) :: n
     real(rp), intent(in   ), dimension(3) :: dli,l
     real(rp), intent(in   ), dimension(0:) :: dzci,dzfi
@@ -301,19 +344,17 @@ module mod_rk
     logical , intent(in   ) :: is_forced
     real(rp), intent(in   ) :: scalf,ssource
     real(rp), intent(inout), dimension(0:1,3) :: fluxo
+    real(rp), intent(inout), dimension(1:,1:,1:) :: dsdtrko
     real(rp), intent(inout), dimension(0:,0:,0:) :: s
     real(rp), intent(out  ) :: f
     !
-    type :: arr
-      real(rp),          allocatable, dimension(:,:,:) :: s
-    end type arr
-    type :: arr_ptr
-      real(rp), pointer, contiguous , dimension(:,:,:) :: s
-    end type arr_ptr
-    type(arr    ), target, allocatable, dimension(:), save :: dsdtrk_t,dsdtrko_t,dsdtrkd
-    type(arr_ptr),         allocatable, dimension(:), save :: dsdtrk  ,dsdtrko
-    !
+#if !defined(_OPENACC)
+    real(rp), target       , allocatable, dimension(:,:,:), save :: dsdtrk_t
+#endif
+    real(rp), pointer      , contiguous , dimension(:,:,:), save :: dsdtrk
+    real(rp), target       , allocatable, dimension(:,:,:), save :: dsdtrkd
     logical, save :: is_first = .true.
+    !
     real(rp) :: factor1,factor2,factor12
     real(rp), dimension(0:1,3) :: flux
     integer :: i,j,k
@@ -323,51 +364,49 @@ module mod_rk
     factor2 = rkpar(2)*dt
     factor12 = factor1 + factor2
     if(is_first) then ! leverage save attribute to allocate these arrays on the device only once
-      if(iscal == nscal) is_first = .false.
-      if(.not.allocated(dsdtrk_t)) then
-        allocate(dsdtrk(  nscal))
-        allocate(dsdtrk_t(nscal))
-        !$acc enter data create(dsdtrk,dsdtrk_t) async(1)
-      end if
-      if(.not.allocated(dsdtrko_t)) then
-        allocate(dsdtrko(  nscal))
-        allocate(dsdtrko_t(nscal))
-        !$acc enter data create(dsdtrko,dsdtrko_t) async(1)
-      end if
-      allocate(dsdtrk_t(iscal)%s(n(1),n(2),n(3)),dsdtrko_t(iscal)%s(n(1),n(2),n(3)))
-      !$acc enter data create(dsdtrk_t(iscal)%s,dsdtrko_t(iscal)%s) async(1)
-      !$acc kernels default(present) async(1) ! not really necessary
-      dsdtrko_t(iscal)%s(:,:,:) = 0._rp
-      !$acc end kernels
-      dsdtrk(iscal)%s  => dsdtrk_t(iscal)%s
-      dsdtrko(iscal)%s => dsdtrko_t(iscal)%s
-      !$acc enter data attach(dsdtrk(iscal)%s,dsdtrko(iscal)%s) async(1)
-      if(.not.allocated(dsdtrkd)) then
-        allocate(dsdtrkd(nscal))
-        !$acc enter data create(dsdtrkd) async(1)
-      end if
+      is_first = .false.
+#if !defined(_OPENACC)
+      allocate(dsdtrk_t(1:n(1),1:n(2),1:n(3)))
+#endif
+      !$acc parallel loop collapse(3) default(present) async(1)
+      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,n(1)
+            dsdtrko(i,j,k) = 0._rp
+          end do
+        end do
+      end do
       if(is_impdiff) then
-        allocate(dsdtrkd(iscal)%s(n(1),n(2),n(3)))
-      else
-        allocate(dsdtrkd(iscal)%s(0,0,0))
+        allocate(dsdtrkd(n(1),n(2),n(3)))
+        !$acc enter data create(dsdtrkd) async(1)
+        !$acc parallel loop collapse(3) default(present) async(1)
+        !$OMP parallel do   collapse(3) DEFAULT(shared)
+        do k=1,n(3)
+          do j=1,n(2)
+            do i=1,n(1)
+              dsdtrkd(i,j,k) = 0._rp
+            end do
+          end do
+        end do
       end if
-      !$acc enter data create(dsdtrkd(iscal)%s) async(1)
-      !$acc kernels default(present) async(1)
-      dsdtrkd(iscal)%s(:,:,:) = 0._rp
-      !$acc end kernels
     end if
+#if defined(_OPENACC)
+    dsdtrk(1:n(1),1:n(2),1:n(3)) => dsdtrk_t(1:product(n(:)))
+#else
+    dsdtrk => dsdtrk_t
+#endif
     !
-    call scal(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,alpha,u,v,w,s,dsdtrk(iscal)%s, &
-              dsdtrkd(iscal)%s)
+    call scal(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,alpha,u,v,w,s,dsdtrk,dsdtrkd)
 #if !defined(_LOOP_UNSWITCHING)
     !$acc parallel loop collapse(3) default(present) async(1)
     !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
-          s(i,j,k) = s(i,j,k) + factor1*dsdtrk(iscal)%s(i,j,k) + factor2*dsdtrko(iscal)%s(i,j,k) + factor12*ssource
+          s(i,j,k) = s(i,j,k) + factor1*dsdtrk(i,j,k) + factor2*dsdtrko(i,j,k) + factor12*ssource
           if(is_impdiff) then
-            s(i,j,k) = s(i,j,k) + factor12*dsdtrkd(iscal)%s(i,j,k)
+            s(i,j,k) = s(i,j,k) + factor12*dsdtrkd(i,j,k)
           end if
         end do
       end do
@@ -379,7 +418,7 @@ module mod_rk
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
-            s(i,j,k) = s(i,j,k) + factor1*dsdtrk(iscal)%s(i,j,k) + factor2*dsdtrko(iscal)%s(i,j,k) + factor12*ssource
+            s(i,j,k) = s(i,j,k) + factor1*dsdtrk(i,j,k) + factor2*dsdtrko(i,j,k) + factor12*ssource
           end do
         end do
       end do
@@ -389,8 +428,8 @@ module mod_rk
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
-            s(i,j,k) = s(i,j,k) + factor1*dsdtrk(iscal)%s(i,j,k) + factor2*dsdtrko(iscal)%s(i,j,k) + &
-                                  factor12*(ssource + dsdtrkd(iscal)%s(i,j,k))
+            s(i,j,k) = s(i,j,k) + factor1*dsdtrk(i,j,k) + factor2*dsdtrko(i,j,k) + &
+                                  factor12*(ssource + dsdtrkd(i,j,k))
           end do
         end do
       end do
@@ -421,15 +460,24 @@ module mod_rk
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
-            s(i,j,k) = s(i,j,k) - .5_rp*factor12*dsdtrkd(iscal)%s(i,j,k)
+            s(i,j,k) = s(i,j,k) - .5_rp*factor12*dsdtrkd(i,j,k)
           end do
         end do
       end do
     end if
     !
-    ! swap dsdtrk <-> dsdtrko
+    ! replaced previous pointer swap to save memory on GPUs by using already allocated
+    ! buffers
     !
-    call swap(dsdtrk(iscal)%s,dsdtrko(iscal)%s)
+    !$acc parallel loop collapse(3) default(present) async(1) ! not really necessary
+    !$OMP parallel do   collapse(3) DEFAULT(shared)
+    do k=1,n(3)
+      do j=1,n(2)
+        do i=1,n(1)
+          dsdtrko(i,j,k) = dsdtrk(i,j,k)
+        end do
+      end do
+    end do
   end subroutine rk_scal
   !
   subroutine cmpt_bulk_forcing(n,is_forced,velf,grid_vol_ratio_c,grid_vol_ratio_f,u,v,w,f)

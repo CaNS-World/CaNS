@@ -133,6 +133,7 @@ module mod_bound
     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
     real(rp) :: factor,sgn
     integer  :: n,dh
+    integer  :: i,j,k
     !
     n = size(p,idir) - 2*nh
     factor = rvalue
@@ -161,173 +162,215 @@ module mod_bound
         !
         select case(idir)
         case(1)
-          !$acc kernels default(present) async(1)
-          !$OMP PARALLEL WORKSHARE
-          p(  0-dh,:,:) = p(n-dh,:,:)
-          p(n+1+dh,:,:) = p(1+dh,:,:)
-          !$OMP END PARALLEL WORKSHARE
-          !$acc end kernels
+          !$acc parallel loop collapse(2) default(present) async(1)
+          !$OMP parallel do   collapse(2) DEFAULT(shared)
+         do k=1-nh,size(p,3)-nh
+           do j=1-nh,size(p,2)-nh
+              p(  0-dh,j,k) = p(n-dh,j,k)
+              p(n+1+dh,j,k) = p(1+dh,j,k)
+            end do
+          end do
         case(2)
-          !$acc kernels default(present) async(1)
-          !$OMP PARALLEL WORKSHARE
-          p(:,  0-dh,:) = p(:,n-dh,:)
-          p(:,n+1+dh,:) = p(:,1+dh,:)
-          !$OMP END PARALLEL WORKSHARE
-          !$acc end kernels
+          !$acc parallel loop collapse(2) default(present) async(1)
+          !$OMP parallel do   collapse(2) DEFAULT(shared)
+          do k=1-nh,size(p,3)-nh
+            do i=1-nh,size(p,1)-nh
+              p(i,  0-dh,k) = p(i,n-dh,k)
+              p(i,n+1+dh,k) = p(i,1+dh,k)
+            end do
+          end do
         case(3)
-          !$acc kernels default(present) async(1)
-          !$OMP PARALLEL WORKSHARE
-          p(:,:,  0-dh) = p(:,:,n-dh)
-          p(:,:,n+1+dh) = p(:,:,1+dh)
-          !$OMP END PARALLEL WORKSHARE
-          !$acc end kernels
+          !$acc parallel loop collapse(2) default(present) async(1)
+          !$OMP parallel do   collapse(2) DEFAULT(shared)
+          do j=1-nh,size(p,2)-nh
+            do i=1-nh,size(p,1)-nh
+              p(i,j,  0-dh) = p(i,j,n-dh)
+              p(i,j,n+1+dh) = p(i,j,1+dh)
+            end do
+          end do
         end select
       case('D','N')
         if(centered) then
           select case(idir)
           case(1)
             if     (ibound == 0) then
-              !$acc kernels default(present) async(1)
-              !$OMP PARALLEL WORKSHARE
-              p(  0-dh,:,:) = factor+sgn*p(1+dh,:,:)
-              !$OMP END PARALLEL WORKSHARE
-              !$acc end kernels
+              !$acc parallel loop collapse(2) default(present) async(1)
+              !$OMP parallel do   collapse(2) DEFAULT(shared)
+              do k=1-nh,size(p,3)-nh
+                do j=1-nh,size(p,2)-nh
+                  p(  0-dh,j,k) = factor+sgn*p(1+dh,j,k)
+                end do
+              end do
             else if(ibound == 1) then
-              !$acc kernels default(present) async(1)
-              !$OMP PARALLEL WORKSHARE
-              p(n+1+dh,:,:) = factor+sgn*p(n-dh,:,:)
-              !$OMP END PARALLEL WORKSHARE
-              !$acc end kernels
+              !$acc parallel loop collapse(2) default(present) async(1)
+              !$OMP parallel do   collapse(2) DEFAULT(shared)
+              do k=1-nh,size(p,3)-nh
+                do j=1-nh,size(p,2)-nh
+                  p(n+1+dh,j,k) = factor+sgn*p(n-dh,j,k)
+                end do
+              end do
             end if
           case(2)
             if     (ibound == 0) then
-              !$acc kernels default(present) async(1)
-              !$OMP PARALLEL WORKSHARE
-              p(:,  0-dh,:) = factor+sgn*p(:,1+dh,:)
-              !$OMP END PARALLEL WORKSHARE
-              !$acc end kernels
+              !$acc parallel loop collapse(2) default(present) async(1)
+              !$OMP parallel do   collapse(2) DEFAULT(shared)
+              do k=1-nh,size(p,3)-nh
+                do i=1-nh,size(p,1)-nh
+                  p(i,  0-dh,k) = factor+sgn*p(i,1+dh,k)
+                end do
+              end do
             else if(ibound == 1) then
-              !$acc kernels default(present) async(1)
-              !$OMP PARALLEL WORKSHARE
-              p(:,n+1+dh,:) = factor+sgn*p(:,n-dh,:)
-              !$OMP END PARALLEL WORKSHARE
-              !$acc end kernels
+              !$acc parallel loop collapse(2) default(present) async(1)
+              !$OMP parallel do   collapse(2) DEFAULT(shared)
+              do k=1-nh,size(p,3)-nh
+                do i=1-nh,size(p,1)-nh
+                  p(i,n+1+dh,k) = factor+sgn*p(i,n-dh,k)
+                end do
+              end do
             end if
           case(3)
             if     (ibound == 0) then
-              !$acc kernels default(present) async(1)
-              !$OMP PARALLEL WORKSHARE
-              p(:,:,  0-dh) = factor+sgn*p(:,:,1+dh)
-              !$OMP END PARALLEL WORKSHARE
-              !$acc end kernels
+              !$acc parallel loop collapse(2) default(present) async(1)
+              !$OMP parallel do   collapse(2) DEFAULT(shared)
+              do j=1-nh,size(p,2)-nh
+                do i=1-nh,size(p,1)-nh
+                  p(i,j,  0-dh) = factor+sgn*p(i,j,1+dh)
+                end do
+              end do
             else if(ibound == 1) then
-              !$acc kernels default(present) async(1)
-              !$OMP PARALLEL WORKSHARE
-              p(:,:,n+1+dh) = factor+sgn*p(:,:,n-dh)
-              !$OMP END PARALLEL WORKSHARE
-              !$acc end kernels
+              !$acc parallel loop collapse(2) default(present) async(1)
+              !$OMP parallel do   collapse(2) DEFAULT(shared)
+              do j=1-nh,size(p,2)-nh
+                do i=1-nh,size(p,1)-nh
+                  p(i,j,n+1+dh) = factor+sgn*p(i,j,n-dh)
+                end do
+              end do
             end if
           end select
         else if(.not.centered.and.ctype == 'D') then
           select case(idir)
           case(1)
             if     (ibound == 0) then
-              !$acc kernels default(present) async(1)
-              !$OMP PARALLEL WORKSHARE
-              p(0-dh,:,:) = factor
-              !$OMP END PARALLEL WORKSHARE
-              !$acc end kernels
+              !$acc parallel loop collapse(2) default(present) async(1)
+              !$OMP parallel do   collapse(2) DEFAULT(shared)
+              do k=1-nh,size(p,3)-nh
+                do j=1-nh,size(p,2)-nh
+                  p(0-dh,j,k) = factor
+                end do
+              end do
             else if(ibound == 1) then
-              !$acc kernels default(present) async(1)
-              !$OMP PARALLEL WORKSHARE
-              p(n+1 ,:,:) = p(n-1,:,:) ! unused
-              p(n+dh,:,:) = factor
-              !$OMP END PARALLEL WORKSHARE
-              !$acc end kernels
+              !$acc parallel loop collapse(2) default(present) async(1)
+              !$OMP parallel do   collapse(2) DEFAULT(shared)
+              do k=1-nh,size(p,3)-nh
+                do j=1-nh,size(p,2)-nh
+                  p(n+1,j,k) = p(n-1,j,k) ! unused
+                  p(n+dh,j,k) = factor
+                end do
+              end do
             end if
           case(2)
             if     (ibound == 0) then
-              !$acc kernels default(present) async(1)
-              !$OMP PARALLEL WORKSHARE
-              p(:,0-dh,:) = factor
-              !$OMP END PARALLEL WORKSHARE
-              !$acc end kernels
+              !$acc parallel loop collapse(2) default(present) async(1)
+              !$OMP parallel do   collapse(2) DEFAULT(shared)
+              do k=1-nh,size(p,3)-nh
+                do i=1-nh,size(p,1)-nh
+                  p(i,0-dh,k) = factor
+                end do
+              end do
             else if(ibound == 1) then
-              !$acc kernels default(present) async(1)
-              !$OMP PARALLEL WORKSHARE
-              p(:,n+1 ,:) = p(:,n-1,:) ! unused
-              p(:,n+dh,:) = factor
-              !$OMP END PARALLEL WORKSHARE
-              !$acc end kernels
+              !$acc parallel loop collapse(2) default(present) async(1)
+              !$OMP parallel do   collapse(2) DEFAULT(shared)
+              do k=1-nh,size(p,3)-nh
+                do i=1-nh,size(p,1)-nh
+                  p(i,n+1,k) = p(i,n-1,k) ! unused
+                  p(i,n+dh,k) = factor
+                end do
+              end do
             end if
           case(3)
             if     (ibound == 0) then
-              !$acc kernels default(present) async(1)
-              !$OMP PARALLEL WORKSHARE
-              p(:,:,0-dh) = factor
-              !$OMP END PARALLEL WORKSHARE
-              !$acc end kernels
+              !$acc parallel loop collapse(2) default(present) async(1)
+              !$OMP parallel do   collapse(2) DEFAULT(shared)
+              do j=1-nh,size(p,2)-nh
+                do i=1-nh,size(p,1)-nh
+                  p(i,j,0-dh) = factor
+                end do
+              end do
             else if(ibound == 1) then
-              !$acc kernels default(present) async(1)
-              !$OMP PARALLEL WORKSHARE
-              p(:,:,n+1 ) = p(:,:,n-1) ! unused
-              p(:,:,n+dh) = factor
-              !$OMP END PARALLEL WORKSHARE
-              !$acc end kernels
+              !$acc parallel loop collapse(2) default(present) async(1)
+              !$OMP parallel do   collapse(2) DEFAULT(shared)
+              do j=1-nh,size(p,2)-nh
+                do i=1-nh,size(p,1)-nh
+                  p(i,j,n+1) = p(i,j,n-1) ! unused
+                  p(i,j,n+dh) = factor
+                end do
+              end do
             end if
           end select
         else if(.not.centered.and.ctype == 'N') then
           select case(idir)
           case(1)
             if     (ibound == 0) then
-              !$acc kernels default(present) async(1)
-              !$OMP PARALLEL WORKSHARE
-              !p(0,:,:) = 1./3.*(-2.*factor+4.*p(1  ,:,:)-p(2  ,:,:))
-              p(0-dh,:,:) = 1.*factor + p(  1+dh,:,:)
-              !$OMP END PARALLEL WORKSHARE
-              !$acc end kernels
+              !$acc parallel loop collapse(2) default(present) async(1)
+              !$OMP parallel do   collapse(2) DEFAULT(shared)
+              do k=1-nh,size(p,3)-nh
+                do j=1-nh,size(p,2)-nh
+                  !p(0-dh,j,k) = 1./3.*(-2.*factor+4.*p(1+dh,j,k)-p(2+dh,j,k))
+                  p(0-dh,j,k) = 1.*factor + p(  1+dh,j,k)
+                end do
+              end do
             else if(ibound == 1) then
-              !$acc kernels default(present) async(1)
-              !$OMP PARALLEL WORKSHARE
-              !p(n,:,:) = 1./3.*(-2.*factor+4.*p(n-1,:,:)-p(n-2,:,:))
-              p(n+1,:,:) = p(n,:,:) ! unused
-              p(n+dh,:,:) = 1.*factor + p(n-1-dh,:,:)
-              !$OMP END PARALLEL WORKSHARE
-              !$acc end kernels
+              !$acc parallel loop collapse(2) default(present) async(1)
+              !$OMP parallel do   collapse(2) DEFAULT(shared)
+              do k=1-nh,size(p,3)-nh
+                do j=1-nh,size(p,2)-nh
+                  !p(n+1,j,k) = 1./3.*(-2.*factor+4.*p(n-1,j,k)-p(n-2,j,k))
+                  p(n+1,j,k) = p(n,j,k) ! unused
+                  p(n+dh,j,k) = 1.*factor + p(n-1-dh,j,k)
+                end do
+              end do
             end if
           case(2)
             if     (ibound == 0) then
-              !$acc kernels default(present) async(1)
-              !$OMP PARALLEL WORKSHARE
-              !p(:,0  ,:) = 1./3.*(-2.*factor+4.*p(:,1,:)-p(:,2  ,:))
-              p(:,0-dh,:) = 1.*factor + p(:,  1+dh,:)
-              !$OMP END PARALLEL WORKSHARE
-              !$acc end kernels
+              !$acc parallel loop collapse(2) default(present) async(1)
+              !$OMP parallel do   collapse(2) DEFAULT(shared)
+              do k=1-nh,size(p,3)-nh
+                do i=1-nh,size(p,1)-nh
+                  !p(i,0-dh,k) = 1./3.*(-2.*factor+4.*p(i,1+dh,k)-p(i,2+dh,k))
+                  p(i,0-dh,k) = 1.*factor + p(i,  1+dh,k)
+                end do
+              end do
             else if(ibound == 1) then
-              !$acc kernels default(present) async(1)
-              !$OMP PARALLEL WORKSHARE
-              !p(:,n,:) = 1./3.*(-2.*factor+4.*p(:,n-1,:)-p(:,n-2,:))
-              p(:,n+1,:) = p(:,n,:) ! unused
-              p(:,n+dh,:) = 1.*factor + p(:,n-1-dh,:)
-              !$OMP END PARALLEL WORKSHARE
-              !$acc end kernels
+              !$acc parallel loop collapse(2) default(present) async(1)
+              !$OMP parallel do   collapse(2) DEFAULT(shared)
+              do k=1-nh,size(p,3)-nh
+                do i=1-nh,size(p,1)-nh
+                  !p(i,n+1,k) = 1./3.*(-2.*factor+4.*p(i,n-1,k)-p(i,n-2,k))
+                  p(i,n+1,k) = p(i,n,k) ! unused
+                  p(i,n+dh,k) = 1.*factor + p(i,n-1-dh,k)
+                end do
+              end do
             end if
           case(3)
             if     (ibound == 0) then
-              !$acc kernels default(present) async(1)
-              !$OMP PARALLEL WORKSHARE
-              !p(:,:,0) = 1./3.*(-2.*factor+4.*p(:,:,1  )-p(:,:,2  ))
-              p(:,:,0-dh) = 1.*factor + p(:,:,  1+dh)
-              !$OMP END PARALLEL WORKSHARE
-              !$acc end kernels
+              !$acc parallel loop collapse(2) default(present) async(1)
+              !$OMP parallel do   collapse(2) DEFAULT(shared)
+              do j=1-nh,size(p,2)-nh
+                do i=1-nh,size(p,1)-nh
+                  !p(i,j,0-dh) = 1./3.*(-2.*factor+4.*p(i,j,1+dh)-p(i,j,2+dh))
+                  p(i,j,0-dh) = 1.*factor + p(i,j,  1+dh)
+                end do
+              end do
             else if(ibound == 1) then
-              !$acc kernels default(present) async(1)
-              !$OMP PARALLEL WORKSHARE
-              !p(:,:,n) = 1./3.*(-2.*factor+4.*p(:,:,n-1)-p(:,:,n-2))
-              p(:,:,n+1) = p(:,:,n) ! unused
-              p(:,:,n+dh) = 1.*factor + p(:,:,n-1-dh)
-              !$OMP END PARALLEL WORKSHARE
-              !$acc end kernels
+              !$acc parallel loop collapse(2) default(present) async(1)
+              !$OMP parallel do   collapse(2) DEFAULT(shared)
+              do j=1-nh,size(p,2)-nh
+                do i=1-nh,size(p,1)-nh
+                  !p(i,j,n+1) = 1./3.*(-2.*factor+4.*p(i,j,n-1)-p(i,j,n-2))
+                  p(i,j,n+1) = p(i,j,n) ! unused
+                  p(i,j,n+dh) = 1.*factor + p(i,j,n-1-dh)
+                end do
+              end do
             end if
           end select
         end if
@@ -349,7 +392,8 @@ module mod_bound
         if(is_bound(0,1)) then
           n(:) = shape(u) - 2*1
           i = 0
-          !$acc parallel loop collapse(2) default(present)
+          !$acc parallel loop collapse(2) default(present) async(1)
+          !$OMP parallel do   collapse(2) DEFAULT(shared)
           do k=1,n(3)
             do j=1,n(2)
               u(i,j,k) = vel2d(j,k)
@@ -360,7 +404,8 @@ module mod_bound
         if(is_bound(0,2)) then
           n(:) = shape(v) - 2*1
           j = 0
-          !$acc parallel loop collapse(2) default(present)
+          !$acc parallel loop collapse(2) default(present) async(1)
+          !$OMP parallel do   collapse(2) DEFAULT(shared)
           do k=1,n(3)
             do i=1,n(1)
               v(i,j,k) = vel2d(i,k)
@@ -371,7 +416,8 @@ module mod_bound
         if(is_bound(0,3)) then
           n(:) = shape(w) - 2*1
           k = 0
-          !$acc parallel loop collapse(2) default(present)
+          !$acc parallel loop collapse(2) default(present) async(1)
+          !$OMP parallel do   collapse(2) DEFAULT(shared)
           do j=1,n(2)
             do i=1,n(1)
               w(i,j,k) = vel2d(i,j)
@@ -381,7 +427,7 @@ module mod_bound
     end select
   end subroutine inflow
   !
-  subroutine updt_rhs_b(c_or_f,cbc,n,is_bound,rhsbx,rhsby,rhsbz,p)
+  subroutine updt_rhs_b(c_or_f,cbc,n,is_bound,rhsbx,rhsby,rhsbz,p,alpha)
     implicit none
     character(len=1), intent(in), dimension(3    ) :: c_or_f
     character(len=1), intent(in), dimension(0:1,3) :: cbc
@@ -389,63 +435,80 @@ module mod_bound
     logical , intent(in), dimension(0:1,3) :: is_bound
     real(rp), intent(in), dimension(:,:,0:), optional :: rhsbx,rhsby,rhsbz
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
+    real(rp), intent(in), optional :: alpha
     integer , dimension(3) :: q
     integer :: idir
     integer :: nn
+    integer :: i,j,k
+    real(rp) :: norm
     q(:) = 0
     do idir = 1,3
       if(c_or_f(idir) == 'f'.and.cbc(1,idir) == 'D') q(idir) = 1
     end do
+    norm = 1.
+    if(present(alpha)) norm = alpha
     !
     if(present(rhsbx)) then
       if(is_bound(0,1)) then
-        !$acc kernels default(present) async(1)
-        !$OMP PARALLEL WORKSHARE
-        p(1 ,1:n(2),1:n(3)) = p(1 ,1:n(2),1:n(3)) + rhsbx(:,:,0)
-        !$OMP END PARALLEL WORKSHARE
-        !$acc end kernels
+        !$acc parallel loop collapse(2) default(present) async(1)
+        !$OMP parallel do   collapse(2) DEFAULT(shared)
+        do k=1,n(3)
+          do j=1,n(2)
+            p(1 ,j,k) = p(1 ,j,k) + rhsbx(j,k,0)*norm
+          end do
+        end do
       end if
       if(is_bound(1,1)) then
         nn = n(1)-q(1)
-        !$acc kernels default(present) async(1)
-        !$OMP PARALLEL WORKSHARE
-        p(nn,1:n(2),1:n(3)) = p(nn,1:n(2),1:n(3)) + rhsbx(:,:,1)
-        !$OMP END PARALLEL WORKSHARE
-        !$acc end kernels
+        !$acc parallel loop collapse(2) default(present) async(1)
+        !$OMP parallel do   collapse(2) DEFAULT(shared)
+        do k=1,n(3)
+          do j=1,n(2)
+            p(nn,j,k) = p(nn,j,k) + rhsbx(j,k,1)*norm
+          end do
+        end do
       end if
     end if
     if(present(rhsby)) then
       if(is_bound(0,2)) then
-        !$acc kernels default(present) async(1)
-        !$OMP PARALLEL WORKSHARE
-        p(1:n(1),1 ,1:n(3)) = p(1:n(1),1 ,1:n(3)) + rhsby(:,:,0)
-        !$OMP END PARALLEL WORKSHARE
-        !$acc end kernels
+        !$acc parallel loop collapse(2) default(present) async(1)
+        !$OMP parallel do   collapse(2) DEFAULT(shared)
+        do k=1,n(3)
+          do i=1,n(1)
+            p(i,1 ,k) = p(i,1 ,k) + rhsby(i,k,0)*norm
+          end do
+        end do
       end if
       if(is_bound(1,2)) then
         nn = n(2)-q(2)
-        !$acc kernels default(present) async(1)
-        !$OMP PARALLEL WORKSHARE
-        p(1:n(1),nn,1:n(3)) = p(1:n(1),nn,1:n(3)) + rhsby(:,:,1)
-        !$OMP END PARALLEL WORKSHARE
-        !$acc end kernels
+        !$acc parallel loop collapse(2) default(present) async(1)
+        !$OMP parallel do   collapse(2) DEFAULT(shared)
+        do k=1,n(3)
+          do i=1,n(1)
+            p(i,nn,k) = p(i,nn,k) + rhsby(i,k,1)*norm
+          end do
+        end do
       end if
     end if
     if(present(rhsbz)) then
       if(is_bound(0,3)) then
-        !$acc kernels default(present) async(1)
-        !$OMP PARALLEL WORKSHARE
-        p(1:n(1),1:n(2),1 ) = p(1:n(1),1:n(2),1 ) + rhsbz(:,:,0)
-        !$OMP END PARALLEL WORKSHARE
-        !$acc end kernels
+        !$acc parallel loop collapse(2) default(present) async(1)
+        !$OMP parallel do   collapse(2) DEFAULT(shared)
+        do j=1,n(2)
+          do i=1,n(1)
+            p(i,j,1 ) = p(i,j,1 ) + rhsbz(i,j,0)*norm
+          end do
+        end do
       end if
       if(is_bound(1,3)) then
         nn = n(3)-q(3)
-        !$acc kernels default(present) async(1)
-        !$OMP PARALLEL WORKSHARE
-        p(1:n(1),1:n(2),nn) = p(1:n(1),1:n(2),nn) + rhsbz(:,:,1)
-        !$OMP END PARALLEL WORKSHARE
-        !$acc end kernels
+        !$acc parallel loop collapse(2) default(present) async(1)
+        !$OMP parallel do   collapse(2) DEFAULT(shared)
+        do j=1,n(2)
+          do i=1,n(1)
+            p(i,j,nn) = p(i,j,nn) + rhsbz(i,j,1)*norm
+          end do
+        end do
       end if
     end if
   end subroutine updt_rhs_b

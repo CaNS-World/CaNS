@@ -81,9 +81,10 @@ module mod_output
     !
     allocate(p1d(ng(idir)))
     !$acc enter data create(p1d)
-    !$acc kernels default(present)
-    p1d(:) = 0._rp
-    !$acc end kernels
+    !$acc parallel loop default(present)
+    do k=1,size(p1d)
+      p1d(k) = 0._rp
+    end do
     select case(idir)
     case(3)
       grid_area_ratio = dl(1)*dl(2)/(l(1)*l(2))
@@ -204,7 +205,7 @@ module mod_output
     filesize = 0_MPI_OFFSET_KIND
     call MPI_FILE_SET_SIZE(fh,filesize,ierr)
     disp = 0_MPI_OFFSET_KIND
-#if 1
+#if 0
     call decomp_2d_write_every(ipencil,p,nskip(1),nskip(2),nskip(3),fname,.true.)
 #else
     !
