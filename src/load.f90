@@ -15,7 +15,7 @@ module mod_load
   use mod_scal, only: scalar
   implicit none
   private
-  public load_all,io_field
+  public load_one,io_field
   contains
   subroutine load_all(io,filename,comm,ng,nh,lo,hi,nscal,u,v,w,p,s,time,istep)
     !

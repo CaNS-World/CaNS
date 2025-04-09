@@ -42,7 +42,7 @@ program cans
   use mod_initmpi        , only: initmpi
   use mod_initsolver     , only: initsolver
   use mod_solve_helmholtz, only: solve_helmholtz,rhs_bound
-  use mod_load           , only: load_all
+  use mod_load           , only: load_one
   use mod_mom            , only: bulk_forcing
   use mod_rk             , only: rk,rk_scal
   use mod_output         , only: out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
@@ -86,7 +86,7 @@ program cans
   use omp_lib
   implicit none
   integer , dimension(3) :: lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z
-  real(rp), allocatable, dimension(:,:,:) :: u,v,w,p,pp
+  real(rp), target, allocatable, dimension(:,:,:) :: u,v,w,p,pp
   real(rp), allocatable, dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
   real(rp), dimension(0:1,3) :: tauxo,tauyo,tauzo
   real(rp), dimension(3) :: f
@@ -125,7 +125,7 @@ program cans
   type(scalar), pointer :: s
   real(rp) :: meanscal
   real(rp), allocatable, dimension(:) :: fs
-  integer :: iscal
+  integer :: iscal,is
   !
   !real(rp), allocatable, dimension(:) :: var
   real(rp), dimension(42) :: var
@@ -138,6 +138,11 @@ program cans
   character(len=3  ) :: scalnum
   character(len=4  ) :: chkptnum
   character(len=100) :: filename
+  type :: arr_ptr
+    real(rp), pointer, contiguous , dimension(:,:,:) :: arr
+  end type arr_ptr
+  type(arr_ptr)    , allocatable, dimension(:) ::   io_vars
+  character(len=10), allocatable, dimension(:) :: c_io_vars
   integer :: k,kk
   logical :: is_done,kill
   !
@@ -349,7 +354,18 @@ program cans
                             nb,is_bound,cbcvel,cbcpre,bcvel,bcpre)
   end if
   !
+  allocate(io_vars(4+nscal),c_io_vars(4+nscal)) ! u,v,w,p,scalars
+  io_vars(1)%arr => u; c_io_vars(1) = '_u'
+  io_vars(2)%arr => v; c_io_vars(2) = '_v'
+  io_vars(3)%arr => w; c_io_vars(3) = '_w'
+  io_vars(4)%arr => p; c_io_vars(4) = '_p'
+  do iscal=1,nscal
+    write(scalnum,'(i3.3)') iscal
+    io_vars(4+iscal)%arr => scalars(iscal)%val; c_io_vars(4+iscal) = '_s_'//scalnum
+  end do
+  !
   is_ptdma_update_p = .true.
+  !
   if(.not.restart) then
     istep = 0
     time = 0.
@@ -360,7 +376,10 @@ program cans
     end do
     if(myid == 0) print*, '*** Initial condition succesfully set ***'
   else
-    call load_all('r',trim(datadir)//'fld.bin',MPI_COMM_WORLD,ng,[1,1,1],lo,hi,nscal,u,v,w,p,scalars,time,istep)
+    do is=1,4+nscal
+      call load_one('r',trim(datadir)//'fld'//trim(c_io_vars(is))//'.bin', &
+                    MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,time,istep)
+    end do
     if(myid == 0) print*, '*** Checkpoint loaded at time = ', time, 'time step = ', istep, '. ***'
   end if
   !$acc enter data copyin(u,v,w,p,dudtrko,dvdtrko,dwdtrko) create(pp)
@@ -557,14 +576,14 @@ program cans
     end if
     if(isave > 0.and.((mod(istep,max(isave,1)) == 0).or.(is_done.and..not.kill))) then
       if(is_overwrite_save) then
-        filename = 'fld.bin'
+        filename = 'fld'
       else
-        filename = 'fld_'//fldnum//'.bin'
+        filename = 'fld_'//fldnum
         if(nsaves_max > 0) then
           if(savecounter >= nsaves_max) savecounter = 0
           savecounter = savecounter + 1
           write(chkptnum,'(i4.4)') savecounter
-          filename = 'fld_'//chkptnum//'.bin'
+          filename = 'fld_'//chkptnum
           var(1) = 1.*istep
           var(2) = time
           var(3) = 1.*savecounter
@@ -576,12 +595,17 @@ program cans
       do iscal=1,nscal
         !$acc update self(scalars(iscal)%val)
       end do
-      call load_all('w',trim(datadir)//trim(filename),MPI_COMM_WORLD,ng,[1,1,1],lo,hi,nscal,u,v,w,p,scalars,time,istep)
+      do is=1,4+nscal
+        call load_one('w',trim(datadir)//trim(filename)//trim(c_io_vars(is))//'.bin', &
+                      MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,time,istep)
+      end do
       if(.not.is_overwrite_save) then
         !
-        ! fld.bin -> last checkpoint file (symbolic link)
+        ! fld_*.bin -> last checkpoint file (symbolic link)
         !
-        call gen_alias(myid,trim(datadir),trim(filename),'fld.bin')
+        do is=1,4+nscal
+          call gen_alias(myid,trim(datadir),trim(filename)//trim(c_io_vars(is))//'.bin','fld'//trim(c_io_vars(is))//'.bin')
+        end do
       end if
       if(myid == 0) print*, '*** Checkpoint saved at time = ', time, 'time step = ', istep, '. ***'
     end if
