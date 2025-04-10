@@ -1200,8 +1200,8 @@ module mod_solver_gpu
       !$acc parallel loop gang vector collapse(2) default(present) async(1)
       do j=1,ny_r
         do i=1,nx_r
-          pp_z(i,j,nn+1) = (pp_z(i,j,nn+1) - cc_z(i,j,nn+1)*pp_z(  i,j,1) - aa_z(i,j,nn+1)*pp_z(  i,j,nn))/ &
-                           (bb_z(i,j,nn+1) + cc_z(i,j,nn+1)*pp_z_2(i,j,1) + aa_z(i,j,nn+1)*pp_z_2(i,j,nn))
+          pp_z(i,j,nn+1) = (pp_z(i,j,nn+1)*norm - cc_z(i,j,nn+1)*pp_z(  i,j,1) - aa_z(i,j,nn+1)*pp_z(  i,j,nn))/ &
+                           (bb_z(i,j,nn+1)      + cc_z(i,j,nn+1)*pp_z_2(i,j,1) + aa_z(i,j,nn+1)*pp_z_2(i,j,nn))
           !$acc loop seq
           do k=1,nn
             pp_z(i,j,k) = pp_z(i,j,k) + pp_z_2(i,j,k)*pp_z(i,j,nn+1)
