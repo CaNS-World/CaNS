@@ -35,5 +35,5 @@ is_poisson_pcr_tdma = F
 /
 
 &other_options
-is_debug = T,is_timing = T
+is_debug = T, is_timing = T
 /
