@@ -7,7 +7,7 @@ UTILSDIR=$CANSDIR/utils
 rm -rf $RUNDIR
 echo "Compiling ..."
 sleep 2
-cp $TESTDIR/build.conf $CANSDIR && cd $CANSDIR && make allclean && make libs && make -j
+cd $CANSDIR && make allclean && make libs && make -j
 cp $TESTDIR/input.nml $RUNDIR && cd $RUNDIR
 echo "Running CaNS..."
 sleep 2
