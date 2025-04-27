@@ -1,0 +1,32 @@
+name: run-all
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+    types:
+    - opened
+    - reopened
+    - synchronize
+    - ready_for_review
+
+jobs:
+  GNU:
+    uses: ./.github/workflows/run-one.yml
+    with:
+      compiler: "GNU"
+
+  INTEL:
+    uses: ./.github/workflows/run-one.yml
+    with:
+      compiler: "INTEL"
+
+  #NVIDIA:
+  # Currently disabled due to lacking space on GitHub free runners
+  #  uses: ./.github/workflows/run-one.yml
+  #  with:
+  #    compiler: "NVIDIA"
