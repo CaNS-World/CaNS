@@ -62,7 +62,7 @@ module mod_load_hdf5
     integer(HSIZE_T) , dimension(3) :: data_count
     integer(HSSIZE_T), dimension(3) :: data_offset
     integer(HSSIZE_T), dimension(3) :: halo_offset
-    logical :: file_exists, group_exists
+    logical :: file_exists, group_exists, dset_exists
     character(len=20):: name, varname
     integer(hsize_t) :: data_size
 
@@ -139,24 +139,31 @@ module mod_load_hdf5
         call h5gopen_f(file_id, name, group_id, ierr)
       else
         call h5gcreate_f(file_id, name, group_id, ierr)
+
+        call h5screate_simple_f(1, (/1_HSIZE_T/), dspace_id, ierr)
+        call h5acreate_f(group_id, "time", H5T_IEEE_F64LE, dspace_id, attr_id, ierr)
+        call h5awrite_f(attr_id, H5T_IEEE_F64LE, time, (/1_HSIZE_T/), ierr)
+        call h5aclose_f(attr_id, ierr)
+
+        call h5acreate_f(group_id, "istep", H5T_STD_I32LE, dspace_id, attr_id, ierr)
+        call h5awrite_f(attr_id, H5T_STD_I32LE, istep, (/1_HSIZE_T/), ierr)
+        call h5aclose_f(attr_id, ierr)
+        call h5sclose_f(dspace_id, ierr)
       end if
-
-      call h5screate_simple_f(1, (/1_HSIZE_T/), dspace_id, ierr)
-      call h5acreate_f(group_id, "time", H5T_IEEE_F64LE, dspace_id, attr_id, ierr)
-      call h5awrite_f(attr_id, H5T_IEEE_F64LE, time, (/1_HSIZE_T/), ierr)
-      call h5aclose_f(attr_id, ierr)
-
-      call h5acreate_f(group_id, "istep", H5T_STD_I32LE, dspace_id, attr_id, ierr)
-      call h5awrite_f(attr_id, H5T_STD_I32LE, istep, (/1_HSIZE_T/), ierr)
-      call h5aclose_f(attr_id, ierr)
-      call h5sclose_f(dspace_id, ierr)
 
       call h5screate_simple_f(ndims, dims, dspace_id, ierr)
 
       do i = 1, nvar
+        call h5lexists_f(group_id, varname, dset_exists, ierr)
+        if (dset_exists) then
+          call h5dopen_f(group_id, varname, dset_id, ierr)
+        else
+          call h5dcreate_f(group_id, varname, H5T_IEEE_F64LE, dspace_id, dset_id, ierr)
+        end if
+
+
         varname = c_io_vars(i)
         var(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) => io_vars(i)%arr
-        call h5dcreate_f(group_id, varname, H5T_IEEE_F64LE, dspace_id, dset_id, ierr)
         call h5dwrite_f(dset_id, H5T_IEEE_F64LE, var, dims, ierr, &
                         file_space_id=slabspace, mem_space_id=memspace, xfer_prp=xfer_plist_id)
         call h5dclose_f(dset_id, ierr)
