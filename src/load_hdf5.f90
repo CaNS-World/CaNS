@@ -22,7 +22,7 @@ module mod_load_hdf5
   end interface load_one
   contains
 #if defined(_USE_HDF5)
-  subroutine io_field_hdf5(io,filename,varname,comm,ng,nh,lo,hi,var,time,istep)
+  subroutine io_field_hdf5(io,filename,c_io_vars,comm,ng,nh,lo,hi,io_vars,time,istep, nvar)
     use hdf5
     !
     ! collective single field data I/O using HDF5
@@ -32,22 +32,26 @@ module mod_load_hdf5
     !
     implicit none
     character(len=1), intent(in) :: io
-    character(len=*), intent(in) :: filename,varname
-    integer         , intent(in) :: comm
+    character(len=*), intent(in) :: filename
+    integer         , intent(in) :: comm, nvar
     integer         , intent(in), dimension(3)   :: ng,nh,lo,hi
-    ! Must statically define kind for hdf5 routine, either duplicate for other precisions (and add to interface) or do some Macro wizardry
-    real(real64), intent(inout),contiguous, dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: var
+    ! Must statically define kind real64 for hdf5 routine,
+    ! either duplicate for other precisions (and add to interface) or do some Macro wizardry
+    !real(real64), intent(inout),contiguous, dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: var
+    type(arr_ptr)    , allocatable, intent(in) ::   io_vars(:)
+    character(len=10), allocatable, intent(in) :: c_io_vars(:)
     real(real64), intent(inout) :: time
-    integer , intent(inout) :: istep
+    integer(int32) , intent(inout) :: istep
 
+    real(real64), pointer, dimension(:,:,:) :: var
     integer , dimension(3) :: n
     integer , dimension(3) :: subsizes, starts
     !
     ! HDF5 variables
     !
-    integer :: ndims, ierr
+    integer :: ndims, ierr, i
     integer(HID_T) :: file_id, group_id
-    integer(HID_T) :: dspace_id, dset_id
+    integer(HID_T) :: dspace_id, dset_id, attr_id
     integer(HID_T) :: filespace
     integer(HID_T) :: slabspace
     integer(HID_T) :: memspace
@@ -59,7 +63,7 @@ module mod_load_hdf5
     integer(HSSIZE_T), dimension(3) :: data_offset
     integer(HSSIZE_T), dimension(3) :: halo_offset
     logical :: file_exists, group_exists
-    character(len=20):: name
+    character(len=20):: name, varname
     integer(hsize_t) :: data_size
 
     !
@@ -100,17 +104,25 @@ module mod_load_hdf5
 
       ! find latest group
       call h5lget_name_by_idx_f(file_id, ".", H5_INDEX_NAME_F, H5_ITER_DEC_F, 0_HSIZE_T, name, ierr, data_size)
-      call h5dopen_f(file_id, trim(name)//'/'//varname, dset_id, ierr)
 
+      call h5aopen_by_name_f(file_id, trim(name), 'time', attr_id, ierr)
+      call h5aread_f(attr_id, H5T_IEEE_F64LE, time, (/1_HSIZE_T/), ierr)
+      call h5aclose_f(attr_id, ierr)
 
-      call h5dread_f(dset_id,H5T_IEEE_F64LE,var,dims,ierr, &
-                     file_space_id=slabspace,mem_space_id=memspace,xfer_prp=xfer_plist_id)
+      call h5aopen_by_name_f(file_id, trim(name), 'istep', attr_id, ierr)
+      call h5aread_f(attr_id, H5T_STD_I32LE, istep, (/1_HSIZE_T/), ierr)
+      call h5aclose_f(attr_id, ierr)
 
-      call h5dclose_f(dset_id, ierr)
+      do i = 1, nvar
+        varname = c_io_vars(i)
+        var(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) => io_vars(i)%arr
+        call h5dopen_f(file_id, trim(name)//'/'//varname, dset_id, ierr)
+        call h5dread_f(dset_id,H5T_IEEE_F64LE,var,dims,ierr, &
+                       file_space_id=slabspace,mem_space_id=memspace,xfer_prp=xfer_plist_id)
+        call h5dclose_f(dset_id, ierr)
+      end do
+
       call h5fclose_f(file_id, ierr)
-
-      ! set time from group name (simpler then using h5 attributes, for now)
-      read(name, '(6x,I8)') istep
 
     case('w')
       inquire(file=filename,exist=file_exists)
@@ -129,12 +141,26 @@ module mod_load_hdf5
         call h5gcreate_f(file_id, name, group_id, ierr)
       end if
 
+      call h5screate_simple_f(1, (/1_HSIZE_T/), dspace_id, ierr)
+      call h5acreate_f(group_id, "time", H5T_IEEE_F64LE, dspace_id, attr_id, ierr)
+      call h5awrite_f(attr_id, H5T_IEEE_F64LE, time, (/1_HSIZE_T/), ierr)
+      call h5aclose_f(attr_id, ierr)
+
+      call h5acreate_f(group_id, "istep", H5T_STD_I32LE, dspace_id, attr_id, ierr)
+      call h5awrite_f(attr_id, H5T_STD_I32LE, istep, (/1_HSIZE_T/), ierr)
+      call h5aclose_f(attr_id, ierr)
+      call h5sclose_f(dspace_id, ierr)
+
       call h5screate_simple_f(ndims, dims, dspace_id, ierr)
 
-      call h5dcreate_f(group_id, varname, H5T_IEEE_F64LE, dspace_id, dset_id, ierr)
-      call h5dwrite_f(dset_id, h5t_ieee_f64le, var, dims, ierr, &
-                      file_space_id=slabspace, mem_space_id=memspace, xfer_prp=xfer_plist_id)
-      call h5dclose_f(dset_id, ierr)
+      do i = 1, nvar
+        varname = c_io_vars(i)
+        var(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) => io_vars(i)%arr
+        call h5dcreate_f(group_id, varname, H5T_IEEE_F64LE, dspace_id, dset_id, ierr)
+        call h5dwrite_f(dset_id, H5T_IEEE_F64LE, var, dims, ierr, &
+                        file_space_id=slabspace, mem_space_id=memspace, xfer_prp=xfer_plist_id)
+        call h5dclose_f(dset_id, ierr)
+      end do
       call h5sclose_f(dspace_id, ierr)
       call h5gclose_f(group_id, ierr)
       call h5fclose_f(file_id, ierr)

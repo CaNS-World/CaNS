@@ -84,7 +84,7 @@ program cans
   use mod_updatep        , only: updatep
   use mod_utils          , only: bulk_mean
 #if defined(_OPENACC)
-  use mod_utils          , only: device_memory_footprint
+  use mod_utils          , only: device_memory_footprint, arr_ptr
 #endif
   use mod_types
   use omp_lib
@@ -142,9 +142,6 @@ program cans
   character(len=3  ) :: scalnum
   character(len=4  ) :: chkptnum
   character(len=100) :: filename
-  type :: arr_ptr
-    real(rp), pointer, contiguous , dimension(:,:,:) :: arr
-  end type arr_ptr
   type(arr_ptr)    , allocatable, dimension(:) ::   io_vars
   character(len=10), allocatable, dimension(:) :: c_io_vars
   integer :: k,kk
@@ -380,15 +377,15 @@ program cans
     end do
     if(myid == 0) print*, '*** Initial condition succesfully set ***'
   else
-    do is=1,4+nscal
 #ifdef _USE_HDF5
-      call load_one('r',trim(datadir)//'fld.h5',trim(c_io_vars(is)), &
-                    MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,time,istep)
+    call load_one('r',trim(datadir)//'fld.h5',c_io_vars, &
+                  MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars,time,istep, 4+nscal)
 #else
+    do is=1,4+nscal
       call load_one('r',trim(datadir)//'fld'//trim(c_io_vars(is))//'.bin', &
                     MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,time,istep)
-#endif
     end do
+#endif
     if(myid == 0) print*, '*** Checkpoint loaded at time = ', time, 'time step = ', istep, '. ***'
   end if
   !$acc enter data copyin(u,v,w,p,dudtrko,dvdtrko,dwdtrko) create(pp)
@@ -604,15 +601,15 @@ program cans
       do iscal=1,nscal
         !$acc update self(scalars(iscal)%val)
       end do
-      do is=1,4+nscal
 #ifdef _USE_HDF5
-        call load_one('w',trim(datadir)//'fld.h5',trim(c_io_vars(is)), &
-                      MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,time,istep)
+      call load_one('w',trim(datadir)//'fld.h5',c_io_vars, &
+                  MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars,time,istep, 4+nscal)
 #else
+      do is=1,4+nscal
         call load_one('w',trim(datadir)//trim(filename)//trim(c_io_vars(is))//'.bin', &
                       MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,time,istep)
-#endif
       end do
+#endif
       if(.not.is_overwrite_save) then
         !
         ! fld_*.bin -> last checkpoint file (symbolic link)
