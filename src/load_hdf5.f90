@@ -14,6 +14,7 @@ module mod_load_hdf5
   use mod_types
   use mod_utils, only: f_sizeof
   use mod_scal, only: scalar
+  use mod_param, only: ipencil_axis
   implicit none
   private
   public load_one
@@ -56,9 +57,9 @@ module mod_load_hdf5
     integer(HID_T) :: slabspace
     integer(HID_T) :: memspace
     !
-    integer(HSIZE_T) :: dims(3)
+    integer(HSIZE_T) :: dims(3), chunk(3)
     !
-    integer(HID_T) :: xfer_plist_id, file_plist_id
+    integer(HID_T) :: xfer_pid, file_pid, dset_pid
     integer(HSIZE_T) , dimension(3) :: data_count
     integer(HSSIZE_T), dimension(3) :: data_offset
     integer(HSSIZE_T), dimension(3) :: halo_offset
@@ -74,6 +75,7 @@ module mod_load_hdf5
     ndims = 3
     dims(:) = ng(:)
     data_count(:) = subsizes(:)
+    write(*,*) subsizes
     data_offset(:) = starts(:)
     halo_offset(:) = nh(:)+1
     !
@@ -81,10 +83,20 @@ module mod_load_hdf5
     ! Common operations
     call h5open_f(ierr)
 
-    call h5pcreate_f(h5p_dataset_xfer_f, xfer_plist_id, ierr)
-    call h5pset_dxpl_mpio_f(xfer_plist_id, H5FD_MPIO_COLLECTIVE_F, ierr)
-    call h5pcreate_f(h5p_file_access_f, file_plist_id, ierr)
-    call h5pset_fapl_mpio_f(file_plist_id, comm, MPI_INFO_NULL, ierr)
+    call h5pcreate_f(h5p_dataset_xfer_f, xfer_pid, ierr)
+    call h5pset_dxpl_mpio_f(xfer_pid, H5FD_MPIO_COLLECTIVE_F, ierr)
+    call h5pcreate_f(h5p_file_access_f, file_pid, ierr)
+    call h5pset_fapl_mpio_f(file_pid, comm, MPI_INFO_NULL, ierr)
+    call h5pcreate_f(h5p_dataset_create_f, dset_pid, ierr)
+
+    ! Sets the other dimensions of the chunk, 1 make a chunk of every independent pencil
+    chunk = 1
+    !Change chunking axis by editing the following line
+    chunk(ipencil_axis) = ng(ipencil_axis)
+    !Turn chunks on/off by commenting out the following line
+    call h5pset_chunk_f(dset_pid, ndims, chunk , ierr)
+    !Turn compression on/off by toggeling the following line, or change the level (1 least/fast, 9 most/slow)
+    call h5pset_deflate_f(dset_pid, 1, ierr) 
 
     call h5screate_simple_f(ndims, data_count+2*nh(:), memspace, ierr) 
     call h5screate_simple_f(ndims, dims, slabspace, ierr)
@@ -97,7 +109,7 @@ module mod_load_hdf5
 
       inquire(file=filename,exist=file_exists)
       if (file_exists) then 
-        call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, ierr, access_prp=file_plist_id)
+        call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, ierr, access_prp=file_pid)
       else
         error stop "Checkpoint file "//filename//"  does not exist"
       endif
@@ -118,7 +130,7 @@ module mod_load_hdf5
         var(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) => io_vars(i)%arr
         call h5dopen_f(file_id, trim(name)//'/'//varname, dset_id, ierr)
         call h5dread_f(dset_id,H5T_IEEE_F64LE,var,dims,ierr, &
-                       file_space_id=slabspace,mem_space_id=memspace,xfer_prp=xfer_plist_id)
+                       file_space_id=slabspace,mem_space_id=memspace,xfer_prp=xfer_pid)
         call h5dclose_f(dset_id, ierr)
       end do
 
@@ -127,9 +139,9 @@ module mod_load_hdf5
     case('w')
       inquire(file=filename,exist=file_exists)
       if (file_exists) then 
-        call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, ierr, access_prp=file_plist_id)
+        call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, ierr, access_prp=file_pid)
       else
-        call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, ierr, access_prp=file_plist_id)
+        call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, ierr, access_prp=file_pid)
       endif
 
       write(name,'(I8.8)') istep
@@ -158,14 +170,15 @@ module mod_load_hdf5
         if (dset_exists) then
           call h5dopen_f(group_id, varname, dset_id, ierr)
         else
-          call h5dcreate_f(group_id, varname, H5T_IEEE_F64LE, dspace_id, dset_id, ierr)
+          call h5dcreate_f(group_id, varname, H5T_IEEE_F64LE, dspace_id, dset_id, ierr, &
+                           dcpl_id=dset_pid)
         end if
 
 
         varname = c_io_vars(i)
         var(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) => io_vars(i)%arr
         call h5dwrite_f(dset_id, H5T_IEEE_F64LE, var, dims, ierr, &
-                        file_space_id=slabspace, mem_space_id=memspace, xfer_prp=xfer_plist_id)
+                        file_space_id=slabspace, mem_space_id=memspace, xfer_prp=xfer_pid)
         call h5dclose_f(dset_id, ierr)
       end do
       call h5sclose_f(dspace_id, ierr)
@@ -175,8 +188,8 @@ module mod_load_hdf5
 10 continue
     call h5sclose_f(memspace, ierr)
     call h5sclose_f(slabspace, ierr)
-    call h5pclose_f(file_plist_id, ierr)
-    call h5pclose_f(xfer_plist_id, ierr)
+    call h5pclose_f(file_pid, ierr)
+    call h5pclose_f(xfer_pid, ierr)
     call h5close_f(ierr)
   end subroutine io_field_hdf5
 #endif
