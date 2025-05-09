@@ -1,0 +1,10 @@
+name: run-default
+
+on:
+  workflow_dispatch:
+
+jobs:
+  GNU:
+    uses: ./.github/workflows/run-one.yml
+    with:
+      compiler: "GNU"

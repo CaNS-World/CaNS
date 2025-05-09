@@ -1,0 +1,65 @@
+name: "Build"
+description: "Compiles dependencies and CaNS for multiple compilers and build profiles"
+inputs:
+  name:
+    description: "Name of the build"
+    required: true
+  compiler:
+    description: "The compiler to use (e.g., GNU, NVIDIA, INTEL)"
+    required: true
+  compiler_flags:
+    description: "Additional flags for compilation"
+    default: ""
+  no-rebuild:
+    description: "Do not rebuild CaNS and dependencies"
+    default: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install compiler
+      shell: bash
+      run: |
+        echo "INFO: Installing compiling environment: ${{ inputs.compiler }}"
+        chmod a+x ./.github/actions/build/scripts/install-${{ inputs.compiler }}.sh
+        source ./.github/actions/build/scripts/install-${{ inputs.compiler }}.sh
+
+    - name: Get dependencies
+      if: ${{ inputs.no-rebuild == 'true' }}
+      uses: actions/download-artifact@v4
+      with:
+        name: compiled-libs-${{ inputs.name }}
+        path: dependencies/
+    - name: Build dependencies
+      if: ${{ inputs.no-rebuild != 'true' }}
+      shell: bash
+      run: |
+        source .github/actions/build/scripts/setenv-${{ inputs.compiler }}.sh
+        make libs FCOMP=${{ inputs.compiler }}
+    - name: Put dependencies
+      if: ${{ inputs.no-rebuild != 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: compiled-libs-${{ inputs.name }}
+        path: dependencies/
+        retention-days: 1
+
+    - name: Get CaNS build
+      if: ${{ inputs.no-rebuild == 'true' }}
+      uses: actions/download-artifact@v4
+      with:
+        name: cans-${{ inputs.name }}
+        path: run/
+    - name: Build CaNS
+      if: ${{ inputs.no-rebuild != 'true' }}
+      shell: bash
+      run: |
+        source .github/actions/build/scripts/setenv-${{ inputs.compiler }}.sh
+        make FCOMP=${{ inputs.compiler }} ${{ inputs.compiler_flags }}
+    - name: Put CaNS build
+      if: ${{ inputs.no-rebuild != 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: cans-${{ inputs.name }}
+        path: run/cans
+        retention-days: 7

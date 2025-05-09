@@ -5,7 +5,7 @@
 #
 # -
 #!/usr/bin/env python
-def read_single_field_binary(filenamei,iskip):
+def read_single_field_binary(data_dir,filenamei,iskip):
     import numpy as np
     #
     # setting up some parameters
@@ -18,7 +18,7 @@ def read_single_field_binary(filenamei,iskip):
     #
     # read geometry file
     #
-    geofile  = "geometry.out"
+    geofile  = data_dir+"/geometry.out"
     geo = np.loadtxt(geofile, comments = "!", max_rows = 2)
     ng = geo[0,:].astype('int')
     l  = geo[1,:]
@@ -33,7 +33,7 @@ def read_single_field_binary(filenamei,iskip):
     yv = yp + dl[1]/2.                              # staggered y grid
     zw = zp + dl[2]/2.                              # staggered z grid
     if(non_uniform_grid):
-        f   = open('grid.bin','rb')
+        f   = open(data_dir+'/grid.bin','rb')
         grid_z = np.fromfile(f,dtype=precision)
         f.close()
         grid_z = np.reshape(grid_z,(ng[2],4),order='F')
@@ -44,7 +44,7 @@ def read_single_field_binary(filenamei,iskip):
     #
     n           = (ng[:]/iskip[:]).astype(int)
     data        = np.zeros([n[0],n[1],n[2]])
-    fld         = np.fromfile(filenamei,dtype=precision)
+    fld         = np.fromfile(data_dir+"/"+filenamei,dtype=precision)
     data[:,:,:] = np.reshape(fld,(n[0],n[1],n[2]),order='F')
     #
     # reshape grid
@@ -64,4 +64,4 @@ if __name__ == "__main__":
     iskipy      = input("Data saved every (ix, iy, iz) points. Value of iy? [1]: ") or "1"
     iskipz      = input("Data saved every (ix, iy, iz) points. Value of iz? [1]: ") or "1"
     iskip       = np.array([iskipx,iskipy,iskipz]).astype(int)
-    data, xp, yp, zp, xu, yv, zw = read_single_field_binary(filenamei,iskip)
+    data, xp, yp, zp, xu, yv, zw = read_single_field_binary("./",filenamei,iskip)
