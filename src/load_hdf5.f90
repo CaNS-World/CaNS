@@ -14,7 +14,7 @@ module mod_load_hdf5
   use mod_types
   use mod_utils, only: f_sizeof
   use mod_scal, only: scalar
-  use mod_param, only: ipencil_axis, l
+  use mod_param, only: ipencil_axis, l, compression_level, chunk_checkpoint
   implicit none
   private
   public load_one
@@ -107,14 +107,17 @@ module mod_load_hdf5
     call h5pset_fapl_mpio_f(file_pid, comm, MPI_INFO_NULL, ierr)
     call h5pcreate_f(h5p_dataset_create_f, dset_pid, ierr)
 
-    ! Sets the other dimensions of the chunk, 1 make a chunk of every independent pencil
-    chunk = 1
-    !Change chunking axis by editing the following line
-    chunk(ipencil_axis) = ng(ipencil_axis)
-    !Turn chunks on/off by commenting out the following line
-    call h5pset_chunk_f(dset_pid, ndims, chunk , ierr)
-    !Turn compression on/off by toggeling the following line, or change the level (1 least/fast, 9 most/slow)
-    call h5pset_deflate_f(dset_pid, 1, ierr) 
+    if(chunk_checkpoint) then
+      ! Sets the other dimensions of the chunk, 1 make a chunk of every independent pencil
+      chunk = 1
+      !Change chunking axis by editing the following line
+      chunk(ipencil_axis) = ng(ipencil_axis)
+      !Turn chunks on/off by commenting out the following line
+      call h5pset_chunk_f(dset_pid, ndims, chunk , ierr)
+
+      !Turn compression on/off by toggeling the following line, or change the level (1 least/fast, 9 most/slow)
+      call h5pset_deflate_f(dset_pid, compression_level, ierr) 
+    endif
 
     call h5pcreate_f(h5p_dataset_create_f, time_pid, ierr)
     call h5pset_chunk_f(time_pid, 1, (/100_HSIZE_T/) , ierr)
