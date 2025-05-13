@@ -33,7 +33,7 @@ RUN_DIR := $(ROOT_DIR)/run
 EXE_DIR := $(BUILD_DIR)
 CONFIG_DIR := $(ROOT_DIR)/configs
 LIBS_DIR := $(ROOT_DIR)/dependencies
-LIBS := $(shell pkg-config hdf5_fortran --libs)
+LIBS := $(shell pkg-config hdf5_fortran --libs) $(shell pkg-config hdf5_hl_fortran --libs) 
 INCS :=
 
 DEFINES :=
@@ -42,7 +42,7 @@ EXE := $(EXE_DIR)/$(TARGET)
 
 # Configuration settings
 FC := mpifort
-FFLAGS := $(shell pkg-config hdf5 --cflags)
+FFLAGS := $(shell pkg-config hdf5_fortran --cflags)
 FFLAGS += -D_USE_HDF5
 AR := ar rcs
 LD := $(FC)
