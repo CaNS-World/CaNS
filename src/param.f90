@@ -49,6 +49,9 @@ integer , protected :: icheck,iout0d,iout1d,iout2d,iout3d,isave
 integer , dimension(2) :: dims ! not protected -> overwritten when autotuning
 integer , protected :: ipencil_axis = 1
 !
+integer , protected :: compression_level = 1 ! 0 = off, 1=fast/worst, 9=slow/best
+logical , protected :: chunk_checkpoint = .true.
+!
 integer, dimension(0:1,3) :: nb
 logical, dimension(0:1,3) :: is_bound
 character(len=1), protected, dimension(0:1,3,3) ::  cbcvel
@@ -128,7 +131,9 @@ contains
                   velf, &
                   gacc, &
                   nscal, &
-                  dims,ipencil_axis
+                  dims,ipencil_axis, &
+                  compression_level, &
+                  chunk_checkpoint
 #if defined(_OPENACC)
     namelist /cudecomp/ &
                        cudecomp_t_comm_backend,cudecomp_is_t_enable_nccl,cudecomp_is_t_enable_nvshmem, &
