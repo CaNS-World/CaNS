@@ -4,6 +4,7 @@
 ! SPDX-License-Identifier: MIT
 !
 ! -
+#if defined(_USE_HDF5)
 module mod_load_hdf5
   use iso_fortran_env
 #if defined(_DECOMP_X)
@@ -22,7 +23,6 @@ module mod_load_hdf5
     procedure :: io_field_hdf5
   end interface load_one
   contains
-#if defined(_USE_HDF5)
   subroutine io_field_hdf5(io,filename,c_io_vars,comm,ng,nh,lo,hi,io_vars,time,istep, nvar)
     use hdf5
     use h5ds 
@@ -228,5 +228,5 @@ module mod_load_hdf5
     call h5pclose_f(xfer_pid, ierr)
     call h5close_f(ierr)
   end subroutine io_field_hdf5
-#endif
 end module mod_load_hdf5
+#endif
