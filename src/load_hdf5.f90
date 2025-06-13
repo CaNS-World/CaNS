@@ -15,7 +15,7 @@ module mod_load_hdf5
   use mod_types
   use mod_utils, only: f_sizeof
   use mod_scal, only: scalar
-  use mod_param, only: ipencil_axis, compression_level, chunk_checkpoint
+  use mod_param, only: ipencil_axis, compression_level, chunk_checkpoint, chunk_size
   implicit none
   private
   public load_one
@@ -90,7 +90,7 @@ module mod_load_hdf5
 
     if(chunk_checkpoint) then
       ! Sets the other dimensions of the chunk, 1 make a chunk of every independent pencil
-      chunk = 1
+      chunk = chunk_size
       !Change chunking axis by editing the following line
       chunk(ipencil_axis) = ng(ipencil_axis)
       !Turn chunks on/off by commenting out the following line
@@ -111,7 +111,7 @@ module mod_load_hdf5
 
       inquire(file=filename,exist=file_exists)
       if (file_exists) then 
-        call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, ierr, access_prp=file_pid)
+        call h5fopen_f(filename, H5F_ACC_RDONLY_F, file_id, ierr, access_prp=file_pid)
       else
         error stop "Checkpoint file "//filename//"  does not exist"
       endif

@@ -51,6 +51,7 @@ integer , protected :: ipencil_axis = 1
 !
 integer , protected :: compression_level = 1 ! 0 = off, 1=fast/worst, 9=slow/best
 logical , protected :: chunk_checkpoint = .true.
+integer , protected :: chunk_size = 32 ! size of the chunk in the non-pencil axis, so default is nx32x32
 !
 integer, dimension(0:1,3) :: nb
 logical, dimension(0:1,3) :: is_bound
@@ -133,7 +134,8 @@ contains
                   nscal, &
                   dims,ipencil_axis, &
                   compression_level, &
-                  chunk_checkpoint
+                  chunk_checkpoint, &
+                  chunk_size
 #if defined(_OPENACC)
     namelist /cudecomp/ &
                        cudecomp_t_comm_backend,cudecomp_is_t_enable_nccl,cudecomp_is_t_enable_nvshmem, &
