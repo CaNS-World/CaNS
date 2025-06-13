@@ -168,6 +168,7 @@ module mod_load_hdf5
       call h5screate_simple_f(ndims, dims, dspace_id, ierr)
 
       do i = 1, nvar
+        varname = c_io_vars(i)
         call h5lexists_f(group_id, varname, dset_exists, ierr)
         if (dset_exists) then
           call h5dopen_f(group_id, varname, dset_id, ierr)
@@ -177,7 +178,6 @@ module mod_load_hdf5
         end if
 
 
-        varname = c_io_vars(i)
         var(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) => io_vars(i)%arr
         call h5dwrite_f(dset_id, H5T_IEEE_F64LE, var, dims, ierr, &
                         file_space_id=slabspace, mem_space_id=memspace, xfer_prp=xfer_pid)
