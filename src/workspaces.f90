@@ -11,7 +11,7 @@ module mod_workspaces
   use mod_utils, only: f_sizeof
   implicit none
   private
-  public init_wspace_arrays,set_cufft_wspace
+  public init_wspace_arrays,set_cufft_wspace,cudecomp_finalize
 contains
   subroutine init_wspace_arrays
     use mod_common_cudecomp, only: handle,gd_halo,gd_poi,gd_ptdma, &
@@ -98,5 +98,18 @@ contains
       end if
     end do
   end subroutine set_cufft_wspace
+  subroutine cudecomp_finalize
+    use cudecomp
+    use mod_common_cudecomp, only: handle,gd_halo,gd_poi,gd_poi_io,gd_ptdma
+    use mod_param          , only: is_poisson_pcr_tdma
+    !
+    implicit none
+    integer :: istat
+    istat = cudecompGridDescDestroy(handle,gd_halo)
+    istat = cudecompGridDescDestroy(handle,gd_poi)
+    istat = cudecompGridDescDestroy(handle,gd_poi_io)
+    if(is_poisson_pcr_tdma) istat = cudecompGridDescDestroy(handle,gd_ptdma)
+    istat = cudecompFinalize(handle)
+  end subroutine cudecomp_finalize
 #endif
 end module mod_workspaces
