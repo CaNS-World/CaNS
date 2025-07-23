@@ -73,7 +73,7 @@ program cans
   use mod_solver         , only: solver
 #else
   use mod_solver_gpu     , only: solver => solver_gpu
-  use mod_workspaces     , only: init_wspace_arrays,set_cufft_wspace
+  use mod_workspaces     , only: init_wspace_arrays,set_cufft_wspace,cudecomp_finalize
   use mod_common_cudecomp, only: istream_acc_queue_1,ap_z_ptdma
 #endif
   use mod_timer          , only: timer_tic,timer_toc,timer_print
@@ -630,5 +630,8 @@ program cans
   end if
   if(myid == 0.and.(.not.kill)) print*, '*** Fim ***'
   call decomp_2d_finalize
+#if defined(_OPENACC)
+  call cudecomp_finalize
+#endif
   call MPI_FINALIZE(ierr)
 end program cans
