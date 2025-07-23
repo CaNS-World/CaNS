@@ -17,7 +17,7 @@ module mod_initmpi
   !@cuf use cudafor, only: cudaGetDeviceCount,cudaSetDevice
 #if defined(_OPENACC)
   use mod_common_cudecomp, only: cudecomp_real_rp, &
-                                 ch => handle,gd => gd_halo,gd_poi, &
+                                 ch => handle,gd => gd_halo,gd_poi,gd_poi_io, &
                                  ap_x,ap_y,ap_z,ap_x_poi,ap_y_poi,ap_z_poi, &
                                  gd_ptdma,ap_y_ptdma,ap_z_ptdma
   use mod_param, only: cudecomp_t_comm_backend     ,cudecomp_h_comm_backend    , &
@@ -46,7 +46,7 @@ module mod_initmpi
     integer(acc_device_kind) ::dev_type
     integer :: local_comm,mydev,ndev
     integer :: istat
-    type(cudecompGridDescConfig)          :: conf,conf_poi
+    type(cudecompGridDescConfig)          :: conf,conf_poi,conf_poi_io
     type(cudecompGridDescAutotuneOptions) :: atune_conf
     type(cudecompGridDescConfig)          :: conf_ptdma
 #else
@@ -120,6 +120,11 @@ module mod_initmpi
     !
     istat = cudecompGridDescCreate(ch,gd_poi,conf,atune_conf)
     conf_poi = conf
+    conf_poi_io = conf
+    conf_poi_io%transpose_axis_contiguous(:) = .true.
+    conf_poi_io%transpose_axis_contiguous(ipencil) = .false.
+    conf_poi_io%gdims(:) = ng(:)
+    istat = cudecompGridDescCreate(ch,gd_poi_io,conf_poi_io)
     dims(:) = conf%pdims(:)
     if(is_poisson_pcr_tdma) then
       istat = cudecompGridDescConfigSetDefaults(conf_ptdma)
