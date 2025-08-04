@@ -204,8 +204,8 @@ module mod_sanity
   subroutine test_sanity_solver(ng,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,dli,dzc,dzf,dzci,dzfi,dzci_g,dzfi_g, &
                                 nb,is_bound,cbcvel,cbcpre,bcvel,bcpre)
 #if defined(_OPENACC)
-    use mod_workspaces, only: set_cufft_wspace
-    use openacc,        only: acc_get_cuda_stream
+    use mod_workspaces     , only: set_cufft_wspace
+    use mod_common_cudecomp, only: istream_acc_queue_1
 #endif
     implicit none
     integer , intent(in), dimension(3) :: ng,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z
@@ -218,7 +218,7 @@ module mod_sanity
     real(rp), intent(in), dimension(0:1,3,3)          :: bcvel
     real(rp), intent(in), dimension(0:1,3)            :: bcpre
     real(rp), allocatable, dimension(:,:,:) :: u,v,w,p
-#if !defined(_OPENACC)
+#if !defined(_OPENACC) || defined(_USE_HIP)
     type(C_PTR), dimension(2,2) :: arrplan
 #else
     integer    , dimension(2,2) :: arrplan
@@ -262,7 +262,7 @@ module mod_sanity
                     lambdaxy,['c','c','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
     !$acc enter data copyin(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
 #if defined(_OPENACC)
-    call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
+    call set_cufft_wspace(pack(arrplan,.true.),istream_acc_queue_1)
 #endif
     dl  = dli**(-1)
     dt  = acos(-1.) ! value is irrelevant
@@ -304,7 +304,7 @@ module mod_sanity
                       lambdaxy,['f','c','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
       !$acc update device(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
 #if defined(_OPENACC)
-      call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
+      call set_cufft_wspace(pack(arrplan,.true.),istream_acc_queue_1)
 #endif
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
       !$acc parallel loop collapse(3) default(present)
@@ -336,7 +336,7 @@ module mod_sanity
                       lambdaxy,['c','f','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
       !$acc update device(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
 #if defined(_OPENACC)
-      call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
+      call set_cufft_wspace(pack(arrplan,.true.),istream_acc_queue_1)
 #endif
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
       !$acc parallel loop collapse(3) default(present)
@@ -368,7 +368,7 @@ module mod_sanity
                       lambdaxy,['c','c','f'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
       !$acc update device(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
 #if defined(_OPENACC)
-      call set_cufft_wspace(pack(arrplan,.true.),acc_get_cuda_stream(1))
+      call set_cufft_wspace(pack(arrplan,.true.),istream_acc_queue_1)
 #endif
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
       !$acc parallel loop collapse(3) default(present)
