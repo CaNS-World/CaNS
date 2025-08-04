@@ -209,38 +209,38 @@ module mod_initflow
     end if
     if(is_wallturb) is_pair = .true.
     if(is_pair) then
-      !
-      ! initialize a streamwise vortex pair for a fast transition
-      ! to turbulence in a pressure-driven channel:
-      !        psi(x,y,z)  = f(z)*g(x,y), with
-      !        f(z)        = (1-z**2)**2, and
-      !        g(x,y)      = y*exp[-(16x**2-4y**2)]
-      ! (x,y,z) --> (streamwise, spanwise, wall-normal) directions
-      !
-      ! see Henningson and Kim, JFM 1991
-      !
-      do k=1,n(3)
-        zcc = 2.*zc(k)/l(3) - 1. ! z rescaled to be between -1 and +1
-        zff = 2.*(zc(k)/l(3) + .5*dzf(k)/l(3)) - 1.
-        do j=1,n(2)
-          yc = ((lo(2)-1+j-0.5)*dl(2)-.5*l(2))*2./l(3)
-          yf = ((lo(2)-1+j-0.0)*dl(2)-.5*l(2))*2./l(3)
-          do i=1,n(1)
-            xc = ((lo(1)-1+i-0.5)*dl(1)-.5*l(1))*2./l(3)
-            xf = ((lo(1)-1+i-0.0)*dl(1)-.5*l(1))*2./l(3)
-            !u(i,j,k) = u1d(k)
-            v(i,j,k) = -1.*gxy(yf,xc)*dfz(zcc)*ubulk*1.5
-            w(i,j,k) =  1.*fz(zff)*dgxy(yc,xc)*ubulk*1.5
-            p(i,j,k) = 0.
+      if(.false.) then
+        !
+        ! initialize a streamwise vortex pair for a fast transition
+        ! to turbulence in a pressure-driven channel:
+        !        psi(x,y,z)  = f(z)*g(x,y), with
+        !        f(z)        = (1-z**2)**2, and
+        !        g(x,y)      = y*exp[-(16x**2-4y**2)]
+        ! (x,y,z) --> (streamwise, spanwise, wall-normal) directions
+        !
+        ! see Henningson and Kim, JFM 1991
+        !
+        do k=1,n(3)
+          zcc = 2.*zc(k)/l(3) - 1. ! z rescaled to be between -1 and +1
+          zff = 2.*(zc(k)/l(3) + .5*dzf(k)/l(3)) - 1.
+          do j=1,n(2)
+            yc = ((lo(2)-1+j-0.5)*dl(2)-.5*l(2))*2./l(3)
+            yf = ((lo(2)-1+j-0.0)*dl(2)-.5*l(2))*2./l(3)
+            do i=1,n(1)
+              xc = ((lo(1)-1+i-0.5)*dl(1)-.5*l(1))*2./l(3)
+              xf = ((lo(1)-1+i-0.0)*dl(1)-.5*l(1))*2./l(3)
+              !u(i,j,k) = u1d(k)
+              v(i,j,k) = -1.*gxy(yf,xc)*dfz(zcc)*ubulk*1.5
+              w(i,j,k) =  1.*fz(zff)*dgxy(yc,xc)*ubulk*1.5
+              p(i,j,k) = 0.
+            end do
           end do
         end do
-      end do
-      !
-      ! alternatively, using a Taylor-Green vortex
-      ! for the cross-stream velocity components
-      ! (commented below)
-      !
-      if(.false.) then
+      else
+        !
+        ! alternatively, using a Taylor-Green vortex
+        ! for the cross-stream velocity components
+        !
         do k=1,n(3)
           zcc = (zc(k)/l(3)                )*2.*pi
           zff = (zc(k)/l(3)+0.5*dzc(k)/l(3))*2.*pi
