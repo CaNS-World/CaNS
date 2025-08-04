@@ -90,7 +90,7 @@ program cans
   real(rp), allocatable, dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
   real(rp), dimension(0:1,3) :: tauxo,tauyo,tauzo
   real(rp), dimension(3) :: f
-#if !defined(_OPENACC)
+#if !defined(_OPENACC) || defined(_USE_HIP)
   type(C_PTR), dimension(2,2) :: arrplanp
 #else
   integer    , dimension(2,2) :: arrplanp
@@ -103,7 +103,7 @@ program cans
   real(rp) :: normfftp
   type(rhs_bound) :: rhsbp
   real(rp) :: alpha
-#if !defined(_OPENACC)
+#if !defined(_OPENACC) || defined(_USE_HIP)
   type(C_PTR), dimension(2,2) :: arrplanu,arrplanv,arrplanw
 #else
   integer    , dimension(2,2) :: arrplanu,arrplanv,arrplanw

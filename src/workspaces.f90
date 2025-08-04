@@ -8,7 +8,7 @@ module mod_workspaces
 #if defined(_OPENACC)
   use mod_types
   use mod_common_cudecomp, only: work,work_cuda,work_halo,work_halo_cuda,work_ptdma,work_ptdma_cuda
-  use mod_utils, only: f_sizeof
+  use mod_utils          , only: f_sizeof
   implicit none
   private
   public init_wspace_arrays,set_cufft_wspace,cudecomp_finalize
@@ -77,25 +77,46 @@ contains
       call acc_map_data(work_ptdma,work_ptdma_cuda,wsize*f_sizeof(work_ptdma(1)))
     end if
     !
+#if !defined(_USE_HIP)
     istream_acc_queue_1 = acc_get_cuda_stream(1) ! fetch CUDA stream of OpenACC queue 1
+#else
+    istream_acc_queue_1 = acc_get_hip_stream(1)
+#endif
   end subroutine init_wspace_arrays
   subroutine set_cufft_wspace(arrplan,istream)
+#if !defined(_USE_HIP)
     use cufft
+#else
+    use, intrinsic :: iso_c_binding, only: C_PTR,c_loc
+    use hipfort_hipfft, only: cufftSetWorkArea => hipfftSetWorkArea_, &
+                              cufftSetStream   => hipfftSetStream_
+#endif
     use openacc
     !
     ! to be done after initializing all FFTs and allocating work
     !
     implicit none
-    integer                 , intent(in)           :: arrplan(:)
-    integer(acc_handle_kind), intent(in), optional :: istream
+#if !defined(_USE_HIP)
+    integer    , intent(in) :: arrplan(:)
+#else
+    type(C_PTR), intent(in) :: arrplan(:)
+#endif
+    integer(acc_handle_kind), target, intent(in), optional :: istream
     integer :: istat,i
     do i=1,size(arrplan)
       !$acc host_data use_device(work)
+#if !defined(_USE_HIP)
       istat = cufftSetWorkArea(arrplan(i),work)
-      !$acc end host_data
       if(present(istream)) then
         istat = cufftSetStream(arrplan(i),istream)
       end if
+#else
+      istat = cufftSetWorkArea(arrplan(i),c_loc(work))
+      !if(present(istream)) then
+      !  istat = cufftSetStream(arrplan(i),c_loc(istream))
+      !end if
+#endif
+      !$acc end host_data
     end do
   end subroutine set_cufft_wspace
   subroutine cudecomp_finalize

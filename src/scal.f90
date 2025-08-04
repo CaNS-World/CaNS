@@ -26,7 +26,7 @@ module mod_scal
     real(rp) :: scalf
     real(rp) :: f
     real(rp), dimension(0:1,3) :: fluxo
-#if !defined(_OPENACC)
+#if !defined(_OPENACC) || defined(_USE_HIP)
     type(C_PTR), dimension(2,2) :: arrplan
 #else
     integer    , dimension(2,2) :: arrplan

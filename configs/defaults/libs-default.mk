@@ -4,6 +4,11 @@ override INCS += -I$(LIBS_DIR)/2decomp-fft/mod
 ifeq ($(strip $(GPU)),1)
 override LIBS += -L$(LIBS_DIR)/cuDecomp/build/lib -lcudecomp -lcudecomp_fort -cudalib=cufft
 override INCS += -I$(LIBS_DIR)/cuDecomp/build/include
+ifneq ($(strip $(USE_HIP)),1)
+override LIBS += -cudalib=cufft
+else
+override LIBS += -lhipfft
+endif
 endif
 
 ifeq ($(strip $(USE_NVTX)),1)

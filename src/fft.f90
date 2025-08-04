@@ -22,10 +22,10 @@ module mod_fft
   contains
   subroutine fftini(ng,n_x,n_y,bcxy,c_or_f,arrplan,normfft)
     implicit none
-    integer, intent(in), dimension(3) :: ng,n_x,n_y
+    integer , target, intent(in), dimension(3) :: ng,n_x,n_y
     character(len=1), intent(in), dimension(0:1,2) :: bcxy
     character(len=1), intent(in), dimension(2) :: c_or_f
-#if !defined(_OPENACC)
+#if !defined(_OPENACC) || defined(_USE_HIP)
     type(C_PTR), intent(out), dimension(2,2) :: arrplan
 #else
     integer    , intent(out), dimension(2,2) :: arrplan
@@ -34,10 +34,12 @@ module mod_fft
     real(rp), dimension(n_x(1),n_x(2),n_x(3))  :: arrx
     real(rp), dimension(n_y(1),n_y(2),n_y(3))  :: arry
 #if !defined(_OPENACC)
-    type(C_PTR) :: plan_fwd_x,plan_bwd_x, &
-                   plan_fwd_y,plan_bwd_y
     type(fftw_iodim), dimension(1) :: iodim
     type(fftw_iodim), dimension(2) :: iodim_howmany
+#endif
+#if !defined(_OPENACC) || defined(_USE_HIP)
+    type(C_PTR) :: plan_fwd_x,plan_bwd_x, &
+                   plan_fwd_y,plan_bwd_y
 #else
     integer     :: plan_fwd_x,plan_bwd_x, &
                    plan_fwd_y,plan_bwd_y
@@ -95,12 +97,20 @@ module mod_fft
     nx_x = n_x(1)             ! padded & axis-contiguous layout
     istat = cufftCreate(plan_fwd_x)
     istat = cufftSetAutoAllocation(plan_fwd_x,0)
+#if !defined(_USE_HIP)
     istat = cufftMakePlanMany(plan_fwd_x,1,ng(1),null(),1,nx_x,null(),1,ng(1)/2+1,CUFFT_FWD_TYPE,batch,wsize)
+#else
+    istat = cufftMakePlanMany(plan_fwd_x,1,c_loc(ng(1)),c_null_ptr,1,nx_x,c_null_ptr,1,ng(1)/2+1,CUFFT_FWD_TYPE,batch,c_loc(wsize))
+#endif
     max_wsize = max(wsize,max_wsize)
     !
     istat = cufftCreate(plan_bwd_x)
     istat = cufftSetAutoAllocation(plan_bwd_x,0)
+#if !defined(_USE_HIP)
     istat = cufftMakePlanMany(plan_bwd_x,1,ng(1),null(),1,ng(1)/2+1,null(),1,nx_x,CUFFT_BWD_TYPE,batch,wsize)
+#else
+    istat = cufftMakePlanMany(plan_bwd_x,1,c_loc(ng(1)),c_null_ptr,1,ng(1)/2+1,c_null_ptr,1,nx_x,CUFFT_BWD_TYPE,batch,c_loc(wsize))
+#endif
     max_wsize = max(wsize,max_wsize)
 #endif
     normfft = normfft*norm(1)*(ng(1)+norm(2)-ix)
@@ -131,12 +141,20 @@ module mod_fft
     ny_y = n_y(1)             ! padded & axis-contiguous layout
     istat = cufftCreate(plan_fwd_y)
     istat = cufftSetAutoAllocation(plan_fwd_y,0)
+#if !defined(_USE_HIP)
     istat = cufftMakePlanMany(plan_fwd_y,1,ng(2),null(),1,ny_y,null(),1,ng(2)/2+1,CUFFT_FWD_TYPE,batch,wsize)
+#else
+    istat = cufftMakePlanMany(plan_fwd_y,1,c_loc(ng(2)),c_null_ptr,1,ny_y,c_null_ptr,1,ng(2)/2+1,CUFFT_FWD_TYPE,batch,c_loc(wsize))
+#endif
     max_wsize = max(wsize,max_wsize)
     !
     istat = cufftCreate(plan_bwd_y)
     istat = cufftSetAutoAllocation(plan_bwd_y,0)
+#if !defined(_USE_HIP)
     istat = cufftMakePlanMany(plan_bwd_y,1,ng(2),null(),1,ng(2)/2+1,null(),1,ny_y,CUFFT_BWD_TYPE,batch,wsize)
+#else
+    istat = cufftMakePlanMany(plan_bwd_y,1,c_loc(ng(2)),c_null_ptr,1,ng(2)/2+1,c_null_ptr,1,ny_y,CUFFT_BWD_TYPE,batch,c_loc(wsize))
+#endif
     max_wsize = max(wsize,max_wsize)
     wsize_fft = max_wsize/f_sizeof(1._rp)
 #endif
@@ -151,7 +169,7 @@ module mod_fft
   !
   subroutine fftend(arrplan)
     implicit none
-#if !defined(_OPENACC)
+#if !defined(_OPENACC) || defined(_USE_HIP)
     type(C_PTR), intent(in), dimension(:,:) :: arrplan
 #else
     integer    , intent(in), dimension(:,:) :: arrplan
@@ -255,27 +273,55 @@ module mod_fft
 #if defined(_OPENACC)
   subroutine fftf_gpu(plan,arr)
     implicit none
-    integer , intent(in) :: plan
-    real(rp), intent(inout), dimension(:,:,:) :: arr
+#if !defined(_USE_HIP)
+    integer    , intent(in) :: plan
+#else
+    type(C_PTR), intent(in) :: plan
+#endif
+    real(rp), target, intent(inout), dimension(:,:,:) :: arr
     integer :: istat
     !$acc host_data use_device(arr)
+#if !defined(_USE_HIP)
 #if defined(_SINGLE_PRECISION)
     istat = cufftExecR2C(plan,arr,arr)
 #else
     istat = cufftExecD2Z(plan,arr,arr)
 #endif
+#else
+    !$acc wait(1)
+#if defined(_SINGLE_PRECISION)
+    istat = cufftExecR2C(plan,c_loc(arr),c_loc(arr))
+#else
+    istat = cufftExecD2Z(plan,c_loc(arr),c_loc(arr))
+#endif
+    istat = hipDeviceSynchronize()
+#endif
     !$acc end host_data
   end subroutine fftf_gpu
   subroutine fftb_gpu(plan,arr)
     implicit none
-    integer , intent(in) :: plan
-    real(rp), intent(inout), dimension(:,:,:) :: arr
+#if !defined(_USE_HIP)
+    integer    , intent(in) :: plan
+#else
+    type(C_PTR), intent(in) :: plan
+#endif
+    real(rp), target, intent(inout), dimension(:,:,:) :: arr
     integer :: istat
     !$acc host_data use_device(arr)
+#if !defined(_USE_HIP)
 #if defined(_SINGLE_PRECISION)
     istat = cufftExecC2R(plan,arr,arr)
 #else
     istat = cufftExecZ2D(plan,arr,arr)
+#endif
+#else
+    !$acc wait(1)
+#if defined(_SINGLE_PRECISION)
+    istat = cufftExecC2R(plan,c_loc(arr),c_loc(arr))
+#else
+    istat = cufftExecZ2D(plan,c_loc(arr),c_loc(arr))
+#endif
+    istat = hipDeviceSynchronize()
 #endif
     !$acc end host_data
   end subroutine fftb_gpu

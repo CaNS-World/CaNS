@@ -29,7 +29,11 @@ module mod_solver_gpu
   subroutine solver_gpu(n,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p,is_ptdma_update,aa_z,cc_z)
     implicit none
     integer , intent(in), dimension(3) :: n,ng
-    integer , intent(in), dimension(2,2) :: arrplan
+#if !defined(_USE_HIP)
+    integer    , intent(in), dimension(2,2) :: arrplan
+#else
+    type(C_PTR), intent(in), dimension(2,2) :: arrplan
+#endif
     real(rp), intent(in) :: normfft
     real(rp), intent(in), dimension(:,:) :: lambdaxy
     real(rp), intent(in), dimension(:) :: a,b,c

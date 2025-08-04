@@ -87,7 +87,7 @@ run: $(EXE)
 
 # Create object files from Fortran source
 $(OBJS): $(BUILD_DIR)/%.o: $(SRCS_DIR)/%
-	$(FC) $(FFLAGS) $(CPP) $(DEFINES) $(INCS) $(FFLAGS_MOD_DIR) $(BUILD_DIR) -c -o $@ $<
+	$(FC) $(FFLAGS) $(CPP) $(DEFINES) $(INCS) $(FFLAGS_MOD_DIR)$(BUILD_DIR) -c -o $@ $<
 
 # Process the Fortran source for module dependencies
 $(DEPS):

@@ -1,17 +1,25 @@
 ifeq ($(strip $(FCOMP)),GNU)
-FFLAGS_MOD_DIR := -J
+FFLAGS_MOD_DIR := -J # extra space
 endif
 ifeq ($(findstring INTEL,$(strip $(FCOMP))),INTEL)
-FFLAGS_MOD_DIR := -module
+FFLAGS_MOD_DIR := -module # extra space
 endif
 ifeq ($(strip $(FCOMP)),NVIDIA)
-FFLAGS_MOD_DIR := -module
+FFLAGS_MOD_DIR := -module # extra space
 ifeq ($(strip $(GPU)),1)
 override FFLAGS += -acc -cuda -Minfo=accel -gpu=cc60,cc70,cc80
 endif
 endif
 ifeq ($(strip $(FCOMP)),CRAY)
-FFLAGS_MOD_DIR := -Q
+FFLAGS_MOD_DIR := -I./build -ef -J
+ifeq ($(strip $(GPU)),1)
+override FFLAGS += -hacc
+else
+override FFLAGS += -hnoacc
+endif
+endif
+ifeq ($(strip $(FCOMP)),FUJITSU)
+FFLAGS_MOD_DIR := -M # extra space
 endif
 
 ifeq ($(strip $(FFLAGS_DEBUG)),1)
@@ -27,6 +35,9 @@ override FFLAGS += -O0 -g -traceback -Mstandard -Minform=inform -Mbackslash -Mbo
 endif
 ifeq ($(strip $(FCOMP)),CRAY)
 override FFLAGS += -g -G0
+endif
+ifeq ($(strip $(FCOMP)),FUJITSU)
+override FFLAGS += -g -g0
 endif
   
 endif
@@ -45,6 +56,9 @@ endif
 ifeq ($(strip $(FCOMP)),CRAY)
 override FFLAGS += -g -G0
 endif
+ifeq ($(strip $(FCOMP)),FUJITSU)
+override FFLAGS += -g -g0
+endif
 
 endif
 
@@ -60,6 +74,9 @@ ifeq ($(strip $(FCOMP)),NVIDIA)
 override FFLAGS += -O3 -fast
 endif
 ifeq ($(strip $(FCOMP)),CRAY)
+override FFLAGS += -O3
+endif
+ifeq ($(strip $(FCOMP)),FUJITSU)
 override FFLAGS += -O3
 endif
   
@@ -79,13 +96,17 @@ endif
 ifeq ($(strip $(FCOMP)),CRAY)
 override FFLAGS += -O3 -hfp3
 endif
+ifeq ($(strip $(FCOMP)),FUJITSU)
+override FFLAGS += -O3 -Kfast
+endif
   
 endif
 
 CUSTOM_DEFINES =  SINGLE_PRECISION \
-				  LOOP_UNSWITCHING \
-				  DECOMP_X_IO \
-                  USE_NVTX \
+		          LOOP_UNSWITCHING \
+		          DECOMP_X_IO \
+		          USE_HIP \
+                  USE_NVTX
 
 DEFINES += $(foreach var,$(CUSTOM_DEFINES),$(if $(filter 1,$(strip $($(var)))), -D_$(var)))
 
@@ -110,8 +131,14 @@ override FFLAGS += -qopenmp
 else ifeq ($(strip $(FCOMP)),NVIDIA)
 override FFLAGS += -mp
 else ifeq ($(strip $(FCOMP)),CRAY)
-override FFLAGS += -homp
+override FFLAGS += -fopenmp
+else ifeq ($(strip $(FCOMP)),FUJITSU)
+override FFLAGS += -fopenmp
 else
 override FFLAGS += -fopenmp
+endif
+else
+ifeq ($(strip $(FCOMP)),CRAY)
+override FFLAGS += -fno-openmp
 endif
 endif
