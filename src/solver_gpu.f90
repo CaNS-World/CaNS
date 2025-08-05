@@ -90,6 +90,7 @@ module mod_solver_gpu
         end do
       end do
     case(2)
+#if !defined(_USE_DIEZDECOMP)
       ap_io = ap_x_0
       pad_io(:) = ap_x%shape(:) - ap_io%shape(:)
 #if !defined(_USE_DIEZDECOMP)
