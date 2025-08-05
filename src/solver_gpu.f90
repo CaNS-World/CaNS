@@ -15,8 +15,9 @@ module mod_solver_gpu
                                  ap_x   => ap_x_poi, &
                                  ap_y   => ap_y_poi, &
                                  ap_z   => ap_z_poi, &
+                                 ap_x_0 => ap_x    , &
                                  ap_z_0 => ap_z    , &
-                                 ch => handle,gd => gd_poi, &
+                                 ch => handle,gd => gd_poi, gd_io => gd_poi_io, &
                                  istream => istream_acc_queue_1
   use mod_fft            , only: signal_processing,fftf_gpu,fftb_gpu
   use mod_param          , only: ipencil_axis,is_poisson_pcr_tdma
@@ -40,7 +41,8 @@ module mod_solver_gpu
     real(rp), pointer, contiguous, dimension(:,:,:) :: px,py,pz
     integer :: i,j,k,q
     logical :: is_periodic_z
-    integer, dimension(3) :: n_x,n_y,n_z,n_z_0,lo_z_0,hi_z_0
+    integer, dimension(3) :: n_x,n_y,n_z,n_z_0,lo_z_0,hi_z_0,pad_io
+    type(cudecompPencilInfo) :: ap_io
     integer :: istat
     logical :: is_ptdma_update_
     real(rp) :: norm
@@ -79,34 +81,26 @@ module mod_solver_gpu
         end do
       end do
     case(2)
-      !
-      ! transpose p -> py to axis-contiguous layout
-      !
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
-      do k=1,n(3)
-        do j=1,n(2)
-          do i=1,n(1)
-            py(j,k,i) = p(i,j,k)
-          end do
-        end do
-      end do
-      !$acc host_data use_device(py,px,work)
-      istat = cudecompTransposeYtoX(ch,gd,py,px,work,dtype_rp,stream=istream)
+      ap_io = ap_x_0
+      pad_io(:) = ap_x%shape(:) - ap_io%shape(:)
+      !$acc host_data use_device(p,px,work)
+      istat = cudecompTransposeYtoX(ch,gd_io,p ,px,work,dtype_rp,input_halo_extents  = [1,1,1], &
+                                                                 output_halo_extents = [0,0,0], &
+                                                                 input_padding       = [0,0,0], &
+                                                                 output_padding      = pad_io, &
+                                                                 stream=istream)
       !$acc end host_data
     case(3)
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP parallel do   collapse(3) DEFAULT(shared)
-      do k=1,n(3)
-        do j=1,n(2)
-          do i=1,n(1)
-            pz(i,j,k) = p(i,j,k)
-          end do
-        end do
-      end do
-      !$acc host_data use_device(pz,py,px,work)
-      istat = cudecompTransposeZtoY(ch,gd,pz,py,work,dtype_rp,stream=istream)
-      istat = cudecompTransposeYtoX(ch,gd,py,px,work,dtype_rp,stream=istream)
+      istat = cudecompGetPencilInfo(ch,gd_io,ap_io,2) ! mem_order = [2,3,1]
+      pad_io(:) = ap_y%shape(:) - ap_io%shape(:)
+      pad_io(ap_y%order(:)) = pad_io(:)
+      !$acc host_data use_device(p,py,px,work)
+      istat = cudecompTransposeZtoY(ch,gd_io,p ,py,work,dtype_rp,input_halo_extents  = [1,1,1], &
+                                                                 output_halo_extents = [0,0,0], &
+                                                                 input_padding       = [0,0,0], &
+                                                                 output_padding      = pad_io, &
+                                                                 stream=istream)
+      istat = cudecompTransposeYtoX(ch,gd   ,py,px,work,dtype_rp,stream=istream)
       !$acc end host_data
     end select
     !
@@ -203,35 +197,22 @@ module mod_solver_gpu
         end do
       end do
     case(2)
-      !$acc host_data use_device(px,py,work)
-      istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_rp,stream=istream)
+      !$acc host_data use_device(px,p,work)
+      istat = cudecompTransposeXtoY(ch,gd_io,px,p ,work,dtype_rp,input_halo_extents  = [0,0,0], &
+                                                                 output_halo_extents = [1,1,1], &
+                                                                 input_padding       = pad_io, &
+                                                                 output_padding      = [0,0,0], &
+                                                                 stream=istream)
       !$acc end host_data
-      !
-      ! transpose py -> p to default layout
-      !
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
-      do k=1,n(3)
-        do j=1,n(2)
-          do i=1,n(1)
-            p(i,j,k) = py(j,k,i)
-          end do
-        end do
-      end do
     case(3)
-      !$acc host_data use_device(px,py,pz,work)
-      istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_rp,stream=istream)
-      istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
+      !$acc host_data use_device(px,py,p,work)
+      istat = cudecompTransposeXtoY(ch,gd   ,px,py,work,dtype_rp,stream=istream)
+      istat = cudecompTransposeYtoZ(ch,gd_io,py,p ,work,dtype_rp,input_halo_extents  = [0,0,0], &
+                                                                 output_halo_extents = [1,1,1], &
+                                                                 input_padding       = pad_io, &
+                                                                 output_padding      = [0,0,0], &
+                                                                 stream=istream)
       !$acc end host_data
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP parallel do   collapse(3) DEFAULT(shared)
-      do k=1,n(3)
-        do j=1,n(2)
-          do i=1,n(1)
-            p(i,j,k) = pz(i,j,k)
-          end do
-        end do
-      end do
     end select
   end subroutine solver_gpu
   !
@@ -906,16 +887,22 @@ module mod_solver_gpu
       !
       if(.not.is_no_decomp_z) then
         select case(ipencil_axis)
+        !
+        ! n.b.: since x- and y-aligned partitions are anyway sub-optimal with z-implicit diffusion,
+        !       the first transposes below are not optimized to skip the copy of the
+        !       input array `p` to `px`/`py`, as done above in `solver_gpu()`;
+        !       the same holds for the reciprocate operations after the solution is obtained
+        !
         case(1)
-           !$acc parallel loop collapse(3) default(present) async(1)
-           !$OMP parallel do   collapse(3) DEFAULT(shared)
-           do k=1,n(3)
-             do j=1,n(2)
-               do i=1,n(1)
-                 px(i,j,k) = p(i,j,k)
-               end do
-             end do
-           end do
+          !$acc parallel loop collapse(3) default(present) async(1)
+          !$OMP parallel do   collapse(3) DEFAULT(shared)
+          do k=1,n(3)
+            do j=1,n(2)
+              do i=1,n(1)
+                px(i,j,k) = p(i,j,k)
+              end do
+            end do
+          end do
           !$acc host_data use_device(px,py,pz,work)
           istat = cudecompTransposeXtoY(ch,gd,px,py,work,dtype_rp,stream=istream)
           istat = cudecompTransposeYtoZ(ch,gd,py,pz,work,dtype_rp,stream=istream)
