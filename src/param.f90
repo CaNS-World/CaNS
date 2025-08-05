@@ -6,7 +6,7 @@
 ! -
 module mod_param
 use mod_types
-#if defined(_OPENACC)
+#if defined(_OPENACC) && !defined(_USE_DIEZDECOMP)
 use cudecomp
 #endif
 implicit none
@@ -87,6 +87,7 @@ logical, protected :: cudecomp_is_t_comm_autotune ,cudecomp_is_h_comm_autotune ,
                       cudecomp_is_t_enable_nccl   ,cudecomp_is_h_enable_nccl   , &
                       cudecomp_is_t_enable_nvshmem,cudecomp_is_h_enable_nvshmem, &
                       cudecomp_is_t_in_place
+logical, protected :: is_use_diezdecomp = .false.,is_diezdecomp_x2z_z2x_transposes = .false.
 #endif
 !
 ! other options: debugging/benchmarking
@@ -129,7 +130,7 @@ contains
                   gacc, &
                   nscal, &
                   dims,ipencil_axis
-#if defined(_OPENACC)
+#if defined(_OPENACC) && !defined(_USE_DIEZDECOMP)
     namelist /cudecomp/ &
                        cudecomp_t_comm_backend,cudecomp_is_t_enable_nccl,cudecomp_is_t_enable_nvshmem, &
                        cudecomp_h_comm_backend,cudecomp_is_h_enable_nccl,cudecomp_is_h_enable_nvshmem
@@ -182,6 +183,7 @@ contains
         if(myid == 0) print*, 'Defaulting to `ipencil_axis = 1` (x-aligned pencils)...'
       end if
 #if defined(_OPENACC)
+#if !defined(_USE_DIEZDECOMP)
       !
       ! reading cuDecomp parameters, if these are set
       !
@@ -245,6 +247,10 @@ contains
       ! manually set cuDecomp out-of-place transposes by default
       !
       cudecomp_is_t_in_place = .false.
+#else
+      is_use_diezdecomp = .true.
+      is_diezdecomp_x2z_z2x_transposes = .false.
+#endif
 #endif
       !
       ! reading scalar transport parameters, if these are set

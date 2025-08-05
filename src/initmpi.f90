@@ -12,7 +12,11 @@ module mod_initmpi
   use mod_types
 #if defined(_OPENACC)
   use openacc
+#if !defined(_USE_DIEZDECOMP)
   use cudecomp
+#else
+  use diezdecomp
+#endif
 #endif
   !@cuf use cudafor, only: cudaGetDeviceCount,cudaSetDevice
 #if defined(_OPENACC)
@@ -28,7 +32,7 @@ module mod_initmpi
   implicit none
   private
   public initmpi
-#if defined(_OPENACC)
+#if defined(_OPENACC) && !defined(_USE_DIEZDECOMP)
   integer, parameter :: CUDECOMP_RANK_NULL = -1
 #endif
   contains
@@ -46,9 +50,13 @@ module mod_initmpi
     integer(acc_device_kind) ::dev_type
     integer :: local_comm,mydev,ndev
     integer :: istat
+#if !defined(_USE_DIEZDECOMP)
     type(cudecompGridDescConfig)          :: conf,conf_poi,conf_poi_io
-    type(cudecompGridDescAutotuneOptions) :: atune_conf
     type(cudecompGridDescConfig)          :: conf_ptdma
+    type(cudecompGridDescAutotuneOptions) :: atune_conf
+#else
+    logical :: is_axis_contiguous(3)
+#endif
 #else
     integer :: comm_cart
 #endif
@@ -60,7 +68,7 @@ module mod_initmpi
     call MPI_COMM_SPLIT_TYPE(MPI_COMM_WORLD,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,local_comm,ierr)
     call MPI_COMM_RANK(local_comm,mydev,ierr)
     dev_type = acc_get_device_type()
-#if 1
+#if !defined(_USE_HIP)
     istat = cudaGetDeviceCount(ndev)      ! may be tweaked with environment variable CUDA_VISIBLE_DEVICES
     mydev = mod(mydev,ndev)
     istat = cudaSetDevice(mydev)
@@ -72,6 +80,7 @@ module mod_initmpi
     call acc_set_device_num(mydev,dev_type)
     call acc_init(dev_type)
     !
+#if !defined(_USE_DIEZDECOMP)
     istat = cudecompInit(ch,MPI_COMM_WORLD)
     !
     ! setup descriptor for the Poisson solver
@@ -156,6 +165,21 @@ module mod_initmpi
       atune_conf%disable_nvshmem_backends = .true.
     end if
     istat = cudecompGridDescCreate(ch,gd,conf,atune_conf)
+#else
+    call diezdecompGridDescCreate(gd    ,dims,ng                                 ,ng,[.false.,.false.,.false.],periods,ipencil)
+    call diezdecompGridDescCreate(gd_poi,dims,[2*(ng(1)/2+1),2*(ng(2)/2+1),ng(3)],ng,[.true. ,.true. ,.false.],periods,ipencil)
+    !
+    ! tweak MPI buffer order by Rafael Diez to improve performance
+    !
+    gd_poi%abs_reorder(:,:,0) = 1
+    gd_poi%abs_reorder(:,:,1) = 0
+    gd_poi%abs_reorder(:,:,2) = 2
+    if(is_poisson_pcr_tdma) then
+      call diezDecompGridDescCreate(gd_ptdma,dims,[ng(1),ng(2),2*dims(2)],[ng(1),ng(2),2*dims(2)],[.false.,.false.,.false.],periods,ipencil)
+    end if
+    is_axis_contiguous(:) = .true.; is_axis_contiguous(ipencil) = .false.
+    call diezdecompGridDescCreate(gd_poi_io,dims,ng,ng,is_axis_contiguous,periods,ipencil)
+#endif
 #endif
     call decomp_2d_init(ng(1),ng(2),ng(3),dims(1),dims(2),periods)
     if(is_poisson_pcr_tdma) then
