@@ -105,6 +105,7 @@ endif
 CUSTOM_DEFINES =  SINGLE_PRECISION \
 		          LOOP_UNSWITCHING \
 		          DECOMP_X_IO \
+				  USE_DIEZDECOMP \
 		          USE_HIP \
                   USE_NVTX
 

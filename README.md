@@ -23,6 +23,8 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 ### _Major Update:_ `CaNS 3.0` _is out!_ :tada:
 See the [Release Notes](https://github.com/CaNS-World/CaNS/releases/tag/v3.0.0) for more details.
 
+**[06/08/2025]:** Support for running on AMD-based supercomputers and new GPU communication backend available! CaNS has been ported using to other platforms using HIP and thanks to the recently developed [diezDecomp library](https://github.com/Rafael10Diez/diezDecomp). See the updated `[docs/INFO_COMPILING.md](docs/INFO_COMPILING.md)` for more details.
+
 **[10/04/2025]:** The writing of checkpoint files has changed. To allow for more flexibility, CaNS now writes one file per scalar field, where each velocity component, pressure, and scalar fields is stored in a different checkpoint file.
 
 **[14/02/2025]:** Most pre-processor macros have been turned into runtime arguments, which allow for a much simpler control of the computational setup without re-compiling the source. See the updated [`docs/INFO_INPUT.md`](docs/INFO_INPUT.md) and [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details.
@@ -43,6 +45,7 @@ Some features are:
  * FFTW guru interface / cuFFT used for computing multi-dimensional vectors of 1D transforms
  * The right type of transformation (Fourier, cosine, sine, etc) is automatically determined form the input file
  * [cuDecomp](https://github.com/NVIDIA/cuDecomp) pencil decomposition library for _hardware-adaptive_ distributed memory calculations on _many GPUs_
+ * [diezDecomp](https://github.com/Rafael10Diez/diezDecomp) pencil decomposition library distributed memory calculations on various GPU/CPU hardware platforms
  * [2DECOMP&FFT](https://github.com/xcompact3d/2decomp-fft) library used for performing global data transpositions on CPUs and some of the data I/O
  * GPU acceleration using OpenACC directives
  * A different canonical flow can be simulated just by changing the input files

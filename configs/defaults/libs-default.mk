@@ -2,8 +2,13 @@ override LIBS += -L$(LIBS_DIR)/2decomp-fft -ldecomp2d
 override INCS += -I$(LIBS_DIR)/2decomp-fft/mod
 
 ifeq ($(strip $(GPU)),1)
-override LIBS += -L$(LIBS_DIR)/cuDecomp/build/lib -lcudecomp -lcudecomp_fort -cudalib=cufft
+ifneq ($(strip $(USE_DIEZDECOMP)),1)
+override LIBS += -L$(LIBS_DIR)/cuDecomp/build/lib -lcudecomp -lcudecomp_fort
 override INCS += -I$(LIBS_DIR)/cuDecomp/build/include
+else
+override LIBS += -L$(LIBS_DIR)/diezDecomp/build/lib -ldiezdecomp
+override INCS += -I$(LIBS_DIR)/diezDecomp/build/include
+endif
 ifneq ($(strip $(USE_HIP)),1)
 override LIBS += -cudalib=cufft
 else

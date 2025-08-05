@@ -594,17 +594,23 @@ module mod_bound
 #if defined(_OPENACC)
   subroutine updthalo_gpu(nh,periods,p)
     use mod_types
+#if !defined(_USE_DIEZDECOMP)
     use cudecomp
+#else
+    use diezdecomp
+#endif
     use mod_common_cudecomp, only: work => work_halo, &
                                    ch => handle,gd => gd_halo, &
                                    dtype => cudecomp_real_rp, &
-                                   istream => istream_acc_queue_1
+                                   istream => istream_acc_queue_1_comm_lib
     implicit none
     integer , intent(in) :: nh
     logical , intent(in) :: periods(3)
     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
     integer :: istat
+#if !defined(_USE_DIEZDECOMP)
     !$acc host_data use_device(p,work)
+#endif
     select case(ipencil_axis)
     case(1)
       istat = cudecompUpdateHalosX(ch,gd,p,work,dtype,[nh,nh,nh],periods,2,stream=istream)
@@ -616,7 +622,9 @@ module mod_bound
       istat = cudecompUpdateHalosZ(ch,gd,p,work,dtype,[nh,nh,nh],periods,1,stream=istream)
       istat = cudecompUpdateHalosZ(ch,gd,p,work,dtype,[nh,nh,nh],periods,2,stream=istream)
     end select
+#if !defined(_USE_DIEZDECOMP)
     !$acc end host_data
+#endif
   end subroutine updthalo_gpu
 #endif
 end module mod_bound
