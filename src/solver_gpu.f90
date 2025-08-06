@@ -1,6 +1,6 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2017-2022 Pedro Costa and the CaNS contributors. All rights reserved.
+! SPDX-FileCopyrightText: Copyright (c) 2017-2025 Pedro Costa and the CaNS contributors. All rights reserved.
 ! SPDX-License-Identifier: MIT
 !
 ! -
@@ -90,7 +90,6 @@ module mod_solver_gpu
         end do
       end do
     case(2)
-#if !defined(_USE_DIEZDECOMP)
       ap_io = ap_x_0
       pad_io(:) = ap_x%shape(:) - ap_io%shape(:)
 #if !defined(_USE_DIEZDECOMP)
