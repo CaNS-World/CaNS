@@ -8,7 +8,7 @@ module mod_utils
   implicit none
   private
   public bulk_mean,f_sizeof,swap
-#if defined(_OPENACC)
+#if defined(_OPENACC) || defined(_OPENMP)
   public device_memory_footprint
 #endif
 contains
@@ -26,9 +26,10 @@ contains
     integer :: i,j,k
     integer :: ierr
     mean = 0.
-    !$acc data copy(mean) async(1)
-    !$acc parallel loop collapse(3) default(present) reduction(+:mean) async(1)
-    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)  REDUCTION(+:mean)
+    !$acc        data copy(      mean) async(1)
+    !$omp target data map(tofrom:mean)
+    !$acc parallel     loop collapse(3) default(present) reduction(+:mean) async(1)
+    !$omp target teams loop collapse(3)                  reduction(+:mean)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
@@ -36,7 +37,8 @@ contains
         end do
       end do
     end do
-    !$acc end data
+    !$omp end target data
+    !$acc end        data
     !$acc wait(1)
     call MPI_ALLREDUCE(MPI_IN_PLACE,mean,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
   end subroutine bulk_mean
@@ -57,7 +59,7 @@ contains
     arr1 => arr2
     arr2 => tmp
   end subroutine swap
-#if defined(_OPENACC)
+#if defined(_OPENACC) || defined(_OPENMP)
   function device_memory_footprint(n,n_z,nscal) result(itotal)
     !
     ! estimate GPU memory footprint, assuming one MPI task <-> one GPU

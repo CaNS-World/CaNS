@@ -6,7 +6,7 @@
 ! -
 module mod_fftw_param
   use, intrinsic :: iso_c_binding
-#if defined(_OPENACC)
+#if defined(_OPENACC) || defined(_OPENMP)
 #if !defined(_USE_HIP)
   use cufft
 #else
@@ -87,7 +87,7 @@ module mod_fftw_param
   type(C_PTR) :: fwd_guruplan_y,bwd_guruplan_y
   type(C_PTR) :: fwd_guruplan_z,bwd_guruplan_z
   logical :: planned=.false.
-#if defined(_OPENACC)
+#if defined(_OPENACC) || defined(_OPENMP)
 #if defined(_SINGLE_PRECISION)
   integer, parameter :: CUFFT_FWD_TYPE = CUFFT_R2C
   integer, parameter :: CUFFT_BWD_TYPE = CUFFT_C2R
