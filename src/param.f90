@@ -6,7 +6,7 @@
 ! -
 module mod_param
 use mod_types
-#if defined(_OPENACC) && !defined(_USE_DIEZDECOMP)
+#if (defined(_OPENACC) || defined(_OPENMP)) && !defined(_USE_DIEZDECOMP)
 use cudecomp
 #endif
 implicit none
@@ -78,7 +78,7 @@ real(rp), protected, allocatable, dimension(:) :: scalf
 logical , protected :: is_boussinesq_buoyancy = .false.
 real(rp), protected :: alpha_max
 !
-#if defined(_OPENACC)
+#if defined(_OPENACC) || defined(_OPENMP)
 !
 ! cuDecomp input parameters
 !
@@ -130,7 +130,7 @@ contains
                   gacc, &
                   nscal, &
                   dims,ipencil_axis
-#if defined(_OPENACC) && !defined(_USE_DIEZDECOMP)
+#if (defined(_OPENACC) || defined(_OPENMP)) && !defined(_USE_DIEZDECOMP)
     namelist /cudecomp/ &
                        cudecomp_t_comm_backend,cudecomp_is_t_enable_nccl,cudecomp_is_t_enable_nvshmem, &
                        cudecomp_h_comm_backend,cudecomp_is_h_enable_nccl,cudecomp_is_h_enable_nvshmem
@@ -182,7 +182,7 @@ contains
         if(myid == 0) print*, 'Warning: prescribed value of `ipencil_axis` different than 1/2/3.', trim(c_iomsg)
         if(myid == 0) print*, 'Defaulting to `ipencil_axis = 1` (x-aligned pencils)...'
       end if
-#if defined(_OPENACC)
+#if defined(_OPENACC) || defined(_OPENMP)
 #if !defined(_USE_DIEZDECOMP)
       !
       ! reading cuDecomp parameters, if these are set
