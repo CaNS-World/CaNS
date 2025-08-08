@@ -44,9 +44,10 @@ module mod_chkdt
     end if
     !
     dti = 0.
-    !$acc data copy(dti) async(1)
-    !$acc parallel loop collapse(3) default(present) private(ux,uy,uz,vx,vy,vz,wx,wy,wz,dtix,dtiy,dtiz) reduction(max:dti) async(1)
-    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)  PRIVATE(ux,uy,uz,vx,vy,vz,wx,wy,wz,dtix,dtiy,dtiz) REDUCTION(max:dti)
+    !$acc        data copy(      dti) async(1)
+    !$omp target data map(tofrom:dti)
+    !$acc parallel     loop collapse(3) default(present) private(ux,uy,uz,vx,vy,vz,wx,wy,wz,dtix,dtiy,dtiz) reduction(max:dti) async(1)
+    !$omp target teams loop collapse(3)                  private(ux,uy,uz,vx,vy,vz,wx,wy,wz,dtix,dtiy,dtiz) reduction(max:dti)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
@@ -66,7 +67,8 @@ module mod_chkdt
         end do
       end do
     end do
-    !$acc end data
+    !$omp end target data
+    !$acc end        data
     !$acc wait(1)
     call MPI_ALLREDUCE(MPI_IN_PLACE,dti,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
     if(dti < epsilon(0._rp)) dti = 1.

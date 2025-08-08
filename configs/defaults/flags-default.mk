@@ -7,15 +7,32 @@ endif
 ifeq ($(strip $(FCOMP)),NVIDIA)
 FFLAGS_MOD_DIR := -module # extra space
 ifeq ($(strip $(GPU)),1)
-override FFLAGS += -acc -cuda -Minfo=accel -gpu=cc60,cc70,cc80
+override FFLAGS += -cuda -gpu=cc70,cc80,cc90
+ifneq ($(filter $(GPU_BACKEND),OACC OMP),$(GPU_BACKEND))
+override FFLAGS += -acc -Minfo=accel
+endif
+ifeq ($(strip $(GPU_BACKEND)),OACC)
+override FFLAGS += -acc -Minfo=accel
+endif
+ifeq ($(strip $(GPU_BACKEND)),OMP)
+override FFLAGS += -mp=gpu -Minfo=mp
+endif
 endif
 endif
 ifeq ($(strip $(FCOMP)),CRAY)
 FFLAGS_MOD_DIR := -I./build -ef -J
 ifeq ($(strip $(GPU)),1)
-override FFLAGS += -hacc
+ifneq ($(filter $(GPU_BACKEND),OACC OMP),$(GPU_BACKEND))
+override FFLAGS += -hacc -hnoomp
+endif
+ifeq ($(strip $(GPU_BACKEND)),OACC)
+override FFLAGS += -hacc -hnoomp
+endif
+ifeq ($(strip $(GPU_BACKEND)),OMP)
+override FFLAGS += -homp -hnoacc
+endif
 else
-override FFLAGS += -hnoacc
+override FFLAGS += -hnoacc -hnoomp
 endif
 endif
 ifeq ($(strip $(FCOMP)),FUJITSU)

@@ -23,7 +23,7 @@ module mod_rk
   contains
   subroutine rk(rkpar,n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,dt,visc,p, &
                 is_forced,velf,bforce,gacc,beta,scalars,dudtrko,dvdtrko,dwdtrko,u,v,w,f)
-#if defined(_OPENACC)
+#if defined(_OPENACC) || defined(_OPENMP)
     use mod_common_cudecomp, only: dudtrk_t => work, &
                                    dvdtrk_t => solver_buf_0, &
                                    dwdtrk_t => solver_buf_1
@@ -49,7 +49,7 @@ module mod_rk
     real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
     real(rp), intent(out  ), dimension(3)        :: f
     real(rp), pointer, contiguous, dimension(:,:,:) :: s
-#if !defined(_OPENACC)
+#if !(defined(_OPENACC) || defined(_OPENMP))
     real(rp), target       , allocatable, dimension(:,:,:), save :: dudtrk_t,dvdtrk_t,dwdtrk_t
 #endif
     real(rp), pointer      , contiguous , dimension(:,:,:), save :: dudtrk  ,dvdtrk  ,dwdtrk
@@ -75,11 +75,11 @@ module mod_rk
     !
     if(is_first) then ! leverage save attribute to allocate these arrays on the device only once
       is_first = .false.
-#if !defined(_OPENACC)
+#if !(defined(_OPENACC) || defined(_OPENMP))
       allocate(dudtrk_t(n(1),n(2),n(3)),dvdtrk_t(n(1),n(2),n(3)),dwdtrk_t(n(1),n(2),n(3)))
 #endif
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      !$acc parallel     loop collapse(3) default(present) async(1)
+      !$omp target teams loop collapse(3)
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
@@ -91,9 +91,10 @@ module mod_rk
       end do
       if(is_impdiff) then
         allocate(dudtrkd(n(1),n(2),n(3)),dvdtrkd(n(1),n(2),n(3)),dwdtrkd(n(1),n(2),n(3)))
-        !$acc enter data create(dudtrkd,dvdtrkd,dwdtrkd) async(1)
+        !$acc        enter data create(   dudtrkd,dvdtrkd,dwdtrkd) async(1)
+        !$omp target enter data map(alloc:dudtrkd,dvdtrkd,dwdtrkd)
       end if
-#if defined(_OPENACC)
+#if defined(_OPENACC) || defined(_OPENMP)
       dudtrk(1:n(1),1:n(2),1:n(3)) => dudtrk_t(1:product(n(:)))
       dvdtrk(1:n(1),1:n(2),1:n(3)) => dvdtrk_t(1:product(n(:)))
       dwdtrk(1:n(1),1:n(2),1:n(3)) => dwdtrk_t(1:product(n(:)))
@@ -107,8 +108,8 @@ module mod_rk
     if(is_fast_mom_kernels) then
       call mom_xyz_ad(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,u,v,w,dudtrk,dvdtrk,dwdtrk,dudtrkd,dvdtrkd,dwdtrkd)
     else
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      !$acc parallel     loop collapse(3) default(present) async(1)
+      !$omp target teams loop collapse(3)
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
@@ -123,8 +124,8 @@ module mod_rk
         call momy_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,v,dvdtrk)
         call momz_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,w,dwdtrk)
       else
-        !$acc parallel loop collapse(3) default(present) async(1)
-        !$OMP parallel do   collapse(3) DEFAULT(shared)
+        !$acc parallel     loop collapse(3) default(present) async(1)
+        !$omp target teams loop collapse(3)
         do k=1,n(3)
           do j=1,n(2)
             do i=1,n(1)
@@ -153,8 +154,8 @@ module mod_rk
     end if
     !
 #if !defined(_LOOP_UNSWITCHING)
-    !$acc parallel loop collapse(3) default(present) async(1)
-    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+    !$acc parallel     loop collapse(3) default(present) async(1)
+    !$omp target teams loop collapse(3)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
@@ -186,8 +187,8 @@ module mod_rk
     end do
 #else
     if(.not.is_impdiff .and. .not.is_buoyancy) then
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      !$acc parallel     loop collapse(3) default(present) async(1)
+      !$omp target teams loop collapse(3)
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
@@ -201,8 +202,8 @@ module mod_rk
         end do
       end do
     else if(is_impdiff .and. .not.is_buoyancy) then
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      !$acc parallel     loop collapse(3) default(present) async(1)
+      !$omp target teams loop collapse(3)
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
@@ -219,8 +220,8 @@ module mod_rk
         end do
       end do
     else if(.not.is_impdiff .and. is_buoyancy) then
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      !$acc parallel     loop collapse(3) default(present) async(1)
+      !$omp target teams loop collapse(3)
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
@@ -237,8 +238,8 @@ module mod_rk
         end do
       end do
     else
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      !$acc parallel     loop collapse(3) default(present) async(1)
+      !$omp target teams loop collapse(3)
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
@@ -263,8 +264,8 @@ module mod_rk
     ! replaced previous pointer swap to save memory on GPUs by using already allocated
     ! buffers
     !
-    !$acc parallel loop collapse(3) default(present) async(1)
-    !$OMP parallel do   collapse(3) DEFAULT(shared)
+    !$acc parallel     loop collapse(3) default(present) async(1)
+    !$omp target teams loop collapse(3)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
@@ -275,8 +276,8 @@ module mod_rk
       end do
     end do
 !#if 0 /*pressure gradient term treated explicitly above */
-!    !$acc parallel loop collapse(3) default(present) async(1)
-!    !$OMP parallel do   collapse(3) DEFAULT(shared)
+!    !$acc parallel     loop collapse(3) default(present) async(1)
+!    !$omp target teams loop collapse(3)
 !    do k=1,n(3)
 !      do j=1,n(2)
 !        do i=1,n(1)
@@ -289,8 +290,8 @@ module mod_rk
 !    call momx_p(n(1),n(2),n(3),dli(1),bforce(1),p,dudtrk)
 !    call momy_p(n(1),n(2),n(3),dli(2),bforce(2),p,dvdtrk)
 !    call momz_p(n(1),n(2),n(3),dzci  ,bforce(3),p,dwdtrk)
-!    !$acc parallel loop collapse(3)
-!    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+!    !$acc parallel     loop collapse(3) default(present) async(1)
+!    !$omp target teams loop collapse(3)
 !    do k=1,n(3)
 !      do j=1,n(2)
 !        do i=1,n(1)
@@ -310,8 +311,8 @@ module mod_rk
       !
       ! compute rhs of Helmholtz equation
       !
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      !$acc parallel     loop collapse(3) default(present) async(1)
+      !$omp target teams loop collapse(3)
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
@@ -326,7 +327,7 @@ module mod_rk
   !
   subroutine rk_scal(rkpar,n,dli,l,dzci,dzfi,grid_vol_ratio_f,alpha,dt,is_bound,u,v,w, &
                      is_forced,scalf,ssource,fluxo,dsdtrko,s,f)
-#if defined(_OPENACC)
+#if defined(_OPENACC) || defined(_OPENMP)
     use mod_common_cudecomp, only: dsdtrk_t => work
 #endif
     !
@@ -350,7 +351,7 @@ module mod_rk
     real(rp), intent(inout), dimension(0:,0:,0:) :: s
     real(rp), intent(out  ) :: f
     !
-#if !defined(_OPENACC)
+#if !(defined(_OPENACC) || defined(_OPENMP))
     real(rp), target       , allocatable, dimension(:,:,:), save :: dsdtrk_t
 #endif
     real(rp), pointer      , contiguous , dimension(:,:,:), save :: dsdtrk
@@ -367,11 +368,11 @@ module mod_rk
     factor12 = factor1 + factor2
     if(is_first) then ! leverage save attribute to allocate these arrays on the device only once
       is_first = .false.
-#if !defined(_OPENACC)
+#if !(defined(_OPENACC) || defined(_OPENMP))
       allocate(dsdtrk_t(1:n(1),1:n(2),1:n(3)))
 #endif
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      !$acc parallel     loop collapse(3) default(present) async(1)
+      !$omp target teams loop collapse(3)
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
@@ -381,9 +382,10 @@ module mod_rk
       end do
       if(is_impdiff) then
         allocate(dsdtrkd(n(1),n(2),n(3)))
-        !$acc enter data create(dsdtrkd) async(1)
-        !$acc parallel loop collapse(3) default(present) async(1)
-        !$OMP parallel do   collapse(3) DEFAULT(shared)
+        !$acc        enter data create(   dsdtrkd) async(1)
+        !$omp target enter data map(alloc:dsdtrkd)
+        !$acc parallel     loop collapse(3) default(present) async(1)
+        !$omp target teams loop collapse(3)
         do k=1,n(3)
           do j=1,n(2)
             do i=1,n(1)
@@ -393,7 +395,7 @@ module mod_rk
         end do
       end if
     end if
-#if defined(_OPENACC)
+#if defined(_OPENACC) || defined(_OPENMP)
     dsdtrk(1:n(1),1:n(2),1:n(3)) => dsdtrk_t(1:product(n(:)))
 #else
     dsdtrk => dsdtrk_t
@@ -401,8 +403,8 @@ module mod_rk
     !
     call scal(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,alpha,u,v,w,s,dsdtrk,dsdtrkd)
 #if !defined(_LOOP_UNSWITCHING)
-    !$acc parallel loop collapse(3) default(present) async(1)
-    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+    !$acc parallel     loop collapse(3) default(present) async(1)
+    !$omp target teams loop collapse(3)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
@@ -415,8 +417,8 @@ module mod_rk
     end do
 #else
     if(.not.is_impdiff) then
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      !$acc parallel     loop collapse(3) default(present) async(1)
+      !$omp target teams loop collapse(3)
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
@@ -425,8 +427,8 @@ module mod_rk
         end do
       end do
     else
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      !$acc parallel     loop collapse(3) default(present) async(1)
+      !$omp target teams loop collapse(3)
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
@@ -457,8 +459,8 @@ module mod_rk
       !
       ! compute rhs of Helmholtz equation
       !
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      !$acc parallel     loop collapse(3) default(present) async(1)
+      !$omp target teams loop collapse(3)
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
@@ -471,8 +473,8 @@ module mod_rk
     ! replaced previous pointer swap to save memory on GPUs by using already allocated
     ! buffers
     !
-    !$acc parallel loop collapse(3) default(present) async(1) ! not really necessary
-    !$OMP parallel do   collapse(3) DEFAULT(shared)
+    !$acc parallel     loop collapse(3) default(present) async(1) ! not really necessary
+    !$omp target teams loop collapse(3)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)

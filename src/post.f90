@@ -24,8 +24,8 @@ module mod_post
     integer :: i,j,k
     dxi = dli(1)
     dyi = dli(2)
-    !$acc parallel loop collapse(3) default(present)
-    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+    !$acc parallel     loop collapse(3) default(present)
+    !$omp target teams loop collapse(3)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
@@ -76,8 +76,8 @@ module mod_post
     !
     ! compute sijsij, where sij = (1/2)(du_i/dx_j + du_j/dx_i)
     !
-    !$acc parallel loop collapse(3) default(present) private(s11,s12,s13,s22,s23,s33)
-    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)  PRIVATE(s11,s12,s13,s22,s23,s33)
+    !$acc parallel     loop collapse(3) default(present) private(s11,s12,s13,s22,s23,s33)
+    !$omp target teams loop collapse(3)                  private(s11,s12,s13,s22,s23,s33)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
@@ -123,8 +123,8 @@ module mod_post
     !
     dxi = dli(1)
     dyi = dli(2)
-    !$acc parallel loop collapse(3) default(present) private(e12,e13,e23)
-    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)  PRIVATE(e12,e13,e23)
+    !$acc parallel     loop collapse(3) default(present) private(e12,e13,e23)
+    !$omp target teams loop collapse(3)                  private(e12,e13,e23)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
@@ -159,8 +159,8 @@ module mod_post
     real(rp), intent(out), dimension(0:,0:,0:) :: qcr
     integer  :: i,j,k
     !
-    !$acc parallel loop collapse(3) default(present)
-    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+    !$acc parallel     loop collapse(3) default(present)
+    !$omp target teams loop collapse(3)
     do k=1,n(3)
       do j=1,n(2)
         do i=1,n(1)
