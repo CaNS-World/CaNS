@@ -16,4 +16,7 @@ module mod_types
   integer, parameter, public :: rp = dp
   integer, parameter, public :: MPI_REAL_RP = MPI_DOUBLE_PRECISION
 #endif
+  type :: arr_ptr
+    real(rp), pointer, contiguous , dimension(:,:,:) :: arr
+  end type arr_ptr
 end module mod_types

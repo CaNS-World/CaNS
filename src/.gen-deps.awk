@@ -1,4 +1,4 @@
-#!/usr/bin/awk -f
+#!/usr/bin/env -S awk -f
 
 #
 # taken from: https://fortran-lang.org/learn/building_programs/project_make
