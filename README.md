@@ -25,7 +25,7 @@ See the [Release Notes](https://github.com/CaNS-World/CaNS/releases/tag/v4.0.0) 
 
 **[26/03/2026]:** We have extended the I/O capabilities of CaNS for checkpointing and data visualization of structured subset outputs, and added support for two new backends that enable data compression: HDF5 and ADIOS2. See the updated [`docs/INFO_INPUT.md`](docs/INFO_INPUT.md) and [`docs/INFO_VISU.md`](docs/INFO_VISU.md) for more details.
 
-**[06/08/2025]:** An OpenMP GPU backend is available in the [`openmp-port` branch](https://github.com/CaNS-World/CaNS/tree/openmp-port). See that branch for the corresponding implementation updates and GPU-backend compilation details.
+**[11/08/2025]:** Support for an OpenMP GPU backend is available. See the updated [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details. Note: OpenMP support for shared-memory parallelization on multiple CPUs is not supported anymore.
 
 **[06/08/2025]:** Support for running on AMD-based supercomputers and a new GPU communication backend are available! CaNS has been ported to other platforms using HIP, thanks to the recently developed [diezDecomp library](https://github.com/Rafael10Diez/diezDecomp). See the updated [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details.
 
