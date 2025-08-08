@@ -362,6 +362,7 @@ contains
     arr(1:n) = arr_tmp(:); arr(n+1) = val
   end subroutine concatenate_c
   subroutine timer_init_cuda_events()
+#if defined(_OPENACC)
     !@cuf use cudafor
     !@cuf integer :: i,istat
     !@cuf allocate(ce_pool_start(TIMER_MAX_PENDING),ce_pool_end(TIMER_MAX_PENDING))
@@ -370,8 +371,10 @@ contains
     !@cuf   istat = cudaEventCreate(ce_pool_end(i))
     !@cuf end do
     !@cuf ce_pool_initialized = .true.
+#endif
   end subroutine timer_init_cuda_events
   subroutine timer_destroy_cuda_events()
+#if defined(_OPENACC)
     !@cuf use cudafor
     !@cuf integer :: i,istat
     !@cuf if(.not.ce_pool_initialized) return
@@ -381,5 +384,6 @@ contains
     !@cuf end do
     !@cuf deallocate(ce_pool_start,ce_pool_end)
     !@cuf ce_pool_initialized = .false.
+#endif
   end subroutine timer_destroy_cuda_events
 end module mod_timer

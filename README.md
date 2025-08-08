@@ -25,6 +25,8 @@ See the [Release Notes](https://github.com/CaNS-World/CaNS/releases/tag/v3.0.0) 
 
 **[26/03/2026]:** We have extended the I/O capabilities of CaNS for checkpointing and data visualization of structured subset outputs, and support two new backends that enable data compression: HDF5 and ADIOS2. See the updated [`docs/INFO_INPUT.md`](docs/INFO_INPUT.md) and [`docs/INFO_VISU.md`](docs/INFO_VISU.md) for more details.
 
+**[11/08/2025]:** Support for an OpenMP GPU backend is available. See the updated [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details. Note: OpenMP support for shared-memory parallelization on multiple CPUs is not supported anymore.
+
 **[06/08/2025]:** Support for running on AMD-based supercomputers and new GPU communication backend available! CaNS has been ported using to other platforms using HIP and thanks to the recently developed [diezDecomp library](https://github.com/Rafael10Diez/diezDecomp). See the updated `[docs/INFO_COMPILING.md](docs/INFO_COMPILING.md)` for more details.
 
 **[10/04/2025]:** The writing of checkpoint files has changed. To allow for more flexibility, CaNS now writes one file per scalar field, where each velocity component, pressure, and scalar fields is stored in a different checkpoint file.
