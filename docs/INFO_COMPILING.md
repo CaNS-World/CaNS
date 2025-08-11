@@ -25,6 +25,8 @@ In this file, `FCOMP` can be one of `GNU` (`gfortran`), `INTEL` (`ifort`), `NVID
  * `SINGLE_PRECISION` : calculation will be carried out in single precision (the default precision is double)
  * `GPU`              : enable GPU accelerated runs
  * `USE_DIEZDECOMP`   : use [diezDecomp](https://github.com/Rafael10Diez/diezDecomp) as GPU communication backend instead of the default (cuDecomp), e.g., for portability in different accelerators. While diezDecomp supports CPU-CPU communication, this is not used in CaNS yet.
+||||||| parent of 26ad731 (Implemented multi-GPU communications with diezDecomp.)
+ * `GPU`              : enable GPU accelerated runs
 
 Typing `make libs` will build the 2DECOMP&FFT/cuDecomp/diezDecomp libraries; then typing `make` will compile the code and copy the executable `cans` to a `run/` folder; `make run` will also copy the default input files `*.in` under `src/` to the same `run/` folder.
 
