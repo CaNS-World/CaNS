@@ -30,6 +30,8 @@ In this file, `FCOMP` can be one of `GNU` (`gfortran`), `INTEL` (`ifort`), `NVID
  * `USE_HDF5`         : enable HDF5-based I/O support
  * `USE_ADIOS2`       : enable ADIOS2-based I/O support
  * `USE_DIEZDECOMP`   : use [diezDecomp](https://github.com/Rafael10Diez/diezDecomp) as GPU communication backend instead of the default (cuDecomp), e.g., for portability in different accelerators. While diezDecomp supports CPU-CPU communication, this is not used in CaNS yet.
+||||||| parent of 26ad731 (Implemented multi-GPU communications with diezDecomp.)
+ * `GPU`              : enable GPU accelerated runs
 
 At present, the GPU-enabled path documented in this branch corresponds to the OpenACC implementation. The OpenMP GPU backend (OpenMP target offload) is being maintained in the [`openmp-port` branch](https://github.com/CaNS-World/CaNS/tree/openmp-port); see its [`docs/INFO_COMPILING.md`](https://github.com/CaNS-World/CaNS/blob/openmp-port/docs/INFO_COMPILING.md) file for the OpenMP target offload build path.
 
