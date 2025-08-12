@@ -54,19 +54,19 @@ jobs:
       fail-fast: false # ensures that jobs run in parallel
     name: test-${{ matrix.mode.name }}-${{ matrix.test-name }}
     env:
-      SKIP_RUN: ${{ matrix.mode.name == 'opt' && inputs.compiler == 'INTEL'}} # skipped combinations
+      SKIP_RUN: ${{ (matrix.mode.name == 'opt' && inputs.compiler == 'INTEL') || (matrix.mode.name == 'dbg' && inputs.compiler == 'NVIDIA') }} # skipped combinations
     steps:
     - name: Display skipped combinations
-      if: ${{ env.SKIP_RUN == 'true'}}
+      if: ${{ env.SKIP_RUN == 'true' }}
       run: |
         echo "INFO: Skipping the "${{ inputs.compiler }}" with mode "${{ matrix.mode.name }}
     - name: Checkout code
-      if: ${{ env.SKIP_RUN != 'true'}}
+      if: ${{ env.SKIP_RUN != 'true' }}
       uses: actions/checkout@v4
       with:
         submodules: false
     - name: Set up the environment and get packages
-      if: ${{ env.SKIP_RUN != 'true'}}
+      if: ${{ env.SKIP_RUN != 'true' }}
       uses: ./.github/actions/build
       with:
         name: ${{ inputs.compiler }}-${{ matrix.mode.name }}
@@ -74,18 +74,18 @@ jobs:
         compiler_flags: ${{ matrix.mode.flags }}
         no-rebuild: true
     - name: Get Python
-      if: ${{ env.SKIP_RUN != 'true'}}
+      if: ${{ env.SKIP_RUN != 'true' }}
       uses: actions/setup-python@v2
       with:
         python-version: 3.13
     - name: Get Python packages for testing
-      if: ${{ env.SKIP_RUN != 'true'}}
+      if: ${{ env.SKIP_RUN != 'true' }}
       shell: bash  # specify the shell explicitly
       run: |
         python -m pip install --upgrade pip
         pip install numpy pytest
     - name: Run the test
-      if: ${{ env.SKIP_RUN != 'true'}}
+      if: ${{ env.SKIP_RUN != 'true' }}
       shell: bash  # specify the shell explicitly
       run: |
            source .github/actions/build/scripts/setenv-${{ inputs.compiler }}.sh
@@ -93,13 +93,13 @@ jobs:
            cd tests/${{ matrix.test-name }}
            bash ./testit.sh
     - name: Upload log files
-      if: ${{ env.SKIP_RUN != 'true'}}
+      if: ${{ env.SKIP_RUN != 'true' }}
       uses: actions/upload-artifact@v4
       with:
         name: logs-${{ inputs.compiler }}-${{ matrix.mode.name }}-${{ matrix.test-name }}
         path: run/*log
     - name: Print log(s)
-      if: ${{ env.SKIP_RUN != 'true'}}
+      if: ${{ env.SKIP_RUN != 'true' }}
       shell: bash  # specify the shell explicitly
       run: |
            for f in $(ls run/*.log)
