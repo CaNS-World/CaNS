@@ -201,7 +201,7 @@ These lines set the flow forcing.
 
 `bforce`, is a constant **body force density term** in the direction in question (e.g., the negative of a constant pressure gradient) that can be added to the right-hand-side of the momentum equation. The three values correspond to three domain directions.
 
-`is_forced`, if true in the direction in question, **forces the flow** with a pressure gradient that balances the total wall shear (e.g., for a pressure-driven channel). The three boolean values correspond to three domain directions.
+`is_forced`, if true in the direction in question, **forces the flow** with a pressure gradient that balances the total wall shear (e.g., for a pressure-driven channel with zero net acceleration/constant bulk velocity). The three boolean values correspond to three domain directions.
 
 `velf`, is the **target bulk velocity** in the direction in question (where `is_forced` is true). The three values correspond to three domain directions.
 

@@ -10,8 +10,8 @@ nstep = 100000, time_max = 100., tw_max = 0.1
 stop_type(1:3) = T, F, F
 restart = F, is_overwrite_save = T, nsaves_max = 0
 icheck = 10, iout0d = 10, iout1d = 100, iout2d = 500, iout3d = 10000, isave = 5000
-cbcvel(0:1,1:3,1) = 'P','P',  'P','P',  'D','D'
-cbcvel(0:1,1:3,2) = 'P','P',  'P','P',  'D','D'
+cbcvel(0:1,1:3,1) = 'P','P',  'P','P',  'D','N'
+cbcvel(0:1,1:3,2) = 'P','P',  'P','P',  'D','N'
 cbcvel(0:1,1:3,3) = 'P','P',  'P','P',  'D','D'
 cbcpre(0:1,1:3)   = 'P','P',  'P','P',  'N','N'
 bcvel(0:1,1:3,1) =  0.,0.,   0.,0.,   0.,0.
