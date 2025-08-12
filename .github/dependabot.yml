@@ -1,0 +1,9 @@
+version: 2
+updates:
+  - package-ecosystem: gitsubmodule
+    directory: "/"
+    schedule:
+      interval: monthly
+    allow:
+      - dependency-name: "dependencies/cuDecomp"
+    labels: ["dependencies", "submodules", "cuDecomp"]
