@@ -22,7 +22,7 @@ DEFINES += -D_DIEZDECOMP_SINGLE
 endif
 
 BUILD_DIR := ./build
-SRC_DIR   := ./src
+SRC_DIR   := ./diezDecomp-repo/src
 OBJ_DIR   := $(BUILD_DIR)
 INC_DIR   := $(BUILD_DIR)/include
 LIB_DIR   := $(BUILD_DIR)/lib
