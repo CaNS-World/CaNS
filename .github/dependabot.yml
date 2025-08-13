@@ -6,4 +6,5 @@ updates:
       interval: monthly
     allow:
       - dependency-name: "dependencies/cuDecomp"
-    labels: ["dependencies", "submodules", "cuDecomp"]
+      - dependency-name: "dependencies/diezDecomp/diezDecomp-repo"
+    labels: ["dependencies", "submodules"]
