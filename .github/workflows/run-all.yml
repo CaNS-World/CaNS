@@ -19,13 +19,16 @@ jobs:
     uses: ./.github/workflows/run-one.yml
     with:
       compiler: "GNU"
+      container_image: "gcc:latest"
 
   INTEL:
     uses: ./.github/workflows/run-one.yml
     with:
       compiler: "INTEL"
+      container_image: "intel/oneapi-hpckit:latest"
 
   NVIDIA:
     uses: ./.github/workflows/run-one.yml
     with:
       compiler: "NVIDIA"
+      container_image: "nvcr.io/nvidia/hpc-sdk:latest"

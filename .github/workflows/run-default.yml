@@ -8,3 +8,4 @@ jobs:
     uses: ./.github/workflows/run-one.yml
     with:
       compiler: "GNU"
+      container_image: "gcc:latest"

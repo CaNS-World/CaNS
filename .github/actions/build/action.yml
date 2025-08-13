@@ -17,13 +17,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Install compiler
-      shell: bash
-      run: |
-        echo "INFO: Installing compiling environment: ${{ inputs.compiler }}"
-        chmod a+x ./.github/actions/build/scripts/install-${{ inputs.compiler }}.sh
-        source ./.github/actions/build/scripts/install-${{ inputs.compiler }}.sh
-
     - name: Get dependencies
       if: ${{ inputs.no-rebuild == 'true' }}
       uses: actions/download-artifact@v4
