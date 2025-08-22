@@ -1111,7 +1111,7 @@ module mod_mom
             wwkp  = 0.25*(w_ccc+w_ccp)*(w_ccc+w_ccp)
             wwkm  = 0.25*(w_ccc+w_ccm)*(w_ccc+w_ccm)
             dwdtd_xy_s = visc*(dwdxp-dwdxm)*dxi + visc*(dwdyp-dwdym)*dyi
-            dwdtd_z_s  = visc*(dwdzp-dwdzm)*dzfi(k)
+            dwdtd_z_s  = visc*(dwdzp-dwdzm)*dzci(k)
             dwdt_s     = -(uwip-uwim)*dxi - (vwjp-vwjm)*dyi - (wwkp-wwkm)*dzfi(k)
             dudt_s = dudt_s + dudtd_xy_s
             dvdt_s = dvdt_s + dvdtd_xy_s
@@ -1244,7 +1244,7 @@ module mod_mom
             wwkp  = 0.25*(w_ccc+w_ccp)*(w_ccc+w_ccp)
             wwkm  = 0.25*(w_ccc+w_ccm)*(w_ccc+w_ccm)
             dwdtd_xy_s = visc*(dwdxp-dwdxm)*dxi + visc*(dwdyp-dwdym)*dyi
-            dwdtd_z_s  = visc*(dwdzp-dwdzm)*dzfi(k)
+            dwdtd_z_s  = visc*(dwdzp-dwdzm)*dzci(k)
             dwdt_s     = -(uwip-uwim)*dxi - (vwjp-vwjm)*dyi - (wwkp-wwkm)*dzfi(k)
             dudtd_s = dudtd_xy_s + dudtd_z_s
             dvdtd_s = dvdtd_xy_s + dvdtd_z_s
