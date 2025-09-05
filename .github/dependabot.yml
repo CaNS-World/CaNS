@@ -7,4 +7,3 @@ updates:
     allow:
       - dependency-name: "dependencies/cuDecomp"
       - dependency-name: "dependencies/diezDecomp/diezDecomp-repo"
-    labels: ["dependencies", "submodules"]
