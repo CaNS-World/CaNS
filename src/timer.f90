@@ -1,6 +1,6 @@
 ! -
 !
-! SPDX-FileCopyrightText: Copyright (c) 2022 Pedro Costa. All rights reserved.
+! SPDX-FileCopyrightText: Pedro Costa and the CaNS contributors
 ! SPDX-License-Identifier: MIT
 !
 ! -
