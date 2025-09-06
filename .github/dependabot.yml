@@ -7,3 +7,11 @@ updates:
     allow:
       - dependency-name: "dependencies/cuDecomp"
       - dependency-name: "dependencies/diezDecomp/diezDecomp-repo"
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      actions-all:
+        patterns:
+          - "*"
