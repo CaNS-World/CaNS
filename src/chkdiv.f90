@@ -30,9 +30,10 @@ module mod_chkdiv
     !dzi = dli(3)
     divtot = 0.
     divmax = 0.
-    !$acc data copy(divtot,divmax) async(1)
-    !$acc parallel loop collapse(3) default(present) private(div) reduction(+:divtot) reduction(max:divmax) async(1)
-    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)  PRIVATE(div) REDUCTION(+:divtot) REDUCTION(max:divmax)
+    !$acc        data copy(      divtot,divmax) async(1)
+    !$omp target data map(tofrom:divtot,divmax)
+    !$acc parallel     loop collapse(3) default(present) private(div) reduction(+:divtot) reduction(max:divmax) async(1)
+    !$omp target teams loop collapse(3)                  private(div) reduction(+:divtot) reduction(max:divmax)
     do k=lo(3),hi(3)
       do j=lo(2),hi(2)
         do i=lo(1),hi(1)
@@ -45,7 +46,8 @@ module mod_chkdiv
         end do
       end do
     end do
-    !$acc end data
+    !$omp end target data
+    !$acc end        data
     !$acc wait(1)
     call MPI_ALLREDUCE(MPI_IN_PLACE,divtot,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
     call MPI_ALLREDUCE(MPI_IN_PLACE,divmax,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)

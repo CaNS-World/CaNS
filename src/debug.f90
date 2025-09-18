@@ -41,10 +41,12 @@ module mod_debug
     end do
     diffmax = 0.
     !$acc wait
-    !$acc data copy(diffmax,q)
+    !$acc        data copy(      diffmax,q)
+    !$omp target data map(tofrom:diffmax,q)
     select case(c_or_f(3))
     case('c')
-      !$acc parallel loop collapse(3) default(present) private(val) reduction(max:diffmax)
+      !$acc parallel     loop collapse(3) default(present) private(val) reduction(max:diffmax)
+      !$omp target teams loop collapse(3)                  private(val) reduction(max:diffmax)
       do k=lo(3),hi(3)-q(3)
         do j=lo(2),hi(2)-q(2)
           do i=lo(1),hi(1)-q(1)
@@ -60,7 +62,8 @@ module mod_debug
         end do
       end do
     case('f')
-      !$acc parallel loop collapse(3) default(present) private(val) reduction(max:diffmax)
+      !$acc parallel     loop collapse(3) default(present) private(val) reduction(max:diffmax)
+      !$omp target teams loop collapse(3)                  private(val) reduction(max:diffmax)
       do k=lo(3),hi(3)-q(3)
         do j=lo(2),hi(2)-q(2)
           do i=lo(1),hi(1)-q(1)
@@ -76,7 +79,8 @@ module mod_debug
         end do
       end do
     end select
-    !$acc end data
+    !$omp end target data
+    !$acc end        data
     call MPI_ALLREDUCE(MPI_IN_PLACE,diffmax,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
   end subroutine chk_helmholtz
   subroutine chk_poisson(lo,hi,dli,dzci,dzfi,fp,fpp,diffmax)
@@ -97,8 +101,10 @@ module mod_debug
     dxi = dli(1); dyi = dli(2)
     diffmax = 0.
     !$acc wait
-    !$acc data copy(diffmax)
-    !$acc parallel loop collapse(3) default(present) private(val) reduction(max:diffmax)
+    !$acc        data copy(      diffmax)
+    !$omp target data map(tofrom:diffmax)
+    !$acc parallel     loop collapse(3) default(present) private(val) reduction(max:diffmax)
+    !$omp target teams loop collapse(3)                  private(val) reduction(max:diffmax)
     do k=lo(3),hi(3)
       do j=lo(2),hi(2)
         do i=lo(1),hi(1)
@@ -111,7 +117,8 @@ module mod_debug
         end do
       end do
     end do
-    !$acc end data
+    !$omp end target data
+    !$acc end        data
     call MPI_ALLREDUCE(MPI_IN_PLACE,diffmax,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
   end subroutine chk_poisson
 end module mod_debug

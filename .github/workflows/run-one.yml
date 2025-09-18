@@ -22,7 +22,7 @@ jobs:
             flags: "FFLAGS_OPT=1 OPENMP=1 LIBS+=-lfftw3_threads"
       fail-fast: false # ensures that jobs run in parallel
     env:
-      SKIP_BUILD: ${{ inputs.compiler != 'GNU' && matrix.mode.name == 'opt-omp' && false }} # skipped combinations (disabled)
+      SKIP_BUILD: ${{ matrix.mode.name == 'opt-omp' }} # skipped combinations
     name: build-${{ matrix.mode.name }}
     steps:
     - name: Checkout code

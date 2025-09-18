@@ -52,18 +52,12 @@ module mod_solver
     allocate(pz(zsize(1),zsize(2),zsize(3)))
     select case(ipencil_axis)
     case(1)
-      !$OMP PARALLEL WORKSHARE
       px(:,:,:) = p(1:n(1),1:n(2),1:n(3))
-      !$OMP END PARALLEL WORKSHARE
     case(2)
-      !$OMP PARALLEL WORKSHARE
       py(:,:,:) = p(1:n(1),1:n(2),1:n(3))
-      !$OMP END PARALLEL WORKSHARE
       call transpose_y_to_x(py,px)
     case(3)
-      !$OMP PARALLEL WORKSHARE
       pz(:,:,:) = p(1:n(1),1:n(2),1:n(3))
-      !$OMP END PARALLEL WORKSHARE
       !call transpose_z_to_x(pz,px)
       call transpose_z_to_y(pz,py)
       call transpose_y_to_x(py,px)
@@ -93,21 +87,15 @@ module mod_solver
     !
     select case(ipencil_axis)
     case(1)
-      !$OMP PARALLEL WORKSHARE
       p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)
-      !$OMP END PARALLEL WORKSHARE
     case(2)
       call transpose_x_to_y(px,py)
-      !$OMP PARALLEL WORKSHARE
       p(1:n(1),1:n(2),1:n(3)) = py(:,:,:)
-      !$OMP END PARALLEL WORKSHARE
     case(3)
       !call transpose_x_to_z(px,pz)
       call transpose_x_to_y(px,py)
       call transpose_y_to_z(py,pz)
-      !$OMP PARALLEL WORKSHARE
       p(1:n(1),1:n(2),1:n(3)) = pz(:,:,:)
-      !$OMP END PARALLEL WORKSHARE
     end select
   end subroutine solver
   !
@@ -128,29 +116,21 @@ module mod_solver
     nn = n
     if(is_periodic) nn = n-1
     if(present(lambdaxy)) then
-      !$OMP PARALLEL DEFAULT(shared) PRIVATE(bb)
-      !$OMP DO COLLAPSE(2)
       do j=1,ny
         do i=1,nx
           bb(:) = b(1:n) + lambdaxy(i,j)
           call dgtsv_homebrewed(nn,a,bb,c,norm,p(i,j,1:nn))
         end do
       end do
-      !$OMP END PARALLEL
     else
-      !$OMP PARALLEL DEFAULT(shared)
-      !$OMP DO COLLAPSE(2)
       do j=1,ny
         do i=1,nx
           call dgtsv_homebrewed(nn,a,b,c,norm,p(i,j,1:nn))
         end do
       end do
-      !$OMP END PARALLEL
     end if
     if(is_periodic) then
       if(present(lambdaxy)) then
-        !$OMP PARALLEL DEFAULT(shared) PRIVATE(bb,p2)
-        !$OMP DO COLLAPSE(2)
         do j=1,ny
           do i=1,nx
             p2(:) = 0.
@@ -163,10 +143,7 @@ module mod_solver
             p(i,j,1:nn) = p(i,j,1:nn) + p2(1:nn)*p(i,j,nn+1)
           end do
         end do
-        !$OMP END PARALLEL
       else
-        !$OMP PARALLEL DEFAULT(shared) PRIVATE(p2)
-        !$OMP DO COLLAPSE(2)
         do j=1,ny
           do i=1,nx
             p2(:) = 0.
@@ -178,7 +155,6 @@ module mod_solver
             p(i,j,1:nn) = p(i,j,1:nn) + p2(1:nn)*p(i,j,nn+1)
           end do
         end do
-        !$OMP END PARALLEL
       end if
     end if
   end subroutine gaussel
@@ -223,8 +199,6 @@ module mod_solver
       !
       ! factor inner rows of z-distributed systems so that they are only coupled to the boundaries:
       !
-      !$OMP PARALLEL DEFAULT(shared) PRIVATE(zz,bb,z)
-      !$OMP DO COLLAPSE(2)
       do j=1,ny
         do i=1,nx
           !
@@ -262,10 +236,7 @@ module mod_solver
           pp_y(i,j,1) = p(i,j,1) ; pp_y(i,j,2) = p(i,j,n)
         end do
       end do
-      !$OMP END PARALLEL
     else
-      !$OMP PARALLEL DEFAULT(shared) PRIVATE(zz,z)
-      !$OMP DO COLLAPSE(2)
       do j=1,ny
         do i=1,nx
           zz(:) = 1./(b(1:2)+eps)
@@ -301,7 +272,6 @@ module mod_solver
           pp_y(i,j,1) = p(i,j,1) ; pp_y(i,j,2) = p(i,j,n)
         end do
       end do
-      !$OMP END PARALLEL
     end if
     !
     ! transpose to gather reduced subdomain boundary systems along z
@@ -329,8 +299,6 @@ module mod_solver
       nn = nn-1
       cc_z_0(:,:,:) = cc_z(:,:,:)
     end if
-    !$OMP PARALLEL DEFAULT(shared) PRIVATE(z)
-    !$OMP DO COLLAPSE(2)
     do j=1,ny_r
       do i=1,nx_r
         do k=2,nn
@@ -343,11 +311,8 @@ module mod_solver
         end do
       end do
     end do
-    !$OMP END PARALLEL
     if(is_periodic) then
       associate(cc_z => cc_z_0)
-      !$OMP PARALLEL DEFAULT(shared) PRIVATE(z)
-      !$OMP DO COLLAPSE(2)
       do j=1,ny_r
         do i=1,nx_r
           pp_z_2(i,j,1:nn) = 0.
@@ -370,7 +335,6 @@ module mod_solver
           end do
         end do
       end do
-      !$OMP END PARALLEL
       end associate
     end if
     !
@@ -380,8 +344,6 @@ module mod_solver
     !
     ! obtain final solution on the inner points
     !
-    !$OMP PARALLEL DEFAULT(shared)
-    !$OMP DO COLLAPSE(2)
     do j=1,ny
       do i=1,nx
         p(i,j,1) = pp_y(i,j,1)
@@ -391,7 +353,6 @@ module mod_solver
         end do
       end do
     end do
-    !$OMP END PARALLEL
   end subroutine gaussel_ptdma
   !
   subroutine dgtsv_homebrewed(n,a,b,c,norm,p)
@@ -450,16 +411,12 @@ module mod_solver
       allocate(pz(zsize(1),zsize(2),zsize(3)))
       select case(ipencil_axis)
       case(1)
-        !$OMP PARALLEL WORKSHARE
         px(:,:,:) = p(1:n(1),1:n(2),1:n(3))
-        !$OMP END PARALLEL WORKSHARE
         !call transpose_x_to_z(px,pz)
         call transpose_x_to_y(px,py)
         call transpose_y_to_z(py,pz)
       case(2)
-        !$OMP PARALLEL WORKSHARE
         py(:,:,:) = p(1:n(1),1:n(2),1:n(3))
-        !$OMP END PARALLEL WORKSHARE
         call transpose_y_to_z(py,pz)
       end select
     end if
@@ -482,14 +439,10 @@ module mod_solver
         !call transpose_z_to_x(pz,px)
         call transpose_z_to_y(pz,py)
         call transpose_y_to_x(py,px)
-        !$OMP PARALLEL WORKSHARE
         p(1:n(1),1:n(2),1:n(3)) = px(:,:,:)
-        !$OMP END PARALLEL WORKSHARE
       case(2)
         call transpose_z_to_y(pz,py)
-        !$OMP PARALLEL WORKSHARE
         p(1:n(1),1:n(2),1:n(3)) = py(:,:,:)
-        !$OMP END PARALLEL WORKSHARE
       end select
     end if
   end subroutine solver_gaussel_z

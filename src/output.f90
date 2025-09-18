@@ -80,18 +80,22 @@ module mod_output
     real(rp) :: grid_area_ratio,p1d_s
     !
     allocate(p1d(ng(idir)))
-    !$acc enter data create(p1d)
-    !$acc parallel loop default(present)
+    !$acc        enter data create(   p1d)
+    !$omp target enter data map(alloc:p1d)
+    !$acc parallel     loop default(present)
+    !$omp target teams loop
     do k=1,size(p1d)
       p1d(k) = 0._rp
     end do
     select case(idir)
     case(3)
       grid_area_ratio = dl(1)*dl(2)/(l(1)*l(2))
-      !$acc parallel loop gang default(present) private(p1d_s)
+      !$acc parallel     loop gang default(present) private(p1d_s)
+      !$omp target teams loop                       private(p1d_s)
       do k=lo(3),hi(3)
         p1d_s = 0._rp
         !$acc loop collapse(2) reduction(+:p1d_s)
+        !$omp loop collapse(2) reduction(+:p1d_s)
         do j=lo(2),hi(2)
           do i=lo(1),hi(1)
             p1d_s = p1d_s + p(i,j,k)*grid_area_ratio
@@ -99,7 +103,8 @@ module mod_output
         end do
         p1d(k) = p1d_s
       end do
-      !$acc exit data copyout(p1d)
+      !$acc        exit data copyout( p1d)
+      !$omp target exit data map(from:p1d)
       call MPI_ALLREDUCE(MPI_IN_PLACE,p1d(1),ng(3),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       if(myid == 0) then
         open(newunit=iunit,file=fname)
@@ -110,10 +115,12 @@ module mod_output
       end if
     case(2)
       grid_area_ratio = dl(1)/(l(1)*l(3))
-      !$acc parallel loop gang default(present) private(p1d_s)
+      !$acc parallel     loop gang default(present) private(p1d_s)
+      !$omp target teams loop                       private(p1d_s)
       do j=lo(2),hi(2)
         p1d_s = 0._rp
         !$acc loop collapse(2) reduction(+:p1d_s)
+        !$omp loop collapse(2) reduction(+:p1d_s)
         do k=lo(3),hi(3)
           do i=lo(1),hi(1)
             p1d_s = p1d_s + p(i,j,k)*dz(k)*grid_area_ratio
@@ -121,7 +128,8 @@ module mod_output
         end do
         p1d(j) = p1d_s
       end do
-      !$acc exit data copyout(p1d)
+      !$acc        exit data copyout( p1d)
+      !$omp target exit data map(from:p1d)
       call MPI_ALLREDUCE(MPI_IN_PLACE,p1d(1),ng(2),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       if(myid == 0) then
         open(newunit=iunit,file=fname)
@@ -132,10 +140,12 @@ module mod_output
       end if
     case(1)
       grid_area_ratio = dl(2)/(l(2)*l(3))
-      !$acc parallel loop gang default(present) private(p1d_s)
+      !$acc parallel     loop gang default(present) private(p1d_s)
+      !$omp target teams loop                       private(p1d_s)
       do i=lo(1),hi(1)
         p1d_s = 0._rp
         !$acc loop collapse(2) reduction(+:p1d_s)
+        !$omp loop collapse(2) reduction(+:p1d_s)
         do k=lo(3),hi(3)
           do j=lo(2),hi(2)
             p1d_s = p1d_s + p(i,j,k)*dz(k)*grid_area_ratio
@@ -143,7 +153,8 @@ module mod_output
         end do
         p1d(i) = p1d_s
       end do
-      !$acc exit data copyout(p1d)
+      !$acc        exit data copyout( p1d)
+      !$omp target exit data map(from:p1d)
       call MPI_ALLREDUCE(MPI_IN_PLACE,p1d(1),ng(1),MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       if(myid == 0) then
         open(newunit=iunit,file=fname)

@@ -222,13 +222,9 @@ module mod_load
       select case(io)
       case('r')
         call transpose_x_to_y(var_x,var_y)
-        !$OMP PARALLEL WORKSHARE
         var(1:n(1),1:n(2),1:n(3)) = var_y(:,:,:)
-        !$OMP END PARALLEL WORKSHARE
       case('w')
-        !$OMP PARALLEL WORKSHARE
         var_y(:,:,:) = var(1:n(1),1:n(2),1:n(3))
-        !$OMP END PARALLEL WORKSHARE
         call transpose_y_to_x(var_y,var_x)
       end select
     case(3)
@@ -236,20 +232,16 @@ module mod_load
       case('r')
         call transpose_x_to_y(var_x,var_y)
         call transpose_y_to_z(var_y,var_z)
-        !$OMP PARALLEL WORKSHARE
         var(1:n(1),1:n(2),1:n(3)) = var_z(:,:,:)
-        !$OMP END PARALLEL WORKSHARE
       case('w')
-        !$OMP PARALLEL WORKSHARE
         var_z(:,:,:) = var(1:n(1),1:n(2),1:n(3))
-        !$OMP END PARALLEL WORKSHARE
         call transpose_z_to_y(var_z,var_y)
         call transpose_y_to_x(var_y,var_x)
       end select
     end select
   end subroutine transpose_to_or_from_x
   !
-#if defined(_OPENACC)
+#if defined(_OPENACC) || defined(_OPENMP)
   subroutine transpose_to_or_from_x_gpu(io,ipencil_axis,nh,var_io,var)
     !
     ! transpose arrays for I/O over x-aligned pencils on GPUs
@@ -297,14 +289,24 @@ module mod_load
     case(2)
       select case(io)
       case('r')
-        !$acc data copyin(var_io) copyout(var)
-        !$acc kernels default(present)
-        var_x(1:n_x_0(1),1:n_x_0(2),1:n_x_0(3)) = var_io(:,:,:)
-        !$acc end kernels
-        !$acc host_data use_device(var_x,var_y,work)
+        !$acc        data copyin(var_io,n_x_0) copyout( var)
+        !$omp target data map(to:var_io,n_x_0) map(from:var)
+        !$acc parallel     loop collapse(3) default(present)
+        !$omp target teams loop collapse(3)
+        do k=1,n_x_0(3)
+          do j=1,n_x_0(2)
+            do i=1,n_x_0(1)
+              var_x(i,j,k) = var_io(i,j,k)
+            end do
+          end do
+        end do
+        !$acc   host_data use_device(     var_x,var_y,work)
+        !$omp target data use_device_addr(var_x,var_y,work)
         istat = cudecompTransposeXtoY(ch,gd,var_x,var_y,work,dtype_rp)
-        !$acc end host_data
-        !$acc kernels loop collapse(3) default(present)
+        !$omp end target data
+        !$acc end   host_data
+        !$acc parallel     loop collapse(3) default(present)
+        !$omp target teams loop collapse(3)
         do k=1,n(3)
           do j=1,n(2)
             do i=1,n(1)
@@ -312,10 +314,13 @@ module mod_load
             end do
           end do
         end do
-        !$acc end data
+        !$omp end target data
+        !$acc end        data
       case('w')
-        !$acc data copyin(var) copyout(var_io) ! var already present, copyin will be ignored
-        !$acc kernels loop collapse(3) default(present)
+        !$acc        data copyin(var,n_x_0) copyout( var_io) ! var already present, copyin will be ignored
+        !$omp target data map(to:var,n_x_0) map(from:var_io)
+        !$acc parallel     loop collapse(3) default(present)
+        !$omp target teams loop collapse(3)
         do k=1,n(3)
           do j=1,n(2)
             do i=1,n(1)
@@ -323,42 +328,83 @@ module mod_load
             end do
           end do
         end do
-        !$acc host_data use_device(var_y,var_x,work)
+        !$acc   host_data use_device(     var_y,var_x,work)
+        !$omp target data use_device_addr(var_y,var_x,work)
         istat = cudecompTransposeYtoX(ch,gd,var_y,var_x,work,dtype_rp)
-        !$acc end host_data
-        !$acc kernels default(present)
-        var_io(:,:,:) = var_x(1:n_x_0(1),1:n_x_0(2),1:n_x_0(3))
-        !$acc end kernels
-        !$acc end data
+        !$omp end target data
+        !$acc end   host_data
+        !$acc parallel     loop collapse(3) default(present)
+        !$omp target teams loop collapse(3)
+        do k=1,n_x_0(3)
+          do j=1,n_x_0(2)
+            do i=1,n_x_0(1)
+              var_io(i,j,k) = var_x(i,j,k)
+            end do
+          end do
+        end do
+        !$omp end target data
+        !$acc end        data
       end select
     case(3)
       select case(io)
       case('r')
-        !$acc data copyin(var_io) copyout(var)
-        !$acc kernels default(present)
-        var_x(1:n_x_0(1),1:n_x_0(2),1:n_x_0(3)) = var_io(:,:,:)
-        !$acc end kernels
-        !$acc host_data use_device(var_x,var_y,var_z,work)
+        !$acc        data copyin(var_io,n_x_0) copyout( var)
+        !$omp target data map(to:var_io,n_x_0) map(from:var)
+        !$acc parallel     loop collapse(3) default(present)
+        !$omp target teams loop collapse(3)
+        do k=1,n_x_0(3)
+          do j=1,n_x_0(2)
+            do i=1,n_x_0(1)
+              var_x(i,j,k) = var_io(i,j,k)
+            end do
+          end do
+        end do
+        !$acc   host_data use_device(     var_x,var_y,var_z,work)
+        !$omp target data use_device_addr(var_x,var_y,var_z,work)
         istat = cudecompTransposeXtoY(ch,gd,var_x,var_y,work,dtype_rp)
         istat = cudecompTransposeYtoZ(ch,gd,var_y,var_z,work,dtype_rp)
-        !$acc end host_data
-        !$acc kernels default(present)
-        var(1:n(1),1:n(2),1:n(3)) = var_z(1:n(1),1:n(2),1:n(3))
-        !$acc end kernels
-        !$acc end data
+        !$omp end target data
+        !$acc end   host_data
+        !$acc parallel     loop collapse(3) default(present)
+        !$omp target teams loop collapse(3)
+        do k=1,n(3)
+          do j=1,n(2)
+            do i=1,n(1)
+              var(i,j,k) = var_z(i,j,k)
+            end do
+          end do
+        end do
+        !$omp end target data
+        !$acc end        data
       case('w')
-        !$acc data copyin(var) copyout(var_io) ! var already present, copyin will be ignored
-        !$acc kernels default(present)
-        var_z(1:n(1),1:n(2),1:n(3)) = var(1:n(1),1:n(2),1:n(3))
-        !$acc end kernels
-        !$acc host_data use_device(var_z,var_y,var_x,work)
+        !$acc        data copyin(var,n_x_0) copyout( var_io)
+        !$omp target data map(to:var,n_x_0) map(from:var_io)
+        !$acc parallel     loop collapse(3) default(present)
+        !$omp target teams loop collapse(3)
+        do k=1,n(3)
+          do j=1,n(2)
+            do i=1,n(1)
+              var_z(i,j,k) = var(i,j,k)
+            end do
+          end do
+        end do
+        !$acc   host_data use_device(     var_z,var_y,var_x,work)
+        !$omp target data use_device_addr(var_z,var_y,var_x,work)
         istat = cudecompTransposeZtoY(ch,gd,var_z,var_y,work,dtype_rp)
         istat = cudecompTransposeYtoX(ch,gd,var_y,var_x,work,dtype_rp)
-        !$acc end host_data
-        !$acc kernels default(present)
-        var_io(:,:,:) = var_x(1:n_x_0(1),1:n_x_0(2),1:n_x_0(3))
-        !$acc end kernels
-        !$acc end data
+        !$omp end target data
+        !$acc end   host_data
+        !$acc parallel     loop collapse(3) default(present)
+        !$omp target teams loop collapse(3)
+        do k=1,n_x_0(3)
+          do j=1,n_x_0(2)
+            do i=1,n_x_0(1)
+              var_io(i,j,k) = var_x(i,j,k)
+            end do
+          end do
+        end do
+        !$omp end target data
+        !$acc end        data
       end select
     end select
   end subroutine transpose_to_or_from_x_gpu

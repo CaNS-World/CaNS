@@ -69,7 +69,7 @@ program cans
                                  is_mask_divergence_check
   use mod_sanity         , only: test_sanity_input,test_sanity_solver
   use mod_scal           , only: scalar,initialize_scalars,bulk_forcing_s
-#if !defined(_OPENACC)
+#if !(defined(_OPENACC) || defined(_OPENMP))
   use mod_solver         , only: solver
 #else
   use mod_solver_gpu     , only: solver => solver_gpu
@@ -79,7 +79,7 @@ program cans
   use mod_timer          , only: timer_tic,timer_toc,timer_print
   use mod_updatep        , only: updatep
   use mod_utils          , only: bulk_mean
-#if defined(_OPENACC)
+#if defined(_OPENACC) || defined(_OPENMP)
   use mod_utils          , only: device_memory_footprint
 #endif
   use mod_types
@@ -90,7 +90,7 @@ program cans
   real(rp), allocatable, dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
   real(rp), dimension(0:1,3) :: tauxo,tauyo,tauzo
   real(rp), dimension(3) :: f
-#if !defined(_OPENACC) || defined(_USE_HIP)
+#if !(defined(_OPENACC) || defined(_OPENMP)) || defined(_USE_HIP)
   type(C_PTR), dimension(2,2) :: arrplanp
 #else
   integer    , dimension(2,2) :: arrplanp
@@ -103,7 +103,7 @@ program cans
   real(rp) :: normfftp
   type(rhs_bound) :: rhsbp
   real(rp) :: alpha
-#if !defined(_OPENACC) || defined(_USE_HIP)
+#if !(defined(_OPENACC) || defined(_OPENMP)) || defined(_USE_HIP)
   type(C_PTR), dimension(2,2) :: arrplanu,arrplanv,arrplanw
 #else
   integer    , dimension(2,2) :: arrplanu,arrplanv,arrplanw
@@ -155,7 +155,6 @@ program cans
   !
   ! initialize MPI/OpenMP
   !
-  !$ call omp_set_num_threads(omp_get_max_threads())
   call initmpi(ng,dims,cbcpre,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,nb,is_bound)
   twi = MPI_WTIME()
   savecounter = 0
@@ -173,7 +172,7 @@ program cans
   allocate(lambdaxyp(n_z(1),n_z(2)))
   allocate(ap(n_z(3)),bp(n_z(3)),cp(n_z(3)))
   if(is_poisson_pcr_tdma) then
-#if defined(_OPENACC)
+#if defined(_OPENACC) || defined(_OPENMP)
     n_z_d(:) = ap_z_ptdma%shape(:)
 #else
     n_z_d(:) = dinfo_ptdma%zsz(:)
@@ -251,13 +250,19 @@ program cans
       write(99,*) l(1),l(2),l(3)
     close(99)
   end if
-  !$acc enter data copyin(lo,hi,n) async
-  !$acc enter data copyin(bforce,dl,dli,l) async
-  !$acc enter data copyin(gacc) async
-  !$acc enter data copyin(zc_g,zf_g,dzc_g,dzf_g) async
-  !$acc enter data create(zc,zf,dzc,dzf,dzci,dzfi,dzci_g,dzfi_g) async
+  !$acc        enter data copyin(lo,hi,n) async
+  !$omp target enter data map(to:lo,hi,n)
+  !$acc        enter data copyin(bforce,dl,dli,l) async
+  !$omp target enter data map(to:bforce,dl,dli,l)
+  !$acc        enter data copyin(gacc) async
+  !$omp target enter data map(to:gacc)
+  !$acc        enter data copyin(zc_g,zf_g,dzc_g,dzf_g) async
+  !$omp target enter data map(to:zc_g,zf_g,dzc_g,dzf_g)
+  !$acc        enter data create(   zc,zf,dzc,dzf,dzci,dzfi,dzci_g,dzfi_g) async
+  !$omp target enter data map(alloc:zc,zf,dzc,dzf,dzci,dzfi,dzci_g,dzfi_g)
   !
-  !$acc parallel loop default(present) private(k) async
+  !$acc parallel     loop default(present) private(k) async
+  !$omp target teams loop                  private(k)
   do kk=lo(3)-1,hi(3)+1
     k = kk-(lo(3)-1)
     zc( k) = zc_g(kk)
@@ -267,21 +272,28 @@ program cans
     dzci(k) = dzc(k)**(-1)
     dzfi(k) = dzf(k)**(-1)
   end do
-  !$acc data copy(ng) async
-  !$acc parallel loop default(present) async
+  !$acc        data copy(  ng) async
+  !$omp target data map(to:ng)
+  !$acc parallel     loop default(present) async
+  !$omp target teams loop
   do k=0,ng(3)+1
     dzci_g(k) = dzc_g(k)**(-1)
     dzfi_g(k) = dzf_g(k)**(-1)
   end do
-  !$acc end data
-  !$acc enter data create(grid_vol_ratio_c,grid_vol_ratio_f) async
-  !$acc parallel loop default(present) async
+  !$omp end target data
+  !$acc end        data
+  !$acc        enter data create(   grid_vol_ratio_c,grid_vol_ratio_f) async
+  !$omp target enter data map(alloc:grid_vol_ratio_c,grid_vol_ratio_f)
+  !$acc parallel     loop default(present) async
+  !$omp target teams loop
   do k=0,n(3)+1
     grid_vol_ratio_c(k) = dl(1)*dl(2)*dzc(k)/(l(1)*l(2)*l(3))
     grid_vol_ratio_f(k) = dl(1)*dl(2)*dzf(k)/(l(1)*l(2)*l(3))
   end do
-  !$acc update self(zc,zf,dzc,dzf,dzci,dzfi) async
-  !$acc exit data copyout(zc_g,zf_g,dzc_g,dzf_g,dzci_g,dzfi_g) async ! not needed on the device
+  !$acc update self(       zc,zf,dzc,dzf,dzci,dzfi) async
+  !$omp target update from(zc,zf,dzc,dzf,dzci,dzfi)
+  !$acc        exit data copyout( zc_g,zf_g,dzc_g,dzf_g,dzci_g,dzfi_g) async ! not needed on the device
+  !$omp target exit data map(from:zc_g,zf_g,dzc_g,dzf_g,dzci_g,dzfi_g)
   !$acc wait
   !
   ! test input files before proceeding with the calculation
@@ -292,10 +304,13 @@ program cans
   !
   call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:), &
                   lambdaxyp,['c','c','c'],ap,bp,cp,arrplanp,normfftp,rhsbp%x,rhsbp%y,rhsbp%z)
-  !$acc enter data copyin(lambdaxyp,ap,bp,cp) async
-  !$acc enter data copyin(rhsbp,rhsbp%x,rhsbp%y,rhsbp%z) async
+  !$acc        enter data copyin(lambdaxyp,ap,bp,cp) async
+  !$omp target enter data map(to:lambdaxyp,ap,bp,cp)
+  !$acc        enter data copyin(rhsbp,rhsbp%x,rhsbp%y,rhsbp%z) async
+  !$omp target enter data map(to:rhsbp,rhsbp%x,rhsbp%y,rhsbp%z)
   if(is_poisson_pcr_tdma) then
-    !$acc enter data create(ap_d,cp_d) async
+    !$acc        enter data create(   ap_d,cp_d) async
+    !$omp target enter data map(alloc:ap_d,cp_d)
   end if
   !$acc wait
   if(is_impdiff) then
@@ -324,18 +339,24 @@ program cans
         call fftend(s%arrplan)
       end do
     end if
-    !$acc enter data copyin(lambdaxyu,au,bu,cu,lambdaxyv,av,bv,cv,lambdaxyw,aw,bw,cw) async
-    !$acc enter data copyin(rhsbu,rhsbu%x,rhsbu%y,rhsbu%z) async
-    !$acc enter data copyin(rhsbv,rhsbv%x,rhsbv%y,rhsbv%z) async
-    !$acc enter data copyin(rhsbw,rhsbw%x,rhsbw%y,rhsbw%z) async
+    !$acc        enter data copyin(lambdaxyu,au,bu,cu,lambdaxyv,av,bv,cv,lambdaxyw,aw,bw,cw) async
+    !$omp target enter data map(to:lambdaxyu,au,bu,cu,lambdaxyv,av,bv,cv,lambdaxyw,aw,bw,cw)
+    !$acc        enter data copyin(rhsbu,rhsbu%x,rhsbu%y,rhsbu%z) async
+    !$omp target enter data map(to:rhsbu,rhsbu%x,rhsbu%y,rhsbu%z)
+    !$acc        enter data copyin(rhsbv,rhsbv%x,rhsbv%y,rhsbv%z) async
+    !$omp target enter data map(to:rhsbv,rhsbv%x,rhsbv%y,rhsbv%z)
+    !$acc        enter data copyin(rhsbw,rhsbw%x,rhsbw%y,rhsbw%z) async
+    !$omp target enter data map(to:rhsbw,rhsbw%x,rhsbw%y,rhsbw%z)
     do iscal=1,nscal
       s => scalars(iscal)
-      !$acc enter data copyin(s%lambdaxy,s%a,s%b,s%c) async
-      !$acc enter data copyin(s%rhsb,s%rhsb%x,s%rhsb%y,s%rhsb%z) async
+      !$acc        enter data copyin(s%lambdaxy,s%a,s%b,s%c) async
+      !$omp target enter data map(to:s%lambdaxy,s%a,s%b,s%c)
+      !$acc        enter data copyin(s%rhsb,s%rhsb%x,s%rhsb%y,s%rhsb%z) async
+      !$omp target enter data map(to:s%rhsb,s%rhsb%x,s%rhsb%y,s%rhsb%z)
     end do
     !$acc wait
   end if
-#if defined(_OPENACC)
+#if defined(_OPENACC) || defined(_OPENMP)
   !
   ! determine workspace sizes and allocate the memory
   !
@@ -382,12 +403,14 @@ program cans
     end do
     if(myid == 0) print*, '*** Checkpoint loaded at time = ', time, 'time step = ', istep, '. ***'
   end if
-  !$acc enter data copyin(u,v,w,p,dudtrko,dvdtrko,dwdtrko) create(pp)
+  !$acc        enter data copyin(u,v,w,p,dudtrko,dvdtrko,dwdtrko) create(   pp)
+  !$omp target enter data map(to:u,v,w,p,dudtrko,dvdtrko,dwdtrko) map(alloc:pp)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
   call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
   do iscal=1,nscal
     s => scalars(iscal)
-    !$acc enter data copyin(s%val,s%dsdtrko) async(1)
+    !$acc        enter data copyin(s%val,s%dsdtrko) async(1)
+    !$omp target enter data map(to:s%val,s%dsdtrko)
     call boundp(s%cbc,n,s%bc,nb,is_bound,dl,dzc,s%val)
   end do
   !$acc wait
@@ -396,9 +419,11 @@ program cans
   !
   write(fldnum,'(i7.7)') istep
   !$acc wait ! not needed but to prevent possible future issues
-  !$acc update self(u,v,w,p)
+  !$acc        update self(u,v,w,p)
+  !$omp target update from(u,v,w,p)
   do iscal=1,nscal
-    !$acc update self(scalars(iscal)%val)
+    !$acc        update self(scalars(iscal)%val)
+    !$omp target update from(scalars(iscal)%val)
   end do
   if(iout1d > 0.and.mod(istep,max(iout1d,1)) == 0) then
     include 'out1d.h90'
@@ -552,25 +577,31 @@ program cans
     write(fldnum,'(i7.7)') istep
     if(iout1d > 0.and.mod(istep,max(iout1d,1)) == 0) then
       !$acc wait
-      !$acc update self(u,v,w,p)
+      !$acc        update self(u,v,w,p)
+      !$omp target update from(u,v,w,p)
       do iscal=1,nscal
-        !$acc update self(scalars(iscal)%val)
+        !$acc        update self(scalars(iscal)%val)
+        !$omp target update from(scalars(iscal)%val)
       end do
       include 'out1d.h90'
     end if
     if(iout2d > 0.and.mod(istep,max(iout2d,1)) == 0) then
       !$acc wait
-      !$acc update self(u,v,w,p)
+      !$acc        update self(u,v,w,p)
+      !$omp target update from(u,v,w,p)
       do iscal=1,nscal
-        !$acc update self(scalars(iscal)%val)
+        !$acc        update self(scalars(iscal)%val)
+        !$omp target update from(scalars(iscal)%val)
       end do
       include 'out2d.h90'
     end if
     if(iout3d > 0.and.mod(istep,max(iout3d,1)) == 0) then
       !$acc wait
-      !$acc update self(u,v,w,p)
+      !$acc        update self(u,v,w,p)
+      !$omp target update from(u,v,w,p)
       do iscal=1,nscal
-        !$acc update self(scalars(iscal)%val)
+        !$acc        update self(scalars(iscal)%val)
+        !$omp target update from(scalars(iscal)%val)
       end do
       include 'out3d.h90'
     end if
@@ -591,9 +622,11 @@ program cans
         end if
       end if
       !$acc wait
-      !$acc update self(u,v,w,p)
+      !$acc        update self(u,v,w,p)
+      !$omp target update from(u,v,w,p)
       do iscal=1,nscal
-        !$acc update self(scalars(iscal)%val)
+        !$acc        update self(scalars(iscal)%val)
+        !$omp target update from(scalars(iscal)%val)
       end do
       do is=1,4+nscal
         call load_one('w',trim(datadir)//trim(filename)//trim(c_io_vars(is))//'.bin', &
@@ -630,7 +663,7 @@ program cans
   end if
   if(myid == 0.and.(.not.kill)) print*, '*** Fim ***'
   call decomp_2d_finalize
-#if defined(_OPENACC)
+#if defined(_OPENACC) || defined(_OPENMP)
   call cudecomp_finalize
 #endif
   call MPI_FINALIZE(ierr)

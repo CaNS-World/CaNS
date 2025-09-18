@@ -26,7 +26,7 @@ module mod_scal
     real(rp) :: scalf
     real(rp) :: f
     real(rp), dimension(0:1,3) :: fluxo
-#if !defined(_OPENACC) || defined(_USE_HIP)
+#if !(defined(_OPENACC) || defined(_OPENMP)) || defined(_USE_HIP)
     type(C_PTR), dimension(2,2) :: arrplan
 #else
     integer    , dimension(2,2) :: arrplan
@@ -56,10 +56,10 @@ module mod_scal
     real(rp) :: dsdtd_xy,dsdtd_z
     !
 #if !defined(_LOOP_UNSWITCHING)
-    !$acc parallel loop collapse(3) default(present) &
+    !$acc parallel     loop collapse(3) default(present) &
     !$acc private(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z) async(1)
-    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared) &
-    !$OMP PRIVATE(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z)
+    !$omp target teams loop collapse(3) &
+    !$omp private(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z)
     do k=1,nz
       do j=1,ny
         do i=1,nx
@@ -97,10 +97,10 @@ module mod_scal
     end do
 #else
     if(.not.is_impdiff) then
-      !$acc parallel loop collapse(3) default(present) &
+      !$acc parallel     loop collapse(3) default(present) &
       !$acc private(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared) &
-      !$OMP PRIVATE(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z)
+      !$omp target teams loop collapse(3) &
+      !$omp private(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z)
       do k=1,nz
         do j=1,ny
           do i=1,nx
@@ -127,10 +127,10 @@ module mod_scal
         end do
       end do
     else if(is_impdiff .and. is_impdiff_1d) then
-      !$acc parallel loop collapse(3) default(present) &
+      !$acc parallel     loop collapse(3) default(present) &
       !$acc private(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared) &
-      !$OMP PRIVATE(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z)
+      !$omp target teams loop collapse(3) &
+      !$omp private(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z)
       do k=1,nz
         do j=1,ny
           do i=1,nx
@@ -158,10 +158,10 @@ module mod_scal
         end do
       end do
     else
-      !$acc parallel loop collapse(3) default(present) &
+      !$acc parallel     loop collapse(3) default(present) &
       !$acc private(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared) &
-      !$OMP PRIVATE(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z)
+      !$omp target teams loop collapse(3) &
+      !$omp private(usip,usim,vsjp,vsjm,wskp,wskm,dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm,dsdtd_xy,dsdtd_z)
       do k=1,nz
         do j=1,ny
           do i=1,nx
@@ -214,10 +214,11 @@ module mod_scal
     lx = l(1); ly = l(2); lz = l(3)
     flux_xp = 0.
     flux_xm = 0.
-    !$acc data copy(flux_xp,flux_xm) async(1)
+    !$acc        data copy(      flux_xp,flux_xm) async(1)
+    !$omp target data map(tofrom:flux_xp,flux_xm)
     if(is_bound(0,1).and.cbcpre(0,1)//cbcpre(1,1) /= 'PP') then
-      !$acc parallel loop collapse(2) default(present) private(dsdxp) reduction(+:flux_xp) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(2) DEFAULT(shared ) private(dsdxp) reduction(+:flux_xp)
+      !$acc parallel     loop collapse(2) default(present) private(dsdxp) reduction(+:flux_xp) async(1)
+      !$omp target teams loop collapse(2)                  private(dsdxp) reduction(+:flux_xp)
       do k=1,nz
         do j=1,ny
           dsdxp   = (s(1 ,j,k)-s(0   ,j,k))*dxi*alpha
@@ -226,8 +227,8 @@ module mod_scal
       end do
     end if
     if(is_bound(1,1).and.cbcpre(0,1)//cbcpre(1,1) /= 'PP') then
-      !$acc parallel loop collapse(2) default(present) private(dsdxm) reduction(+:flux_xm) async(1)
-      !$OMP PARALLEL DO   collapse(2) default(shared ) private(dsdxm) reduction(+:flux_xm)
+      !$acc parallel     loop collapse(2) default(present) private(dsdxm) reduction(+:flux_xm) async(1)
+      !$omp target teams loop collapse(2)                  private(dsdxm) reduction(+:flux_xm)
       do k=1,nz
         do j=1,ny
           dsdxm   = (s(nx,j,k)-s(nx+1,j,k))*dxi*alpha
@@ -235,13 +236,15 @@ module mod_scal
         end do
       end do
     end if
-    !$acc end data
+    !$omp end target data
+    !$acc end        data
     flux_yp = 0.
     flux_ym = 0.
-    !$acc data copy(flux_yp,flux_ym) async(1)
+    !$acc        data copy(      flux_yp,flux_ym) async(1)
+    !$omp target data map(tofrom:flux_yp,flux_ym)
     if(is_bound(0,2).and.cbcpre(0,2)//cbcpre(1,2) /= 'PP') then
-      !$acc parallel loop collapse(2) default(present) private(dsdyp) reduction(+:flux_yp) async(1)
-      !$OMP PARALLEL DO   collapse(2) default(shared ) private(dsdyp) reduction(+:flux_yp)
+      !$acc parallel     loop collapse(2) default(present) private(dsdyp) reduction(+:flux_yp) async(1)
+      !$omp target teams loop collapse(2)                  private(dsdyp) reduction(+:flux_yp)
       do k=1,nz
         do i=1,nx
           dsdyp   = (s(i,1 ,k)-s(i,0   ,k))*dyi*alpha
@@ -250,8 +253,8 @@ module mod_scal
       end do
     end if
     if(is_bound(1,2).and.cbcpre(0,2)//cbcpre(1,2) /= 'PP') then
-      !$acc parallel loop collapse(2) default(present) private(dsdym) reduction(+:flux_ym) async(1)
-      !$OMP PARALLEL DO   collapse(2) default(shared ) private(dsdym) reduction(+:flux_ym)
+      !$acc parallel     loop collapse(2) default(present) private(dsdym) reduction(+:flux_ym) async(1)
+      !$omp target teams loop collapse(2)                  private(dsdym) reduction(+:flux_ym)
       do k=1,nz
         do i=1,nx
           dsdym   = (s(i,ny,k)-s(i,ny+1,k))*dyi*alpha
@@ -259,13 +262,15 @@ module mod_scal
         end do
       end do
     end if
-    !$acc end data
+    !$omp end target data
+    !$acc end        data
     flux_zp = 0.
     flux_zm = 0.
-    !$acc data copy(flux_zp,flux_zm) async(1)
+    !$acc        data copy(      flux_zp,flux_zm) async(1)
+    !$omp target data map(tofrom:flux_zp,flux_zm)
     if(is_bound(0,3).and.cbcpre(0,3)//cbcpre(1,3) /= 'PP') then
-      !$acc parallel loop collapse(2) default(present) private(dsdzp) reduction(+:flux_zp) async(1)
-      !$OMP PARALLEL DO   collapse(2) default(shared ) private(dsdzp) reduction(+:flux_zp)
+      !$acc parallel     loop collapse(2) default(present) private(dsdzp) reduction(+:flux_zp) async(1)
+      !$omp target teams loop collapse(2)                  private(dsdzp) reduction(+:flux_zp)
       do j=1,ny
         do i=1,nx
           dsdzp   = (s(i,j,1 )-s(i,j,0   ))*dzci(0)*alpha
@@ -274,8 +279,8 @@ module mod_scal
       end do
     end if
     if(is_bound(1,3).and.cbcpre(0,3)//cbcpre(1,3) /= 'PP') then
-      !$acc parallel loop collapse(2) default(present) private(dsdzm) reduction(+:flux_zm) async(1)
-      !$OMP PARALLEL DO   collapse(2) default(shared ) private(dsdzm) reduction(+:flux_zm)
+      !$acc parallel     loop collapse(2) default(present) private(dsdzm) reduction(+:flux_zm) async(1)
+      !$omp target teams loop collapse(2)                  private(dsdzm) reduction(+:flux_zm)
       do j=1,ny
         do i=1,nx
           dsdzm   = (s(i,j,nz)-s(i,j,nz+1))*dzci(nz)*alpha
@@ -283,12 +288,9 @@ module mod_scal
         end do
       end do
     end if
-    !$acc end data
+    !$omp end target data
+    !$acc end        data
     !$acc wait(1)
-    !
-    !flux(:) = [flux_x,flux_y,flux_z]
-    !
-    ! discern upper and lower boundary fluxes
     !
     flux(:,1) = [flux_xp,flux_xm]
     flux(:,2) = [flux_yp,flux_ym]
@@ -305,8 +307,8 @@ module mod_scal
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
     integer :: i,j,k
     if(is_forced) then
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP parallel do   collapse(3) DEFAULT(shared)
+      !$acc parallel     loop collapse(3) default(present) async(1)
+      !$omp target teams loop collapse(3)
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)

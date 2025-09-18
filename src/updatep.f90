@@ -29,8 +29,8 @@ module mod_updatep
     if(is_impdiff) then
       dxi = dli(1); dyi = dli(2)
 #if !defined(_LOOP_UNSWITCHING)
-      !$acc parallel loop collapse(3) default(present) private(lap_pp) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared ) private(lap_pp)
+      !$acc parallel     loop collapse(3) default(present) private(lap_pp) async(1)
+      !$omp target teams loop collapse(3)                  private(lap_pp)
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
@@ -47,8 +47,8 @@ module mod_updatep
       end do
 #else
       if(is_impdiff_1d) then
-        !$acc parallel loop collapse(3) default(present) private(lap_pp) async(1)
-        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared ) private(lap_pp)
+        !$acc parallel     loop collapse(3) default(present) private(lap_pp) async(1)
+        !$omp target teams loop collapse(3)                  private(lap_pp)
         do k=1,n(3)
           do j=1,n(2)
             do i=1,n(1)
@@ -59,8 +59,8 @@ module mod_updatep
           end do
         end do
       else
-        !$acc parallel loop collapse(3) default(present) private(lap_pp) async(1)
-        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared ) private(lap_pp)
+        !$acc parallel     loop collapse(3) default(present) private(lap_pp) async(1)
+        !$omp target teams loop collapse(3)                  private(lap_pp)
         do k=1,n(3)
           do j=1,n(2)
             do i=1,n(1)
@@ -75,8 +75,8 @@ module mod_updatep
       end if
 #endif
     else
-      !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
+      !$acc parallel     loop collapse(3) default(present) async(1)
+      !$omp target teams loop collapse(3)
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
