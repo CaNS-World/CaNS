@@ -408,7 +408,7 @@ module mod_solver_gpu
             pp2(1) = pp2(1)*z
             !$acc loop seq
             do k=2,nn
-              z      = 1./(b(k)+lxy-a(k)*dd(k-1)+eps)
+              z      = 1./(b(k)-a(k)*dd(k-1)+eps)
               pp2(k) = (pp2(k)-a(k)*pp2(k-1))*z
               dd(k)  = c(k)*z
             end do
@@ -418,8 +418,8 @@ module mod_solver_gpu
               pp2(k) = pp2(k) - dd(k)*pp2(k+1)
             end do
             !
-            p(i,j,nn+1) = (p(i,j,nn+1)*norm       - c(nn+1)*p( i,j,1) - a(nn+1)*p( i,j,nn)) / &
-                          (b(    nn+1)      + lxy + c(nn+1)*pp2(   1) + a(nn+1)*pp2(   nn)+eps)
+            p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p( i,j,1) - a(nn+1)*p( i,j,nn)) / &
+                          (b(    nn+1)      + c(nn+1)*pp2(   1) + a(nn+1)*pp2(   nn)+eps)
             !$acc loop seq
             do k=1,nn-1
               p(i,j,k) = p(i,j,k) + pp2(k)*p(i,j,nn+1)
