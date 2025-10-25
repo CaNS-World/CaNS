@@ -81,7 +81,6 @@ module mod_solver_gpu
     select case(ipencil_axis)
     case(1)
       !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP parallel do   collapse(3) DEFAULT(shared)
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
@@ -123,7 +122,6 @@ module mod_solver_gpu
       else
 #if defined(_USE_DIEZDECOMP)
         !$acc parallel loop collapse(3) default(present) async(1)
-        !$OMP parallel do   collapse(3) DEFAULT(shared)
         do k=1,n(3)
           do j=1,n(2)
             do i=1,n(1)
@@ -183,7 +181,6 @@ module mod_solver_gpu
         n_y_2 = ap_y%shape(2)
         n_y_1 = ap_y%shape(1)
         !$acc parallel loop collapse(3) default(present) async(1)
-        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
         do k=1,n_y_3
           do j=1,n_y_2
             do i=1,n_y_1
@@ -206,7 +203,6 @@ module mod_solver_gpu
         n_y_2 = ap_y%shape(2)
         n_y_1 = ap_y%shape(1)
         !$acc parallel loop collapse(3) default(present) async(1)
-        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
         do k=1,n_y_3
           do j=1,n_y_2
             do i=1,n_y_1
@@ -236,7 +232,6 @@ module mod_solver_gpu
     select case(ipencil_axis)
     case(1)
       !$acc parallel loop collapse(3) default(present) async(1)
-      !$OMP parallel do   collapse(3) DEFAULT(shared)
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
@@ -274,7 +269,6 @@ module mod_solver_gpu
 #if defined(_USE_DIEZDECOMP)
         istat = diezdecompTransposeXtoZ(ch,gd,px,pz,work,dtype_rp,stream=istream)
         !$acc parallel loop collapse(3) default(present) async(1)
-        !$OMP parallel do   collapse(3) DEFAULT(shared)
         do k=1,n(3)
           do j=1,n(2)
             do i=1,n(1)
@@ -1003,7 +997,6 @@ module mod_solver_gpu
         !
         case(1)
           !$acc parallel loop collapse(3) default(present) async(1)
-          !$OMP parallel do   collapse(3) DEFAULT(shared)
           do k=1,n(3)
             do j=1,n(2)
               do i=1,n(1)
@@ -1030,7 +1023,6 @@ module mod_solver_gpu
           ! transpose p -> py to axis-contiguous layout
           !
           !$acc parallel loop collapse(3) default(present) async(1)
-          !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
           do k=1,n(3)
             do j=1,n(2)
               do i=1,n(1)
@@ -1080,7 +1072,6 @@ module mod_solver_gpu
         !$acc end host_data
 #endif
         !$acc parallel loop collapse(3) default(present) async(1)
-        !$OMP parallel do   collapse(3) DEFAULT(shared)
         do k=1,n(3)
           do j=1,n(2)
             do i=1,n(1)
@@ -1100,7 +1091,6 @@ module mod_solver_gpu
         ! transpose py -> p to default layout
         !
         !$acc parallel loop collapse(3) default(present) async(1)
-        !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
         do k=1,n(3)
           do j=1,n(2)
             do i=1,n(1)
