@@ -94,7 +94,7 @@ jobs:
            bash ./testit.sh
     - name: Upload log files
       if: ${{ env.SKIP_RUN != 'true' }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: logs-${{ inputs.compiler }}-${{ matrix.mode.name }}-${{ matrix.test-name }}
         path: run/*log
