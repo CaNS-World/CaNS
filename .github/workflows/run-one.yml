@@ -27,7 +27,7 @@ jobs:
     steps:
     - name: Checkout code
       if: ${{ env.SKIP_BUILD != 'true' }}
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
         submodules: true
     - name: Set up the environment and get packages
@@ -62,7 +62,7 @@ jobs:
         echo "INFO: Skipping the "${{ inputs.compiler }}" with mode "${{ matrix.mode.name }}
     - name: Checkout code
       if: ${{ env.SKIP_RUN != 'true' }}
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
         submodules: false
     - name: Set up the environment and get packages
