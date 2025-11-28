@@ -41,7 +41,6 @@ program cans
   use mod_initgrid       , only: initgrid
   use mod_initmpi        , only: initmpi
   use mod_initsolver     , only: initsolver
-  use mod_solve_helmholtz, only: solve_helmholtz,rhs_bound
   use mod_load           , only: load_one
   use mod_mom            , only: bulk_forcing
   use mod_rk             , only: rk,rk_scal
@@ -69,6 +68,7 @@ program cans
                                  is_mask_divergence_check
   use mod_sanity         , only: test_sanity_input,test_sanity_solver
   use mod_scal           , only: scalar,initialize_scalars,bulk_forcing_s
+  use mod_solve_helmholtz, only: solve_helmholtz,rhs_bound
 #if !defined(_OPENACC)
   use mod_solver         , only: solver
 #else
