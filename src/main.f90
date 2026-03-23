@@ -59,7 +59,7 @@ program cans
                                  dims, &
                                  nb,is_bound, &
                                  rkcoeff,small, &
-                                 datadir, &
+                                 datadir,io_ext, &
                                  read_input, &
                                  is_debug,is_debug_poisson, &
                                  is_timing, &
@@ -355,13 +355,13 @@ program cans
   end if
   !
   allocate(io_vars(4+nscal),c_io_vars(4+nscal)) ! u,v,w,p,scalars
-  io_vars(1)%arr => u; c_io_vars(1) = '_u'
-  io_vars(2)%arr => v; c_io_vars(2) = '_v'
-  io_vars(3)%arr => w; c_io_vars(3) = '_w'
-  io_vars(4)%arr => p; c_io_vars(4) = '_p'
+  io_vars(1)%arr => u; c_io_vars(1) = 'u'
+  io_vars(2)%arr => v; c_io_vars(2) = 'v'
+  io_vars(3)%arr => w; c_io_vars(3) = 'w'
+  io_vars(4)%arr => p; c_io_vars(4) = 'p'
   do iscal=1,nscal
     write(scalnum,'(i3.3)') iscal
-    io_vars(4+iscal)%arr => scalars(iscal)%val; c_io_vars(4+iscal) = '_s_'//scalnum
+    io_vars(4+iscal)%arr => scalars(iscal)%val; c_io_vars(4+iscal) = 's_'//scalnum
   end do
   !
   is_ptdma_update_p = .true.
@@ -377,8 +377,8 @@ program cans
     if(myid == 0) print*, '*** Initial condition succesfully set ***'
   else
     do is=1,4+nscal
-      call load_one('r',trim(datadir)//'fld'//trim(c_io_vars(is))//'.bin', &
-                    MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,time,istep)
+      call load_one('r',trim(datadir)//'fld_'//trim(c_io_vars(is))//trim(io_ext), &
+                    MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,trim(c_io_vars(is)),time,istep)
     end do
     if(myid == 0) print*, '*** Checkpoint loaded at time = ', time, 'time step = ', istep, '. ***'
   end if
@@ -596,15 +596,16 @@ program cans
         !$acc update self(scalars(iscal)%val)
       end do
       do is=1,4+nscal
-        call load_one('w',trim(datadir)//trim(filename)//trim(c_io_vars(is))//'.bin', &
-                      MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,time,istep)
+        call load_one('w',trim(datadir)//trim(filename)//'_'//trim(c_io_vars(is))//trim(io_ext), &
+                      MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,trim(c_io_vars(is)),time,istep)
       end do
       if(.not.is_overwrite_save) then
         !
-        ! fld_*.bin -> last checkpoint file (symbolic link)
+        ! fld_*.<ext> -> last checkpoint file (symbolic link)
         !
         do is=1,4+nscal
-          call gen_alias(myid,trim(datadir),trim(filename)//trim(c_io_vars(is))//'.bin','fld'//trim(c_io_vars(is))//'.bin')
+          call gen_alias(myid,trim(datadir),trim(filename)//'_'//trim(c_io_vars(is))//trim(io_ext), &
+                         'fld_'//trim(c_io_vars(is))//trim(io_ext))
         end do
       end if
       if(myid == 0) print*, '*** Checkpoint saved at time = ', time, 'time step = ', istep, '. ***'
