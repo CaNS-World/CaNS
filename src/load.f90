@@ -19,15 +19,24 @@ module mod_load
   implicit none
   private
   integer, parameter :: FILETYPE_MPIIO = 0, FILETYPE_HDF5 = 1, FILETYPE_ADIOS2 = 2
-  integer, parameter :: NAME_LEN_MAX = 256
-  public load_all,load_one,io_field
 #if defined(_USE_ADIOS2)
   interface io_field_adios2_1d
     module procedure io_field_adios2_1d_real
     module procedure io_field_adios2_1d_int
   end interface io_field_adios2_1d
+  type :: adios2_compression_params
+    !
+    ! name  : compression algorithm name
+    ! keys  : parameter names passed to the compressor
+    ! values: parameter values paired with keys
+    !
+    character(len=64) :: name = ''
+    character(len=64), dimension(10) :: keys = ''
+    character(len=64), dimension(10) :: values = ''
+  end type adios2_compression_params
 #endif
-  contains
+  public :: load_all,load_one,io_field
+contains
   subroutine load_all(io,filename,comm,ng,nh,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
     !
     ! dispatches restart I/O to the selected backend
@@ -40,12 +49,12 @@ module mod_load
     integer , intent(in)               :: nscal
     real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: u,v,w,p
     type(scalar), intent(inout), dimension(:) :: s
-    real(rp), intent(inout), optional :: time
-    integer , intent(inout), optional :: istep
-    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g ! if grid metadata is written, write time and istep too
+    real(rp), intent(inout) :: time
+    integer , intent(inout) :: istep
+    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
     integer :: file_type
     !
-    file_type = load_fetch_file_type(filename)
+    file_type = fetch_file_type(filename)
     select case(file_type)
     case(FILETYPE_MPIIO)
       call load_all_mpiio(io,filename,comm,ng,nh,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
@@ -74,18 +83,14 @@ module mod_load
     integer , intent(in)               :: nscal
     real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: u,v,w,p
     type(scalar), intent(inout), dimension(:) :: s
-    real(rp), intent(inout), optional :: time
-    integer , intent(inout), optional :: istep
-    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g ! if grid metadata is written, write time and istep too
+    real(rp), intent(inout) :: time
+    integer , intent(inout) :: istep
+    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
     real(rp), dimension(2) :: fldinfo
     integer :: iscal
     integer :: fh
     integer :: nreals_myid
     integer(kind=MPI_OFFSET_KIND) :: filesize,disp,good
-    !
-    ! silence compiler warnings for backend-agnostic arguments unused by MPI-IO
-    associate(dummy_x => x_g, dummy_y => y_g, dummy_z => z_g)
-    end associate
     !
     select case(io)
     case('r')
@@ -150,21 +155,17 @@ module mod_load
         deallocate(tmp_x,tmp_y,tmp_z)
       end block
 #endif
-      if(present(time) .and. present(istep)) then
-        call MPI_FILE_SET_VIEW(fh,disp,MPI_REAL_RP,MPI_REAL_RP,'native',MPI_INFO_NULL,ierr)
-        nreals_myid = 0
-        if(myid == 0) nreals_myid = 2
-        call MPI_FILE_READ(fh,fldinfo,nreals_myid,MPI_REAL_RP,MPI_STATUS_IGNORE,ierr)
-        call MPI_FILE_CLOSE(fh,ierr)
-        call MPI_BCAST(fldinfo,2,MPI_REAL_RP,0,comm,ierr)
-        time  =      fldinfo(1)
-        istep = nint(fldinfo(2))
-      else
-        call MPI_FILE_CLOSE(fh,ierr)
-      end if
+      call MPI_FILE_SET_VIEW(fh,disp,MPI_REAL_RP,MPI_REAL_RP,'native',MPI_INFO_NULL,ierr)
+      nreals_myid = 0
+      if(myid == 0) nreals_myid = 2
+      call MPI_FILE_READ(fh,fldinfo,nreals_myid,MPI_REAL_RP,MPI_STATUS_IGNORE,ierr)
+      call MPI_FILE_CLOSE(fh,ierr)
+      call MPI_BCAST(fldinfo,2,MPI_REAL_RP,0,comm,ierr)
+      time  =      fldinfo(1)
+      istep = nint(fldinfo(2))
     case('w')
       !
-      ! guarantees overwriting if file exists
+      ! write
       !
       call MPI_FILE_OPEN(comm,filename, &
                          MPI_MODE_CREATE+MPI_MODE_WRONLY,MPI_INFO_NULL,fh,ierr)
@@ -214,13 +215,11 @@ module mod_load
         deallocate(tmp_x,tmp_y,tmp_z)
       end block
 #endif
-      if(present(time) .and. present(istep)) then
-        call MPI_FILE_SET_VIEW(fh,disp,MPI_REAL_RP,MPI_REAL_RP,'native',MPI_INFO_NULL,ierr)
-        fldinfo = [time,1._rp*istep]
-        nreals_myid = 0
-        if(myid == 0) nreals_myid = 2
-        call MPI_FILE_WRITE(fh,fldinfo,nreals_myid,MPI_REAL_RP,MPI_STATUS_IGNORE,ierr)
-      end if
+      call MPI_FILE_SET_VIEW(fh,disp,MPI_REAL_RP,MPI_REAL_RP,'native',MPI_INFO_NULL,ierr)
+      fldinfo = [time,1._rp*istep]
+      nreals_myid = 0
+      if(myid == 0) nreals_myid = 2
+      call MPI_FILE_WRITE(fh,fldinfo,nreals_myid,MPI_REAL_RP,MPI_STATUS_IGNORE,ierr)
       call MPI_FILE_CLOSE(fh,ierr)
     end select
   end subroutine load_all_mpiio
@@ -430,13 +429,13 @@ module mod_load
     integer         , intent(in) :: comm
     integer , intent(in), dimension(3) :: ng,nh,lo,hi
     real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
-    character(len=*), intent(in), optional :: varname
+    character(len=*), intent(in) :: varname
     real(rp), intent(inout), optional :: time
     integer , intent(inout), optional :: istep
     real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
     integer :: file_type
     !
-    file_type = load_fetch_file_type(filename)
+    file_type = fetch_file_type(filename)
     select case(file_type)
     case(FILETYPE_MPIIO)
       call load_one_mpiio(io,filename,comm,ng,nh,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
@@ -463,7 +462,7 @@ module mod_load
     integer         , intent(in) :: comm
     integer , intent(in), dimension(3) :: ng,nh,lo,hi
     real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
-    character(len=*), intent(in), optional :: varname
+    character(len=*), intent(in) :: varname
     real(rp), intent(inout), optional :: time
     integer , intent(inout), optional :: istep
     real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
@@ -473,7 +472,7 @@ module mod_load
     integer(kind=MPI_OFFSET_KIND) :: filesize,disp,good
     !
     ! silence compiler warnings for backend-agnostic arguments unused by MPI-IO
-    associate(dummy_x => x_g, dummy_y => y_g, dummy_z => z_g, dummy_varname => varname)
+    associate(dummy_varname => varname)
     end associate
     !
     select case(io)
@@ -529,11 +528,13 @@ module mod_load
       call MPI_FILE_READ(fh,fldinfo,nreals_myid,MPI_REAL_RP,MPI_STATUS_IGNORE,ierr)
       call MPI_FILE_CLOSE(fh,ierr)
       call MPI_BCAST(fldinfo,2,MPI_REAL_RP,0,comm,ierr)
-      time  =      fldinfo(1)
-      istep = nint(fldinfo(2))
+      if(present(time) .and. present(istep)) then
+        time  =      fldinfo(1)
+        istep = nint(fldinfo(2))
+      end if
     case('w')
       !
-      ! guarantees overwriting if file exists
+      ! write
       !
       call MPI_FILE_OPEN(comm,filename, &
                          MPI_MODE_CREATE+MPI_MODE_WRONLY,MPI_INFO_NULL,fh,ierr)
@@ -567,11 +568,13 @@ module mod_load
         deallocate(tmp_x,tmp_y,tmp_z)
       end block
 #endif
-      call MPI_FILE_SET_VIEW(fh,disp,MPI_REAL_RP,MPI_REAL_RP,'native',MPI_INFO_NULL,ierr)
-      fldinfo = [time,1._rp*istep]
-      nreals_myid = 0
-      if(myid == 0) nreals_myid = 2
-      call MPI_FILE_WRITE(fh,fldinfo,nreals_myid,MPI_REAL_RP,MPI_STATUS_IGNORE,ierr)
+      if(present(time) .and. present(istep)) then
+        call MPI_FILE_SET_VIEW(fh,disp,MPI_REAL_RP,MPI_REAL_RP,'native',MPI_INFO_NULL,ierr)
+        fldinfo = [time,1._rp*istep]
+        nreals_myid = 0
+        if(myid == 0) nreals_myid = 2
+        call MPI_FILE_WRITE(fh,fldinfo,nreals_myid,MPI_REAL_RP,MPI_STATUS_IGNORE,ierr)
+      end if
       call MPI_FILE_CLOSE(fh,ierr)
     end select
   end subroutine load_one_mpiio
@@ -585,8 +588,8 @@ module mod_load
     character(len=*), intent(in) :: filename
     integer , intent(in), dimension(3) :: n,nh
     real(rp), intent(inout), dimension(1-nh(1):,1-nh(2):,1-nh(3):) :: u,v,w,p
-    real(rp), intent(inout), optional :: time
-    integer , intent(inout), optional :: istep
+    real(rp), intent(inout) :: time
+    integer , intent(inout) :: istep
     real(rp), dimension(2) :: fldinfo
     integer :: iunit
     !
@@ -596,8 +599,8 @@ module mod_load
       read(iunit) u(1:n(1),1:n(2),1:n(3)), &
                   v(1:n(1),1:n(2),1:n(3)), &
                   w(1:n(1),1:n(2),1:n(3)), &
-                  p(1:n(1),1:n(2),1:n(3)), &
-                  fldinfo(1:2)
+                  p(1:n(1),1:n(2),1:n(3))
+      read(iunit) fldinfo(1:2)
       close(iunit)
       time = fldinfo(1)
       istep = nint(fldinfo(2))
@@ -610,8 +613,8 @@ module mod_load
       write(iunit) u(1:n(1),1:n(2),1:n(3)), &
                    v(1:n(1),1:n(2),1:n(3)), &
                    w(1:n(1),1:n(2),1:n(3)), &
-                   p(1:n(1),1:n(2),1:n(3)), &
-                   fldinfo(1:2)
+                   p(1:n(1),1:n(2),1:n(3))
+      write(iunit) fldinfo(1:2)
       close(iunit)
     end select
   end subroutine load_all_local
@@ -625,8 +628,8 @@ module mod_load
     character(len=*), intent(in) :: filename
     integer , intent(in), dimension(3) :: n,nh
     real(rp), intent(inout), dimension(1-nh(1):,1-nh(2):,1-nh(3):) :: p
-    real(rp), intent(inout), optional :: time
-    integer , intent(inout), optional :: istep
+    real(rp), intent(inout) :: time
+    integer , intent(inout) :: istep
     real(rp), dimension(2) :: fldinfo
     integer :: iunit
     !
@@ -634,25 +637,23 @@ module mod_load
     case('r')
       open(newunit=iunit,file=filename,action='read' ,access='stream',form='unformatted',status='old'    )
       read(iunit) p(1:n(1),1:n(2),1:n(3))
-      if(present(time) .and. present(istep)) read(iunit) fldinfo(1:2)
+      read(iunit) fldinfo(1:2)
       close(iunit)
-      if(present(time) .and. present(istep)) then
-        time = fldinfo(1)
-        istep = nint(fldinfo(2))
-      end if
+      time = fldinfo(1)
+      istep = nint(fldinfo(2))
     case('w')
       !
       ! write
       !
-      if(present(time) .and. present(istep)) fldinfo = [time,1._rp*istep]
+      fldinfo = [time,1._rp*istep]
       open(newunit=iunit,file=filename,action='write',access='stream',form='unformatted',status='replace')
       write(iunit) p(1:n(1),1:n(2),1:n(3))
-      if(present(time) .and. present(istep)) write(iunit) fldinfo(1:2)
+      write(iunit) fldinfo(1:2)
       close(iunit)
     end select
   end subroutine load_one_local
   !
-  integer function load_fetch_file_type(filename)
+  integer function fetch_file_type(filename) result(file_type)
     !
     ! returns the backend implied by the file suffix, defaulting to raw binary
     !
@@ -661,25 +662,26 @@ module mod_load
     integer :: n,idot
     character(len=6) :: ext
     n = len_trim(filename)
-    load_fetch_file_type = FILETYPE_MPIIO
+    file_type = FILETYPE_MPIIO
     if(n > 0) then
       idot = scan(filename(1:n),'.',back=.true.)
       if(idot > 0 .and. idot < n) then
         ext = filename(idot:n)
         select case(trim(ext))
         case('.bin')
-          load_fetch_file_type = FILETYPE_MPIIO
+          file_type = FILETYPE_MPIIO
         case('.h5','.hdf','.hdf5','.nc')
-          load_fetch_file_type = FILETYPE_HDF5
+          file_type = FILETYPE_HDF5
         case('.bp')
-          load_fetch_file_type = FILETYPE_ADIOS2
+          file_type = FILETYPE_ADIOS2
         end select
       end if
     end if
-  end function load_fetch_file_type
+  end function fetch_file_type
   !
 #if defined(_USE_HDF5)
   subroutine load_all_hdf5(io,filename,comm,ng,nh,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
+    use mod_param, only: is_use_compression
     !
     ! reads/writes a restart file for all fields using HDF5
     !
@@ -691,11 +693,12 @@ module mod_load
     integer , intent(in)               :: nscal
     real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: u,v,w,p
     type(scalar), intent(inout), dimension(:) :: s
-    real(rp), intent(inout), optional :: time
-    integer , intent(inout), optional :: istep
-    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g ! if grid metadata is written, write time and istep too
+    real(rp), intent(inout) :: time
+    integer , intent(inout) :: istep
+    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
     character(len=5) :: scalnum
     integer :: iscal
+    !
     select case(io)
     case('r')
       call io_field_hdf5(io,filename,'u',comm,ng,nh,lo,hi,u,time,istep,x_g,y_g,z_g)
@@ -707,52 +710,83 @@ module mod_load
         call io_field_hdf5(io,filename,'s_'//scalnum,comm,ng,nh,lo,hi,s(iscal)%val)
       end do
     case('w')
-      call io_field_hdf5(io,filename,'u',comm,ng,nh,lo,hi,u,time,istep,x_g,y_g,z_g,.true.)
-      call io_field_hdf5(io,filename,'v',comm,ng,nh,lo,hi,v,first_write=.false.)
-      call io_field_hdf5(io,filename,'w',comm,ng,nh,lo,hi,w,first_write=.false.)
-      call io_field_hdf5(io,filename,'p',comm,ng,nh,lo,hi,p,first_write=.false.)
+      call io_field_hdf5(io,filename,'u',comm,ng,nh,lo,hi,u,time,istep,x_g,y_g,z_g, &
+                         first_write=.true.,is_compress=is_use_compression)
+      call io_field_hdf5(io,filename,'v',comm,ng,nh,lo,hi,v,first_write=.false.,is_compress=is_use_compression)
+      call io_field_hdf5(io,filename,'w',comm,ng,nh,lo,hi,w,first_write=.false.,is_compress=is_use_compression)
+      call io_field_hdf5(io,filename,'p',comm,ng,nh,lo,hi,p,first_write=.false.,is_compress=is_use_compression)
       do iscal=1,nscal
         write(scalnum,'(i3.3)') iscal
-        call io_field_hdf5(io,filename,'s_'//scalnum,comm,ng,nh,lo,hi,s(iscal)%val,first_write=.false.)
+        call io_field_hdf5(io,filename,'s_'//scalnum,comm,ng,nh,lo,hi,s(iscal)%val, &
+                           first_write=.false.,is_compress=is_use_compression)
       end do
     end select
   end subroutine load_all_hdf5
   !
   subroutine load_one_hdf5(io,filename,comm,ng,nh,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
+    use mod_param, only: is_use_compression
     !
     ! reads/writes a restart file for a single field using HDF5
     !
     implicit none
+    integer, parameter :: NAME_LEN_MAX = 256
     character(len=1), intent(in) :: io
     character(len=*), intent(in) :: filename
     integer         , intent(in) :: comm
     integer , intent(in), dimension(3) :: ng,nh,lo,hi
     real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
-    character(len=*), intent(in), optional :: varname
+    character(len=*), intent(in) :: varname
     real(rp), intent(inout), optional :: time
     integer , intent(inout), optional :: istep
-    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g ! if grid metadata is written, write time and istep too
+    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
     character(len=NAME_LEN_MAX) :: field_name
-    field_name = 'var'
-    if(present(varname)) field_name = trim(varname)
+    !
+    field_name = trim(varname)
     select case(io)
     case('r')
-      if(present(time) .and. present(istep)) then
-        call io_field_hdf5(io,filename,field_name,comm,ng,nh,lo,hi,p,time,istep,x_g,y_g,z_g)
-      else
-        call io_field_hdf5(io,filename,field_name,comm,ng,nh,lo,hi,p,x_g=x_g,y_g=y_g,z_g=z_g)
-      end if
+      call io_field_hdf5(io,filename,field_name,comm,ng,nh,lo,hi,p,time,istep,x_g,y_g,z_g)
     case('w')
       ! single-field writes always start from a fresh file
-      if(present(time) .and. present(istep)) then
-        call io_field_hdf5(io,filename,field_name,comm,ng,nh,lo,hi,p,time,istep,x_g,y_g,z_g,first_write=.true.)
-      else
-        call io_field_hdf5(io,filename,field_name,comm,ng,nh,lo,hi,p,x_g=x_g,y_g=y_g,z_g=z_g,first_write=.true.)
-      end if
+      call io_field_hdf5(io,filename,field_name,comm,ng,nh,lo,hi,p,time,istep,x_g,y_g,z_g, &
+                         first_write=.true.,is_compress=is_use_compression)
     end select
   end subroutine load_one_hdf5
   !
-  subroutine io_field_hdf5(io,filename,varname,comm,ng,nh,lo,hi,var,time,istep,x_g,y_g,z_g,first_write)
+  subroutine hdf5_checkpoint_chunk_dims(comm,n,ng,chunk_dims)
+    use hdf5, only: HSIZE_T
+    !
+    ! choose chunk sizes aligned with the current pencil layout
+    !
+    implicit none
+    integer(i8), parameter :: MEGABYTE = 1024_i8*1024_i8
+    integer(i8), parameter :: HDF5_CHUNK_MAX = 2._i8*MEGABYTE ! 2 MiB
+    integer         , intent(in) :: comm
+    integer         , intent(in),  dimension(3) :: n,ng
+    integer(HSIZE_T), intent(out), dimension(3) :: chunk_dims
+    integer, dimension(3) :: nn
+    integer(i8) :: chunk_size
+    integer :: idir
+    logical :: is_reduced
+    !
+    call MPI_ALLREDUCE(n,nn,3,MPI_INTEGER,MPI_MIN,comm,ierr)
+    !
+    chunk_size = product(int(nn,i8))*int(f_sizeof(1._rp),i8)
+    do while(chunk_size > HDF5_CHUNK_MAX)
+      is_reduced = .false.
+      do idir=1,3
+        if(nn(idir) > 1) then
+          nn(idir) = max(1,nn(idir)/2)
+          is_reduced = .true.
+          chunk_size = product(int(nn,i8))*int(f_sizeof(1._rp),i8)
+          if(chunk_size <= HDF5_CHUNK_MAX) exit
+        end if
+      end do
+      if(.not. is_reduced) exit
+    end do
+    chunk_dims(:) = nn(:)
+  end subroutine hdf5_checkpoint_chunk_dims
+  !
+  subroutine io_field_hdf5(io,filename,varname,comm,ng,nh,lo,hi,var,time,istep,x_g,y_g,z_g,first_write,is_compress)
     use hdf5
     !
     ! collective single field data I/O using HDF5
@@ -761,6 +795,8 @@ module mod_load
     ! with the field data I/O inspired from the AFiD code
     !
     implicit none
+    character(len=*), parameter :: HDF5_COMPRESSION = 'gzip'
+    integer         , parameter :: HDF5_COMPRESSION_LEVEL = 4
     character(len=1), intent(in) :: io
     character(len=*), intent(in) :: filename,varname
     integer         , intent(in) :: comm
@@ -770,9 +806,10 @@ module mod_load
     integer , intent(inout), optional :: istep
     real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
     logical , intent(in), optional :: first_write
+    logical , intent(in), optional :: is_compress
     integer , dimension(3) :: n
     integer , dimension(3) :: sizes,subsizes,starts
-    logical :: first_write_loc
+    logical :: first_write_
     real(rp) :: meta_time(1)
     integer  :: meta_istep(1)
     !
@@ -786,13 +823,18 @@ module mod_load
     !
     integer(HID_T) :: dset
     integer(HID_T) :: dtype_rp,dtype_int
+    integer(HID_T) :: dcpl_id
     !
     integer(HSIZE_T) :: dims(3)
+    integer(HSIZE_T) :: chunk_dims(3)
     !
     integer(HID_T) :: plist_id
     integer(HSIZE_T) , dimension(3) :: data_count
+    integer(HSIZE_T) , dimension(3) :: mem_dims
     integer(HSSIZE_T), dimension(3) :: data_offset
     integer(HSSIZE_T), dimension(3) :: halo_offset
+    logical :: use_dcpl
+    logical :: is_compress_
     !
     n(:)        = hi(:)-lo(:)+1
     sizes(:)    = ng(:)
@@ -802,10 +844,13 @@ module mod_load
     ndims = 3
     dims(:) = ng(:)
     data_count(:) = subsizes(:)
+    mem_dims(:) = subsizes(:)+2*nh(:)
     data_offset(:) = starts(:)
     halo_offset(:) = nh(:)
-    first_write_loc = .true.
-    if(present(first_write)) first_write_loc = first_write
+    first_write_ = .true.
+    if(present(first_write)) first_write_ = first_write
+    is_compress_ = .false.
+    if(present(is_compress)) is_compress_ = is_compress
     call h5open_f(ierr)
     dtype_rp = HDF5_REAL_RP()
     dtype_int = H5T_NATIVE_INTEGER
@@ -817,8 +862,8 @@ module mod_load
       call h5fopen_f(filename,H5F_ACC_RDONLY_F,file_id,ierr,access_prp=plist_id)
       call h5pclose_f(plist_id,ierr)
       !
-      call h5dopen_f(file_id,'fields/'//varname,dset,ierr)
-      call h5screate_simple_f(ndims,data_count+2*nh(:),memspace,ierr)
+      call h5dopen_f(file_id,'fields/'//trim(varname),dset,ierr)
+      call h5screate_simple_f(3,mem_dims,memspace,ierr)
       !
       call h5dget_space_f(dset,slabspace,ierr)
       call h5sselect_hyperslab_f(slabspace,H5S_SELECT_SET_F,data_offset,data_count,ierr)
@@ -826,7 +871,7 @@ module mod_load
       call h5pcreate_f(H5P_DATASET_XFER_F,plist_id,ierr)
       call h5pset_dxpl_mpio_f(plist_id,H5FD_MPIO_COLLECTIVE_F,ierr)
       !
-      call h5dread_f(dset,dtype_rp,var,dims,ierr,file_space_id=slabspace,mem_space_id=memspace,xfer_prp=plist_id)
+      call h5dread_f(dset,dtype_rp,var,data_count,ierr,file_space_id=slabspace,mem_space_id=memspace,xfer_prp=plist_id)
       !
       call h5pclose_f(plist_id,ierr)
       call h5dclose_f(dset,ierr)
@@ -838,13 +883,13 @@ module mod_load
         call h5fopen_f(filename,H5F_ACC_RDONLY_F,file_id,ierr)
         if(present(time)) then
           call h5dopen_f(file_id,'meta/time',dset,ierr)
-          call h5dread_f(dset,dtype_rp,meta_time,[int(1,HSIZE_T)],ierr)
+          call h5dread_f(dset,dtype_rp,meta_time,[1_HSIZE_T],ierr)
           call h5dclose_f(dset,ierr)
           time = meta_time(1)
         end if
         if(present(istep)) then
           call h5dopen_f(file_id,'meta/istep',dset,ierr)
-          call h5dread_f(dset,dtype_int,meta_istep,[int(1,HSIZE_T)],ierr)
+          call h5dread_f(dset,dtype_int,meta_istep,[1_HSIZE_T],ierr)
           call h5dclose_f(dset,ierr)
           istep = meta_istep(1)
         end if
@@ -874,74 +919,106 @@ module mod_load
       call h5screate_simple_f(ndims,dims,filespace,ierr)
       call h5pcreate_f(H5P_FILE_ACCESS_F,plist_id,ierr)
       call h5pset_fapl_mpio_f(plist_id,comm,MPI_INFO_NULL,ierr)
-      if(first_write_loc) then
+      if(first_write_) then
         ! guarantees overwriting if file exists
         call h5fcreate_f(filename,H5F_ACC_TRUNC_F,file_id,ierr,access_prp=plist_id)
+        call h5gcreate_f(file_id,'fields',group_id,ierr)
+        call h5gclose_f(group_id,ierr)
       else
         call h5fopen_f(filename,H5F_ACC_RDWR_F,file_id,ierr,access_prp=plist_id)
       end if
       call h5pclose_f(plist_id,ierr)
       !
-      if(first_write_loc) then
-        call h5gcreate_f(file_id,'fields',group_id,ierr)
+      use_dcpl = .false.
+      if(is_compress_) then
+        !
+        ! determine chunk dimensions to target about 2 MiB per chunk
+        !
+        call hdf5_checkpoint_chunk_dims(comm,n,ng,chunk_dims)
+        select case(HDF5_COMPRESSION)
+        case('gzip')
+          call h5pcreate_f(H5P_DATASET_CREATE_F,dcpl_id,ierr)
+          call h5pset_chunk_f(dcpl_id,ndims,chunk_dims,ierr)
+          call h5pset_shuffle_f(dcpl_id,ierr) ! comment to disable shuffle filter
+          call h5pset_deflate_f(dcpl_id,HDF5_COMPRESSION_LEVEL,ierr)
+          use_dcpl = .true.
+        case default
+          if(first_write_ .and. myid == 0) print*, 'Warning: unknown HDF5 checkpoint compression preset. Writing uncompressed fields.'
+        end select
+      end if
+      if(use_dcpl) then
+        call h5gopen_f(file_id,'fields',group_id,ierr)
+        call h5dcreate_f(group_id,trim(varname),dtype_rp,filespace,dset,ierr,dcpl_id=dcpl_id)
+        call h5gclose_f(group_id,ierr)
+        call h5pclose_f(dcpl_id,ierr)
       else
         call h5gopen_f(file_id,'fields',group_id,ierr)
+        call h5dcreate_f(group_id,trim(varname),dtype_rp,filespace,dset,ierr)
+        call h5gclose_f(group_id,ierr)
       end if
-      call h5dcreate_f(group_id,varname,dtype_rp,filespace,dset,ierr)
-      call h5screate_simple_f(ndims,data_count+2*nh(:),memspace,ierr)
+      call h5screate_simple_f(3,mem_dims,memspace,ierr)
       call h5dget_space_f(dset,slabspace,ierr)
       call h5sselect_hyperslab_f(slabspace,H5S_SELECT_SET_F,data_offset,data_count,ierr)
       call h5sselect_hyperslab_f(memspace,H5S_SELECT_SET_F,halo_offset,data_count,ierr)
       call h5pcreate_f(H5P_DATASET_XFER_F,plist_id,ierr)
       call h5pset_dxpl_mpio_f(plist_id,H5FD_MPIO_COLLECTIVE_F,ierr)
-      call h5dwrite_f(dset,dtype_rp,var,dims,ierr,file_space_id=slabspace,mem_space_id=memspace,xfer_prp=plist_id)
+      call h5dwrite_f(dset,dtype_rp,var,data_count,ierr,file_space_id=slabspace,mem_space_id=memspace,xfer_prp=plist_id)
       !
       call h5pclose_f(plist_id,ierr)
       call h5dclose_f(dset,ierr)
       call h5sclose_f(memspace,ierr)
       call h5sclose_f(slabspace,ierr)
       call h5sclose_f(filespace,ierr)
-      call h5gclose_f(group_id,ierr)
       call h5fclose_f(file_id,ierr)
       !
       ! write metadata
       !
-      if(myid == 0 .and. first_write_loc) then
+      if(myid == 0) then
         call h5fopen_f(filename,H5F_ACC_RDWR_F,file_id,ierr)
         !
-        if(present(x_g) .and. present(y_g) .and. present(z_g)) then
+        if(first_write_ .and. present(x_g) .and. present(y_g) .and. present(z_g)) then
           call h5gcreate_f(file_id,'grid',group_id,ierr)
-          call h5screate_simple_f(1,[int(ng(1),hsize_t)],filespace,ierr)
+          call h5screate_simple_f(1,[int(ng(1),HSIZE_T)],filespace,ierr)
           call h5dcreate_f(group_id,'x',dtype_rp,filespace,dset,ierr)
-          call h5dwrite_f(dset,dtype_rp,x_g(1:ng(1)),[int(ng(1),hsize_t)],ierr)
+          call h5dwrite_f(dset,dtype_rp,x_g(1:ng(1)),[int(ng(1),HSIZE_T)],ierr)
           call h5dclose_f(dset,ierr)
           call h5sclose_f(filespace,ierr)
-          call h5screate_simple_f(1,[int(ng(2),hsize_t)],filespace,ierr)
+          call h5screate_simple_f(1,[int(ng(2),HSIZE_T)],filespace,ierr)
           call h5dcreate_f(group_id,'y',dtype_rp,filespace,dset,ierr)
-          call h5dwrite_f(dset,dtype_rp,y_g(1:ng(2)),[int(ng(2),hsize_t)],ierr)
+          call h5dwrite_f(dset,dtype_rp,y_g(1:ng(2)),[int(ng(2),HSIZE_T)],ierr)
           call h5dclose_f(dset,ierr)
           call h5sclose_f(filespace,ierr)
-          call h5screate_simple_f(1,[int(ng(3),hsize_t)],filespace,ierr)
+          call h5screate_simple_f(1,[int(ng(3),HSIZE_T)],filespace,ierr)
           call h5dcreate_f(group_id,'z',dtype_rp,filespace,dset,ierr)
-          call h5dwrite_f(dset,dtype_rp,z_g(1:ng(3)),[int(ng(3),hsize_t)],ierr)
+          call h5dwrite_f(dset,dtype_rp,z_g(1:ng(3)),[int(ng(3),HSIZE_T)],ierr)
           call h5dclose_f(dset,ierr)
-          call h5gclose_f(group_id,ierr)
           call h5sclose_f(filespace,ierr)
+          call h5gclose_f(group_id,ierr)
         end if
         !
-        if(present(time) .and. present(istep)) then
+        if(first_write_ .and. (present(time) .or. present(istep))) then
           call h5gcreate_f(file_id,'meta',group_id,ierr)
-          call h5screate_simple_f(1,[int(1,hsize_t)],filespace,ierr)
+          call h5gclose_f(group_id,ierr)
+        end if
+        if(first_write_ .and. present(time)) then
+          call h5gopen_f(file_id,'meta',group_id,ierr)
+          call h5screate_simple_f(1,[1_HSIZE_T],filespace,ierr)
           meta_time(1) = time
           call h5dcreate_f(group_id,'time',dtype_rp,filespace,dset,ierr)
-          call h5dwrite_f(dset,dtype_rp,meta_time,[int(1,hsize_t)],ierr)
+          call h5dwrite_f(dset,dtype_rp,meta_time,[1_HSIZE_T],ierr)
           call h5dclose_f(dset,ierr)
+          call h5sclose_f(filespace,ierr)
+          call h5gclose_f(group_id,ierr)
+        end if
+        if(first_write_ .and. present(istep)) then
+          call h5gopen_f(file_id,'meta',group_id,ierr)
+          call h5screate_simple_f(1,[1_HSIZE_T],filespace,ierr)
           meta_istep(1) = istep
           call h5dcreate_f(group_id,'istep',dtype_int,filespace,dset,ierr)
-          call h5dwrite_f(dset,dtype_int,meta_istep,[int(1,hsize_t)],ierr)
+          call h5dwrite_f(dset,dtype_int,meta_istep,[1_HSIZE_T],ierr)
           call h5dclose_f(dset,ierr)
-          call h5gclose_f(group_id,ierr)
           call h5sclose_f(filespace,ierr)
+          call h5gclose_f(group_id,ierr)
         end if
         call h5fclose_f(file_id,ierr)
       end if
@@ -964,6 +1041,7 @@ module mod_load
 #endif
 #if defined(_USE_ADIOS2)
   subroutine load_all_adios2(io,filename,comm,ng,nh,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
+    use mod_param, only: is_use_compression
     !
     ! reads/writes a restart file for all fields using ADIOS2
     !
@@ -975,115 +1053,155 @@ module mod_load
     integer , intent(in)               :: nscal
     real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: u,v,w,p
     type(scalar), intent(inout), dimension(:) :: s
-    real(rp), intent(inout), optional :: time
-    integer , intent(inout), optional :: istep
-    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g ! if grid metadata is written, write time and istep too
+    real(rp), intent(inout) :: time
+    integer , intent(inout) :: istep
+    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
     type(adios2_adios) :: adios
     type(adios2_io) :: io_handle
     type(adios2_engine) :: engine
+    type(adios2_operator) :: compress
+    type(adios2_compression_params) :: compress_params
     character(len=5) :: scalnum
     real(rp) :: meta_rp(1)
     integer :: meta_i4(1)
     integer :: iscal
+    logical :: is_compress,is_pack
     !
-    call load_adios2_open(io,adios,io_handle,engine,filename,comm)
+    call adios2_open_engine(io,adios,io_handle,engine,filename,comm)
+    is_compress = (io == 'w' .and. is_use_compression)
+    !
+    ! BP5 in ADIOS2 2.11.0 is unable tocombine compression with SetMemorySelection to exclude halo regions when writing
+    ! This will be fixed soon; see: https://github.com/ornladios/ADIOS2/issues/4965
+    ! As a temporary workaround, we pack the data into a contiguous buffer array for writing.
+    !
+    is_pack = is_compress
+    if(is_compress) then
+      compress_params = adios_get_default_compression_params('blosc')
+      call adios2_define_compress(adios,compress,compress_params)
+    end if
     !
     select case(io)
     case('r')
-      call io_field_adios2(io,engine,io_handle,'u',ng,nh,lo,hi,u)
-      call io_field_adios2(io,engine,io_handle,'v',ng,nh,lo,hi,v)
-      call io_field_adios2(io,engine,io_handle,'w',ng,nh,lo,hi,w)
-      call io_field_adios2(io,engine,io_handle,'p',ng,nh,lo,hi,p)
+      call io_field_adios2(io,engine,io_handle,'u',ng,nh,lo,hi,u,is_pack)
+      call io_field_adios2(io,engine,io_handle,'v',ng,nh,lo,hi,v,is_pack)
+      call io_field_adios2(io,engine,io_handle,'w',ng,nh,lo,hi,w,is_pack)
+      call io_field_adios2(io,engine,io_handle,'p',ng,nh,lo,hi,p,is_pack)
       do iscal=1,nscal
         write(scalnum,'(i3.3)') iscal
-        call io_field_adios2(io,engine,io_handle,'s_'//scalnum,ng,nh,lo,hi,s(iscal)%val)
+        call io_field_adios2(io,engine,io_handle,'s_'//scalnum,ng,nh,lo,hi,s(iscal)%val,is_pack)
       end do
       call io_field_adios2_1d(io,engine,io_handle,'time',meta_rp,comm)
       call io_field_adios2_1d(io,engine,io_handle,'istep',meta_i4,comm)
-      time = meta_rp(1)
-      istep = meta_i4(1)
       if(present(x_g)) call io_field_adios2_1d(io,engine,io_handle,'x',x_g(1:ng(1)),comm)
       if(present(y_g)) call io_field_adios2_1d(io,engine,io_handle,'y',y_g(1:ng(2)),comm)
       if(present(z_g)) call io_field_adios2_1d(io,engine,io_handle,'z',z_g(1:ng(3)),comm)
+      time = meta_rp(1)
+      istep = meta_i4(1)
     case('w')
-      meta_rp(1) = time
-      meta_i4(1) = istep
-      call io_field_adios2(io,engine,io_handle,'u',ng,nh,lo,hi,u)
-      call io_field_adios2(io,engine,io_handle,'v',ng,nh,lo,hi,v)
-      call io_field_adios2(io,engine,io_handle,'w',ng,nh,lo,hi,w)
-      call io_field_adios2(io,engine,io_handle,'p',ng,nh,lo,hi,p)
+      if(is_compress) then
+        call io_field_adios2(io,engine,io_handle,'u',ng,nh,lo,hi,u,is_pack,compress,compress_params)
+        call io_field_adios2(io,engine,io_handle,'v',ng,nh,lo,hi,v,is_pack,compress,compress_params)
+        call io_field_adios2(io,engine,io_handle,'w',ng,nh,lo,hi,w,is_pack,compress,compress_params)
+        call io_field_adios2(io,engine,io_handle,'p',ng,nh,lo,hi,p,is_pack,compress,compress_params)
+      else
+        call io_field_adios2(io,engine,io_handle,'u',ng,nh,lo,hi,u)
+        call io_field_adios2(io,engine,io_handle,'v',ng,nh,lo,hi,v)
+        call io_field_adios2(io,engine,io_handle,'w',ng,nh,lo,hi,w)
+        call io_field_adios2(io,engine,io_handle,'p',ng,nh,lo,hi,p)
+      end if
       do iscal=1,nscal
         write(scalnum,'(i3.3)') iscal
-        call io_field_adios2(io,engine,io_handle,'s_'//scalnum,ng,nh,lo,hi,s(iscal)%val)
+        if(is_compress) then
+          call io_field_adios2(io,engine,io_handle,'s_'//scalnum,ng,nh,lo,hi,s(iscal)%val,is_pack,compress, &
+                               compress_params)
+        else
+          call io_field_adios2(io,engine,io_handle,'s_'//scalnum,ng,nh,lo,hi,s(iscal)%val)
+        end if
       end do
+      meta_rp(1) = time
+      meta_i4(1) = istep
       call io_field_adios2_1d(io,engine,io_handle,'time',meta_rp,comm)
       call io_field_adios2_1d(io,engine,io_handle,'istep',meta_i4,comm)
-      if(present(x_g) .and. present(y_g) .and. present(z_g)) then
-        call io_field_adios2_1d(io,engine,io_handle,'x',x_g(1:ng(1)),comm)
-        call io_field_adios2_1d(io,engine,io_handle,'y',y_g(1:ng(2)),comm)
-        call io_field_adios2_1d(io,engine,io_handle,'z',z_g(1:ng(3)),comm)
-      end if
+      if(present(x_g)) call io_field_adios2_1d(io,engine,io_handle,'x',x_g(1:ng(1)),comm)
+      if(present(y_g)) call io_field_adios2_1d(io,engine,io_handle,'y',y_g(1:ng(2)),comm)
+      if(present(z_g)) call io_field_adios2_1d(io,engine,io_handle,'z',z_g(1:ng(3)),comm)
     end select
     !
-    call load_adios2_close(io,adios,engine)
+    call adios2_close_engine(adios,engine)
   end subroutine load_all_adios2
   !
   subroutine load_one_adios2(io,filename,comm,ng,nh,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
+    use mod_param, only: is_use_compression
     !
     ! reads/writes a restart file for a single field using ADIOS2
     !
     implicit none
+    integer, parameter :: NAME_LEN_MAX = 256
     character(len=1), intent(in) :: io
     character(len=*), intent(in) :: filename
     integer         , intent(in) :: comm
     integer , intent(in), dimension(3) :: ng,nh,lo,hi
     real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
-    character(len=*), intent(in), optional :: varname
+    character(len=*), intent(in) :: varname
     real(rp), intent(inout), optional :: time
     integer , intent(inout), optional :: istep
-    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g ! if grid metadata is written, write time and istep too
+    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
     type(adios2_adios) :: adios
     type(adios2_io) :: io_handle
     type(adios2_engine) :: engine
+    type(adios2_operator) :: compress
+    type(adios2_compression_params) :: compress_params
     real(rp) :: meta_rp(1)
     integer :: meta_i4(1)
     character(len=NAME_LEN_MAX) :: field_name
+    logical :: is_compress,is_pack
     !
-    field_name = 'var'
-    if(present(varname)) field_name = trim(varname)
-    call load_adios2_open(io,adios,io_handle,engine,filename,comm)
+    field_name = trim(varname)
+    call adios2_open_engine(io,adios,io_handle,engine,filename,comm)
+    is_compress = io == 'w' .and. is_use_compression
+    is_pack = is_compress
+    if(is_compress) then
+      compress_params = adios_get_default_compression_params('blosc')
+      call adios2_define_compress(adios,compress,compress_params)
+    end if
     !
     select case(io)
     case('r')
-      call io_field_adios2(io,engine,io_handle,field_name,ng,nh,lo,hi,p)
-      if(present(time) .and. present(istep)) then
+      call io_field_adios2(io,engine,io_handle,field_name,ng,nh,lo,hi,p,is_pack)
+      if(present(time)) then
         call io_field_adios2_1d(io,engine,io_handle,'time',meta_rp,comm)
-        call io_field_adios2_1d(io,engine,io_handle,'istep',meta_i4,comm)
         time = meta_rp(1)
+      end if
+      if(present(istep)) then
+        call io_field_adios2_1d(io,engine,io_handle,'istep',meta_i4,comm)
         istep = meta_i4(1)
       end if
       if(present(x_g)) call io_field_adios2_1d(io,engine,io_handle,'x',x_g(1:ng(1)),comm)
       if(present(y_g)) call io_field_adios2_1d(io,engine,io_handle,'y',y_g(1:ng(2)),comm)
       if(present(z_g)) call io_field_adios2_1d(io,engine,io_handle,'z',z_g(1:ng(3)),comm)
     case('w')
-      call io_field_adios2(io,engine,io_handle,field_name,ng,nh,lo,hi,p)
-      if(present(time) .and. present(istep)) then
+      if(is_compress) then
+        call io_field_adios2(io,engine,io_handle,field_name,ng,nh,lo,hi,p,is_pack,compress,compress_params)
+      else
+        call io_field_adios2(io,engine,io_handle,field_name,ng,nh,lo,hi,p)
+      end if
+      if(present(time)) then
         meta_rp(1) = time
-        meta_i4(1) = istep
         call io_field_adios2_1d(io,engine,io_handle,'time',meta_rp,comm)
+      end if
+      if(present(istep)) then
+        meta_i4(1) = istep
         call io_field_adios2_1d(io,engine,io_handle,'istep',meta_i4,comm)
       end if
-      if(present(x_g) .and. present(y_g) .and. present(z_g)) then
-        call io_field_adios2_1d(io,engine,io_handle,'x',x_g(1:ng(1)),comm)
-        call io_field_adios2_1d(io,engine,io_handle,'y',y_g(1:ng(2)),comm)
-        call io_field_adios2_1d(io,engine,io_handle,'z',z_g(1:ng(3)),comm)
-      end if
+      if(present(x_g)) call io_field_adios2_1d(io,engine,io_handle,'x',x_g(1:ng(1)),comm)
+      if(present(y_g)) call io_field_adios2_1d(io,engine,io_handle,'y',y_g(1:ng(2)),comm)
+      if(present(z_g)) call io_field_adios2_1d(io,engine,io_handle,'z',z_g(1:ng(3)),comm)
     end select
     !
-    call load_adios2_close(io,adios,engine)
+    call adios2_close_engine(adios,engine)
   end subroutine load_one_adios2
   !
-  subroutine load_adios2_open(io,adios,io_handle,engine,filename,comm)
+  subroutine adios2_open_engine(io,adios,io_handle,engine,filename,comm)
     !
     ! opens an ADIOS2 engine for restart I/O
     !
@@ -1107,27 +1225,107 @@ module mod_load
     call adios2_declare_io(io_handle, adios, 'restart', ierr)
     call adios2_set_parameter(io_handle, 'Engine', 'BP5', ierr)
     call adios2_open(engine, io_handle, filename, adios2_mode, ierr)
-    if(io == 'r') then
-      call adios2_begin_step(engine, ierr)
-    end if
-  end subroutine load_adios2_open
+    call adios2_begin_step(engine, ierr)
+  end subroutine adios2_open_engine
   !
-  subroutine load_adios2_close(io,adios,engine)
+  subroutine adios2_close_engine(adios,engine)
     !
     ! closes an ADIOS2 engine for restart I/O
     !
     implicit none
-    character(len=1), intent(in) :: io
     type(adios2_adios), intent(inout) :: adios
     type(adios2_engine), intent(inout) :: engine
-    if(io == 'r') then
-      call adios2_end_step(engine, ierr)
-    end if
+    call adios2_end_step(engine, ierr)
     call adios2_close(engine, ierr)
     call adios2_finalize(adios, ierr)
-  end subroutine load_adios2_close
+  end subroutine adios2_close_engine
   !
-  subroutine io_field_adios2(io,engine,io_handle,varname,ng,nh,lo,hi,var)
+  function adios_get_default_compression_params(name) result(params)
+    !
+    ! returns one of the supported ADIOS2 compression presets
+    !
+    implicit none
+    character(len=*), intent(in), optional :: name
+    type(adios2_compression_params) :: params
+    character(len=16) :: name_
+    name_ = 'blosc'
+    if(present(name)) name_ = trim(name)
+    params%keys(:) = ''
+    params%values(:) = ''
+    select case(trim(name_))
+    case('blosc')
+      params%name = 'blosc'
+      params%keys(1) = 'clevel'
+      params%keys(2) = 'doshuffle'
+      params%values(1) = '5'
+      params%values(2) = 'BLOSC_SHUFFLE'
+    case('zfp')
+      params%name = 'zfp'
+      params%keys(1) = 'accuracy'
+      params%values(1) = '1e-6'
+    case('sz3')
+      params%name = 'sz3'
+      params%keys(1) = 'accuracy'
+      params%values(1) = '1e-6'
+    case default
+      params%name = 'blosc'
+      params%keys(1) = 'clevel'
+      params%keys(2) = 'doshuffle'
+      params%values(1) = '5'
+      params%values(2) = 'BLOSC_SHUFFLE'
+    end select
+  end function adios_get_default_compression_params
+  !
+  subroutine adios2_define_compress(adios,compress,params)
+    !
+    ! defines the checkpoint compression operator requested by the user
+    !
+    implicit none
+    type(adios2_adios), intent(in) :: adios
+    type(adios2_operator), intent(out) :: compress
+    type(adios2_compression_params), intent(in), optional :: params
+    type(adios2_compression_params) :: params_
+    params_ = adios_get_default_compression_params()
+    if(present(params)) params_ = params
+    call adios2_define_operator(compress,adios,'compress',trim(params_%name),ierr)
+  end subroutine adios2_define_compress
+  !
+  subroutine adios2_add_compress(var_handle,compress,params)
+    !
+    ! attaches the configured operator parameters to a variable
+    !
+    implicit none
+    type(adios2_variable), intent(in) :: var_handle
+    type(adios2_operator), intent(in) :: compress
+    type(adios2_compression_params), intent(in), optional :: params
+    type(adios2_compression_params) :: params_
+    integer :: operation_index
+    integer :: first_param,iparam
+    !
+    params_ = adios_get_default_compression_params()
+    if(present(params)) params_ = params
+    first_param = 0
+    do iparam=1,size(params_%keys)
+      if(len_trim(params_%keys(iparam)) > 0) then
+        first_param = iparam
+        exit
+      end if
+    end do
+    if(first_param > 0) then
+      call adios2_add_operation(operation_index,var_handle,compress,trim(params_%keys(first_param)), &
+                                trim(params_%values(first_param)),ierr)
+      do iparam=first_param+1,size(params_%keys)
+        if(len_trim(params_%keys(iparam)) > 0) then
+          call adios2_set_operation_parameter(var_handle,operation_index,trim(params_%keys(iparam)), &
+                                              trim(params_%values(iparam)),ierr)
+        end if
+      end do
+    else
+      call adios2_add_operation(operation_index,var_handle,compress,'','',ierr)
+    end if
+  end subroutine adios2_add_compress
+  !
+  subroutine io_field_adios2(io,engine,io_handle,varname,ng,nh,lo,hi,var,is_pack,compress,params)
     !
     ! reads/writes a halo-free 3D field using ADIOS2 selections
     !
@@ -1138,12 +1336,17 @@ module mod_load
     character(len=*), intent(in) :: varname
     integer , intent(in), dimension(3) :: ng,nh,lo,hi
     real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: var
+    logical , intent(in), optional :: is_pack
+    type(adios2_operator), intent(in), optional :: compress
+    type(adios2_compression_params), intent(in), optional :: params
     type(adios2_variable) :: var_handle
     integer(i8), dimension(3) :: shape,start,count
     integer(i8), dimension(3) :: mem_shape,mem_start
     integer , dimension(3) :: n
     logical, parameter :: adios2_constant_dims = .true.
     integer, parameter :: ndims = 3
+    logical :: is_pack_
+    real(rp), allocatable, dimension(:,:,:) :: tmp
     !
     n(:) = hi(:)-lo(:)+1
     shape(:) = ng(:)
@@ -1151,19 +1354,34 @@ module mod_load
     count(:) = n(:)
     mem_shape(:) = n(:)+2*nh(:)
     mem_start(:) = nh(:)
+    is_pack_ = .false.
+    if(present(is_pack)) is_pack_ = is_pack
+    if(is_pack_) allocate(tmp(n(1),n(2),n(3)))
     !
     select case(io)
     case('r')
       call adios2_inquire_variable(var_handle, io_handle, varname, ierr)
       call adios2_set_selection(var_handle, ndims, start, count, ierr)
-      call adios2_set_memory_selection(var_handle, ndims, mem_start, mem_shape, ierr)
-      call adios2_get(engine, var_handle, var, adios2_mode_sync, ierr)
+      if(is_pack_) then
+        call adios2_get(engine, var_handle, tmp, adios2_mode_sync, ierr)
+        var(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)) = tmp(:,:,:)
+      else
+        call adios2_set_memory_selection(var_handle, ndims, mem_start, mem_shape, ierr)
+        call adios2_get(engine, var_handle, var, adios2_mode_sync, ierr)
+      end if
     case('w')
       call adios2_define_variable(var_handle, io_handle, varname, ADIOS2_REAL_RP(), &
                                   ndims, shape, start, count, adios2_constant_dims, ierr)
-      call adios2_set_memory_selection(var_handle, ndims, mem_start, mem_shape, ierr)
-      call adios2_put(engine, var_handle, var, adios2_mode_sync, ierr)
+      if(present(compress)) call adios2_add_compress(var_handle,compress,params)
+      if(is_pack_) then
+        tmp(:,:,:) = var(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3))
+        call adios2_put(engine, var_handle, tmp, adios2_mode_sync, ierr)
+      else
+        call adios2_set_memory_selection(var_handle, ndims, mem_start, mem_shape, ierr)
+        call adios2_put(engine, var_handle, var, adios2_mode_sync, ierr)
+      end if
     end select
+    if(is_pack_) deallocate(tmp)
   end subroutine io_field_adios2
   !
   subroutine io_field_adios2_1d_real(io,engine,io_handle,varname,var,comm)
