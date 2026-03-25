@@ -39,6 +39,7 @@ endif
 
 ifeq ($(strip $(USE_ADIOS2)),1)
 override LIBS += -ladios2_fortran_mpi -ladios2_fortran -ladios2_cxx11_mpi -ladios2_cxx11 -ladios2_c_mpi -ladios2_c -ladios2_core
+endif
 override INCS += -I/usr/include -I/usr/include/adios2/fortran
 endif
 

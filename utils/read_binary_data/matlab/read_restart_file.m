@@ -9,7 +9,6 @@
 %
 precision = 'double';     % precision of the real-valued data
 r0 = [0.,0.,0.];    % domain origin
-non_uniform_grid = true;
 %
 % read geometry file
 %
@@ -27,7 +26,7 @@ zp = linspace(r0(3)+dl(3)/2.,r0(3)+l(3),ng(3)); % centered  z grid
 xu = xp + dl(1)/2.;                           % staggered x grid
 yv = yp + dl(2)/2.;                           % staggered y grid
 zw = zp + dl(3)/2.;                           % staggered z grid
-if(non_uniform_grid)
+if(exist('grid.bin','file'))
     f   = fopen('grid.bin');
     grid_z = fread(f,[ng(3),4],precision);
     fclose(f);

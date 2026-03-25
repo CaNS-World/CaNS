@@ -5,10 +5,10 @@
 !
 ! -
   !
-  ! write_visu_2d(datadir,fname_bin,fname_log,varname,inorm,nslice,ng,time,istep,p)
+  ! write_visu_2d(datadir,fname_bin,fname_log,varname,ng,nh,lo,hi,inorm,islice,time,istep,p,x_g,y_g,z_g)
   !
-  ! saves field data into a binary file and appends information about the data to a file
-  ! the log file can be used to generate a xdmf file for visualization of field data
+  ! saves a planar slice through the structured subset output path and appends
+  ! the corresponding metadata to a log file used for xdmf generation
   !
   ! datadir   -> name of the directory where the data is saved
   ! fname_bin -> name of the output binary file
@@ -20,27 +20,30 @@
   ! inorm     -> plane is perpendicular to direction inorm (1, 2, or 3)
   ! islice    -> plane is of constant index islice in direction inorm
   ! ng        -> array with the global number of points in each direction
+  ! nh        -> halo extents
+  ! lo,hi     -> local interior ownership in global indices
   ! time      -> physical time
   ! istep     -> time step number
   ! p         -> 3D input scalar field
+  ! x_g,y_g,z_g -> global coordinate arrays written alongside the subset
   !
   ! modify the calls below as desired
   !
-  call write_visu_2d(datadir,'vex_slice_fld_'//fldnum//'.bin','log_visu_2d_slice_1.out','Velocity_X', &
-                     2,ng(2)/2,ng,time,istep, &
-                     u(1:n(1),1:n(2),1:n(3)))
-  call write_visu_2d(datadir,'vey_slice_fld_'//fldnum//'.bin','log_visu_2d_slice_1.out','Velocity_Y', &
-                     2,ng(2)/2,ng,time,istep, &
-                     v(1:n(1),1:n(2),1:n(3)))
-  call write_visu_2d(datadir,'vez_slice_fld_'//fldnum//'.bin','log_visu_2d_slice_1.out','Velocity_Z', &
-                     2,ng(2)/2,ng,time,istep, &
-                     w(1:n(1),1:n(2),1:n(3)))
-  call write_visu_2d(datadir,'pre_slice_fld_'//fldnum//'.bin','log_visu_2d_slice_1.out','Pressure_P', &
-                     2,ng(2)/2,ng,time,istep, &
-                     p(1:n(1),1:n(2),1:n(3)))
+  call write_visu_2d(datadir,'vex_slice_fld_'//fldnum//trim(io_ext),'log_visu_2d_slice_1.out','Velocity_X', &
+                     ng,[1,1,1],lo,hi,2,ng(2)/2,time,istep, &
+                     u,xc_g,yc_g,zc_g)
+  call write_visu_2d(datadir,'vey_slice_fld_'//fldnum//trim(io_ext),'log_visu_2d_slice_1.out','Velocity_Y', &
+                     ng,[1,1,1],lo,hi,2,ng(2)/2,time,istep, &
+                     v,xc_g,yc_g,zc_g)
+  call write_visu_2d(datadir,'vez_slice_fld_'//fldnum//trim(io_ext),'log_visu_2d_slice_1.out','Velocity_Z', &
+                     ng,[1,1,1],lo,hi,2,ng(2)/2,time,istep, &
+                     w,xc_g,yc_g,zc_g)
+  call write_visu_2d(datadir,'pre_slice_fld_'//fldnum//trim(io_ext),'log_visu_2d_slice_1.out','Pressure_P', &
+                     ng,[1,1,1],lo,hi,2,ng(2)/2,time,istep, &
+                     p,xc_g,yc_g,zc_g)
   do iscal = 1,nscal
     write(scalnum,'(i3.3)') iscal
-    call write_visu_2d(datadir,'sca_'//scalnum//'_slice_fld_'//fldnum//'.bin','log_visu_2d_slice_1.out','Scalar_S'//scalnum, &
-                       2,ng(2)/2,ng,time,istep, &
-                       scalars(iscal)%val(1:n(1),1:n(2),1:n(3)))
+    call write_visu_2d(datadir,'sca_'//scalnum//'_slice_fld_'//fldnum//trim(io_ext),'log_visu_2d_slice_1.out','Scalar_S'//scalnum, &
+                       ng,[1,1,1],lo,hi,2,ng(2)/2,time,istep, &
+                       scalars(iscal)%val,xc_g,yc_g,zc_g)
   end do

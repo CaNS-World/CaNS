@@ -35,7 +35,7 @@ module mod_load
     character(len=64), dimension(10) :: values = ''
   end type adios2_compression_params
 #endif
-  public :: load_all,load_one,io_field
+  public :: load_all,load_one,io_field,io_write_subset
 contains
   subroutine load_all(io,filename,comm,ng,nh,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
     !
@@ -51,7 +51,9 @@ contains
     type(scalar), intent(inout), dimension(:) :: s
     real(rp), intent(inout) :: time
     integer , intent(inout) :: istep
-    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
+    real(rp), intent(inout), dimension(1-nh(1):), optional :: x_g
+    real(rp), intent(inout), dimension(1-nh(2):), optional :: y_g
+    real(rp), intent(inout), dimension(1-nh(3):), optional :: z_g
     integer :: file_type
     !
     file_type = fetch_file_type(filename)
@@ -85,7 +87,9 @@ contains
     type(scalar), intent(inout), dimension(:) :: s
     real(rp), intent(inout) :: time
     integer , intent(inout) :: istep
-    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
+    real(rp), intent(inout), dimension(1-nh(1):), optional :: x_g
+    real(rp), intent(inout), dimension(1-nh(2):), optional :: y_g
+    real(rp), intent(inout), dimension(1-nh(3):), optional :: z_g
     real(rp), dimension(2) :: fldinfo
     integer :: iscal
     integer :: fh
@@ -432,7 +436,9 @@ contains
     character(len=*), intent(in) :: varname
     real(rp), intent(inout), optional :: time
     integer , intent(inout), optional :: istep
-    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
+    real(rp), intent(inout), dimension(1-nh(1):), optional :: x_g
+    real(rp), intent(inout), dimension(1-nh(2):), optional :: y_g
+    real(rp), intent(inout), dimension(1-nh(3):), optional :: z_g
     integer :: file_type
     !
     file_type = fetch_file_type(filename)
@@ -465,7 +471,9 @@ contains
     character(len=*), intent(in) :: varname
     real(rp), intent(inout), optional :: time
     integer , intent(inout), optional :: istep
-    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
+    real(rp), intent(inout), dimension(1-nh(1):), optional :: x_g
+    real(rp), intent(inout), dimension(1-nh(2):), optional :: y_g
+    real(rp), intent(inout), dimension(1-nh(3):), optional :: z_g
     real(rp), dimension(2) :: fldinfo
     integer :: fh
     integer :: nreals_myid
@@ -579,6 +587,361 @@ contains
     end select
   end subroutine load_one_mpiio
   !
+  subroutine io_write_subset(filename,varname,comm,ng,nh,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
+    !
+    ! writes a structured subset of a 3D field
+    !
+    implicit none
+    character(len=*), intent(in) :: filename,varname
+    integer         , intent(in) :: comm
+    integer         , intent(in), dimension(3) :: ng,nh,lo,hi,lo_out,hi_out,nskip
+    real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: var
+    real(rp), intent(in), optional :: time
+    integer , intent(in), optional :: istep
+    real(rp), intent(in), dimension(1-nh(1):), optional :: x_g
+    real(rp), intent(in), dimension(1-nh(2):), optional :: y_g
+    real(rp), intent(in), dimension(1-nh(3):), optional :: z_g
+    logical , intent(in), optional :: is_pack
+    integer :: file_type
+    !
+    file_type = fetch_file_type(filename)
+    select case(file_type)
+    case(FILETYPE_MPIIO)
+      call write_subset_mpiio(filename,varname,comm,ng,nh,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
+#if defined(_USE_HDF5)
+    case(FILETYPE_HDF5)
+      call write_subset_hdf5(filename,varname,comm,ng,nh,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
+#endif
+#if defined(_USE_ADIOS2)
+    case(FILETYPE_ADIOS2)
+      call write_subset_adios2(filename,varname,comm,ng,nh,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
+#endif
+    case default
+      call write_subset_mpiio(filename,varname,comm,ng,nh,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
+    end select
+    call MPI_BARRIER(comm,ierr)
+  end subroutine io_write_subset
+  !
+  subroutine subset_get_local_extents(lo,hi,lo_out,hi_out,nskip,lo_sel,hi_sel,n_sel,lo_pack)
+    !
+    ! computes the local portion of the requested structured subset
+    !
+    implicit none
+    integer, intent(in), dimension(3) :: lo,hi,lo_out,hi_out,nskip
+    integer, intent(out), dimension(3) :: lo_sel,hi_sel,n_sel,lo_pack
+    integer :: idir,gmin,gmax,first,last,rel
+    !
+    lo_sel(:) = 0
+    hi_sel(:) = -1
+    n_sel(:) = 0
+    lo_pack(:) = 0
+    do idir=1,3
+      gmin = max(lo(idir),lo_out(idir))
+      gmax = min(hi(idir),hi_out(idir))
+      if(gmin > gmax) then
+        exit
+      end if
+      rel = gmin - lo_out(idir)
+      first = lo_out(idir) + ((rel + nskip(idir) - 1)/nskip(idir))*nskip(idir)
+      if(first > gmax) then
+        exit
+      end if
+      last = lo_out(idir) + ((gmax - lo_out(idir))/nskip(idir))*nskip(idir)
+      lo_sel(idir) = first
+      hi_sel(idir) = last
+      n_sel(idir) = (last-first)/nskip(idir) + 1
+      lo_pack(idir) = (first-lo_out(idir))/nskip(idir) + 1
+    end do
+  end subroutine subset_get_local_extents
+  !
+  subroutine subset_stage_field(lo,hi,nh,lo_sel,hi_sel,lo_pack,hi_pack,nskip,var,buf)
+    !
+    ! stages a local compact subset block, using direct copy for unit skip
+    ! and explicit packing for strided selections
+    !
+    implicit none
+    integer, intent(in), dimension(3) :: lo,hi,nh,lo_sel,hi_sel,lo_pack,hi_pack,nskip
+    real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: var
+    real(rp), allocatable, intent(out), dimension(:,:,:) :: buf
+    integer :: i,j,k,ii,jj,kk
+    !
+    allocate(buf(lo_pack(1):hi_pack(1),lo_pack(2):hi_pack(2),lo_pack(3):hi_pack(3)))
+    if(all(nskip(:) == 1)) then
+      buf(:,:,:) = var(lo_sel(1):hi_sel(1),lo_sel(2):hi_sel(2),lo_sel(3):hi_sel(3))
+    else
+      kk = lo_pack(3)-1
+      do k=lo_sel(3),hi_sel(3),nskip(3)
+        kk = kk + 1
+        jj = lo_pack(2)-1
+        do j=lo_sel(2),hi_sel(2),nskip(2)
+          jj = jj + 1
+          ii = lo_pack(1)-1
+          do i=lo_sel(1),hi_sel(1),nskip(1)
+            ii = ii + 1
+            buf(ii,jj,kk) = var(i,j,k)
+          end do
+        end do
+      end do
+    end if
+  end subroutine subset_stage_field
+  !
+  !
+  subroutine write_subset_mpiio(filename,varname,comm,ng,nh,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
+    !
+    ! writes a structured subset to a raw binary file in parallel
+    !
+    implicit none
+    character(len=*), intent(in) :: filename,varname
+    integer         , intent(in) :: comm
+    integer         , intent(in), dimension(3) :: ng,nh,lo,hi,lo_out,hi_out,nskip
+    real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: var
+    real(rp), intent(in), optional :: time
+    integer , intent(in), optional :: istep
+    real(rp), intent(in), dimension(1-nh(1):), optional :: x_g
+    real(rp), intent(in), dimension(1-nh(2):), optional :: y_g
+    real(rp), intent(in), dimension(1-nh(3):), optional :: z_g
+    logical , intent(in), optional :: is_pack
+    real(rp), allocatable, dimension(:,:,:) :: buf
+    real(rp), allocatable, dimension(:) :: x_sel,y_sel,z_sel
+    integer, dimension(3) :: lo_sel,hi_sel,n_sel,lo_pack,hi_pack,ng_out
+    integer :: fh,color,write_comm
+    integer(MPI_OFFSET_KIND) :: filesize
+    logical :: has_data,is_pack_,is_full_field
+    !
+    ng_out(:) = (hi_out(:)-lo_out(:))/nskip(:) + 1
+    call subset_get_local_extents(lo,hi,lo_out,hi_out,nskip,lo_sel,hi_sel,n_sel,lo_pack)
+    has_data = all(n_sel(:) > 0)
+    is_pack_ = .not. all(nskip(:) == 1)
+    if(present(is_pack)) is_pack_ = is_pack
+    is_full_field = all(nskip(:) == 1) .and. all(lo_out(:) == 1) .and. all(hi_out(:) == ng(:))
+    color = merge(1,MPI_UNDEFINED,has_data)
+    call MPI_COMM_SPLIT(comm,color,0,write_comm,ierr)
+    if(has_data) then
+      hi_pack(:) = lo_pack(:) + n_sel(:) - 1
+      call MPI_FILE_OPEN(write_comm,filename,MPI_MODE_CREATE+MPI_MODE_WRONLY,MPI_INFO_NULL,fh,ierr)
+      filesize = 0_MPI_OFFSET_KIND
+      call MPI_FILE_SET_SIZE(fh,filesize,ierr)
+      filesize = 0_MPI_OFFSET_KIND
+      if(is_pack_) then
+        call subset_stage_field(lo,hi,nh,lo_sel,hi_sel,lo_pack,hi_pack,nskip,var,buf)
+        call io_field('w',fh,ng_out,[0,0,0],lo_pack,hi_pack,filesize,buf)
+      else if(is_full_field) then
+        call io_field('w',fh,ng_out,nh,lo,hi,filesize,var)
+      else
+        call io_field('w',fh,ng_out,[0,0,0],lo_pack,hi_pack,filesize, &
+                      var(lo_sel(1):hi_sel(1),lo_sel(2):hi_sel(2),lo_sel(3):hi_sel(3)))
+      end if
+      call MPI_FILE_CLOSE(fh,ierr)
+      call MPI_COMM_FREE(write_comm,ierr)
+    end if
+  end subroutine write_subset_mpiio
+  !
+#if defined(_USE_HDF5)
+  subroutine write_subset_hdf5(filename,varname,comm,ng,nh,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
+    use hdf5
+    use mod_param, only: is_use_compression
+    !
+    ! writes a structured subset to an HDF5 file in parallel
+    !
+    implicit none
+    character(len=*), intent(in) :: filename,varname
+    integer         , intent(in) :: comm
+    integer         , intent(in), dimension(3) :: ng,nh,lo,hi,lo_out,hi_out,nskip
+    real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: var
+    real(rp), intent(in), optional :: time
+    integer , intent(in), optional :: istep
+    real(rp), intent(in), dimension(1-nh(1):), optional :: x_g
+    real(rp), intent(in), dimension(1-nh(2):), optional :: y_g
+    real(rp), intent(in), dimension(1-nh(3):), optional :: z_g
+    logical , intent(in), optional :: is_pack
+    real(rp), allocatable, dimension(:,:,:) :: buf
+    real(rp), allocatable, dimension(:) :: x_sel,y_sel,z_sel
+    integer, dimension(3) :: ng_out,lo_sel,hi_sel,n_sel,lo_pack,hi_pack
+    real(rp) :: time_
+    integer(HID_T) :: file_id,group_id,dset,space
+    integer(HSIZE_T), dimension(1) :: dims
+    integer :: istep_,color,write_comm,myid_loc
+    integer :: ierr_local
+    logical :: has_data,is_pack_,is_full_field
+    !
+    ng_out(:) = (hi_out(:)-lo_out(:))/nskip(:) + 1
+    call subset_get_local_extents(lo,hi,lo_out,hi_out,nskip,lo_sel,hi_sel,n_sel,lo_pack)
+    has_data = all(n_sel(:) > 0)
+    is_pack_ = .not. all(nskip(:) == 1)
+    if(present(is_pack)) is_pack_ = is_pack
+    is_full_field = all(nskip(:) == 1) .and. all(lo_out(:) == 1) .and. all(hi_out(:) == ng(:))
+    color = merge(1,MPI_UNDEFINED,has_data)
+    call MPI_COMM_SPLIT(comm,color,0,write_comm,ierr)
+    if(has_data) then
+      call MPI_COMM_RANK(write_comm,myid_loc,ierr)
+      hi_pack(:) = lo_pack(:) + n_sel(:) - 1
+      time_ = 0._rp
+      istep_ = 0
+      if(present(time)) time_ = time
+      if(present(istep)) istep_ = istep
+      if(present(x_g)) then
+        allocate(x_sel(1:ng_out(1)))
+        x_sel(1:ng_out(1)) = x_g(lo_out(1):hi_out(1):nskip(1))
+      end if
+      if(present(y_g)) then
+        allocate(y_sel(1:ng_out(2)))
+        y_sel(1:ng_out(2)) = y_g(lo_out(2):hi_out(2):nskip(2))
+      end if
+      if(present(z_g)) then
+        allocate(z_sel(1:ng_out(3)))
+        z_sel(1:ng_out(3)) = z_g(lo_out(3):hi_out(3):nskip(3))
+      end if
+      if(is_pack_) call subset_stage_field(lo,hi,nh,lo_sel,hi_sel,lo_pack,hi_pack,nskip,var,buf)
+      if(present(x_g) .and. present(y_g) .and. present(z_g)) then
+        if(is_pack_) then
+          call io_field_hdf5('w',filename,trim(varname),write_comm,ng_out,[0,0,0],lo_pack,hi_pack,buf,time_,istep_, &
+                             x_sel,y_sel,z_sel,first_write=.true.,is_compress=is_use_compression)
+        else if(is_full_field) then
+          call io_field_hdf5('w',filename,trim(varname),write_comm,ng_out,nh,lo,hi,var,time_,istep_, &
+                             x_sel,y_sel,z_sel,first_write=.true.,is_compress=is_use_compression)
+        else
+          call io_field_hdf5('w',filename,trim(varname),write_comm,ng_out,[0,0,0],lo_pack,hi_pack, &
+                             var(lo_sel(1):hi_sel(1),lo_sel(2):hi_sel(2),lo_sel(3):hi_sel(3)),time_,istep_, &
+                             x_sel,y_sel,z_sel,first_write=.true.,is_compress=is_use_compression)
+        end if
+      else
+        if(is_pack_) then
+          call io_field_hdf5('w',filename,trim(varname),write_comm,ng_out,[0,0,0],lo_pack,hi_pack,buf,time_,istep_, &
+                             first_write=.true.,is_compress=is_use_compression)
+        else if(is_full_field) then
+          call io_field_hdf5('w',filename,trim(varname),write_comm,ng_out,nh,lo,hi,var,time_,istep_, &
+                             first_write=.true.,is_compress=is_use_compression)
+        else
+          call io_field_hdf5('w',filename,trim(varname),write_comm,ng_out,[0,0,0],lo_pack,hi_pack, &
+                             var(lo_sel(1):hi_sel(1),lo_sel(2):hi_sel(2),lo_sel(3):hi_sel(3)),time_,istep_, &
+                             first_write=.true.,is_compress=is_use_compression)
+        end if
+      end if
+      if(myid_loc == 0) then
+        dims(1) = 3_HSIZE_T
+        call h5open_f(ierr_local)
+        call h5fopen_f(filename,H5F_ACC_RDWR_F,file_id,ierr_local)
+        call h5gopen_f(file_id,'meta',group_id,ierr_local)
+        call h5screate_simple_f(1,dims,space,ierr_local)
+        call h5dcreate_f(group_id,'lo',H5T_NATIVE_INTEGER,space,dset,ierr_local)
+        call h5dwrite_f(dset,H5T_NATIVE_INTEGER,lo_out,dims,ierr_local)
+        call h5dclose_f(dset,ierr_local)
+        call h5dcreate_f(group_id,'hi',H5T_NATIVE_INTEGER,space,dset,ierr_local)
+        call h5dwrite_f(dset,H5T_NATIVE_INTEGER,hi_out,dims,ierr_local)
+        call h5dclose_f(dset,ierr_local)
+        call h5dcreate_f(group_id,'nskip',H5T_NATIVE_INTEGER,space,dset,ierr_local)
+        call h5dwrite_f(dset,H5T_NATIVE_INTEGER,nskip,dims,ierr_local)
+        call h5dclose_f(dset,ierr_local)
+        call h5sclose_f(space,ierr_local)
+        call h5gclose_f(group_id,ierr_local)
+        call h5fclose_f(file_id,ierr_local)
+        call h5close_f(ierr_local)
+      end if
+      call MPI_COMM_FREE(write_comm,ierr)
+    end if
+  end subroutine write_subset_hdf5
+  !
+#endif
+#if defined(_USE_ADIOS2)
+  subroutine write_subset_adios2(filename,varname,comm,ng,nh,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
+    use mod_param, only: is_use_compression
+    !
+    ! writes a structured subset to an ADIOS2 file in parallel
+    !
+    implicit none
+    character(len=*), intent(in) :: filename,varname
+    integer         , intent(in) :: comm
+    integer         , intent(in), dimension(3) :: ng,nh,lo,hi,lo_out,hi_out,nskip
+    real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: var
+    real(rp), intent(in), optional :: time
+    integer , intent(in), optional :: istep
+    real(rp), intent(in), optional, dimension(1-nh(1):) :: x_g
+    real(rp), intent(in), optional, dimension(1-nh(2):) :: y_g
+    real(rp), intent(in), optional, dimension(1-nh(3):) :: z_g
+    logical , intent(in), optional :: is_pack
+    real(rp), allocatable, dimension(:,:,:) :: buf
+    real(rp), allocatable, dimension(:) :: x_sel,y_sel,z_sel
+    type(adios2_adios) :: adios
+    type(adios2_io) :: io_handle
+    type(adios2_engine) :: engine
+    type(adios2_operator) :: compress
+    type(adios2_compression_params) :: compress_params
+    integer, dimension(3) :: ng_out,lo_sel,hi_sel,n_sel,lo_pack,hi_pack
+    real(rp) :: meta_rp(1)
+    integer :: meta_i4(1)
+    integer :: meta_lo(3),meta_hi(3),meta_skip(3)
+    real(rp) :: time_
+    integer :: istep_,color,write_comm,myid_loc
+    logical :: is_compress,has_data,is_pack_,is_full_field
+    !
+    ng_out(:) = (hi_out(:)-lo_out(:))/nskip(:) + 1
+    call subset_get_local_extents(lo,hi,lo_out,hi_out,nskip,lo_sel,hi_sel,n_sel,lo_pack)
+    has_data = all(n_sel(:) > 0)
+    is_pack_ = .not. all(nskip(:) == 1)
+    if(present(is_pack)) is_pack_ = is_pack
+    is_full_field = all(nskip(:) == 1) .and. all(lo_out(:) == 1) .and. all(hi_out(:) == ng(:))
+    color = merge(1,MPI_UNDEFINED,has_data)
+    call MPI_COMM_SPLIT(comm,color,0,write_comm,ierr)
+    if(.not. has_data) return
+    hi_pack(:) = lo_pack(:) + n_sel(:) - 1
+    if(is_pack_) call subset_stage_field(lo,hi,nh,lo_sel,hi_sel,lo_pack,hi_pack,nskip,var,buf)
+    time_ = 0._rp
+    istep_ = 0
+    if(present(time)) time_ = time
+    if(present(istep)) istep_ = istep
+    if(present(x_g)) then
+      allocate(x_sel(1:ng_out(1)))
+      x_sel(1:ng_out(1)) = x_g(lo_out(1):hi_out(1):nskip(1))
+    end if
+    if(present(y_g)) then
+      allocate(y_sel(1:ng_out(2)))
+      y_sel(1:ng_out(2)) = y_g(lo_out(2):hi_out(2):nskip(2))
+    end if
+    if(present(z_g)) then
+      allocate(z_sel(1:ng_out(3)))
+      z_sel(1:ng_out(3)) = z_g(lo_out(3):hi_out(3):nskip(3))
+    end if
+     call adios2_open_engine('w',adios,io_handle,engine,filename,write_comm)
+    is_compress = is_use_compression
+    if(is_compress) then
+      compress_params = adios_get_default_compression_params('blosc')
+      is_pack_ = .true.
+      if(.not. allocated(buf)) call subset_stage_field(lo,hi,nh,lo_sel,hi_sel,lo_pack,hi_pack,nskip,var,buf)
+      call adios2_define_compress(adios,compress,compress_params)
+      !
+      ! Feed ADIOS2 compression with a canonical packed array starting at 1
+      ! instead of relying on memory selections over an offset buffer due to
+      ! a previously-described ADIOS2 2.11.0 limitation that will be fixed soon
+      !
+      call io_field_adios2('w',engine,io_handle,trim(varname),ng_out,[0,0,0],lo_pack,hi_pack,buf,.true.,compress,compress_params)
+    else
+      if(is_pack_) then
+        call io_field_adios2('w',engine,io_handle,trim(varname),ng_out,[0,0,0],lo_pack,hi_pack,buf)
+      else if(is_full_field) then
+        call io_field_adios2('w',engine,io_handle,trim(varname),ng_out,nh,lo,hi,var,.false.)
+      else
+        call io_field_adios2('w',engine,io_handle,trim(varname),ng_out,[0,0,0],lo_pack,hi_pack, &
+                             var(lo_sel(1):hi_sel(1),lo_sel(2):hi_sel(2),lo_sel(3):hi_sel(3)))
+      end if
+    end if
+    meta_rp(1) = time_
+    meta_i4(1) = istep_
+    meta_lo(:) = lo_out(:)
+    meta_hi(:) = hi_out(:)
+    meta_skip(:) = nskip(:)
+    call io_field_adios2_1d('w',engine,io_handle,'time',meta_rp,write_comm)
+    call io_field_adios2_1d('w',engine,io_handle,'istep',meta_i4,write_comm)
+    call io_field_adios2_1d('w',engine,io_handle,'lo',meta_lo,write_comm)
+    call io_field_adios2_1d('w',engine,io_handle,'hi',meta_hi,write_comm)
+    call io_field_adios2_1d('w',engine,io_handle,'nskip',meta_skip,write_comm)
+    if(present(x_g)) call io_field_adios2_1d('w',engine,io_handle,'x',x_sel,write_comm)
+    if(present(y_g)) call io_field_adios2_1d('w',engine,io_handle,'y',y_sel,write_comm)
+    if(present(z_g)) call io_field_adios2_1d('w',engine,io_handle,'z',z_sel,write_comm)
+    call adios2_close_engine(adios,engine)
+    call MPI_COMM_FREE(write_comm,ierr)
+  end subroutine write_subset_adios2
+  !
+#endif
   subroutine load_all_local(io,filename,n,nh,u,v,w,p,time,istep)
     !
     ! reads/writes a restart file
@@ -695,7 +1058,9 @@ contains
     type(scalar), intent(inout), dimension(:) :: s
     real(rp), intent(inout) :: time
     integer , intent(inout) :: istep
-    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
+    real(rp), intent(inout), dimension(1-nh(1):), optional :: x_g
+    real(rp), intent(inout), dimension(1-nh(2):), optional :: y_g
+    real(rp), intent(inout), dimension(1-nh(3):), optional :: z_g
     character(len=5) :: scalnum
     integer :: iscal
     !
@@ -738,7 +1103,9 @@ contains
     character(len=*), intent(in) :: varname
     real(rp), intent(inout), optional :: time
     integer , intent(inout), optional :: istep
-    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
+    real(rp), intent(inout), dimension(1-nh(1):), optional :: x_g
+    real(rp), intent(inout), dimension(1-nh(2):), optional :: y_g
+    real(rp), intent(inout), dimension(1-nh(3):), optional :: z_g
     character(len=NAME_LEN_MAX) :: field_name
     !
     field_name = trim(varname)
@@ -801,10 +1168,12 @@ contains
     character(len=*), intent(in) :: filename,varname
     integer         , intent(in) :: comm
     integer         , intent(in), dimension(3)   :: ng,nh,lo,hi
-    real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: var
+    real(rp), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: var
     real(rp), intent(inout), optional :: time
     integer , intent(inout), optional :: istep
-    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
+    real(rp), intent(inout), dimension(:), optional :: x_g
+    real(rp), intent(inout), dimension(:), optional :: y_g
+    real(rp), intent(inout), dimension(:), optional :: z_g
     logical , intent(in), optional :: first_write
     logical , intent(in), optional :: is_compress
     integer , dimension(3) :: n
@@ -815,7 +1184,7 @@ contains
     !
     ! HDF5 variables
     !
-    integer :: ndims, ierr
+    integer :: ndims,ierr,myid_loc
     integer(HID_T) :: file_id,group_id
     integer(HID_T) :: filespace
     integer(HID_T) :: slabspace
@@ -851,6 +1220,7 @@ contains
     if(present(first_write)) first_write_ = first_write
     is_compress_ = .false.
     if(present(is_compress)) is_compress_ = is_compress
+    call MPI_COMM_RANK(comm,myid_loc,ierr)
     call h5open_f(ierr)
     dtype_rp = HDF5_REAL_RP()
     dtype_int = H5T_NATIVE_INTEGER
@@ -879,7 +1249,7 @@ contains
       call h5sclose_f(memspace,ierr)
       call h5fclose_f(file_id,ierr)
       !
-      if(myid == 0 .and. (present(time) .or. present(istep) .or. present(x_g) .or. present(y_g) .or. present(z_g))) then
+      if(myid_loc == 0 .and. (present(time) .or. present(istep) .or. present(x_g) .or. present(y_g) .or. present(z_g))) then
         call h5fopen_f(filename,H5F_ACC_RDONLY_F,file_id,ierr)
         if(present(time)) then
           call h5dopen_f(file_id,'meta/time',dset,ierr)
@@ -943,7 +1313,10 @@ contains
           call h5pset_deflate_f(dcpl_id,HDF5_COMPRESSION_LEVEL,ierr)
           use_dcpl = .true.
         case default
-          if(first_write_ .and. myid == 0) print*, 'Warning: unknown HDF5 checkpoint compression preset. Writing uncompressed fields.'
+          if(first_write_ .and. myid_loc == 0) then
+            print*, 'Warning: unknown HDF5 checkpoint compression preset.'
+            print*, 'Writing uncompressed fields.'
+          end if
         end select
       end if
       if(use_dcpl) then
@@ -973,24 +1346,24 @@ contains
       !
       ! write metadata
       !
-      if(myid == 0) then
+      if(myid_loc == 0) then
         call h5fopen_f(filename,H5F_ACC_RDWR_F,file_id,ierr)
         !
         if(first_write_ .and. present(x_g) .and. present(y_g) .and. present(z_g)) then
           call h5gcreate_f(file_id,'grid',group_id,ierr)
-          call h5screate_simple_f(1,[int(ng(1),HSIZE_T)],filespace,ierr)
+          call h5screate_simple_f(1,[int(size(x_g),HSIZE_T)],filespace,ierr)
           call h5dcreate_f(group_id,'x',dtype_rp,filespace,dset,ierr)
-          call h5dwrite_f(dset,dtype_rp,x_g(1:ng(1)),[int(ng(1),HSIZE_T)],ierr)
+          call h5dwrite_f(dset,dtype_rp,x_g,[int(size(x_g),HSIZE_T)],ierr)
           call h5dclose_f(dset,ierr)
           call h5sclose_f(filespace,ierr)
-          call h5screate_simple_f(1,[int(ng(2),HSIZE_T)],filespace,ierr)
+          call h5screate_simple_f(1,[int(size(y_g),HSIZE_T)],filespace,ierr)
           call h5dcreate_f(group_id,'y',dtype_rp,filespace,dset,ierr)
-          call h5dwrite_f(dset,dtype_rp,y_g(1:ng(2)),[int(ng(2),HSIZE_T)],ierr)
+          call h5dwrite_f(dset,dtype_rp,y_g,[int(size(y_g),HSIZE_T)],ierr)
           call h5dclose_f(dset,ierr)
           call h5sclose_f(filespace,ierr)
-          call h5screate_simple_f(1,[int(ng(3),HSIZE_T)],filespace,ierr)
+          call h5screate_simple_f(1,[int(size(z_g),HSIZE_T)],filespace,ierr)
           call h5dcreate_f(group_id,'z',dtype_rp,filespace,dset,ierr)
-          call h5dwrite_f(dset,dtype_rp,z_g(1:ng(3)),[int(ng(3),HSIZE_T)],ierr)
+          call h5dwrite_f(dset,dtype_rp,z_g,[int(size(z_g),HSIZE_T)],ierr)
           call h5dclose_f(dset,ierr)
           call h5sclose_f(filespace,ierr)
           call h5gclose_f(group_id,ierr)
@@ -1055,7 +1428,9 @@ contains
     type(scalar), intent(inout), dimension(:) :: s
     real(rp), intent(inout) :: time
     integer , intent(inout) :: istep
-    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
+    real(rp), intent(inout), dimension(1-nh(1):), optional :: x_g
+    real(rp), intent(inout), dimension(1-nh(2):), optional :: y_g
+    real(rp), intent(inout), dimension(1-nh(3):), optional :: z_g
     type(adios2_adios) :: adios
     type(adios2_io) :: io_handle
     type(adios2_engine) :: engine
@@ -1071,10 +1446,17 @@ contains
     is_compress = (io == 'w' .and. is_use_compression)
     !
     ! BP5 in ADIOS2 2.11.0 is unable tocombine compression with SetMemorySelection to exclude halo regions when writing
-    ! This will be fixed soon; see: https://github.com/ornladios/ADIOS2/issues/4965
+    ! This has been fixed and should be available in an upcoming release;
+    ! see: https://github.com/ornladios/ADIOS2/issues/4965
     ! As a temporary workaround, we pack the data into a contiguous buffer array for writing.
     !
-    is_pack = is_compress
+    !is_pack = is_use_compression
+    !
+    ! ADIOS2 2.9.x on Ubuntu can mis-handle SetMemorySelection on haloed
+    ! restart arrays even without compression. Use the packed path for
+    ! restart fields to keep read/write behavior consistent across versions.
+    !
+    is_pack = .true.
     if(is_compress) then
       compress_params = adios_get_default_compression_params('blosc')
       call adios2_define_compress(adios,compress,compress_params)
@@ -1104,10 +1486,10 @@ contains
         call io_field_adios2(io,engine,io_handle,'w',ng,nh,lo,hi,w,is_pack,compress,compress_params)
         call io_field_adios2(io,engine,io_handle,'p',ng,nh,lo,hi,p,is_pack,compress,compress_params)
       else
-        call io_field_adios2(io,engine,io_handle,'u',ng,nh,lo,hi,u)
-        call io_field_adios2(io,engine,io_handle,'v',ng,nh,lo,hi,v)
-        call io_field_adios2(io,engine,io_handle,'w',ng,nh,lo,hi,w)
-        call io_field_adios2(io,engine,io_handle,'p',ng,nh,lo,hi,p)
+        call io_field_adios2(io,engine,io_handle,'u',ng,nh,lo,hi,u,is_pack)
+        call io_field_adios2(io,engine,io_handle,'v',ng,nh,lo,hi,v,is_pack)
+        call io_field_adios2(io,engine,io_handle,'w',ng,nh,lo,hi,w,is_pack)
+        call io_field_adios2(io,engine,io_handle,'p',ng,nh,lo,hi,p,is_pack)
       end if
       do iscal=1,nscal
         write(scalnum,'(i3.3)') iscal
@@ -1115,7 +1497,7 @@ contains
           call io_field_adios2(io,engine,io_handle,'s_'//scalnum,ng,nh,lo,hi,s(iscal)%val,is_pack,compress, &
                                compress_params)
         else
-          call io_field_adios2(io,engine,io_handle,'s_'//scalnum,ng,nh,lo,hi,s(iscal)%val)
+          call io_field_adios2(io,engine,io_handle,'s_'//scalnum,ng,nh,lo,hi,s(iscal)%val,is_pack)
         end if
       end do
       meta_rp(1) = time
@@ -1145,7 +1527,9 @@ contains
     character(len=*), intent(in) :: varname
     real(rp), intent(inout), optional :: time
     integer , intent(inout), optional :: istep
-    real(rp), intent(inout), dimension(0:), optional :: x_g,y_g,z_g
+    real(rp), intent(inout), dimension(1-nh(1):), optional :: x_g
+    real(rp), intent(inout), dimension(1-nh(2):), optional :: y_g
+    real(rp), intent(inout), dimension(1-nh(3):), optional :: z_g
     type(adios2_adios) :: adios
     type(adios2_io) :: io_handle
     type(adios2_engine) :: engine
@@ -1159,7 +1543,12 @@ contains
     field_name = trim(varname)
     call adios2_open_engine(io,adios,io_handle,engine,filename,comm)
     is_compress = io == 'w' .and. is_use_compression
-    is_pack = is_compress
+    !is_pack = is_use_compression
+    !
+    ! See load_all_adios2: pack restart fields for ADIOS2 to avoid
+    ! version-dependent SetMemorySelection issues on haloed arrays.
+    !
+    is_pack = .true.
     if(is_compress) then
       compress_params = adios_get_default_compression_params('blosc')
       call adios2_define_compress(adios,compress,compress_params)
@@ -1183,7 +1572,7 @@ contains
       if(is_compress) then
         call io_field_adios2(io,engine,io_handle,field_name,ng,nh,lo,hi,p,is_pack,compress,compress_params)
       else
-        call io_field_adios2(io,engine,io_handle,field_name,ng,nh,lo,hi,p)
+        call io_field_adios2(io,engine,io_handle,field_name,ng,nh,lo,hi,p,is_pack)
       end if
       if(present(time)) then
         meta_rp(1) = time
@@ -1335,7 +1724,7 @@ contains
     type(adios2_io)    , intent(in) :: io_handle
     character(len=*), intent(in) :: varname
     integer , intent(in), dimension(3) :: ng,nh,lo,hi
-    real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: var
+    real(rp), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: var
     logical , intent(in), optional :: is_pack
     type(adios2_operator), intent(in), optional :: compress
     type(adios2_compression_params), intent(in), optional :: params
@@ -1400,17 +1789,19 @@ contains
     real(rp), dimension(1) :: dummy
     logical, parameter :: adios2_constant_dims = .true.
     integer, parameter :: ndims = 1
+    integer :: myid_loc
     !
     dummy = 0.
     shape(1) = size(var)
     start(1) = 0
     count(1) = 0
-    if(myid == 0) count(1) = shape(1)
+    call MPI_COMM_RANK(comm,myid_loc,ierr)
+    if(myid_loc == 0) count(1) = shape(1)
     !
     select case(io)
     case('r')
       count(1) = shape(1)
-      if(myid == 0) then
+      if(myid_loc == 0) then
         call adios2_inquire_variable(var_handle, io_handle, varname, ierr)
         call adios2_set_selection(var_handle, ndims, start, count, ierr)
         call adios2_get(engine, var_handle, var, adios2_mode_sync, ierr)
@@ -1419,7 +1810,7 @@ contains
     case('w')
       call adios2_define_variable(var_handle, io_handle, varname, ADIOS2_REAL_RP(), &
                                   ndims, shape, start, count, adios2_constant_dims, ierr)
-      if(myid == 0) then
+      if(myid_loc == 0) then
         call adios2_put(engine, var_handle, var, adios2_mode_sync, ierr)
       else
         call adios2_put(engine, var_handle, dummy, adios2_mode_sync, ierr)
@@ -1443,17 +1834,19 @@ contains
     integer, dimension(1) :: dummy
     logical, parameter :: adios2_constant_dims = .true.
     integer, parameter :: ndims = 1
+    integer :: myid_loc
     !
     dummy = 0
     shape(1) = size(var)
     start(1) = 0
     count(1) = 0
-    if(myid == 0) count(1) = shape(1)
+    call MPI_COMM_RANK(comm,myid_loc,ierr)
+    if(myid_loc == 0) count(1) = shape(1)
     !
     select case(io)
     case('r')
       count(1) = shape(1)
-      if(myid == 0) then
+      if(myid_loc == 0) then
         call adios2_inquire_variable(var_handle, io_handle, varname, ierr)
         call adios2_set_selection(var_handle, ndims, start, count, ierr)
         call adios2_get(engine, var_handle, var, adios2_mode_sync, ierr)
@@ -1462,7 +1855,7 @@ contains
     case('w')
       call adios2_define_variable(var_handle, io_handle, varname, adios2_type_integer4, &
                                   ndims, shape, start, count, adios2_constant_dims, ierr)
-      if(myid == 0) then
+      if(myid_loc == 0) then
         call adios2_put(engine, var_handle, var, adios2_mode_sync, ierr)
       else
         call adios2_put(engine, var_handle, dummy, adios2_mode_sync, ierr)
