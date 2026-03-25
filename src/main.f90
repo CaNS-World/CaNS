@@ -38,7 +38,7 @@ program cans
   use mod_fft            , only: fftini,fftend
   use mod_fillps         , only: fillps
   use mod_initflow       , only: initflow,initscal
-  use mod_initgrid       , only: initgrid
+  use mod_initgrid       , only: initgrid,save_grid
   use mod_initmpi        , only: initmpi
   use mod_initsolver     , only: initsolver
   use mod_load           , only: load_one
@@ -114,9 +114,10 @@ program cans
   type(rhs_bound) :: rhsbu,rhsbv,rhsbw
   !
   real(rp) :: dt,dti,dt_cfl,time,dtrk,dtrki,divtot,divmax
-  integer :: irk,istep
+  integer :: irk,istep,iunit
   real(rp), allocatable, dimension(:) :: dzc  ,dzf  ,zc  ,zf  ,dzci  ,dzfi, &
                                          dzc_g,dzf_g,zc_g,zf_g,dzci_g,dzfi_g, &
+                                         xc_g,xf_g,yc_g,yf_g, &
                                          grid_vol_ratio_c,grid_vol_ratio_f
   real(rp) :: meanvelu,meanvelv,meanvelw
   real(rp), dimension(3) :: dpdl
@@ -193,6 +194,8 @@ program cans
            zf_g(  0:ng(3)+1), &
            dzci_g(0:ng(3)+1), &
            dzfi_g(0:ng(3)+1))
+  allocate(xc_g(0:ng(1)+1),xf_g(0:ng(1)+1), &
+           yc_g(0:ng(2)+1),yf_g(0:ng(2)+1))
   allocate(grid_vol_ratio_c,mold=dzc)
   allocate(grid_vol_ratio_f,mold=dzf)
   allocate(rhsbp%x(n(2),n(3),0:1), &
@@ -237,19 +240,20 @@ program cans
   if(myid == 0) print*, '*******************************'
   if(myid == 0) print*, ''
   call initgrid(gtype,ng(3),gr,l(3),dzc_g,dzf_g,zc_g,zf_g,cbcpre(0,3)//cbcpre(1,3) == 'PP')
+  do kk=0,ng(1)+1
+    xc_g(kk) = (kk-0.5_rp)*dl(1)
+    xf_g(kk) = (kk-1.0_rp)*dl(1)
+  end do
+  do kk=0,ng(2)+1
+    yc_g(kk) = (kk-0.5_rp)*dl(2)
+    yf_g(kk) = (kk-1.0_rp)*dl(2)
+  end do
   if(myid == 0) then
-    open(99,file=trim(datadir)//'grid.bin',action='write',form='unformatted',access='stream',status='replace')
-    write(99) dzc_g(1:ng(3)),dzf_g(1:ng(3)),zc_g(1:ng(3)),zf_g(1:ng(3))
-    close(99)
-    open(99,file=trim(datadir)//'grid.out')
-    do kk=0,ng(3)+1
-      write(99,*) 0.,zf_g(kk),zc_g(kk),dzf_g(kk),dzc_g(kk)
-    end do
-    close(99)
-    open(99,file=trim(datadir)//'geometry.out')
-      write(99,*) ng(1),ng(2),ng(3)
-      write(99,*) l(1),l(2),l(3)
-    close(99)
+    open(newunit=iunit,file=trim(datadir)//'geometry.out',status='replace')
+    write(iunit,*) ng(1),ng(2),ng(3)
+    write(iunit,*) l(1),l(2),l(3)
+    close(iunit)
+    call save_grid(datadir,ng,zc_g,zf_g,dzc_g,dzf_g)
   end if
   !$acc enter data copyin(lo,hi,n) async
   !$acc enter data copyin(bforce,dl,dli,l) async
@@ -596,8 +600,24 @@ program cans
         !$acc update self(scalars(iscal)%val)
       end do
       do is=1,4+nscal
-        call load_one('w',trim(datadir)//trim(filename)//'_'//trim(c_io_vars(is))//trim(io_ext), &
-                      MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,trim(c_io_vars(is)),time,istep)
+        select case(trim(c_io_vars(is)))
+        case('u')
+          call load_one('w',trim(datadir)//trim(filename)//'_'//trim(c_io_vars(is))//trim(io_ext), &
+                        MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,trim(c_io_vars(is)),time,istep, &
+                        xf_g,yc_g,zc_g)
+        case('v')
+          call load_one('w',trim(datadir)//trim(filename)//'_'//trim(c_io_vars(is))//trim(io_ext), &
+                        MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,trim(c_io_vars(is)),time,istep, &
+                        xc_g,yf_g,zc_g)
+        case('w')
+          call load_one('w',trim(datadir)//trim(filename)//'_'//trim(c_io_vars(is))//trim(io_ext), &
+                        MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,trim(c_io_vars(is)),time,istep, &
+                        xc_g,yc_g,zf_g)
+        case default
+          call load_one('w',trim(datadir)//trim(filename)//'_'//trim(c_io_vars(is))//trim(io_ext), &
+                        MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,trim(c_io_vars(is)),time,istep, &
+                        xc_g,yc_g,zc_g)
+        end select
       end do
       if(.not.is_overwrite_save) then
         !

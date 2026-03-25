@@ -8,10 +8,11 @@ module mod_output
   use mpi
   use decomp_2d_io
   use mod_common_mpi, only:ierr,myid
+  use mod_load      , only: io_write_subset
   use mod_types
   implicit none
   private
-  public out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
+  public out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d,write_visu_subset
   character(len=*), parameter :: fmt_dp = '(*(es24.16e3,1x))', &
                                  fmt_sp = '(*(es15.8e2,1x))'
 #if !defined(_SINGLE_PRECISION)
@@ -155,87 +156,77 @@ module mod_output
     end select
   end subroutine out1d
   !
-  subroutine out2d(fname,inorm,islice,p)
-    use mod_param, only: ipencil => ipencil_axis
+  subroutine out2d(fname,ng,nh,lo,hi,inorm,islice,p,varname,time,istep,x_g,y_g,z_g,is_pack)
     !
-    ! saves a planar slice of a scalar field into a binary file
+    ! saves a planar slice of a scalar field using the structured subset engine
     !
     ! fname  -> name of the output file
-    ! inorm  -> plane is perpendicular to direction
-    !           inorm (1,2,3)
-    ! islice -> plane is of constant index islice
-    !           in direction inorm
+    ! ng     -> global domain sizes
+    ! nh     -> local halo extents
+    ! lo,hi  -> local interior ownership in global indices
+    ! inorm  -> plane is perpendicular to direction inorm (1,2,3)
+    ! islice -> plane is of constant index islice in direction inorm
     ! p      -> 3D input scalar field
+    ! varname,time,istep,x_g,y_g,z_g -> subset metadata
     !
     implicit none
     character(len=*), intent(in) :: fname
+    integer , intent(in), dimension(3) :: ng,nh,lo,hi
     integer , intent(in) :: inorm,islice
-    real(rp), intent(in), dimension(:,:,:) :: p
+    real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
+    character(len=*), intent(in) :: varname
+    real(rp), intent(in) :: time
+    integer , intent(in) :: istep
+    real(rp), intent(in), dimension(1-nh(1):) :: x_g
+    real(rp), intent(in), dimension(1-nh(2):) :: y_g
+    real(rp), intent(in), dimension(1-nh(3):) :: z_g
+    logical , intent(in), optional :: is_pack
+    integer, dimension(3) :: lo_out,hi_out
     !
     select case(inorm)
-    case(1) !normal to x --> yz plane
-       call decomp_2d_write_plane(ipencil,p,inorm,islice,'.',fname,'dummy')
-    case(2) !normal to y --> zx plane
-       call decomp_2d_write_plane(ipencil,p,inorm,islice,'.',fname,'dummy')
-    case(3) !normal to z --> xy plane
-       call decomp_2d_write_plane(ipencil,p,inorm,islice,'.',fname,'dummy')
+    case(1)
+      lo_out(:) = [islice,1     ,1   ]
+      hi_out(:) = [islice,ng(2),ng(3)]
+    case(2)
+      lo_out(:) = [1    ,islice,1   ]
+      hi_out(:) = [ng(1),islice,ng(3)]
+    case(3)
+      lo_out(:) = [1    ,1    ,islice]
+      hi_out(:) = [ng(1),ng(2),islice]
     end select
+    call io_write_subset(fname,varname,MPI_COMM_WORLD,ng,nh,lo,hi,lo_out,hi_out,[1,1,1],p,time,istep,x_g,y_g,z_g,is_pack)
   end subroutine out2d
   !
-  subroutine out3d(fname,nskip,p)
-    use mod_param, only: ipencil => ipencil_axis
+  subroutine out3d(fname,ng,nh,lo,hi,lo_out,hi_out,nskip,p,varname,time,istep,x_g,y_g,z_g,is_pack)
     !
-    ! saves a 3D scalar field into a binary file
+    ! saves a structured subset of a scalar field using the subset engine
     !
     ! fname  -> name of the output file
-    ! nskip  -> array with the step size for which the
-    !           field is written; i.e.: [1,1,1]
-    !           writes the full field
+    ! ng     -> global domain sizes
+    ! nh     -> local halo extents
+    ! lo,hi  -> local interior ownership in global indices
+    ! lo_out -> first global point written in each direction
+    ! hi_out -> last  global point written in each direction
+    ! nskip  -> output stride in each direction
     ! p      -> 3D input scalar field
     !
     implicit none
     character(len=*), intent(in) :: fname
+    integer , intent(in), dimension(3) :: ng,nh,lo,hi,lo_out,hi_out
     integer , intent(in), dimension(3) :: nskip
-    real(rp), intent(in), dimension(:,:,:) :: p
-    integer :: fh
-    integer(kind=MPI_OFFSET_KIND) :: filesize,disp
+    real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
+    character(len=*), intent(in) :: varname
+    real(rp), intent(in) :: time
+    integer , intent(in) :: istep
+    real(rp), intent(in), dimension(1-nh(1):) :: x_g
+    real(rp), intent(in), dimension(1-nh(2):) :: y_g
+    real(rp), intent(in), dimension(1-nh(3):) :: z_g
+    logical , intent(in), optional :: is_pack
     !
-    call MPI_FILE_OPEN(MPI_COMM_WORLD, fname, &
-         MPI_MODE_CREATE+MPI_MODE_WRONLY, MPI_INFO_NULL,fh, ierr)
-    filesize = 0_MPI_OFFSET_KIND
-    call MPI_FILE_SET_SIZE(fh,filesize,ierr)
-    disp = 0_MPI_OFFSET_KIND
-#if 0
-    call decomp_2d_write_every(ipencil,p,nskip(1),nskip(2),nskip(3),fname,.true.)
-#else
-    !
-    ! alternative way of writing a full 3D field that was needed in the past
-    !
-    block
-      use decomp_2d
-      use mod_load, only: io_field
-      integer, dimension(3) :: ng,lo,hi
-      ng(:) = [nx_global,ny_global,nz_global]
-      select case(ipencil)
-      case(1)
-        lo(:) = xstart(:)
-        hi(:) = xend(:)
-      case(2)
-        lo(:) = ystart(:)
-        hi(:) = yend(:)
-      case(3)
-        lo(:) = zstart(:)
-        hi(:) = zend(:)
-      end select
-      if(any(nskip /= 1) .and. myid == 0) &
-        print*, 'Warning: `nskip` should be `[1,1,1]` if `io_field()` is used to output 3D field data'
-      call io_field('w',fh,ng,[0,0,0],lo,hi,disp,p)
-    end block
-#endif
-    call MPI_FILE_CLOSE(fh,ierr)
+    call io_write_subset(fname,varname,MPI_COMM_WORLD,ng,nh,lo,hi,lo_out,hi_out,nskip,p,time,istep,x_g,y_g,z_g,is_pack)
   end subroutine out3d
   !
-  subroutine write_log_output(fname,fname_fld,varname,nmin,nmax,nskip,time,istep)
+  subroutine write_log_output(fname,fname_fld,varname,lo_out,hi_out,nskip,time,istep)
     !
     ! appends information about a saved binary file to a log file
     ! this file is used to generate a xdmf file for visualization of field data
@@ -243,15 +234,15 @@ module mod_output
     ! fname     -> name of the output log file
     ! fname_fld -> name of the saved binary file (excluding the directory)
     ! varname   -> name of the variable that is saved
-    ! nmin      -> first element of the field that is saved in each direction, e.g. [1,1,1]
-    ! nmax      -> last  element of the field that is saved in each direction, e.g. [ng(1),ng(2),ng(3)]
+    ! lo_out    -> first element of the field that is saved in each direction, e.g. [1,1,1]
+    ! hi_out    -> last  element of the field that is saved in each direction, e.g. [ng(1),ng(2),ng(3)]
     ! nskip     -> step size between nmin and nmax, e.g. [1,1,1] if the whole array is saved
     ! time      -> physical time
     ! istep     -> time step number
     !
     implicit none
     character(len=*), intent(in) :: fname,fname_fld,varname
-    integer , intent(in), dimension(3) :: nmin,nmax,nskip
+    integer , intent(in), dimension(3) :: lo_out,hi_out,nskip
     real(rp), intent(in)               :: time
     integer , intent(in)               :: istep
     character(len=100) :: cfmt
@@ -260,52 +251,77 @@ module mod_output
     write(cfmt, '(A)') '(A,A,A,9i5,E16.7e3,i7)'
     if(myid  ==  0) then
       open(newunit=iunit,file=fname,position='append')
-      write(iunit,trim(cfmt)) trim(fname_fld),' ',trim(varname),nmin,nmax,nskip,time,istep
+      write(iunit,trim(cfmt)) trim(fname_fld),' ',trim(varname),lo_out,hi_out,nskip,time,istep
       close(iunit)
     end if
   end subroutine write_log_output
   !
-  subroutine write_visu_3d(datadir,fname_bin,fname_log,varname,nmin,nmax,nskip,time,istep,p)
+  subroutine write_visu_subset(datadir,fname_bin,fname_log,varname,ng,nh,lo,hi,lo_out,hi_out,nskip,time,istep,p,x_g,y_g,z_g,is_pack)
+    !
+    ! wraps subset data output and subset metadata logging
+    !
+    implicit none
+    character(len=*), intent(in)          :: datadir,fname_bin,fname_log,varname
+    integer , intent(in), dimension(3)    :: ng,nh,lo,hi,lo_out,hi_out,nskip
+    real(rp), intent(in)                  :: time
+    integer , intent(in)                  :: istep
+    real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
+    real(rp), intent(in), dimension(1-nh(1):)   :: x_g
+    real(rp), intent(in), dimension(1-nh(2):)   :: y_g
+    real(rp), intent(in), dimension(1-nh(3):)   :: z_g
+    logical , intent(in), optional        :: is_pack
+    !
+    call out3d(trim(datadir)//trim(fname_bin),ng,nh,lo,hi,lo_out,hi_out,nskip,p,varname,time,istep,x_g,y_g,z_g,is_pack)
+    call write_log_output(trim(datadir)//trim(fname_log),trim(fname_bin),trim(varname),lo_out,hi_out,nskip,time,istep)
+  end subroutine write_visu_subset
+  !
+  subroutine write_visu_3d(datadir,fname_bin,fname_log,varname,ng,nh,lo,hi,lo_out,hi_out,nskip,time,istep,p,x_g,y_g,z_g,is_pack)
     !
     ! wraps the calls of out3d and write_log_output into the same subroutine
     !
     implicit none
     character(len=*), intent(in)          :: datadir,fname_bin,fname_log,varname
-    integer , intent(in), dimension(3)    :: nmin,nmax,nskip
+    integer , intent(in), dimension(3)    :: ng,nh,lo,hi,lo_out,hi_out,nskip
     real(rp), intent(in)                  :: time
     integer , intent(in)                  :: istep
-    real(rp), intent(in), dimension(:,:,:) :: p
+    real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
+    real(rp), intent(in), dimension(1-nh(1):)   :: x_g
+    real(rp), intent(in), dimension(1-nh(2):)   :: y_g
+    real(rp), intent(in), dimension(1-nh(3):)   :: z_g
+    logical , intent(in), optional        :: is_pack
     !
-    call out3d(trim(datadir)//trim(fname_bin),nskip,p)
-    call write_log_output(trim(datadir)//trim(fname_log),trim(fname_bin),trim(varname),nmin,nmax,nskip,time,istep)
+    call write_visu_subset(datadir,fname_bin,fname_log,varname,ng,nh,lo,hi,lo_out,hi_out,nskip,time,istep,p,x_g,y_g,z_g,is_pack)
   end subroutine write_visu_3d
   !
-  subroutine write_visu_2d(datadir,fname_bin,fname_log,varname,inorm,nslice,ng,time,istep,p)
+  subroutine write_visu_2d(datadir,fname_bin,fname_log,varname,ng,nh,lo,hi,inorm,nslice,time,istep,p,x_g,y_g,z_g,is_pack)
     !
     ! wraps the calls of out2d and write-log_output into the same subroutine
     !
     implicit none
     character(len=*), intent(in)          :: datadir,fname_bin,fname_log,varname
+    integer , intent(in), dimension(3)    :: ng,nh,lo,hi
     integer , intent(in)                  :: inorm,nslice
-    integer , intent(in), dimension(3)    :: ng
     real(rp), intent(in)                  :: time
     integer , intent(in)                  :: istep
-    real(rp), intent(in), dimension(:,:,:) :: p
-    integer , dimension(3) :: nmin_2d,nmax_2d
+    real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
+    real(rp), intent(in), dimension(1-nh(1):)   :: x_g
+    real(rp), intent(in), dimension(1-nh(2):)   :: y_g
+    real(rp), intent(in), dimension(1-nh(3):)   :: z_g
+    logical , intent(in), optional        :: is_pack
+    integer , dimension(3) :: lo_out,hi_out
     !
-    call out2d(trim(datadir)//trim(fname_bin),inorm,nslice,p)
     select case(inorm)
     case(1)
-      nmin_2d(:) = [nslice,1    ,1    ]
-      nmax_2d(:) = [nslice,ng(2),ng(3)]
+      lo_out(:) = [nslice,1     ,1   ]
+      hi_out(:) = [nslice,ng(2),ng(3)]
     case(2)
-      nmin_2d(:) = [1    ,nslice,1    ]
-      nmax_2d(:) = [ng(1),nslice,ng(3)]
+      lo_out(:) = [1    ,nslice,1    ]
+      hi_out(:) = [ng(1),nslice,ng(3)]
     case(3)
-      nmin_2d(:) = [1    ,1    ,nslice]
-      nmax_2d(:) = [ng(1),ng(2),nslice]
+      lo_out(:) = [1    ,1    ,nslice]
+      hi_out(:) = [ng(1),ng(2),nslice]
     end select
-    call write_log_output(trim(datadir)//trim(fname_log),trim(fname_bin),trim(varname),nmin_2d,nmax_2d,[1,1,1],time,istep)
+    call write_visu_subset(datadir,fname_bin,fname_log,varname,ng,nh,lo,hi,lo_out,hi_out,[1,1,1],time,istep,p,x_g,y_g,z_g,is_pack)
   end subroutine write_visu_2d
   !
   subroutine out1d_chan(fname,ng,lo,hi,idir,l,dl,z_g,u,v,w) ! e.g. for a channel with streamwise dir in x

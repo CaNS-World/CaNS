@@ -9,7 +9,7 @@ module mod_initgrid
   use mod_types
   implicit none
   private
-  public initgrid
+  public initgrid,save_grid
   contains
   subroutine initgrid(gtype,n,gr,lz,dzc,dzf,zc,zf,is_periodic)
     !
@@ -202,4 +202,64 @@ module mod_initgrid
     z = 1._rp/(1._rp+(k/kb)**2)*(dyp*k+(3._rp/4._rp*alpha*c_eta*k)**(4._rp/3._rp)*(k/kb)**2)/(2._rp*retau)
     if( kg > nzg-kg ) z = 1._rp-z
   end subroutine gridpoint_natural
+  !
+  subroutine save_grid(datadir,ng,zc,zf,dzc,dzf)
+    !
+    ! saves grid for post-processing
+    !
+#if defined(_USE_HDF5)
+    use hdf5
+#endif
+    implicit none
+    character(len=*), intent(in) :: datadir
+    integer , intent(in), dimension(3) :: ng
+    real(rp), intent(in), dimension(0:) :: zc,zf,dzc,dzf
+    integer :: iunit,k
+#if defined(_USE_HDF5)
+    integer :: ierr_h5
+    integer(HID_T) :: file_id,dset,space
+    integer(HSIZE_T), dimension(1) :: dims
+#endif
+    !
+    open(newunit=iunit,file=trim(datadir)//'grid.bin',action='write',form='unformatted',access='stream',status='replace')
+    write(iunit) dzc(1:ng(3)),dzf(1:ng(3)),zc(1:ng(3)),zf(1:ng(3))
+    close(iunit)
+    open(newunit=iunit,file=trim(datadir)//'grid.out',status='replace')
+    do k=0,ng(3)+1
+      write(iunit,*) 0.,zf(k),zc(k),dzf(k),dzc(k)
+    end do
+    close(iunit)
+#if defined(_USE_HDF5)
+    call h5open_f(ierr_h5)
+    call h5fcreate_f(trim(datadir)//'grid.h5',H5F_ACC_TRUNC_F,file_id,ierr_h5)
+    dims(1) = int(ng(3),HSIZE_T)
+    call h5screate_simple_f(1,dims,space,ierr_h5)
+    call h5dcreate_f(file_id,'z',HDF5_REAL_RP(),space,dset,ierr_h5)
+    call h5dwrite_f(dset,HDF5_REAL_RP(),zc(1:ng(3)),dims,ierr_h5)
+    call h5dclose_f(dset,ierr_h5)
+    call h5dcreate_f(file_id,'zf',HDF5_REAL_RP(),space,dset,ierr_h5)
+    call h5dwrite_f(dset,HDF5_REAL_RP(),zf(1:ng(3)),dims,ierr_h5)
+    call h5dclose_f(dset,ierr_h5)
+    call h5dcreate_f(file_id,'dzc',HDF5_REAL_RP(),space,dset,ierr_h5)
+    call h5dwrite_f(dset,HDF5_REAL_RP(),dzc(1:ng(3)),dims,ierr_h5)
+    call h5dclose_f(dset,ierr_h5)
+    call h5dcreate_f(file_id,'dzf',HDF5_REAL_RP(),space,dset,ierr_h5)
+    call h5dwrite_f(dset,HDF5_REAL_RP(),dzf(1:ng(3)),dims,ierr_h5)
+    call h5dclose_f(dset,ierr_h5)
+    call h5sclose_f(space,ierr_h5)
+    call h5fclose_f(file_id,ierr_h5)
+    call h5close_f(ierr_h5)
+#endif
+  end subroutine save_grid
+#if defined(_USE_HDF5)
+  integer(HID_T) function HDF5_REAL_RP()
+    use hdf5
+    implicit none
+    if(rp == dp) then
+      HDF5_REAL_RP = H5T_NATIVE_DOUBLE
+    else
+      HDF5_REAL_RP = H5T_NATIVE_REAL
+    end if
+  end function HDF5_REAL_RP
+#endif
 end module mod_initgrid
