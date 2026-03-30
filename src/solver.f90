@@ -120,66 +120,173 @@ module mod_solver
     real(rp), intent(in) :: norm
     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
     real(rp), intent(in), dimension(nx,ny), optional :: lambdaxy
-    real(rp), dimension(n) :: bb,p2
-    integer :: i,j,nn
+    real(rp), allocatable, dimension(:,:,:) :: d,p2
+    real(rp) :: z
+    integer :: i,j,k,nn
     !
     ! solve tridiagonal system
     !
     nn = n
     if(is_periodic) nn = n-1
+    !
+    ! allocate work arrays
+    !
+    allocate(d(nx,ny,nn))
+    !
+    ! forward elimination
+    !
     if(present(lambdaxy)) then
-      !$OMP PARALLEL DEFAULT(shared) PRIVATE(bb)
-      !$OMP DO COLLAPSE(2)
+      !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(z)
       do j=1,ny
         do i=1,nx
-          bb(:) = b(1:n) + lambdaxy(i,j)
-          call dgtsv_homebrewed(nn,a,bb,c,norm,p(i,j,1:nn))
+          z = 1./(b(1) + lambdaxy(i,j) + eps)
+          d(i,j,1) = c(1)*z
+          p(i,j,1) = p(i,j,1)*norm*z
         end do
       end do
-      !$OMP END PARALLEL
+      !
+      do k=2,nn
+        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(z)
+        do j=1,ny
+          do i=1,nx
+            z = 1./(b(k) + lambdaxy(i,j) - a(k)*d(i,j,k-1) + eps)
+            d(i,j,k) = c(k)*z
+            p(i,j,k) = (p(i,j,k)*norm - a(k)*p(i,j,k-1))*z
+          end do
+        end do
+      end do
     else
-      !$OMP PARALLEL DEFAULT(shared)
-      !$OMP DO COLLAPSE(2)
+      z = 1./(b(1) + eps)
+      !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
       do j=1,ny
         do i=1,nx
-          call dgtsv_homebrewed(nn,a,b,c,norm,p(i,j,1:nn))
+          d(i,j,1) = c(1)*z
+          p(i,j,1) = p(i,j,1)*norm*z
         end do
       end do
-      !$OMP END PARALLEL
+      !
+      do k=2,nn
+        z = 1./(b(k) - a(k)*d(1,1,k-1) + eps)
+        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
+        do j=1,ny
+          do i=1,nx
+            d(i,j,k) = c(k)*z
+            p(i,j,k) = (p(i,j,k)*norm - a(k)*p(i,j,k-1))*z
+          end do
+        end do
+      end do
     end if
+    !
+    ! backward substitution
+    !
+    do k=nn-1,1,-1
+      !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
+      do j=1,ny
+        do i=1,nx
+          p(i,j,k) = p(i,j,k) - d(i,j,k)*p(i,j,k+1)
+        end do
+      end do
+    end do
+    !
+    ! handle periodic closure with an auxiliary tridiagonal solve
+    !
     if(is_periodic) then
+      allocate(p2(nx,ny,nn))
+      !
+      ! initialize the auxiliary right-hand side for the periodic correction
+      !
+      !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
+      do j=1,ny
+        do i=1,nx
+          p2(i,j,1:nn) = 0.
+          p2(i,j,1)  = -a(1)
+          p2(i,j,nn) = p2(i,j,nn) - c(nn)
+        end do
+      end do
+      !
+      ! forward elimination for the auxiliary system
+      !
       if(present(lambdaxy)) then
-        !$OMP PARALLEL DEFAULT(shared) PRIVATE(bb,p2)
-        !$OMP DO COLLAPSE(2)
+        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(z)
         do j=1,ny
           do i=1,nx
-            p2(:) = 0.
-            p2(1 ) = -a(1 )
-            p2(nn) = p2(nn) - c(nn)
-            bb(:) = b(1:n) + lambdaxy(i,j)
-            call dgtsv_homebrewed(nn,a,bb,c,1._rp,p2(1:nn))
-            p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn)) / &
-                          (bb(   nn+1)      + c(nn+1)*p2(   1) + a(nn+1)*p2(   nn)+eps)
-            p(i,j,1:nn) = p(i,j,1:nn) + p2(1:nn)*p(i,j,nn+1)
+            z = 1./(b(1) + lambdaxy(i,j) + eps)
+            d(i,j,1) = c(1)*z
+            p2(i,j,1) = p2(i,j,1)*z
           end do
         end do
-        !$OMP END PARALLEL
+        do k=2,nn
+          !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(z)
+          do j=1,ny
+            do i=1,nx
+              z = 1./(b(k) + lambdaxy(i,j) - a(k)*d(i,j,k-1) + eps)
+              d(i,j,k) = c(k)*z
+              p2(i,j,k) = (p2(i,j,k) - a(k)*p2(i,j,k-1))*z
+            end do
+          end do
+        end do
       else
-        !$OMP PARALLEL DEFAULT(shared) PRIVATE(p2)
-        !$OMP DO COLLAPSE(2)
+        z = 1./(b(1) + eps)
+        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
         do j=1,ny
           do i=1,nx
-            p2(:) = 0.
-            p2(1 ) = -a(1 )
-            p2(nn) = p2(nn) - c(nn)
-            call dgtsv_homebrewed(nn,a,b,c,1._rp,p2(1:nn))
-            p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn)) / &
-                          (b(    nn+1)      + c(nn+1)*p2(   1) + a(nn+1)*p2(   nn)+eps)
-            p(i,j,1:nn) = p(i,j,1:nn) + p2(1:nn)*p(i,j,nn+1)
+            d(i,j,1) = c(1)*z
+            p2(i,j,1) = p2(i,j,1)*z
           end do
         end do
-        !$OMP END PARALLEL
+        do k=2,nn
+          z = 1./(b(k) - a(k)*d(1,1,k-1) + eps)
+          !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
+          do j=1,ny
+            do i=1,nx
+              d(i,j,k) = c(k)*z
+              p2(i,j,k) = (p2(i,j,k) - a(k)*p2(i,j,k-1))*z
+            end do
+          end do
+        end do
       end if
+      !
+      ! backward substitution for the auxiliary system
+      !
+      do k=nn-1,1,-1
+        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
+        do j=1,ny
+          do i=1,nx
+            p2(i,j,k) = p2(i,j,k) - d(i,j,k)*p2(i,j,k+1)
+          end do
+        end do
+      end do
+      !
+      ! solve for the periodic closure value and correct the interior solution
+      !
+      if(present(lambdaxy)) then
+        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
+        do j=1,ny
+          do i=1,nx
+            p(i,j,nn+1) = (p(i,j,nn+1)*norm        - c(nn+1)*p( i,j,1) - a(nn+1)*p(i,j,nn)) / &
+               (b(nn+1) + lambdaxy(i,j) + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn) + eps)
+          end do
+        end do
+      else
+        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
+        do j=1,ny
+          do i=1,nx
+            p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p( i,j,1) - a(nn+1)*p( i,j,nn)) / &
+               (b(nn+1)          + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn) + eps)
+          end do
+        end do
+      end if
+      !
+      ! apply the periodic correction to all interior points
+      !
+      do k=1,nn
+        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
+        do j=1,ny
+          do i=1,nx
+            p(i,j,k) = p(i,j,k) + p2(i,j,k)*p(i,j,nn+1)
+          end do
+        end do
+      end do
     end if
   end subroutine gaussel
   !
