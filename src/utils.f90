@@ -74,7 +74,7 @@ contains
     ! 1. 'main' arrays: u,v,w,p,pp,scalars
     !
     nh(:) = 1
-    itotal = itotal + product(n(:)+2*nh(:))*rp_size*(5+nscal)
+    itotal = itotal + product(int(n(:),i8)+2*int(nh(:),i8))*rp_size*(5+nscal)
     !
     ! 2. grids arrays: zc,zf,dzc,dzf,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f (tiny footprint)
     !
@@ -86,10 +86,12 @@ contains
     !
     block
       integer(i8) :: itemp1,itemp1_(3),itemp2,itemp3
-      itemp1_(:) = [n_z(2)*n_z(3)*2,n_z(1)*n_z(3)*2,n_z(1)*n_z(2)*2]
+      itemp1_(:) = [int(n_z(2),i8)*int(n_z(3),i8)*2, &
+                    int(n_z(1),i8)*int(n_z(3),i8)*2, &
+                    int(n_z(1),i8)*int(n_z(2),i8)*2]
       itemp1 = sum(itemp1_(:))   ! rhs
-      itemp2 = product(n_z(1:2)) ! lambdaxy
-      itemp3 = n_z(3)*3          ! a,b,c
+      itemp2 = product(int(n_z(1:2),i8)) ! lambdaxy
+      itemp3 = int(n_z(3),i8)*3          ! a,b,c
       if(.not.is_impdiff) then
         !
         ! rhsbp, lambdaxyp, ap,bp,cp
@@ -110,7 +112,7 @@ contains
     !
     ! 4. prediction velocity arrays arrays d[u,v,w]dtrk_t, d[u,v,w]dtrko_t + scalars equivalent
     !
-    itemp  = product(n(:))*rp_size
+    itemp  = product(int(n(:),i8))*rp_size
     itotal = itotal + itemp*(2*(3+nscal))
     if(is_impdiff) then
       itotal = itotal + itemp*(1*(3+nscal))
