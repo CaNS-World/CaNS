@@ -19,7 +19,7 @@ contains
                                    solver_buf_0,solver_buf_1, &
                                    ap_z,pz_aux_1, &
                                    istream_acc_queue_1,istream_acc_queue_1_comm_lib
-    use mod_fft            , only: wsize_fft
+    use mod_fft            , only: wsize_fft,wsize_tmp
     use mod_param          , only: ng,cudecomp_is_t_in_place,cbcpre,ipencil => ipencil_axis,is_poisson_pcr_tdma, &
                                    is_use_diezdecomp
 #if !defined(_USE_DIEZDECOMP)
@@ -30,13 +30,16 @@ contains
     use openacc
     implicit none
     integer :: istat
-    integer(i8) :: wsize,max_wsize
+    integer(i8) :: wsize,max_wsize,elem_round
     integer :: nh(3)
     !
-    ! allocate cuDecomp workspace buffer for transposes (reused for FFTs)
+    ! allocate cuDecomp workspace buffer for transposes (reused for FFTs and other temporaries)
     !
     max_wsize = -1
-    wsize     = wsize_fft
+    ! work space for temporaries, rounded up to 256 byte boundary
+    elem_round = 256/f_sizeof(1._rp)
+    wsize_tmp = (max(ap_x_poi%size,ap_y_poi%size) + elem_round - 1) / elem_round * elem_round
+    wsize     = wsize_fft + wsize_tmp
     max_wsize = max(max_wsize,wsize)
     istat = cudecompGetTransposeWorkspaceSize(handle,gd_poi,wsize)
     max_wsize = max(max_wsize,wsize)
@@ -112,6 +115,7 @@ contains
                               cufftSetStream   => hipfftSetStream_
 #endif
     use openacc
+    use mod_fft       , only: wsize_tmp
     !
     ! to be done after initializing all FFTs and allocating work
     !
@@ -126,12 +130,12 @@ contains
     do i=1,size(arrplan)
       !$acc host_data use_device(work)
 #if !defined(_USE_HIP)
-      istat = cufftSetWorkArea(arrplan(i),work)
+      istat = cufftSetWorkArea(arrplan(i),work(wsize_tmp + 1))
       if(present(istream)) then
         istat = cufftSetStream(arrplan(i),istream)
       end if
 #else
-      istat = cufftSetWorkArea(arrplan(i),c_loc(work))
+      istat = cufftSetWorkArea(arrplan(i),c_loc(work(wsize_tmp + 1)))
       !if(present(istream)) then
       !  istat = cufftSetStream(arrplan(i),c_loc(istream))
       !end if
