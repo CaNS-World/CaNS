@@ -350,7 +350,7 @@ program cans
                   device_memory_footprint(n,n_z,nscal)/(1._sp*1024**3), ' ***'
 #endif
   if(is_debug_poisson) then
-    call test_sanity_solver(ng,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,dli,dzc,dzf,dzci,dzfi,dzci_g,dzfi_g, &
+    call test_sanity_solver(ng,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,l,dli,dzc,dzf,dzci,dzfi,dzci_g,dzfi_g, &
                             nb,is_bound,cbcvel,cbcpre,bcvel,bcpre)
   end if
   !
@@ -496,8 +496,8 @@ program cans
         kill = .true.
       end if
       dti = 1./dt
-      call chkdiv(lo,hi,dli,dzfi,u,v,w,divtot,divmax)
-      if(myid == 0) print*, 'Total divergence = ', divtot, '| Maximum divergence = ', divmax
+      call chkdiv(lo,hi,l,dli,dzfi,u,v,w,divtot,divmax)
+      if(myid == 0) print*, 'Mean absolute divergence = ', divtot, '| Maximum absolute divergence = ', divmax
       if(.not.is_mask_divergence_check) then
         if(divmax > small.or.is_nan(divtot)) then
           if(myid == 0) print*, 'ERROR: maximum divergence is too large.'
