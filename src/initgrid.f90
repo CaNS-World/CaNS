@@ -11,7 +11,7 @@ module mod_initgrid
   private
   public initgrid
   contains
-  subroutine initgrid(gtype,n,gr,lz,dzc,dzf,zc,zf)
+  subroutine initgrid(gtype,n,gr,lz,dzc,dzf,zc,zf,is_periodic)
     !
     ! initializes the non-uniform grid along z
     !
@@ -23,6 +23,7 @@ module mod_initgrid
     integer , intent(in ) :: gtype,n
     real(rp), intent(in ) :: gr,lz
     real(rp), intent(out), dimension(0:n+1) :: dzc,dzf,zc,zf
+    logical , intent(in ) :: is_periodic
     real(rp) :: z0
     integer :: k
     procedure (), pointer :: gridpoint => null()
@@ -54,20 +55,38 @@ module mod_initgrid
     end if
     zf(1:n) = zf(1:n)*lz
     !
-    ! step 2) determine grid spacing between faces dzf
-    !
-    do k=1,n
-      dzf(k) = zf(k)-zf(k-1)
-    end do
-    dzf(0  ) = dzf(1)
-    dzf(n+1) = dzf(n)
-    !
-    ! step 3) determine grid spacing between centers dzc
-    !
-    do k=0,n
-      dzc(k) = .5*(dzf(k)+dzf(k+1))
-    end do
-    dzc(n+1) = dzc(n)
+    if(abs(gr) < epsilon(1._rp)) then
+      !
+      ! for uniform grids, set constant spacing to avoid round-off errors
+      !
+      dzf(:) = lz/(1.*n)
+      dzc(:) = lz/(1.*n)
+    else
+      !
+      ! step 2) determine grid spacing between faces dzf
+      !
+      do k=1,n
+        dzf(k) = zf(k)-zf(k-1)
+      end do
+      if(.not.is_periodic) then
+        dzf(0  ) = dzf(1)
+        dzf(n+1) = dzf(n)
+      else
+        dzf(0  ) = dzf(n)
+        dzf(n+1) = dzf(1)
+      end if
+      !
+      ! step 3) determine grid spacing between centers dzc
+      !
+      do k=0,n
+        dzc(k) = .5*(dzf(k)+dzf(k+1))
+      end do
+      if(.not.is_periodic) then
+        dzc(n+1) = dzc(n)
+      else
+        dzc(n+1) = dzc(1)
+      end if
+    end if
     !
     ! step 4) compute coordinates of cell centers zc and faces zf
     !
