@@ -5,7 +5,9 @@
 !
 ! -
 module mod_rk
-  use mod_mom  , only: momx_a,momy_a,momz_a, &
+  use mod_mom  , only: momx_a => momx_a_vv, &
+                       momy_a => momy_a_vv, &
+                       momz_a => momz_a_vv, &
                        momx_d,momy_d,momz_d, &
                        momx_p,momy_p,momz_p, &
                        cmpt_wallshear, &
@@ -146,7 +148,7 @@ module mod_rk
         end if
         call momx_a(n(1),n(2),n(3),dli(1),dli(2),dzfi,u,v,w,dudtrk)
         call momy_a(n(1),n(2),n(3),dli(1),dli(2),dzfi,u,v,w,dvdtrk)
-        call momz_a(n(1),n(2),n(3),dli(1),dli(2),dzci,u,v,w,dwdtrk)
+        call momz_a(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,u,v,w,dwdtrk)
       end if
     end if
     !
