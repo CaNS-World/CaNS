@@ -7,8 +7,9 @@
 module mod_initmpi
   use mpi
   use decomp_2d
-  use mod_common_mpi, only: myid,ierr,halo,dinfo_ptdma
-  use mod_param     , only: ipencil => ipencil_axis,is_poisson_pcr_tdma
+  use decomp_2d_constants, only: D2D_LOG_QUIET
+  use mod_common_mpi     , only: myid,ierr,halo,dinfo_ptdma
+  use mod_param          , only: ipencil => ipencil_axis,is_poisson_pcr_tdma
   use mod_types
 #if defined(_OPENACC)
   use openacc
@@ -181,6 +182,7 @@ module mod_initmpi
     call diezdecompGridDescCreate(gd_poi_io,dims,ng,ng,is_axis_contiguous,periods,ipencil)
 #endif
 #endif
+    decomp_log = D2D_LOG_QUIET
     call decomp_2d_init(ng(1),ng(2),ng(3),dims(1),dims(2),periods)
     if(is_poisson_pcr_tdma) then
       call decomp_info_init(ng(1),ng(2),2*dims(2),dinfo_ptdma)
