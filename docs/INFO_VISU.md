@@ -47,7 +47,7 @@ a similar script also located in `utils/visualize_fields/gen_xdmf_easy`, named `
  Name of the pattern of the restart files to be visualized [fld?*.bin]:
  Names of stored variables [VEX VEY VEZ PRE]:
  Name to be appended to the grid files to prevent overwriting [_fld]:
- Name of the output file [viewfld_DNS_fld.xmf]:
+ Name of the output file [viewfld_DNS.xmf]:
 ~~~
 
 ## HDF5 and ADIOS2 outputs
@@ -61,7 +61,7 @@ for HDF5 visualization outputs, use:
 * `write_xdmf_hdf5.py` for 2D/3D field outputs
 * `write_xdmf_restart_hdf5.py` for checkpoint files
 
-these scripts generate `Xdmf` files in the same spirit as the raw-binary workflow above, but using the HDF5 outputs*.
+these scripts generate `Xdmf` files in the same spirit as the raw-binary workflow above, but using the HDF5 outputs.
 
 ### ADIOS2
 
