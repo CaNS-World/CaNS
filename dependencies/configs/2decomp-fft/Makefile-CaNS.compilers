@@ -1,0 +1,169 @@
+#
+# mods to accommodate CaNS
+#
+include $(CANS_CONF)
+DEFS = -DVERSION=\"$(GIT_VERSION)\"
+ifneq ($(strip $(SINGLE_PRECISION)),1)
+ifneq ($(strip $(SINGLE_PRECISION_POISSON)),1)
+override DEFS += -DDOUBLE_PREC -cpp
+endif
+endif
+ifeq ($(strip $(FFLAGS_DEBUG)),1)
+BUILD=DEBUG
+endif
+ifeq ($(strip $(FFLAGS_DEBUG_MAX)),1)
+BUILD=DEBUG
+endif
+CMP=$(strip $(FCOMP))
+#=======================================================================
+# Makefile for 2DECOMP&FFT compilers
+#=======================================================================
+
+DEBUG_BUILD =
+ifeq ($(BUILD),DEBUG)
+  DEBUG_BUILD = yes
+endif
+ifeq ($(BUILD),dev)
+  DEBUG_BUILD = yes
+endif
+FC = mpifort
+ifeq ($(CMP),INTEL)
+  FC = mpiifx
+
+  FFLAGS += -fpp -std08
+  ifeq ($(DEBUG_BUILD),yes)
+    DEFS += -DDEBUG
+    FFLAGS += -g -O0 -debug extended -traceback
+  else
+    FFLAGS += -O3 -mavx2 -march=core-avx2 -mtune=core-avx2
+  endif
+
+  ifeq ($(BUILD),dev)
+    # Add additional, stricter flags
+    FFLAGS += -warn all,noexternal
+  endif
+
+  MODFLAG = -module # Explicit space
+else ifeq ($(CMP),INTEL_IFORT)
+  FC = mpiifort
+
+  FFLAGS += -fpp -std08
+  ifeq ($(DEBUG_BUILD),yes)
+    DEFS += -DDEBUG
+    FFLAGS += -g -O0 -debug extended -traceback
+  else
+    FFLAGS += -O3 -mavx2 -march=core-avx2 -mtune=core-avx2
+  endif
+
+  ifeq ($(BUILD),dev)
+    # Add additional, stricter flags
+    FFLAGS += -warn all,noexternal
+  endif
+
+  MODFLAG = -module # Explicit space
+else ifeq ($(CMP),GNU)
+  FC = mpifort
+  FFLAGS += -cpp -std=f2008
+  ifeq "$(shell expr `gfortran -dumpversion | cut -f1 -d.` \>= 10)" "1"
+    FFLAGS += -fallow-argument-mismatch
+  endif
+  ifeq ($(DEBUG_BUILD),yes)
+    DEFS += -DDEBUG
+    FFLAGS += -g3 -Og
+    FFLAGS += -ffpe-trap=invalid,zero -fcheck=all -fimplicit-none
+  else
+    FFLAGS += -O3 -march=native
+  endif
+  ifeq ($(findstring openmpi,$(shell $(FC) -show | grep openmpi)),openmpi)
+    MPI_FAMILY = openmpi
+  else
+    MPI_FAMILY = mpich # Probably
+  endif
+
+  ifeq ($(BUILD),dev)
+    # Add additional, stricter flags
+    FFLAGS += -Wall -Wpedantic
+    ifneq ($(FFT),fftw3)
+      # FFTW3 (legacy) doesn't have interfaces
+      ifeq ($(MPI_FAMILY),openmpi)
+        # MPICH doesn't export interfaces...
+        FFLAGS += -Wimplicit-procedure -Wimplicit-interface
+      endif
+    endif
+    FFLAGS += -Wno-unused-function
+    FFLAGS += -Werror
+  endif
+else ifeq ($(CMP),NAG)
+  FC = mpinagfor
+  FFLAGS += -fpp
+else ifeq ($(CMP),CRAY)
+  FC = ftn
+  FFLAGS += -eF
+  ifeq ($(DEBUG_BUILD),yes)
+    DEFS += -DDEBUG
+    FFLAGS += -G2
+    FFLAGS += -en
+  else
+    FFLAGS += -g -O3
+  endif
+  FFLAGS += -N1023 -M 296
+else ifeq ($(CMP),NVIDIA)
+  FC = mpifort
+  MODFLAG = -module # Explicit space
+  FFLAGS += -cpp
+  ifeq ($(PARAMOD),multicore)
+     FFLAGS += -O3 -Minfo=accel -stdpar -acc -target=multicore
+     LFLAGS += -acc -lnvhpcwrapnvtx
+  else ifeq ($(PARAMOD),gpu)
+     CCXY=80
+     MANAGED=yes
+     ifeq ($(MANAGED),yes)
+       GPUOPT=-gpu=cc${CCXY},managed,lineinfo
+     else
+       GPUOPT=-gpu=cc${CCXY},lineinfo
+     endif
+     FFLAGS += -D_GPU
+     NCCL=no
+     ifeq ($(NCCL),yes)
+       FFLAGS += -D_NCCL
+     endif
+     FFLAGS += -Mfree -Kieee -Minfo=accel,stdpar ${GPUOPT} -acc -target=gpu -traceback -O3 -DUSE_CUDA -cuda
+     ifeq ($(NCCL),yes)
+       FFLAGS += -cudalib=cufft,nccl
+     else
+       FFLAGS += -cudalib=cufft
+     endif
+     #FFLAGS += -D_GPU -Mfree -Kieee -Minfo=accel,stdpar -stdpar=gpu -gpu=cc80,managed,lineinfo -acc -target=gpu -traceback -O3 -DUSE_CUDA -cuda -cudalib=cufft
+     #FFLAGS += -Mfree -Kieee -Minfo=accel,stdpar -stdpar=gpu -gpu=cc80,managed,lineinfo -acc -target=gpu -traceback -O3 -DUSE_CUDA -cuda -cudalib=cufft
+     LFLAGS += -acc -lnvhpcwrapnvtx
+  else
+    ifeq ($(DEBUG_BUILD),yes)
+      DEFS += -DDEBUG
+      FFLAGS += -g -O0
+      FFLAGS += -traceback
+      FFLAGS += -Mbounds -Mchkptr
+      FFLAGS += -Ktrap=fp # Trap floating-point errors
+    else
+      FFLAGS += -O3 -fast -tp=native
+    endif
+  endif
+  #FFLAGS += -cpp -O3 -Minfo=accel -stdpar -acc -target=multicore
+  #FFLAGS = -cpp -Mfree -Kieee -Minfo=accel -g -acc -target=gpu -fast -O3 -Minstrument
+else ifeq ($(CMP),FUJITSU)
+  FC = mpifrtpx
+  FFLAGS += -cpp
+  MODFLAG = -M # Explicit space
+  ifeq ($(DEBUG_BUILD),yes)
+    DEFS += -DDEBUG
+    FFLAGS += -g -g0
+  else
+    FFLAGS += -O3 #-Kfast
+  endif
+endif
+ifeq ($(strip $(FTN_MPI_WRAPPER)),1)
+  FC = ftn
+endif
+
+# Local Variables:
+# mode: makefile
+# End:
