@@ -24,8 +24,19 @@ NAME_TWO_2="two-step-2"
 for name in $NAME_ONE $NAME_TWO_1 $NAME_TWO_2; do
   echo "INFO: Running CaNS, case $name"
   mv input-${name}.nml input.nml
+  set +e
   ${MPIRUN} ./cans 1> log_file.log 2> err_log.log
+  status=$?
+  set -e
   (head -n 50 log_file.log; echo -e "\n[...output omitted...]\n"; tail -n 50 log_file.log) # report first and last N lines of the log file
+  if [ -s err_log.log ]; then
+    echo -e "\nINFO: stderr from CaNS\n"
+    cat err_log.log
+  fi
+  if [ $status -ne 0 ]; then
+    echo "ERROR: CaNS exited with status $status"
+    exit $status
+  fi
   dirname="data-$(echo $name | sed 's/-[1-2]//g')/"
   mkdir -p $dirname
   if [[ $name == *"two-step"* ]]; then
