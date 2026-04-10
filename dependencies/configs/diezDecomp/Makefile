@@ -2,6 +2,9 @@
 MAKEFLAGS += --no-builtin-rules --no-builtin-variables
 SHELL=/bin/bash
 
+CFG_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+CANS_DIR := $(abspath $(CFG_DIR)/../../..)
+
 FC := mpifort
 FFLAGS :=
 AR := ar rcs
@@ -10,10 +13,9 @@ RM := rm -rf
 GD := $(SRCS_DIR)/.gen-deps.awk
 CPP := -cpp
 
-ROOT_DIR := ../../
-CONFIG_DIR := $(ROOT_DIR)/configs
+CONFIG_DIR := $(CANS_DIR)/configs
 BUILD_CONFIG_FILE ?= build.conf
-include $(ROOT_DIR)/$(BUILD_CONFIG_FILE)
+include $(CANS_DIR)/$(BUILD_CONFIG_FILE)
 include $(CONFIG_DIR)/compilers.mk
 include $(CONFIG_DIR)/flags.mk
 include $(CONFIG_DIR)/libs.mk
@@ -22,7 +24,7 @@ DEFINES += -D_DIEZDECOMP_SINGLE
 endif
 
 BUILD_DIR := ./build
-SRC_DIR   := ./diezDecomp-repo/src
+SRC_DIR   := ./src
 OBJ_DIR   := $(BUILD_DIR)
 INC_DIR   := $(BUILD_DIR)/include
 LIB_DIR   := $(BUILD_DIR)/lib

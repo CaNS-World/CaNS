@@ -7,7 +7,7 @@ updates:
     allow:
       - dependency-name: "dependencies/2decomp-fft"
       - dependency-name: "dependencies/cuDecomp"
-      - dependency-name: "dependencies/diezDecomp/diezDecomp-repo"
+      - dependency-name: "dependencies/diezDecomp"
   - package-ecosystem: github-actions
     directory: "/"
     schedule:

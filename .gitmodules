@@ -4,6 +4,6 @@
 [submodule "dependencies/2decomp-fft"]
 	path = dependencies/2decomp-fft
 	url = https://github.com/CaNS-World/2decomp-fft
-[submodule "dependencies/diezDecomp/diezDecomp-repo"]
-	path = dependencies/diezDecomp/diezDecomp-repo
+[submodule "dependencies/diezDecomp"]
+	path = dependencies/diezDecomp
 	url = https://github.com/Rafael10Diez/diezDecomp
