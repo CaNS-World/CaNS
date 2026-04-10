@@ -93,13 +93,13 @@ jobs:
            cd tests/${{ matrix.test-name }}
            bash ./testit.sh
     - name: Upload log files
-      if: ${{ env.SKIP_RUN != 'true' }}
+      if: ${{ always() && env.SKIP_RUN != 'true' }}
       uses: actions/upload-artifact@v7
       with:
         name: logs-${{ inputs.compiler }}-${{ matrix.mode.name }}-${{ matrix.test-name }}
         path: run/*log
     - name: Print log(s)
-      if: ${{ env.SKIP_RUN != 'true' }}
+      if: ${{ always() && env.SKIP_RUN != 'true' }}
       shell: bash  # specify the shell explicitly
       run: |
            for f in $(ls run/*.log)
