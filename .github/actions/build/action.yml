@@ -26,7 +26,7 @@ runs:
 
     - name: Get dependencies
       if: ${{ inputs.no-rebuild == 'true' }}
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: compiled-libs-${{ inputs.name }}
         path: dependencies/
@@ -38,7 +38,7 @@ runs:
         make libs FCOMP=${{ inputs.compiler }}
     - name: Put dependencies
       if: ${{ inputs.no-rebuild != 'true' }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: compiled-libs-${{ inputs.name }}
         path: dependencies/
@@ -46,7 +46,7 @@ runs:
 
     - name: Get CaNS build
       if: ${{ inputs.no-rebuild == 'true' }}
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: cans-${{ inputs.name }}
         path: run/
@@ -58,7 +58,7 @@ runs:
         make FCOMP=${{ inputs.compiler }} ${{ inputs.compiler_flags }}
     - name: Put CaNS build
       if: ${{ inputs.no-rebuild != 'true' }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: cans-${{ inputs.name }}
         path: run/cans
