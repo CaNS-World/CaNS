@@ -253,7 +253,7 @@ program cans
     write(iunit,*) ng(1),ng(2),ng(3)
     write(iunit,*) l(1),l(2),l(3)
     close(iunit)
-    call save_grid(datadir,ng,zc_g,zf_g,dzc_g,dzf_g)
+    call save_grid(datadir,'grid',ng,zc_g,zf_g,dzc_g,dzf_g)
   end if
   !$acc enter data copyin(lo,hi,n) async
   !$acc enter data copyin(bforce,dl,dli,l) async

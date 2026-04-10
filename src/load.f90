@@ -480,6 +480,7 @@ contains
     integer(kind=MPI_OFFSET_KIND) :: filesize,disp,good
     !
     ! silence compiler warnings for backend-agnostic arguments unused by MPI-IO
+    !
     associate(dummy_varname => varname)
     end associate
     !
@@ -1241,7 +1242,7 @@ contains
       call h5pcreate_f(H5P_DATASET_XFER_F,plist_id,ierr)
       call h5pset_dxpl_mpio_f(plist_id,H5FD_MPIO_COLLECTIVE_F,ierr)
       !
-      call h5dread_f(dset,dtype_rp,var,data_count,ierr,file_space_id=slabspace,mem_space_id=memspace,xfer_prp=plist_id)
+      call h5dread_f(dset,dtype_rp,var,mem_dims,ierr,file_space_id=slabspace,mem_space_id=memspace,xfer_prp=plist_id)
       !
       call h5pclose_f(plist_id,ierr)
       call h5dclose_f(dset,ierr)
@@ -1335,7 +1336,7 @@ contains
       call h5sselect_hyperslab_f(memspace,H5S_SELECT_SET_F,halo_offset,data_count,ierr)
       call h5pcreate_f(H5P_DATASET_XFER_F,plist_id,ierr)
       call h5pset_dxpl_mpio_f(plist_id,H5FD_MPIO_COLLECTIVE_F,ierr)
-      call h5dwrite_f(dset,dtype_rp,var,data_count,ierr,file_space_id=slabspace,mem_space_id=memspace,xfer_prp=plist_id)
+      call h5dwrite_f(dset,dtype_rp,var,mem_dims,ierr,file_space_id=slabspace,mem_space_id=memspace,xfer_prp=plist_id)
       !
       call h5pclose_f(plist_id,ierr)
       call h5dclose_f(dset,ierr)

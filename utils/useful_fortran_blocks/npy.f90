@@ -37,7 +37,7 @@ module mod_npy
     integer(i4)                  :: header_len
     !
     header_len = len(dict_str(var_type,shape(arr)))
-    open(newunit=iunit, file=filename, access="stream")
+    open(newunit=iunit, file=filename, access="stream", form="unformatted", status="replace")
     write(iunit) magic_num,magic_str,major,minor
     write(iunit) header_len
     write(iunit) dict_str(var_type,shape(arr))
@@ -53,7 +53,7 @@ module mod_npy
     integer(i4)                  :: header_len
     !
     header_len = len(dict_str(var_type,shape(arr)))
-    open(newunit=iunit, file=filename, access="stream")
+    open(newunit=iunit, file=filename, access="stream", form="unformatted", status="replace")
     write(iunit) magic_num,magic_str,major,minor
     write(iunit) header_len
     write(iunit) dict_str(var_type,shape(arr))
@@ -69,7 +69,7 @@ module mod_npy
     integer(i4)                  :: header_len
     !
     header_len = len(dict_str(var_type,shape(arr)))
-    open(newunit=iunit, file=filename, access="stream")
+    open(newunit=iunit, file=filename, access="stream", form="unformatted", status="replace")
     write(iunit) magic_num,magic_str,major,minor
     write(iunit) header_len
     write(iunit) dict_str(var_type,shape(arr))
@@ -85,7 +85,7 @@ module mod_npy
     integer(i4)                  :: header_len
     !
     header_len = len(dict_str(var_type,shape(arr)))
-    open(newunit=iunit, file=filename, access="stream")
+    open(newunit=iunit, file=filename, access="stream", form="unformatted", status="replace")
     write(iunit) magic_num,magic_str,major,minor
     write(iunit) header_len
     write(iunit) dict_str(var_type,shape(arr))
@@ -101,7 +101,7 @@ module mod_npy
     integer(i4)                  :: header_len
     !
     header_len = len(dict_str(var_type,shape(arr)))
-    open(newunit=iunit, file=filename, access="stream")
+    open(newunit=iunit, file=filename, access="stream", form="unformatted", status="replace")
     write(iunit) magic_num,magic_str,major,minor
     write(iunit) header_len
     write(iunit) dict_str(var_type,shape(arr))
@@ -117,7 +117,7 @@ module mod_npy
     integer(i4)                  :: header_len
     !
     header_len = len(dict_str(var_type,shape(arr)))
-    open(newunit=iunit, file=filename, access="stream")
+    open(newunit=iunit, file=filename, access="stream", form="unformatted", status="replace")
     write(iunit) magic_num,magic_str,major,minor
     write(iunit) header_len
     write(iunit) dict_str(var_type,shape(arr))
@@ -133,7 +133,7 @@ module mod_npy
     integer(i4)                  :: header_len
     !
     header_len = len(dict_str(var_type,shape(arr)))
-    open(newunit=iunit, file=filename, access="stream")
+    open(newunit=iunit, file=filename, access="stream", form="unformatted", status="replace")
     write(iunit) magic_num,magic_str,major,minor
     write(iunit) header_len
     write(iunit) dict_str(var_type,shape(arr))
@@ -149,7 +149,7 @@ module mod_npy
     integer(i4)                  :: header_len
     !
     header_len = len(dict_str(var_type,shape(arr)))
-    open(newunit=iunit, file=filename, access="stream")
+    open(newunit=iunit, file=filename, access="stream", form="unformatted", status="replace")
     write(iunit) magic_num,magic_str,major,minor
     write(iunit) header_len
     write(iunit) dict_str(var_type,shape(arr))
@@ -165,7 +165,7 @@ module mod_npy
     integer(i4)                  :: header_len
     !
     header_len = len(dict_str(var_type,shape(arr)))
-    open(newunit=iunit, file=filename, access="stream")
+    open(newunit=iunit, file=filename, access="stream", form="unformatted", status="replace")
     write(iunit) magic_num,magic_str,major,minor
     write(iunit) header_len
     write(iunit) dict_str(var_type,shape(arr))
@@ -181,7 +181,7 @@ module mod_npy
     integer(i4)                  :: header_len
     !
     header_len = len(dict_str(var_type,shape(arr)))
-    open(newunit=iunit, file=filename, access="stream")
+    open(newunit=iunit, file=filename, access="stream", form="unformatted", status="replace")
     write(iunit) magic_num,magic_str,major,minor
     write(iunit) header_len
     write(iunit) dict_str(var_type,shape(arr))
@@ -197,7 +197,7 @@ module mod_npy
     integer(i4)                       :: header_len
     !
     header_len = len(dict_str(var_type,shape(arr)))
-    open(newunit=iunit, file=filename, access="stream")
+    open(newunit=iunit, file=filename, access="stream", form="unformatted", status="replace")
     write(iunit) magic_num,magic_str,major,minor
     write(iunit) header_len
     write(iunit) dict_str(var_type,shape(arr))
@@ -213,7 +213,7 @@ module mod_npy
     integer(i4)                  :: header_len
     !
     header_len = len(dict_str(var_type,shape(arr)))
-    open(newunit=iunit, file=filename, access="stream")
+    open(newunit=iunit, file=filename, access="stream", form="unformatted", status="replace")
     write(iunit) magic_num,magic_str,major,minor
     write(iunit) header_len
     write(iunit) dict_str(var_type,shape(arr))
@@ -229,7 +229,7 @@ module mod_npy
     integer(i4)                  :: header_len
     !
     header_len = len(dict_str(var_type,shape(arr)))
-    open(newunit=iunit, file=filename, access="stream")
+    open(newunit=iunit, file=filename, access="stream", form="unformatted", status="replace")
     write(iunit) magic_num,magic_str,major,minor
     write(iunit) header_len
     write(iunit) dict_str(var_type,shape(arr))
@@ -245,7 +245,7 @@ module mod_npy
     integer(i4)                  :: header_len
     !
     header_len = len(dict_str(var_type,shape(arr)))
-    open(newunit=iunit, file=filename, access="stream")
+    open(newunit=iunit, file=filename, access="stream", form="unformatted", status="replace")
     write(iunit) magic_num,magic_str,major,minor
     write(iunit) header_len
     write(iunit) dict_str(var_type,shape(arr))
@@ -261,7 +261,7 @@ module mod_npy
     integer(i4)                  :: header_len
     !
     header_len = len(dict_str(var_type,shape(arr)))
-    open(newunit=iunit, file=filename, access="stream")
+    open(newunit=iunit, file=filename, access="stream", form="unformatted", status="replace")
     write(iunit) magic_num,magic_str,major,minor
     write(iunit) header_len
     write(iunit) dict_str(var_type,shape(arr))
@@ -277,7 +277,7 @@ module mod_npy
     integer(i4)                  :: header_len
     !
     header_len = len(dict_str(var_type,shape(arr)))
-    open(newunit=iunit, file=filename, access="stream")
+    open(newunit=iunit, file=filename, access="stream", form="unformatted", status="replace")
     write(iunit) magic_num,magic_str,major,minor
     write(iunit) header_len
     write(iunit) dict_str(var_type,shape(arr))

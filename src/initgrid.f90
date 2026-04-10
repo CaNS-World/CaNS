@@ -203,7 +203,7 @@ module mod_initgrid
     if( kg > nzg-kg ) z = 1._rp-z
   end subroutine gridpoint_natural
   !
-  subroutine save_grid(datadir,ng,zc,zf,dzc,dzf)
+  subroutine save_grid(datadir,fname,ng,zc,zf,dzc,dzf)
     !
     ! saves grid for post-processing
     !
@@ -211,7 +211,7 @@ module mod_initgrid
     use hdf5
 #endif
     implicit none
-    character(len=*), intent(in) :: datadir
+    character(len=*), intent(in) :: datadir,fname
     integer , intent(in), dimension(3) :: ng
     real(rp), intent(in), dimension(0:) :: zc,zf,dzc,dzf
     integer :: iunit,k
@@ -221,17 +221,17 @@ module mod_initgrid
     integer(HSIZE_T), dimension(1) :: dims
 #endif
     !
-    open(newunit=iunit,file=trim(datadir)//'grid.bin',action='write',form='unformatted',access='stream',status='replace')
+    open(newunit=iunit,file=trim(datadir)//trim(fname)//'.bin',action='write',form='unformatted',access='stream',status='replace')
     write(iunit) dzc(1:ng(3)),dzf(1:ng(3)),zc(1:ng(3)),zf(1:ng(3))
     close(iunit)
-    open(newunit=iunit,file=trim(datadir)//'grid.out',status='replace')
+    open(newunit=iunit,file=trim(datadir)//trim(fname)//'.out',status='replace')
     do k=0,ng(3)+1
       write(iunit,*) 0.,zf(k),zc(k),dzf(k),dzc(k)
     end do
     close(iunit)
 #if defined(_USE_HDF5)
     call h5open_f(ierr_h5)
-    call h5fcreate_f(trim(datadir)//'grid.h5',H5F_ACC_TRUNC_F,file_id,ierr_h5)
+    call h5fcreate_f(trim(datadir)//trim(fname)//'.h5',H5F_ACC_TRUNC_F,file_id,ierr_h5)
     dims(1) = int(ng(3),HSIZE_T)
     call h5screate_simple_f(1,dims,space,ierr_h5)
     call h5dcreate_f(file_id,'z',HDF5_REAL_RP(),space,dset,ierr_h5)

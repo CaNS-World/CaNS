@@ -176,6 +176,7 @@ contains
         close(iunit)
         error stop
       end if
+      !
       ! read `dns` namelist
       !
       rewind(iunit)
