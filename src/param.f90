@@ -102,6 +102,13 @@ logical, protected :: is_impdiff = .false., is_impdiff_1d = .false., &
                       is_poisson_pcr_tdma = .false., &
                       is_fast_mom_kernels = .true., &
                       is_gridpoint_natural_channel = .false.
+!
+! i/o backend parameters
+!
+character(len=16), protected :: io_backend = 'mpiio'
+character(len=6) , protected :: io_ext = '.bin'
+logical          , protected :: is_use_compression = .false.
+
 contains
   subroutine read_input(myid)
     use, intrinsic :: iso_fortran_env, only: iostat_end
@@ -111,6 +118,7 @@ contains
     integer, intent(in) :: myid
     integer :: iunit,ierr
     character(len=1024) :: c_iomsg
+    logical :: is_io_fallback
     namelist /dns/ &
                   ng, &
                   l, &
@@ -130,6 +138,9 @@ contains
                   gacc, &
                   nscal, &
                   dims,ipencil_axis
+    namelist /io/  &
+                  io_backend, &
+                  is_use_compression
 #if defined(_OPENACC) && !defined(_USE_DIEZDECOMP)
     namelist /cudecomp/ &
                        cudecomp_t_comm_backend,cudecomp_is_t_enable_nccl,cudecomp_is_t_enable_nvshmem, &
@@ -165,6 +176,9 @@ contains
         close(iunit)
         error stop
       end if
+      ! read `dns` namelist
+      !
+      rewind(iunit)
       read(iunit,nml=dns,iostat=ierr,iomsg=c_iomsg)
       if(ierr /= 0) then
         if(myid == 0) print*, 'Error reading `dns` namelist: ', trim(c_iomsg)
@@ -321,6 +335,48 @@ contains
         call MPI_FINALIZE(ierr)
         close(iunit)
         error stop
+      end if
+      !
+      ! read `io` namelist
+      !
+      rewind(iunit)
+      read(iunit,nml=io,iostat=ierr,iomsg=c_iomsg)
+      if(ierr /= 0 .and. ierr /= iostat_end) then
+        if(myid == 0) print*, 'Error reading `io` namelist: ', trim(c_iomsg)
+        if(myid == 0) print*, 'Aborting...'
+        call MPI_FINALIZE(ierr)
+        close(iunit)
+        error stop
+      end if
+      is_io_fallback = .false.
+      select case(trim(io_backend))
+      case('mpiio')
+        io_ext = '.bin'
+      case('hdf5')
+#if defined(_USE_HDF5)
+        io_ext = '.h5'
+#else
+        if(myid == 0) print*, 'Warning: `io_backend = hdf5` requires an HDF5 build.'
+        is_io_fallback = .true.
+#endif
+      case('adios2')
+#if defined(_USE_ADIOS2)
+        io_ext = '.bp'
+#else
+        if(myid == 0) print*, 'Warning: `io_backend = adios2` requires an ADIOS2 build.'
+        is_io_fallback = .true.
+#endif
+      case default
+        if(myid == 0) print*, 'Warning: unknown `io_backend = ', trim(io_backend), '`.'
+        is_io_fallback = .true.
+      end select
+      if(is_io_fallback) then
+        if(myid == 0) print*, 'Defaulting to `io_backend = mpiio`...'
+        io_backend = 'mpiio'
+        io_ext = '.bin'
+      end if
+      if(is_use_compression .and. trim(io_backend) == 'mpiio') then
+        if(myid == 0) print*, 'Warning: compression is ignored for `io_backend = mpiio`.'
       end if
     close(iunit)
   end subroutine read_input

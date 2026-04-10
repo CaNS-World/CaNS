@@ -106,6 +106,8 @@ CUSTOM_DEFINES =  SINGLE_PRECISION \
 		          LOOP_UNSWITCHING \
 		          DECOMP_X_IO \
 				  USE_DIEZDECOMP \
+		          USE_HDF5 \
+				  USE_ADIOS2 \
 		          USE_HIP \
                   USE_NVTX
 

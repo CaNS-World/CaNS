@@ -16,7 +16,6 @@ if(    iprecision == 4):
 else:
     my_dtype = 'float64'
 r0 = np.array([0.,0.,0.]) # domain origin
-non_uniform_grid = True
 #
 # define data type and
 # read saved data log
@@ -72,7 +71,7 @@ z = np.arange(r0[2]+dl[2]/2.,r0[2]+l[2],dl[2])
 if os.path.exists(xgridfile): os.remove(xgridfile)
 if os.path.exists(ygridfile): os.remove(ygridfile)
 if os.path.exists(zgridfile): os.remove(zgridfile)
-if(non_uniform_grid):
+if os.path.exists('grid.bin'):
     f   = open('grid.bin','rb')
     grid_z = np.fromfile(f,dtype=my_dtype)
     f.close()
@@ -148,7 +147,7 @@ output = output.toprettyxml(indent="    ",newl='\n')
 outfile = input("Name of the output file [viewfld_DNS.xmf]: ") or "viewfld_DNS.xmf"
 xdmf_file = open(outfile, 'w')
 xdmf_file.write(output)
-xdmf_file.close
+xdmf_file.close()
 #
 # workaround to add the DOCTYPE line
 #

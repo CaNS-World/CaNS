@@ -6,13 +6,13 @@
 # -
 #!/usr/bin/env python
 def read_single_field_binary(data_dir,filenamei,iskip):
+    import os
     import numpy as np
     #
     # setting up some parameters
     #
     iprecision = 8            # precision of the real-valued data
     r0 = np.array([0.,0.,0.]) # domain origin
-    non_uniform_grid = True
     precision  = 'float64'
     if(iprecision == 4): precision = 'float32'
     #
@@ -32,8 +32,8 @@ def read_single_field_binary(data_dir,filenamei,iskip):
     xu = xp + dl[0]/2.                              # staggered x grid
     yv = yp + dl[1]/2.                              # staggered y grid
     zw = zp + dl[2]/2.                              # staggered z grid
-    if(non_uniform_grid):
-        f   = open(data_dir+'/grid.bin','rb')
+    if(os.path.exists(data_dir+"/grid.bin")):
+        f = open(data_dir+'/grid.bin','rb')
         grid_z = np.fromfile(f,dtype=precision)
         f.close()
         grid_z = np.reshape(grid_z,(ng[2],4),order='F')
