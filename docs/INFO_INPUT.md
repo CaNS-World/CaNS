@@ -236,6 +236,7 @@ The first line sets the configuration for the transpose communication backend au
 * `5` -> `CUDECOMP_TRANSPOSE_COMM_NCCL_PL`
 * `6` -> `CUDECOMP_TRANSPOSE_COMM_NVSHMEM`
 * `7` -> `CUDECOMP_TRANSPOSE_COMM_NVSHMEM_PL`
+* `8` -> `CUDECOMP_TRANSPOSE_COMM_NVSHMEM_SM`
 * any other value -> enable runtime transpose backend autotuning
 
 The other two boolean values, enable/disable the NCCL (`cudecomp_is_t_enable_nccl`) and NVSHMEM (`cudecomp_is_t_enable_nvshmem`) options for *transpose* communication backend autotuning.
