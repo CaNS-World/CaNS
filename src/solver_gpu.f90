@@ -23,7 +23,7 @@ module mod_solver_gpu
                                  ap_z_0 => ap_z    , &
                                  ch => handle,gd => gd_poi, gd_io => gd_poi_io, &
                                  istream => istream_acc_queue_1_comm_lib
-  use mod_fft            , only: signal_processing,fftf_gpu,fftb_gpu
+  use mod_fft            , only: fft_gpu
   use mod_param          , only: ipencil_axis,is_poisson_pcr_tdma, &
                                  is_use_diezdecomp,is_diezdecomp_x2z_z2x_transposes
   use mod_types
@@ -47,7 +47,7 @@ module mod_solver_gpu
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
     logical , intent(inout), target, optional :: is_ptdma_update
     real(rp), intent(inout), dimension(:,:,:), optional :: aa_z,cc_z
-    real(rp), pointer, contiguous, dimension(:,:,:) :: px,py,pz
+    real(rp), pointer, contiguous, dimension(:,:,:) :: px,py,pz,pfft_tmp_x,pfft_tmp_y
     integer :: i,j,k,q
     logical :: is_periodic_z
     integer, dimension(3) :: n_x,n_y,n_z,n_z_0,lo_z_0,hi_z_0,pad_io
@@ -77,6 +77,8 @@ module mod_solver_gpu
       py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_1(1:product(n_y(:)))
     end if
     pz(1:n_z(1),1:n_z(2),1:n_z(3)) => solver_buf_0(1:product(n_z(:)))
+    pfft_tmp_x(1:n_x(1),1:n_x(2),1:n_x(3)) => work(1:product(n_x(:)))
+    pfft_tmp_y(1:n_y(1),1:n_y(2),1:n_y(3)) => work(1:product(n_y(:)))
     !
     select case(ipencil_axis)
     case(1)
@@ -134,9 +136,7 @@ module mod_solver_gpu
       end if
     end select
     !
-    call signal_processing(0,'F',bc(0,1)//bc(1,1),c_or_f(1),ng(1),n_x,1,px)
-    call fftf_gpu(arrplan(1,1),px)
-    call signal_processing(1,'F',bc(0,1)//bc(1,1),c_or_f(1),ng(1),n_x,1,px)
+    call fft_gpu('F',bc(0,1)//bc(1,1),c_or_f(1),ng(1),n_x,arrplan(1,1),px,pfft_tmp_x)
     !
 #if !defined(_USE_DIEZDECOMP)
     !$acc host_data use_device(px,py,work)
@@ -146,9 +146,7 @@ module mod_solver_gpu
     !$acc end host_data
 #endif
     !
-    call signal_processing(0,'F',bc(0,2)//bc(1,2),c_or_f(2),ng(2),n_y,1,py)
-    call fftf_gpu(arrplan(1,2),py)
-    call signal_processing(1,'F',bc(0,2)//bc(1,2),c_or_f(2),ng(2),n_y,1,py)
+    call fft_gpu('F',bc(0,2)//bc(1,2),c_or_f(2),ng(2),n_y,arrplan(1,2),py,pfft_tmp_y)
     !
     q = merge(1,0,c_or_f(3) == 'f'.and.bc(1,3) == 'D'.and.hi_z_0(3) == ng(3))
     is_periodic_z = bc(0,3)//bc(1,3) == 'PP'
@@ -213,9 +211,7 @@ module mod_solver_gpu
       end block
     end if
     !
-    call signal_processing(0,'B',bc(0,2)//bc(1,2),c_or_f(2),ng(2),n_y,1,py)
-    call fftb_gpu(arrplan(2,2),py)
-    call signal_processing(1,'B',bc(0,2)//bc(1,2),c_or_f(2),ng(2),n_y,1,py)
+    call fft_gpu('B',bc(0,2)//bc(1,2),c_or_f(2),ng(2),n_y,arrplan(2,2),py,pfft_tmp_y)
     !
 #if !defined(_USE_DIEZDECOMP)
     !$acc host_data use_device(py,px,work)
@@ -225,9 +221,7 @@ module mod_solver_gpu
     !$acc end host_data
 #endif
     !
-    call signal_processing(0,'B',bc(0,1)//bc(1,1),c_or_f(1),ng(1),n_x,1,px)
-    call fftb_gpu(arrplan(2,1),px)
-    call signal_processing(1,'B',bc(0,1)//bc(1,1),c_or_f(1),ng(1),n_x,1,px)
+    call fft_gpu('B',bc(0,1)//bc(1,1),c_or_f(1),ng(1),n_x,arrplan(2,1),px,pfft_tmp_x)
     !
     select case(ipencil_axis)
     case(1)
