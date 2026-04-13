@@ -36,3 +36,13 @@ endif
 endif
 
 endif
+
+ifeq ($(strip $(USE_ADIOS2)),1)
+override LIBS += -ladios2_mpi_fortran -ladios2_mpi_fortran_mpi
+override INCS += -I/usr/include/adios2/fortran
+endif
+
+ifeq ($(strip $(USE_HDF5)),1)
+override LIBS += -lhdf5_openmpi_fortran
+override INCS += -I/usr/include/hdf5/openmpi
+endif

@@ -84,7 +84,7 @@ output = output.toprettyxml(indent="    ",newl='\n')
 outfile = input("Name of the output file [viewbox_DNS.xmf]: ") or "viewbox_DNS.xmf"
 xdmf_file = open(outfile, 'w')
 xdmf_file.write(output)
-xdmf_file.close
+xdmf_file.close()
 #
 # workaround to add the DOCTYPE line
 #

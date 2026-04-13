@@ -1,6 +1,6 @@
-# how to visualize the output binary files form *CaNS*
+# how to visualize the output binary files from *CaNS*
 
-in addition to the binary files for visualization, *CaNS* now generates a log file that contains information about the saved data (see `out2d.h90` and `out3d.h90` for more details); this new approach uses that log file to generate the `Xdmf` visualization file.
+in addition to the field files for visualization, *CaNS* now generates a log file that contains information about the saved data (see `out2d.h90` and `out3d.h90` for more details); this new approach uses that log file to generate the corresponding visualization metadata.
 
 the steps are as follows:
 
@@ -40,12 +40,34 @@ the procedure for visualizing 2D field data that is saved by *CaNS* in `out2d.h9
 
 ### checkpoint files
 
-A similar script also located in `utils/visualize_fields/gen_xdmf_easy`, named `write_xdmf_restart.py`, can be used to generate metadata that allows to visualize the field data contained in all saved checkpoint files:
+a similar script also located in `utils/visualize_fields/gen_xdmf_easy`, named `write_xdmf_restart.py`, can be used to generate metadata that allows to visualize the field data contained in all saved checkpoint files:
 
 ~~~
  $ python write_xdmf_restart.py
  Name of the pattern of the restart files to be visualized [fld?*.bin]:
  Names of stored variables [VEX VEY VEZ PRE]:
  Name to be appended to the grid files to prevent overwriting [_fld]:
- Name of the output file [viewfld_DNS_fld.xmf]:
+ Name of the output file [viewfld_DNS.xmf]:
 ~~~
+
+## HDF5 and ADIOS2 outputs
+
+similar helper scripts are available for the other supported I/O backends under `utils/visualize_fields/gen_xdmf_easy`.
+
+### HDF5
+
+for HDF5 visualization outputs, use:
+
+* `write_xdmf_hdf5.py` for 2D/3D field outputs
+* `write_xdmf_restart_hdf5.py` for checkpoint files
+
+these scripts generate `Xdmf` files in the same spirit as the raw-binary workflow above, but using the HDF5 outputs.
+
+### ADIOS2
+
+for ADIOS2 visualization outputs, use:
+
+* `gen_vtk_adios2.py` for 2D/3D field outputs
+* `gen_vtk_restart_adios2.py` for checkpoint files
+
+these scripts generate a `vtk.xml` descriptor inside each `.bp` directory, which can then be opened directly in ParaView/VTK-aware tools.

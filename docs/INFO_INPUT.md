@@ -135,7 +135,7 @@ These lines set the simulation termination criteria and whether the simulation s
 
 a checkpoint file `fld.bin` will be saved before the simulation is terminated.
 
-`restart`, if true, **restarts the simulation** from a previously saved checkpoint file, named `fld.bin`.
+`restart`, if true, **restarts the simulation** from a previously saved checkpoint file, named `fld.bin` (or `fld.h5` / `fld.bp` for the other supported backends).
 
 `is_overwrite_save`, if true, overwrites the checkpoint file `fld.bin` at every save; if false, a symbolic link is created which makes `fld.bin` point to the last checkpoint file with name `fld_???????.bin` (with `???????` denoting the corresponding time step number). In the latter case, to restart a run from a different checkpoint one just has to point the file `fld.bin` to the right file, e.g.: ` ln -sf fld_0000100.bin fld.bin`.
 
@@ -157,6 +157,24 @@ These lines set the frequency of time step checking and output:
 * every `isave`  time steps a **checkpoint file** is written (`fld_???????.bin`), and a symbolic link for the restart file, `fld.bin`, will point to this last save so that, by default, the last saved checkpoint file is used to restart the simulation
 
 1d, 2d and 3d outputs can be tweaked modifying files `out?d.h90`, and re-compiling the source. See also `output.f90` for more details. _Set any of these variables to `0` to skip the corresponding operation._
+
+---
+
+```fortran
+&io
+io_backend = 'mpiio'
+/
+```
+
+This optional namelist selects the **I/O backend** used for checkpointing and field output.
+
+The following options are currently available for `io_backend`:
+
+* `mpiio`: raw binary output based on MPI-I/O (default)
+* `hdf5`: HDF5 output for checkpoint and visualization files
+* `adios2`: ADIOS2 output for checkpoint and visualization files
+
+If `&io` is not provided, *CaNS* defaults to `io_backend = 'mpiio'`. Note also that selecting `hdf5` or `adios2` requires compiling the code with support for the corresponding library; otherwise, *CaNS* falls back to `mpiio` with a warning at runtime.
 
 ---
 

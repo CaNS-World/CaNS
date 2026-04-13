@@ -6,6 +6,7 @@
 # -
 import numpy as np
 import os
+import h5py
 #
 # define some custom parameters, not defined in the DNS code
 #
@@ -16,7 +17,6 @@ if(    iprecision == 4):
 else:
     my_dtype = 'float64'
 r0 = np.array([0.,0.,0.]) # domain origin
-non_uniform_grid = True
 #
 # define data type and
 # read saved data log
@@ -62,22 +62,26 @@ ng = data[0,:].astype('int')
 l  = data[1,:]
 dl = l/(1.*ng)
 #
-# generate grid files
+# generate subset grid file for xdmf
 #
 x = np.arange(r0[0]+dl[0]/2.,r0[0]+l[0],dl[0])
 y = np.arange(r0[1]+dl[1]/2.,r0[1]+l[1],dl[1])
 z = np.arange(r0[2]+dl[2]/2.,r0[2]+l[2],dl[2])
-if os.path.exists(gridfile): os.remove(gridfile)
-if(non_uniform_grid):
+if(os.path.exists('grid.h5')):
+    hf = h5py.File('grid.h5','r')
+    z = np.asarray(hf["z"])
+    hf.close()
+elif(os.path.exists('grid.bin')):
     f   = open('grid.bin','rb')
     grid_z = np.fromfile(f,dtype=my_dtype)
     f.close()
     grid_z = np.reshape(grid_z,(ng[2],4),order='F')
     z = r0[2] + grid_z[:,2]
+if os.path.exists(gridfile): os.remove(gridfile)
 x = x[nmin[0]-1:nmax[0]:nstep[0]].astype(my_dtype)
 y = y[nmin[1]-1:nmax[1]:nstep[1]].astype(my_dtype)
 z = z[nmin[2]-1:nmax[2]:nstep[2]].astype(my_dtype)
-hf = h5py.File(gridfile, 'w')
+hf = h5py.File(gridfile,'w')
 hf.create_dataset('x', data=x)
 hf.create_dataset('y', data=y)
 hf.create_dataset('z', data=z)
@@ -149,7 +153,7 @@ output = output.toprettyxml(indent="    ",newl='\n')
 outfile = input("Name of the output file [viewfld_DNS.xmf]: ") or "viewfld_DNS.xmf"
 xdmf_file = open(outfile, 'w')
 xdmf_file.write(output)
-xdmf_file.close
+xdmf_file.close()
 #
 # workaround to add the DOCTYPE line
 #
