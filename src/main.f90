@@ -449,7 +449,7 @@ program cans
         end if
         call boundp(s%cbc,n,s%bc,nb,is_bound,dl,dzc,s%val)
       end do
-      call rk(rkcoeff(:,irk),n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,visc,dt,p, &
+      call rk(rkcoeff(:,irk),n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,dt,visc,p, &
               is_forced,velf,bforce,gacc,beta,scalars,dudtrko,dvdtrko,dwdtrko,u,v,w,f)
       call bulk_forcing(n,is_forced,f,u,v,w)
       dpdl(:) = dpdl(:) + f(:)
