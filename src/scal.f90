@@ -45,8 +45,9 @@ module mod_scal
     !
     implicit none
     integer , intent(in) :: nx,ny,nz
-    real(rp), intent(in) :: dxi,dyi,visc
+    real(rp), intent(in) :: dxi,dyi
     real(rp), intent(in), dimension(0:) :: dzci,dzfi
+    real(rp), intent(in) :: visc
     real(rp), dimension(0:,0:,0:), intent(in) :: u,v,w,s
     real(rp), dimension(:,:,:), intent(out) :: dsdt
     real(rp), dimension(:,:,:), intent(out), optional :: dsdtd

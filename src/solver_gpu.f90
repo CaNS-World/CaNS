@@ -949,7 +949,7 @@ module mod_solver_gpu
   subroutine solver_gaussel_z_gpu(n,ng,hi,a,b,c,bcz,c_or_f,norm,p)
     use mod_param, only: eps
     implicit none
-    integer , intent(in), dimension(3) :: ng,n,hi
+    integer , intent(in), dimension(3) :: n,ng,hi
     real(rp), intent(in), dimension(:) :: a,b,c
     character(len=1), dimension(0:1), intent(in) :: bcz
     character(len=1), intent(in), dimension(3) :: c_or_f

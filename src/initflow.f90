@@ -23,7 +23,7 @@ module mod_initflow
     real(rp), intent(in), dimension(0:1,3,3) :: bcvel
     integer , intent(in), dimension(3) :: ng,lo
     real(rp), intent(in), dimension(3) :: l,dl
-    real(rp), intent(in), dimension(0:) :: dzc,dzf,zc,zf
+    real(rp), intent(in), dimension(0:) :: zc,zf,dzc,dzf
     real(rp), intent(in)               :: visc
     logical , intent(in), dimension(3) :: is_forced
     real(rp), intent(in), dimension(3) :: velf,bforce
@@ -204,7 +204,7 @@ module mod_initflow
     end if
     if(is_mean) then
       if(trim(inivel) /= 'iop') then
-        call set_mean(n,ubulk,dzf/l(3)*(dl(1)/l(1))*(dl(2)/l(2)),u(1:n(1),1:n(2),1:n(3)))
+        call set_mean(n,dzf/l(3)*(dl(1)/l(1))*(dl(2)/l(2)),ubulk,u(1:n(1),1:n(2),1:n(3)))
       end if
     end if
     if(is_wallturb) is_pair = .true.
@@ -340,7 +340,7 @@ module mod_initflow
       call add_noise(ng,lo,123,.05_rp,s(1:n(1),1:n(2),1:n(3)))
     end if
     if(is_mean) then
-      call set_mean(n,sref,dzf/l(3)*(dl(1)/l(1))*(dl(2)/l(2)),s(1:n(1),1:n(2),1:n(3)))
+      call set_mean(n,dzf/l(3)*(dl(1)/l(1))*(dl(2)/l(2)),sref,s(1:n(1),1:n(2),1:n(3)))
     end if
   end subroutine initscal
   !
@@ -376,7 +376,7 @@ module mod_initflow
     end do
   end subroutine add_noise
   !
-  subroutine set_mean(n,mean,grid_vol_ratio,p)
+  subroutine set_mean(n,grid_vol_ratio,mean,p)
   implicit none
   integer , intent(in), dimension(3) :: n
   real(rp), intent(in), dimension(0:) :: grid_vol_ratio
