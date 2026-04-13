@@ -55,7 +55,11 @@ runs:
       shell: bash
       run: |
         source .github/actions/build/scripts/setenv-${{ inputs.compiler }}.sh
-        make FCOMP=${{ inputs.compiler }} ${{ inputs.compiler_flags }}
+        if [ "${{ inputs.compiler }}" = "NVIDIA" ]; then
+          make FCOMP=${{ inputs.compiler }} 'FFLAGS+= -tp=px' ${{ inputs.compiler_flags }}
+        else
+          make FCOMP=${{ inputs.compiler }} ${{ inputs.compiler_flags }}
+        fi
     - name: Put CaNS build
       if: ${{ inputs.no-rebuild != 'true' }}
       uses: actions/upload-artifact@v7
