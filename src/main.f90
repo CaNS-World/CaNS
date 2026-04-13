@@ -76,7 +76,6 @@ program cans
   use mod_workspaces     , only: init_wspace_arrays,set_cufft_wspace,cudecomp_finalize
   use mod_common_cudecomp, only: istream_acc_queue_1,ap_z_ptdma
 #endif
-  use mod_timer          , only: timer_tic,timer_toc,timer_print
   use mod_updatep        , only: updatep
   use mod_utils          , only: bulk_mean
 #if defined(_OPENACC)
