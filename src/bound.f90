@@ -154,11 +154,13 @@ module mod_bound
       select case(ctype)
       case('P')
         !
-        ! n.b.: this periodic BC imposition assumes that the subroutine is only called for
-        !       for non-decomposed directions, for which n is the domain length in index space;
-        !       note that the is_bound(:,:) mask above (set under initmpi.f90) is only true along
-        !       the (undecomposed) pencil direction;
-        !       along decomposed directions, periodicity is naturally set via the halo exchange
+        ! note: this periodic BC imposition assumes that the subroutine is only
+        ! called for non-decomposed directions, for which `n` is the domain
+        ! length in index space;
+        ! note that the `is_bound(:,:)` mask above (set under `initmpi.f90`)
+        ! is only true along the undecomposed pencil direction;
+        ! along decomposed directions, periodicity is naturally set via the
+        ! halo exchange
         !
         select case(idir)
         case(1)

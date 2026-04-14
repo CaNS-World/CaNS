@@ -360,7 +360,7 @@ module mod_solver_gpu
       end if
     else
       if(.not.allocated(dd)) then
-        allocate(dd(n+1)) ! needs to accomodate both face-centered and cell-centered variables
+        allocate(dd(n+1)) ! needs to accommodate both face-centered and cell-centered variables
         !$acc enter data create(dd) async(1)
       end if
       !$acc parallel loop gang vector collapse(2) default(present) private(z) async(1)
@@ -384,7 +384,7 @@ module mod_solver_gpu
       end do
       if(is_periodic) then
         if(.not.allocated(pp2)) then
-          allocate(pp2(n+1)) ! needs to accomodate both face-centered and cell-centered variables
+          allocate(pp2(n+1)) ! needs to accommodate both face-centered and cell-centered variables
           !$acc enter data create(pp2) async(1)
         end if
         !$acc parallel loop gang vector collapse(2) default(present) private(z) async(1)
@@ -752,7 +752,7 @@ module mod_solver_gpu
       ! manual partitioning to avoid an MPI_ALLGATHER
       ! initialization step and storing the result
       !
-      ! for future reference, one can do, only once, in an initialization step:
+      ! for future reference, this could be done once in an initialization step:
       !  ```
       !  allocate(lo_y_all(3,0:nrank-1),hi_y_all(3,0:nrank-1))
       !  call MPI_ALLGATHER(lo_y,3,MPI_INTEGER,lo_all,3,MPI_INTEGER,MPI_COMM_WORLD)
@@ -990,10 +990,11 @@ module mod_solver_gpu
       if(.not.is_no_decomp_z) then
         select case(ipencil_axis)
         !
-        ! n.b.: since x- and y-aligned partitions are anyway sub-optimal with z-implicit diffusion,
-        !       the first transposes below are not optimized to skip the copy of the
-        !       input array `p` to `px`/`py`, as done above in `solver_gpu()`;
-        !       the same holds for the reciprocate operations after the solution is obtained
+        ! note: since x- and y-aligned partitions are anyway sub-optimal with
+        ! z-implicit diffusion, the first transposes below are not
+        ! optimized to skip the copy of the input array `p` to `px`/`py`,
+        ! as done above in `solver_gpu()`; the same holds for the
+        ! reciprocal operations after the solution is obtained
         !
         case(1)
           !$acc parallel loop collapse(3) default(present) async(1)

@@ -15,8 +15,8 @@ module mod_debug
   !
   subroutine chk_helmholtz(lo,hi,l,dli,dzci,dzfi,alpha,fp,fpp,bc,is_bound,c_or_f,difftot,diffmax)
     !
-    ! this subroutine checks if the implementation of implicit diffusion is
-    ! correct under sanity.f90
+    ! this subroutine checks the correctness of the solution of a Helmholtz equation
+    ! with collocated or staggered boundary conditions
     !
     implicit none
     integer , intent(in), dimension(3) :: lo,hi

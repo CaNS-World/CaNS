@@ -61,7 +61,7 @@ module mod_initflow
       is_noise = .true.
     case('iop') ! reversed 'poi'
       !
-      ! convective reference frame moving with velocit `ubulk`;
+      ! convective reference frame moving with velocity `ubulk`;
       ! walls have negative velocity equal to `ubulk` in the laboratory frame
       !
       ubulk = 0.5*abs(bcvel(0,3,1)+bcvel(1,3,1))
@@ -445,7 +445,7 @@ module mod_initflow
     integer  :: k
     real(rp) :: theta
     !
-    ! temporal boudary layer profile
+    ! temporal boundary layer profile
     ! with thickness d, viscosity nu, and wall velocity norm (at z=0)
     !
     theta = 54.*nu/norm
