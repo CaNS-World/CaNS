@@ -58,8 +58,8 @@ contains
 #endif
     !
     ! allocate cuDecomp workspace buffer for halos
-    ! (needs to be different due to the possible need of an NVSHMEM allocator
-    !  in one of the descriptors, rather than a simple cudaMaloc)
+    ! (needs to be separate due to the possible need for an NVSHMEM allocator
+    !  in one of the descriptors, rather than a simple cudaMalloc)
     !
     nh(:) = 1
     istat = cudecompGetHaloWorkspaceSize(handle,gd_halo,ipencil,nh,max_wsize)
@@ -86,10 +86,10 @@ contains
         !$acc enter data create(pz_aux_1)
       end if
       !
-      ! allocate pcr-tdma transpose workspaces: separate buffer is needed because work is used along with work_ptdma
+      ! allocate PCR-TDMA transpose workspaces: a separate buffer is needed because `work` is used along with `work_ptdma`
       !
       istat = cudecompGetTransposeWorkspaceSize(handle,gd_ptdma,wsize)
-      wsize = max(wsize,(3*(ng(3)+1))) ! work_ptdma also use as a buffer with this size in `gaussel_ptdma_gpu_fast_1d`
+      wsize = max(wsize,(3*(ng(3)+1))) ! `work_ptdma` is also used as a buffer with this size in `gaussel_ptdma_gpu_fast_1d`
       allocate(work_ptdma(wsize))
       !$acc enter data create(work_ptdma) if(is_use_diezdecomp)
 #if !defined(_USE_DIEZDECOMP)

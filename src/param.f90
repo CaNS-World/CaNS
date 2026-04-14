@@ -170,7 +170,7 @@ contains
     nscal = 0
     open(newunit=iunit,file=input_file,status='old',action='read',iostat=ierr,iomsg=c_iomsg)
       if(ierr /= 0) then
-        if(myid == 0) print*, 'Error reading the input file: ', trim(c_iomsg)
+        if(myid == 0) print*, 'ERROR: reading the input file: ', trim(c_iomsg)
         if(myid == 0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
         close(iunit)
@@ -182,7 +182,7 @@ contains
       rewind(iunit)
       read(iunit,nml=dns,iostat=ierr,iomsg=c_iomsg)
       if(ierr /= 0) then
-        if(myid == 0) print*, 'Error reading `dns` namelist: ', trim(c_iomsg)
+        if(myid == 0) print*, 'ERROR: reading `dns` namelist: ', trim(c_iomsg)
         if(myid == 0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
         close(iunit)
@@ -194,7 +194,7 @@ contains
       visc = visci**(-1)
       if(all([1,2,3] /= ipencil_axis)) then
         ipencil_axis = 1 ! default to one
-        if(myid == 0) print*, 'Warning: prescribed value of `ipencil_axis` different than 1/2/3.', trim(c_iomsg)
+        if(myid == 0) print*, 'Warning: prescribed value of `ipencil_axis` is different from 1/2/3.'
         if(myid == 0) print*, 'Defaulting to `ipencil_axis = 1` (x-aligned pencils)...'
       end if
 #if defined(_OPENACC)
@@ -213,7 +213,7 @@ contains
       rewind(iunit)
       read(iunit,nml=cudecomp,iostat=ierr,iomsg=c_iomsg)
       if(ierr /= 0) then
-        if(myid == 0) print*, 'Error reading cudecomp namelist: ', trim(c_iomsg)
+        if(myid == 0) print*, 'ERROR: reading `cudecomp` namelist: ', trim(c_iomsg)
         if(myid == 0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
         close(iunit)
@@ -292,7 +292,7 @@ contains
         rewind(iunit)
         read(iunit,nml=scalar,iostat=ierr,iomsg=c_iomsg)
         if(ierr /= 0) then
-          if(myid == 0) print*, 'Error reading scalar namelist: ', trim(c_iomsg)
+          if(myid == 0) print*, 'ERROR: reading `scalar` namelist: ', trim(c_iomsg)
           if(myid == 0) print*, 'Aborting...'
           call MPI_FINALIZE(ierr)
           close(iunit)
@@ -306,7 +306,7 @@ contains
       alpha_max = alpha_max**(-1)
       if(is_boussinesq_buoyancy) then
         if(nscal == 0) then
-          if(myid == 0) print*, 'error reading the input file: `is_boussinesq_buoyancy = T` requires `nscal > 0`.'
+          if(myid == 0) print*, 'ERROR: reading the input file: `is_boussinesq_buoyancy = T` requires `nscal > 0`.'
           if(myid == 0) print*, 'Aborting...'
           call MPI_FINALIZE(ierr)
           error stop
@@ -318,7 +318,7 @@ contains
       rewind(iunit)
       read(iunit,nml=numerics,iostat=ierr,iomsg=c_iomsg)
       if(ierr /= 0 .and. ierr /= iostat_end) then
-        if(myid == 0) print*, 'Error reading `numerics` namelist: ', trim(c_iomsg)
+        if(myid == 0) print*, 'ERROR: reading `numerics` namelist: ', trim(c_iomsg)
         if(myid == 0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
         close(iunit)
@@ -331,7 +331,7 @@ contains
       rewind(iunit)
       read(iunit,nml=other_options,iostat=ierr,iomsg=c_iomsg)
       if(ierr /= 0 .and. ierr /= iostat_end) then
-        if(myid == 0) print*, 'Error reading `other_options` namelist: ', trim(c_iomsg)
+        if(myid == 0) print*, 'ERROR: reading `other_options` namelist: ', trim(c_iomsg)
         if(myid == 0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
         close(iunit)
@@ -343,7 +343,7 @@ contains
       rewind(iunit)
       read(iunit,nml=io,iostat=ierr,iomsg=c_iomsg)
       if(ierr /= 0 .and. ierr /= iostat_end) then
-        if(myid == 0) print*, 'Error reading `io` namelist: ', trim(c_iomsg)
+        if(myid == 0) print*, 'ERROR: reading `io` namelist: ', trim(c_iomsg)
         if(myid == 0) print*, 'Aborting...'
         call MPI_FINALIZE(ierr)
         close(iunit)

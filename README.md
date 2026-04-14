@@ -20,8 +20,8 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 
 ## News
 
-### _Major Update:_ `CaNS 3.0` _is out!_ :tada:
-See the [Release Notes](https://github.com/CaNS-World/CaNS/releases/tag/v3.0.0) for more details.
+### _Major Update:_ `CaNS 4.0` _is out!_ :tada:
+See the [Release Notes](https://github.com/CaNS-World/CaNS/releases/tag/v4.0.0) for more details.
 
 **[26/03/2026]:** We have extended the I/O capabilities of CaNS for checkpointing and data visualization of structured subset outputs, and support two new backends that enable data compression: HDF5 and ADIOS2. See the updated [`docs/INFO_INPUT.md`](docs/INFO_INPUT.md) and [`docs/INFO_VISU.md`](docs/INFO_VISU.md) for more details.
 

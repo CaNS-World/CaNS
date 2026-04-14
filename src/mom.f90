@@ -555,9 +555,9 @@ module mod_mom
                 dvdxp,dvdxm,dvdzp,dvdzm, &
                 dwdxp,dwdxm,dwdyp,dwdym
     !
-    ! n.b.: replace scalars with reduction of tau(1:3,1:3) once the
-    !       nvfortran bug for array reductions on Pascal architectures
-    !       is solved; this subroutine is not used in production anyway
+    ! replace scalars with a reduction of tau(1:3,1:3) once the
+    ! nvfortran bug for array reductions on Pascal architectures
+    ! is solved; this subroutine is not used in production anyway
     !
     real(rp) :: tau21p,tau31p,tau12p,tau32p,tau13p,tau23p, &
                 tau21m,tau31m,tau12m,tau32m,tau13m,tau23m
@@ -842,7 +842,7 @@ module mod_mom
       do j=1,ny
         do i=1,nx
           !
-          ! touch u,v,w sequentially
+          ! touch `u`, `v`, `w` sequentially
           !
           u_ccm = u(i  ,j  ,k-1)
           u_pcm = u(i+1,j  ,k-1)

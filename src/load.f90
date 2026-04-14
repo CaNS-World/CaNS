@@ -107,7 +107,7 @@ contains
       good = (product(int(ng(:),MPI_OFFSET_KIND))*(4+nscal)+2)*f_sizeof(1._rp)
       if(filesize /= good) then
         if(myid == 0) print*, ''
-        if(myid == 0) print*, '*** Simulation aborted due a checkpoint file with incorrect size ***'
+        if(myid == 0) print*, '*** Simulation aborted due to a checkpoint file with incorrect size ***'
         if(myid == 0) print*, '    file: ', filename, ' | expected size: ', good, '| actual size: ', filesize
         call MPI_FINALIZE(ierr)
         error stop
@@ -313,12 +313,12 @@ contains
     !
     ! transpose arrays for I/O over x-aligned pencils on GPUs
     !
-    ! n.b.: the Poisson solver buffers are being recycled here, meaning
-    ! that I/O should use same precision as these buffers, in case this
-    ! routine is used in the future;
+    ! note: the Poisson solver buffers are being recycled here, meaning that
+    ! I/O should use the same precision as these buffers if this routine
+    ! is used in the future;
     ! alternatively one could *temporarily* (i.e., during I/O) offload
-    ! device memory and allocate larger buffers (and while at it, use a
-    ! dedicated cuDecomp grid descriptor without axis-contiguous layout)
+    ! device memory and allocate larger buffers, and use a dedicated
+    ! cuDecomp grid descriptor without axis-contiguous layout
     !
     use cudecomp
     use mod_common_cudecomp, only: buf => solver_buf_0, work, &
@@ -495,7 +495,7 @@ contains
       good = (product(int(ng(:),MPI_OFFSET_KIND))*1+2)*f_sizeof(1._rp)
       if(filesize /= good) then
         if(myid == 0) print*, ''
-        if(myid == 0) print*, '*** Simulation aborted due a checkpoint file with incorrect size ***'
+        if(myid == 0) print*, '*** Simulation aborted due to a checkpoint file with incorrect size ***'
         if(myid == 0) print*, '    file: ', filename, ' | expected size: ', good, '| actual size: ', filesize
         call MPI_FINALIZE(ierr)
         error stop
@@ -685,7 +685,6 @@ contains
       end do
     end if
   end subroutine subset_stage_field
-  !
   !
   subroutine write_subset_mpiio(filename,varname,comm,ng,nh,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
     !
@@ -1446,16 +1445,14 @@ contains
     call adios2_open_engine(io,adios,io_handle,engine,filename,comm)
     is_compress = (io == 'w' .and. is_use_compression)
     !
-    ! BP5 in ADIOS2 2.11.0 is unable tocombine compression with SetMemorySelection to exclude halo regions when writing
-    ! This has been fixed and should be available in an upcoming release;
-    ! see: https://github.com/ornladios/ADIOS2/issues/4965
-    ! As a temporary workaround, we pack the data into a contiguous buffer array for writing.
+    ! BP5 in ADIOS2 2.11.0 is unable to combine compression with SetMemorySelection to exclude halo regions when writing.
+    ! this has been fixed and should be available in an upcoming release (seettps://github.com/ornladios/ADIOS2/issues/4965)
+    ! as a temporary workaround, we pack the data into a contiguous buffer array for writing.
     !
     !is_pack = is_use_compression
     !
-    ! ADIOS2 2.9.x on Ubuntu can mis-handle SetMemorySelection on haloed
-    ! restart arrays even without compression. Use the packed path for
-    ! restart fields to keep read/write behavior consistent across versions.
+    ! ADIOS2 2.9.x on Ubuntu can mis-handle SetMemorySelection on haloed restart arrays even without compression.
+    ! use the packed path for restart fields to keep read/write behavior consistent across versions.
     !
     is_pack = .true.
     if(is_compress) then
@@ -1546,8 +1543,7 @@ contains
     is_compress = io == 'w' .and. is_use_compression
     !is_pack = is_use_compression
     !
-    ! See load_all_adios2: pack restart fields for ADIOS2 to avoid
-    ! version-dependent SetMemorySelection issues on haloed arrays.
+    ! see load_all_adios2: pack restart fields for ADIOS2 to avoid version-dependent SetMemorySelection issues on haloed arrays.
     !
     is_pack = .true.
     if(is_compress) then
