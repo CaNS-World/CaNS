@@ -8,6 +8,7 @@ The `Makefile` in the root directory is used to compile the code, and is expecte
 #
 # compiler and compiling profile
 #
+At present, the GPU-enabled path documented in this branch corresponds to the OpenACC implementation. The OpenMP GPU backend is being maintained in the [`openmp-port` branch](https://github.com/CaNS-World/CaNS/tree/openmp-port); see its [`docs/INFO_COMPILING.md`](https://github.com/CaNS-World/CaNS/blob/openmp-port/docs/INFO_COMPILING.md) for the OpenMP target offload build path.
 FCOMP=GNU          # options: GNU, NVIDIA, INTEL
 FFLAGS_OPT=1       # for production runs
 FFLAGS_OPT_MAX=0   # for production runs (more aggressive optimization)
@@ -29,6 +30,8 @@ In this file, `FCOMP` can be one of `GNU` (`gfortran`), `INTEL` (`ifort`), `NVID
  * `USE_HDF5`         : enable HDF5-based I/O support
  * `USE_ADIOS2`       : enable ADIOS2-based I/O support
  * `USE_DIEZDECOMP`   : use [diezDecomp](https://github.com/Rafael10Diez/diezDecomp) as GPU communication backend instead of the default (cuDecomp), e.g., for portability in different accelerators. While diezDecomp supports CPU-CPU communication, this is not used in CaNS yet.
+
+At present, the GPU-enabled path documented in this branch corresponds to the OpenACC implementation. The OpenMP GPU backend (OpenMP target offload) is being maintained in the [`openmp-port` branch](https://github.com/CaNS-World/CaNS/tree/openmp-port); see its [`docs/INFO_COMPILING.md`](https://github.com/CaNS-World/CaNS/blob/openmp-port/docs/INFO_COMPILING.md) file for the OpenMP target offload build path.
 
 Typing `make libs` will build the 2DECOMP&FFT/cuDecomp/diezDecomp libraries; then typing `make` will compile the code and copy the executable `cans` to a `run/` folder; `make run` will also copy the default input files `*.in` under `src/` to the same `run/` folder.
 
