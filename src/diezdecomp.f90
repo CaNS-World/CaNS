@@ -5,7 +5,7 @@
 !
 ! -
 module diezdecomp
-#if defined(_OPENACC) && defined(_USE_DIEZDECOMP)
+#if (defined(_OPENACC) || defined(_OPENMP)) && defined(_USE_DIEZDECOMP)
   !
   ! named constants
   !
