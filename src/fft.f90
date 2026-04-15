@@ -645,7 +645,6 @@ module mod_fft
     implicit none
     !
     ! wrapper subroutine for signal processing to compute FFT-based transforms
-    ! (can also be done with pointers to a subroutine like in `initgrid.f90`)
     !
     integer,          intent(in) :: pre_or_pos ! prior (0) or after (1) fft
     character(len=1), intent(in) :: f_or_b     ! forward or backward transform

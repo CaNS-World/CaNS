@@ -31,19 +31,19 @@
   !
   call write_visu_2d(datadir,'vex_slice_fld_'//fldnum//trim(io_ext),'log_visu_2d_slice_1.out','Velocity_X', &
                      ng,[1,1,1],lo,hi,2,ng(2)/2,time,istep, &
-                     u,xc_g,yc_g,zc_g)
+                     u,xc_g,yc_g,zc_g,.true.)
   call write_visu_2d(datadir,'vey_slice_fld_'//fldnum//trim(io_ext),'log_visu_2d_slice_1.out','Velocity_Y', &
                      ng,[1,1,1],lo,hi,2,ng(2)/2,time,istep, &
-                     v,xc_g,yc_g,zc_g)
+                     v,xc_g,yc_g,zc_g,.true.)
   call write_visu_2d(datadir,'vez_slice_fld_'//fldnum//trim(io_ext),'log_visu_2d_slice_1.out','Velocity_Z', &
                      ng,[1,1,1],lo,hi,2,ng(2)/2,time,istep, &
-                     w,xc_g,yc_g,zc_g)
+                     w,xc_g,yc_g,zc_g,.true.)
   call write_visu_2d(datadir,'pre_slice_fld_'//fldnum//trim(io_ext),'log_visu_2d_slice_1.out','Pressure_P', &
                      ng,[1,1,1],lo,hi,2,ng(2)/2,time,istep, &
-                     p,xc_g,yc_g,zc_g)
+                     p,xc_g,yc_g,zc_g,.true.)
   do iscal = 1,nscal
     write(scalnum,'(i3.3)') iscal
     call write_visu_2d(datadir,'sca_'//scalnum//'_slice_fld_'//fldnum//trim(io_ext),'log_visu_2d_slice_1.out','Scalar_S'//scalnum, &
                        ng,[1,1,1],lo,hi,2,ng(2)/2,time,istep, &
-                       scalars(iscal)%val,xc_g,yc_g,zc_g)
+                       scalars(iscal)%val,xc_g,yc_g,zc_g,.true.)
   end do
