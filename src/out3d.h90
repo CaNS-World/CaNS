@@ -31,19 +31,19 @@
   !
   call write_visu_3d(datadir,'vex_fld_'//fldnum//trim(io_ext),'log_visu_3d.out','Velocity_X', &
                      ng,[1,1,1],lo,hi,[1,1,1],[ng(1),ng(2),ng(3)],[1,1,1],time,istep, &
-                     u,xc_g,yc_g,zc_g)
+                     u,xc_g,yc_g,zc_g,.true.)
   call write_visu_3d(datadir,'vey_fld_'//fldnum//trim(io_ext),'log_visu_3d.out','Velocity_Y', &
                      ng,[1,1,1],lo,hi,[1,1,1],[ng(1),ng(2),ng(3)],[1,1,1],time,istep, &
-                     v,xc_g,yc_g,zc_g)
+                     v,xc_g,yc_g,zc_g,.true.)
   call write_visu_3d(datadir,'vez_fld_'//fldnum//trim(io_ext),'log_visu_3d.out','Velocity_Z', &
                      ng,[1,1,1],lo,hi,[1,1,1],[ng(1),ng(2),ng(3)],[1,1,1],time,istep, &
-                     w,xc_g,yc_g,zc_g)
+                     w,xc_g,yc_g,zc_g,.true.)
   call write_visu_3d(datadir,'pre_fld_'//fldnum//trim(io_ext),'log_visu_3d.out','Pressure_P', &
                      ng,[1,1,1],lo,hi,[1,1,1],[ng(1),ng(2),ng(3)],[1,1,1],time,istep, &
-                     p,xc_g,yc_g,zc_g)
+                     p,xc_g,yc_g,zc_g,.true.)
   do iscal = 1,nscal
     write(scalnum,'(i3.3)') iscal
     call write_visu_3d(datadir,'sca_'//scalnum//'_fld_'//fldnum//trim(io_ext),'log_visu_3d.out','Scalar_S'//scalnum, &
                        ng,[1,1,1],lo,hi,[1,1,1],[ng(1),ng(2),ng(3)],[1,1,1],time,istep, &
-                       scalars(iscal)%val,xc_g,yc_g,zc_g)
+                       scalars(iscal)%val,xc_g,yc_g,zc_g,.true.)
   end do
