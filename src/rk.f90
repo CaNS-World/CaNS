@@ -21,7 +21,7 @@ module mod_rk
   implicit none
   public rk,rk_scal
   contains
-  subroutine rk(rkpar,n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,visc,dt,p, &
+  subroutine rk(rkpar,n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,dt,visc,p, &
                 is_forced,velf,bforce,gacc,beta,scalars,dudtrko,dvdtrko,dwdtrko,u,v,w,f)
 #if defined(_OPENACC)
     use mod_common_cudecomp, only: dudtrk_t => work, &
@@ -35,10 +35,10 @@ module mod_rk
     implicit none
     real(rp), intent(in   ), dimension(2)        :: rkpar
     integer , intent(in   ), dimension(3)        :: n
-    real(rp), intent(in   )                      :: visc,dt
     real(rp), intent(in   ), dimension(3)        :: dli
     real(rp), intent(in   ), dimension(0:)       :: dzci,dzfi
     real(rp), intent(in   ), dimension(0:)       :: grid_vol_ratio_c,grid_vol_ratio_f
+    real(rp), intent(in   )                      :: dt,visc
     real(rp), intent(in   ), dimension(0:,0:,0:) :: p
     logical , intent(in   ), dimension(3)        :: is_forced
     real(rp), intent(in   ), dimension(3)        :: velf,bforce
@@ -509,7 +509,7 @@ module mod_rk
     end if
   end subroutine cmpt_bulk_forcing
   !
-  subroutine cmpt_bulk_forcing_alternative(rkpar,n,dli,l,dzci,dzfi,visc,dt,is_bound,is_forced,u,v,w,tauxo,tauyo,tauzo,f,is_first)
+  subroutine cmpt_bulk_forcing_alternative(rkpar,n,dli,l,dzci,dzfi,dt,visc,is_bound,is_forced,u,v,w,tauxo,tauyo,tauzo,f,is_first)
     !
     ! computes the pressure gradient to be added to the flow that perfectly balances the wall shear stresses
     ! this effectively prescribes zero net acceleration, which allows to sustain a constant mass flux
@@ -517,9 +517,9 @@ module mod_rk
     implicit none
     real(rp), intent(in), dimension(2) :: rkpar
     integer , intent(in), dimension(3) :: n
-    real(rp), intent(in) :: visc,dt
     real(rp), intent(in   ), dimension(3) :: dli,l
     real(rp), intent(in   ), dimension(0:) :: dzci,dzfi
+    real(rp), intent(in) :: dt,visc
     logical , intent(in   ), dimension(0:1,3)    :: is_bound
     logical , intent(in   ), dimension(3) :: is_forced
     real(rp), intent(in   ), dimension(0:,0:,0:) :: u,v,w

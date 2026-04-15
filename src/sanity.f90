@@ -53,7 +53,7 @@ module mod_sanity
     end if
     if(is_impdiff_1d .and. .not.(ipencil_axis == 3) .and. .not.is_poisson_pcr_tdma) then
       if(dims(2) > 1) then
-        if(myid == 0)  print*, 'WARNING: a run with implicit Z diffusion (`is_impdiff_1d = T`) is much more efficient &
+        if(myid == 0)  print*, 'Warning: a run with implicit Z diffusion (`is_impdiff_1d = T`) is much more efficient &
                                        & when the flow is not decomposed along the Z direction.'
       end if
     end if
@@ -326,7 +326,7 @@ module mod_sanity
       call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,is_bound,rhsbx,rhsby,rhsbz,u)
       call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,1),['f','c','c'],u)
       call fftend(arrplan)
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w) ! actually we are only interested in boundary condition in u
+      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w) ! actually we are only interested in the boundary condition in `u`
       call chk_helmholtz(lo,hi,l,dli,dzci,dzfi,alpha,p,u,cbcvel(:,:,1),is_bound,['f','c','c'],restot,resmax)
       passed_loc = resmax < small
       if(myid == 0.and.(.not.passed_loc)) &
@@ -358,7 +358,7 @@ module mod_sanity
       call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,is_bound,rhsbx,rhsby,rhsbz,v)
       call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,2),['c','f','c'],v)
       call fftend(arrplan)
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w) ! actually we are only interested in boundary condition in v
+      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w) ! actually we are only interested in the boundary condition in `v`
       call chk_helmholtz(lo,hi,l,dli,dzci,dzfi,alpha,p,v,cbcvel(:,:,2),is_bound,['c','f','c'],restot,resmax)
       passed_loc = resmax < small
       if(myid == 0.and.(.not.passed_loc)) &
@@ -390,7 +390,7 @@ module mod_sanity
       call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,is_bound,rhsbx,rhsby,rhsbz,w)
       call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,3),['c','c','f'],w)
       call fftend(arrplan)
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w) ! actually we are only interested in boundary condition in w
+      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w) ! actually we are only interested in the boundary condition in `w`
       call chk_helmholtz(lo,hi,l,dli,dzci,dzfi,alpha,p,w,cbcvel(:,:,3),is_bound,['c','c','f'],restot,resmax)
       passed_loc = resmax < small
       if(myid == 0.and.(.not.passed_loc)) &

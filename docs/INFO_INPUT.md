@@ -1,6 +1,6 @@
-# about the input file `input.nml`
+# About the input file `input.nml`
 
-Consider the following input file as example (corresponds to a turbulent plane channel flow). `&dns` defines a so-called Fortran namelist containing all the necessary physical and computational parameters to set a case.
+Consider the following input file as an example (corresponding to a turbulent plane channel flow). `&dns` defines a Fortran namelist containing all the necessary physical and computational parameters to set a case.
 
 
 ```fortran
@@ -27,7 +27,7 @@ bcpre(0:1,1:3  ) =  0.,0.,   0.,0.,   0.,0.
 bforce(1:3) = 0., 0., 0.
 is_forced(1:3) = T, F, F
 velf(1:3) = 1., 0., 0.
-dims(1:2) = 2, 2, ipecil_axis = 1
+dims(1:2) = 2, 2, ipencil_axis = 1
 /
 ```
 <details>
@@ -72,7 +72,7 @@ cfl = 0.95, dtmax = 1.e5, dt_f = -1.
 
 This line controls the simulation time step size.
 
-The time step size is set to be equal to `min(cfl*dt_cfl,dtmax)` if `dt_f < 0`, and to `dt_f` otherwise. In the former case, the code prescribes the minimum value between `dtmax` and `cfl` times the maximum allowable time step `dt_cfl` (computed every `ickeck` time steps; see below). `dtmax` is therefore used when a constant time step, smaller than `cfl*dt_cfl`, is required. If not, it should be set to a high value so that the time step is dynamically adjusted to `cfl*dt_cfl`. Finally, a constant time step size time step may be forced, irrespective of the temporal stability evaluation through `dt_f`.
+The time step size is set to be equal to `min(cfl*dt_cfl,dtmax)` if `dt_f < 0`, and to `dt_f` otherwise. In the former case, the code prescribes the minimum value between `dtmax` and `cfl` times the maximum allowable time step `dt_cfl` (computed every `icheck` time steps; see below). `dtmax` is therefore used when a constant time step, smaller than `cfl*dt_cfl`, is required. If not, it should be set to a high value so that the time step is dynamically adjusted to `cfl*dt_cfl`. Finally, a constant time step size may be forced, irrespective of the temporal stability evaluation through `dt_f`.
 
 ---
 
@@ -133,13 +133,13 @@ These lines set the simulation termination criteria and whether the simulation s
 * `stop_type(2)`, if true (`T`), the simulation will terminate after `time_max` physical time units have been reached
 * `stop_type(3)`, if true (`T`), the simulation will terminate after `tw_max` simulation wall-clock time (in hours) has been reached
 
-a checkpoint file `fld.bin` will be saved before the simulation is terminated.
-
 `restart`, if true, **restarts the simulation** from a previously saved checkpoint file, named `fld.bin` (or `fld.h5` / `fld.bp` for the other supported backends).
 
 `is_overwrite_save`, if true, overwrites the checkpoint file `fld.bin` at every save; if false, a symbolic link is created which makes `fld.bin` point to the last checkpoint file with name `fld_???????.bin` (with `???????` denoting the corresponding time step number). In the latter case, to restart a run from a different checkpoint one just has to point the file `fld.bin` to the right file, e.g.: ` ln -sf fld_0000100.bin fld.bin`.
 
 `nsaves_max` limits the number of saved checkpoint files, if `is_over_write_save` is false; a value of `0` or any negative integer corresponds to no limit, and the code uses the file format described above; otherwise, only `nsaves_max` checkpoint files are saved, with the oldest save being overwritten when the number of saved checkpoints exceeds this threshold; in this case, files with a format `fld_????.bin` are saved (with `????` denoting the saved file number), with `fld.bin` pointing to the last checkpoint file as described above; moreover, a file `log_checkpoints.out` records information about the time step number and physical time corresponding to each saved file number.
+
+Finally, note that a checkpoint file will be saved before the simulation is terminated.
 
 ---
 
@@ -149,32 +149,14 @@ icheck = 10, iout0d = 10, iout1d = 100, iout2d = 500, iout3d = 10000, isave = 50
 
 These lines set the frequency of time step checking and output:
 
-* every `icheck` time steps **the new time step size** is computed according to the new stability criterion and cfl (above)
+* every `icheck` time steps **the new time step size** is computed according to the stability criterion and `cfl` (above)
 * every `iout0d` time steps **history files with global scalar variables** are appended; currently the forcing pressure gradient and time step history are reported
 * every `iout1d` time steps **1d profiles** are written (e.g. velocity and its moments) to a file
 * every `iout2d` time steps **2d slices of a 3d scalar field** are written to a file
 * every `iout3d` time steps **3d scalar fields** are written to a file
 * every `isave`  time steps a **checkpoint file** is written (`fld_???????.bin`), and a symbolic link for the restart file, `fld.bin`, will point to this last save so that, by default, the last saved checkpoint file is used to restart the simulation
 
-1d, 2d and 3d outputs can be tweaked modifying files `out?d.h90`, and re-compiling the source. See also `output.f90` for more details. _Set any of these variables to `0` to skip the corresponding operation._
-
----
-
-```fortran
-&io
-io_backend = 'mpiio'
-/
-```
-
-This optional namelist selects the **I/O backend** used for checkpointing and field output.
-
-The following options are currently available for `io_backend`:
-
-* `mpiio`: raw binary output based on MPI-I/O (default)
-* `hdf5`: HDF5 output for checkpoint and visualization files
-* `adios2`: ADIOS2 output for checkpoint and visualization files
-
-If `&io` is not provided, *CaNS* defaults to `io_backend = 'mpiio'`. Note also that selecting `hdf5` or `adios2` requires compiling the code with support for the corresponding library; otherwise, *CaNS* falls back to `mpiio` with a warning at runtime.
+1d, 2d, and 3d outputs can be tweaked by modifying files `out?d.h90` and recompiling the source. See also `output.f90` for more details. _Set any of these variables to `0` to skip the corresponding operation._
 
 ---
 
@@ -191,11 +173,11 @@ bcpre(0:1,1:3  ) =  0.,0.,   0.,0.,   0.,0.
 
 These lines set the boundary conditions (BC).
 
-The **type** (BC) for each field variable are set by a row of six characters, `X0 X1  Y0 Y1  Z0 Z1` where,
+The **type** (BC) for each field variable is set by a row of six characters, `X0 X1  Y0 Y1  Z0 Z1`, where:
 
-* `X0` `X1` set the type of BC the field variable for the **lower** and **upper** boundaries in `x`
-* `Y0` `Y1` set the type of BC the field variable for the **lower** and **upper** boundaries in `y`
-* `Z0` `Z1` set the type of BC the field variable for the **lower** and **upper** boundaries in `z`
+* `X0` `X1` set the type of BC for the field variable at the **lower** and **upper** boundaries in `x`
+* `Y0` `Y1` set the type of BC for the field variable at the **lower** and **upper** boundaries in `y`
+* `Z0` `Z1` set the type of BC for the field variable at the **lower** and **upper** boundaries in `z`
 
 The four rows correspond to the three velocity components, and pressure, i.e. `u`, `v`, `w`, and `p`.
 
@@ -217,11 +199,11 @@ velf(1:3) = 1., 0., 0.
 
 These lines set the flow forcing.
 
-`bforce`, is a constant **body force density term** in the direction in question (e.g., the negative of a constant pressure gradient) that can be added to the right-hand-side of the momentum equation. The three values correspond to three domain directions.
+`bforce` is a constant **body force density term** in the direction in question (e.g., the negative of a constant pressure gradient) that can be added to the right-hand side of the momentum equation. The three values correspond to the three domain directions.
 
-`is_forced`, if true in the direction in question, **forces the flow** with a pressure gradient that balances the total wall shear (e.g., for a pressure-driven channel with zero net acceleration/constant bulk velocity). The three boolean values correspond to three domain directions.
+`is_forced`, if true in the direction in question, **forces the flow** with a pressure gradient that balances the total wall shear (e.g., for a pressure-driven channel with zero net acceleration/constant bulk velocity). The three boolean values correspond to the three domain directions.
 
-`velf`, is the **target bulk velocity** in the direction in question (where `is_forced` is true). The three values correspond to three domain directions.
+`velf` is the **target bulk velocity** in the direction in question (where `is_forced` is true). The three values correspond to the three domain directions.
 
 ---
 
@@ -229,13 +211,13 @@ These lines set the flow forcing.
 dims(1:2) = 2, 2, ipencil_axis = 1
 ```
 
-This line set the domain decomposition and orientation of the computational subdomains.
+This line sets the domain decomposition and orientation of the computational subdomains.
 
 `dims` is the **processor grid**, the number of domain partitions along the first and second decomposed directions (which depend on the selected default pencil orientation). `dims(1)*dims(2)` corresponds therefore to the total number of computational subdomains. Setting `dims(:) = [0,0]` will trigger a runtime autotuning step to find the processor grid that minimizes transpose times. Note, however, that other components of the algorithm (e.g., collective I/O) may also be affected by the choice of processor grid.
 
-`ipencil_axis` sets the **orientation of the computational subdomains** (or pencils), being one of [1,2,3] for [X,Y,Z]-aligned pencils. X-aligned is the default if this option is not set, and should be optimal for all cases except for Z-implicit diffusion, where using Z-pencils are recommended if `dims(2) > 1` in the input file; see the description of the `&numerics` namelist below.
+`ipencil_axis` sets the **orientation of the computational subdomains** (or pencils), being one of `[1,2,3]` for `[X,Y,Z]`-aligned pencils. X-aligned is the default if this option is not set, and should be optimal for all cases except for Z-implicit diffusion, where Z-pencils are recommended if `dims(2) > 1` in the input file; see the description of the `&numerics` namelist below.
 
-# about the `&cudecomp` namelist under `input.nml`
+# About the `&cudecomp` namelist under `input.nml`
 
 In addition to the `&dns` namelist in the input file, there is an **optional** namelist to set some runtime configurations for the *cuDecomp* library. Consider the following `&cudecomp` namelist, which corresponds to the default options in case the file is not provided:
 
@@ -272,7 +254,7 @@ The other two boolean values, enable/disable the NCCL (`cudecomp_is_h_enable_ncc
 
 Finally, it is worth recalling that passing `dims(1:2) = [0,0]` under `&dns` will trigger the *processor grid* autotuning, so there is no need to provide that option in the `&cudecomp` namelist.
 
-# about the `&scalar` namelist under `input.nml`
+# About the `&scalar` namelist under `input.nml`
 
 This namelist is **optional** and defines the parameters needed to solve the transport equations associated with an arbitrary number of scalars.
 
@@ -366,7 +348,7 @@ which, in this example, defines a negative gravitational acceleration along `z` 
 
 Finally, **activate the buoyancy term** with `is_boussinesq_buoyancy = T` in the `&scalar` namelist.
 
-# about the `&numerics` namelist under `input.nml`
+# About the `&numerics` namelist under `input.nml`
 
 This namelist defines parameters related to the numerical discretization and computational method. The values below are the default ones, in case the namelist is not specified in the input file.
 
@@ -380,11 +362,11 @@ is_poisson_pcr_tdma = F
 In these lines, `is_impdiff` and `is_impdiff_1d` enable the (semi-) **implicit temporal integration of diffusion terms**:
 
 * `is_impdiff`, if `.true.`, the diffusion term of the Navier-Stokes and scalar equations is integrated in time implicitly, which may improve the stability of the numerical algorithm for viscous-dominated flows.
-* `is_impdiff_1d`, is similar to `is_impdiff`, but with implicit diffusion *only* along Z, which may be advantageous when the grid along Z is much finer than along the other directions; *for optimal parallel performance, the domain should not be decomposed along Z* (`ipencil_axis=3`, or `ipencil_axis = 1/2` with `dims(2) = 1`)
+* `is_impdiff_1d` is similar to `is_impdiff`, but with implicit diffusion *only* along Z, which may be advantageous when the grid along Z is much finer than along the other directions; *for optimal parallel performance, the domain should not be decomposed along Z* (`ipencil_axis=3`, or `ipencil_axis = 1/2` with `dims(2) = 1`)
 
-Finally, `is_poisson_pcr_tdma`, if `.true.`, allows for solving the Poisson/Helmhotlz equations along Z with a parallel cyclic reduction--tridiagonal matrix algorithm (PCR-TDMA) method. This approach may result in major gains in scalability for pencil-distributed simulations at scale, on many GPUs.
+Finally, `is_poisson_pcr_tdma`, if `.true.`, allows for solving the Poisson/Helmholtz equations along Z with a parallel cyclic reduction--tridiagonal matrix algorithm (PCR-TDMA) method. This approach may result in major gains in scalability for pencil-distributed simulations at scale, on many GPUs.
 
-# about the `&other_options` namelist under `input.nml`
+# About the `&other_options` namelist under `input.nml`
 
 This namelist defines other parameters related to the monitoring, debugging, or benchmarking of a computation. The values below are the default ones, in case the namelist is not specified in the input file.
 
@@ -397,3 +379,21 @@ is_debug = T, is_timing = T
 In these lines, `is_debug` performs some **sanity checks for debugging purposes** that do not introduce computational overhead, and `is_timing` reports the wall-clock time per step.
 
 Note: other parameters for `&numerics` and `&other_options` are not exposed here, as they are meant for very specific, advanced use or developers. They can be found in `param.f90`.
+
+This optional namelist selects the **I/O backend** used for checkpointing and field output.
+
+# About the `&io` namelist under `input.nml`
+
+```fortran
+&io
+io_backend = 'mpiio'
+/
+```
+
+The following options are currently available for `io_backend`:
+
+* `mpiio`: raw binary output based on MPI-I/O (default)
+* `hdf5`: HDF5 output for checkpoint and visualization files (requires building with `USE_HDF5=1`)
+* `adios2`: ADIOS2 output for checkpoint and visualization files (requires building with `USE_ADIOS2=1`)
+
+If `&io` is not provided, *CaNS* defaults to `io_backend = 'mpiio'`. Note also that selecting `hdf5` or `adios2` requires compiling the code with support for the corresponding library; otherwise, *CaNS* falls back to `mpiio` with a warning at runtime.
