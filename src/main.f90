@@ -501,7 +501,7 @@ program cans
       end if
       dti = 1./dt
       call chkdiv(lo,hi,l,dli,dzfi,u,v,w,divtot,divmax)
-      if(myid == 0) print*, 'Mean absolute divergence = ', divtot, '| Maximum absolute divergence = ', divmax
+      if(myid == 0) print*, 'Velocity divergence norms: Mean = ', divtot, '| Maximum = ', divmax
       if(.not.is_mask_divergence_check) then
         if(divmax > small.or.is_nan(divtot)) then
           if(myid == 0) print*, 'ERROR: maximum divergence is too large.'
