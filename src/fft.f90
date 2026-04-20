@@ -456,8 +456,8 @@ module mod_fft
     !
     ! v(n) = x(2n       ),              0 <= n <= floor((N-1)/2)
     !      = x(2N -2n -1), floor((N+1)/2) <= n <= N-1
-    ! with n = 0,...,N-1 and N is the total number of elements
-    ! of the signal.
+    ! with n = 0,...,N-1 and N being the total number of elements of the
+    ! signal.
     !
     ! pre-processing required for computing the corresponding
     ! discrete sine transform (DST) may also be performed
@@ -617,8 +617,8 @@ module mod_fft
     !
     ! v(n) = x(2n       ),              0 <= n <= floor((N-1)/2)
     !      = x(2N -2n -1), floor((N+1)/2) <= n <= N-1
-    ! with n = 0,...,N-1 and N is the total number of elements
-    ! of the signal.
+    ! with n = 0,...,N-1 and N being the total number of elements of the
+    ! signal.
     !
     ! post-processing required for computing the corresponding
     ! discrete sine transform (DST) may also be performed

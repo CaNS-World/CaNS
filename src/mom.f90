@@ -240,8 +240,9 @@ module mod_mom
   subroutine momx_d(nx,ny,nz,dxi,dyi,dzci,dzfi,visc,u,dudt)
     implicit none
     integer , intent(in) :: nx,ny,nz
-    real(rp), intent(in) :: dxi,dyi,visc
+    real(rp), intent(in) :: dxi,dyi
     real(rp), intent(in), dimension(0:) :: dzci,dzfi
+    real(rp), intent(in) :: visc
     real(rp), dimension(0:,0:,0:), intent(in   ) :: u
     real(rp), dimension( :, :, :), intent(inout) :: dudt
     real(rp) :: dudxp,dudxm,dudyp,dudym,dudzp,dudzm
@@ -270,8 +271,9 @@ module mod_mom
   subroutine momy_d(nx,ny,nz,dxi,dyi,dzci,dzfi,visc,v,dvdt)
     implicit none
     integer , intent(in) :: nx,ny,nz
-    real(rp), intent(in) :: dxi,dyi,visc
+    real(rp), intent(in) :: dxi,dyi
     real(rp), intent(in), dimension(0:) :: dzci,dzfi
+    real(rp), intent(in) :: visc
     real(rp), dimension(0:,0:,0:), intent(in   ) :: v
     real(rp), dimension( :, :, :), intent(inout) :: dvdt
     real(rp) :: dvdxp,dvdxm,dvdyp,dvdym,dvdzp,dvdzm
@@ -300,8 +302,9 @@ module mod_mom
   subroutine momz_d(nx,ny,nz,dxi,dyi,dzci,dzfi,visc,w,dwdt)
     implicit none
     integer , intent(in) :: nx,ny,nz
-    real(rp), intent(in) :: dxi,dyi,visc
+    real(rp), intent(in) :: dxi,dyi
     real(rp), intent(in), dimension(0:) :: dzci,dzfi
+    real(rp), intent(in) :: visc
     real(rp), dimension(0:,0:,0:), intent(in   ) :: w
     real(rp), dimension( :, :, :), intent(inout) :: dwdt
     integer :: i,j,k
@@ -390,8 +393,8 @@ module mod_mom
   subroutine momx_d_z(nx,ny,nz,dzci,dzfi,visc,u,dudt)
     implicit none
     integer , intent(in) :: nx,ny,nz
-    real(rp), intent(in) :: visc
     real(rp), intent(in), dimension(0:) :: dzci,dzfi
+    real(rp), intent(in) :: visc
     real(rp), dimension(0:,0:,0:), intent(in   ) :: u
     real(rp), dimension( :, :, :), intent(inout) :: dudt
     real(rp) :: dudzp,dudzm
@@ -414,8 +417,8 @@ module mod_mom
   subroutine momy_d_z(nx,ny,nz,dzci,dzfi,visc,v,dvdt)
     implicit none
     integer , intent(in) :: nx,ny,nz
-    real(rp), intent(in) :: visc
     real(rp), intent(in), dimension(0:) :: dzci,dzfi
+    real(rp), intent(in) :: visc
     real(rp), dimension(0:,0:,0:), intent(in   ) :: v
     real(rp), dimension( :, :, :), intent(inout) :: dvdt
     real(rp) :: dvdzp,dvdzm
@@ -438,8 +441,8 @@ module mod_mom
   subroutine momz_d_z(nx,ny,nz,dzci,dzfi,visc,w,dwdt)
     implicit none
     integer , intent(in) :: nx,ny,nz
-    real(rp), intent(in) :: visc
     real(rp), intent(in), dimension(0:) :: dzci,dzfi
+    real(rp), intent(in) :: visc
     real(rp), dimension(0:,0:,0:), intent(in   ) :: w
     real(rp), dimension( :, :, :), intent(inout) :: dwdt
     integer :: i,j,k
@@ -552,9 +555,9 @@ module mod_mom
                 dvdxp,dvdxm,dvdzp,dvdzm, &
                 dwdxp,dwdxm,dwdyp,dwdym
     !
-    ! n.b.: replace scalars with reduction of tau(1:3,1:3) once the
-    !       nvfortran bug for array reductions on Pascal architectures
-    !       is solved; this subroutine is not used in production anyway
+    ! replace scalars with a reduction of tau(1:3,1:3) once the
+    ! nvfortran bug for array reductions on Pascal architectures
+    ! is solved; this subroutine is not used in production anyway
     !
     real(rp) :: tau21p,tau31p,tau12p,tau32p,tau13p,tau23p, &
                 tau21m,tau31m,tau12m,tau32m,tau13m,tau23m
@@ -839,7 +842,7 @@ module mod_mom
       do j=1,ny
         do i=1,nx
           !
-          ! touch u,v,w sequentially
+          ! touch `u`, `v`, `w` sequentially
           !
           u_ccm = u(i  ,j  ,k-1)
           u_pcm = u(i+1,j  ,k-1)

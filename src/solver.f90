@@ -16,8 +16,8 @@ module mod_solver
   contains
   subroutine solver(n,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p,is_ptdma_update,aa_z,cc_z)
     !
-    ! n.b.: some of the transposes below are suboptimal in slab decompositions,
-    !       as they would be a no-op if done in-place (e.g., px = py for xy slabs)
+    ! note: some of the transposes below are suboptimal in slab decompositions,
+    ! as they would be a no-op if done in-place (e.g., `px = py` for xy slabs)
     !
     implicit none
     integer , intent(in), dimension(3) :: n,ng

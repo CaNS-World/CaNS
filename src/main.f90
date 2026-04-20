@@ -224,13 +224,14 @@ program cans
   !$acc enter data copyin(scalars(:))
   !
   if(is_debug) then
-    if(myid == 0) print*, 'This executable of CaNS was built with compiler: ', compiler_version()
-    if(myid == 0) print*, 'Using the options: ', compiler_options()
+    if(myid == 0) print*, '*** CaNS build information ***'
+    if(myid == 0) print*, 'Compiler version: ', compiler_version()
+    if(myid == 0) print*, 'Compiler options: ', compiler_options()
     block
       character(len=MPI_MAX_LIBRARY_VERSION_STRING) :: mpi_version
       integer :: ilen
       call MPI_GET_LIBRARY_VERSION(mpi_version,ilen,ierr)
-      if(myid == 0) print*, 'MPI Version: ', trim(mpi_version)
+      if(myid == 0) print*, 'MPI version: ', trim(mpi_version)
     end block
     if(myid == 0) print*, ''
   end if
@@ -377,7 +378,7 @@ program cans
       s => scalars(iscal)
       call initscal(s%ini,s%bc,ng,lo,l,dl,zc,dzf,s%alpha,s%is_forced,s%scalf,s%val)
     end do
-    if(myid == 0) print*, '*** Initial condition succesfully set ***'
+    if(myid == 0) print*, '*** Initial condition successfully set ***'
   else
     do is=1,4+nscal
       call load_one('r',trim(datadir)//'fld_'//trim(c_io_vars(is))//trim(io_ext), &
@@ -449,7 +450,7 @@ program cans
         end if
         call boundp(s%cbc,n,s%bc,nb,is_bound,dl,dzc,s%val)
       end do
-      call rk(rkcoeff(:,irk),n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,visc,dt,p, &
+      call rk(rkcoeff(:,irk),n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,dt,visc,p, &
               is_forced,velf,bforce,gacc,beta,scalars,dudtrko,dvdtrko,dwdtrko,u,v,w,f)
       call bulk_forcing(n,is_forced,f,u,v,w)
       dpdl(:) = dpdl(:) + f(:)
@@ -500,7 +501,7 @@ program cans
       end if
       dti = 1./dt
       call chkdiv(lo,hi,l,dli,dzfi,u,v,w,divtot,divmax)
-      if(myid == 0) print*, 'Mean absolute divergence = ', divtot, '| Maximum absolute divergence = ', divmax
+      if(myid == 0) print*, 'Velocity divergence norms: Mean = ', divtot, '| Maximum = ', divmax
       if(.not.is_mask_divergence_check) then
         if(divmax > small.or.is_nan(divtot)) then
           if(myid == 0) print*, 'ERROR: maximum divergence is too large.'
@@ -635,7 +636,7 @@ program cans
       call MPI_ALLREDUCE(dt12,dt12av ,1,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
       call MPI_ALLREDUCE(dt12,dt12min,1,MPI_REAL_RP,MPI_MIN,MPI_COMM_WORLD,ierr)
       call MPI_ALLREDUCE(dt12,dt12max,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
-      if(myid == 0) print*, 'Avrg, min & max elapsed time: '
+      if(myid == 0) print*, 'Average, minimum & maximum elapsed time: '
       if(myid == 0) print*, dt12av/(1.*product(dims)),dt12min,dt12max
     end if
   end do
