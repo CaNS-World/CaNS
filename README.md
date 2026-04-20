@@ -29,25 +29,13 @@ See the [Release Notes](https://github.com/CaNS-World/CaNS/releases/tag/v4.0.0) 
 
 **[06/08/2025]:** Support for running on AMD-based supercomputers and new GPU communication backend available! CaNS has been ported using to other platforms using HIP and thanks to the recently developed [diezDecomp library](https://github.com/Rafael10Diez/diezDecomp). See the updated `[docs/INFO_COMPILING.md](docs/INFO_COMPILING.md)` for more details.
 
-**[10/04/2025]:** The writing of checkpoint files has changed. To allow for more flexibility, CaNS now writes one file per scalar field, where each velocity component, pressure, and scalar fields is stored in a different checkpoint file.
-
-**[14/02/2025]:** Most pre-processor macros have been turned into runtime arguments, which allow for a much simpler control of the computational setup without re-compiling the source. See the updated [`docs/INFO_INPUT.md`](docs/INFO_INPUT.md) and [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details.
-
-**[08/02/2025]:** A new approach for solving the Poisson equation based on a Parallel Cyclic Reduction -- Tridiagonal Matrix Algorithm (PCR-TDMA) approach. See [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details.
-
-**[31/01/2025]:** CaNS now can solve the transport equations associated with an arbritrary number of scalars :tada:, with a versatile discretization of the diffusion term. Thermal convection under the Boussinesq approximation is also supported. See the updated [`docs/INFO_INPUT.md`](docs/INFO_INPUT.md) and [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) files for more details, and some of the new cases under `examples/`.
-
-**[29/01/2025]:** To avoid having the `build.conf` and `configs/*.mk` files - often changed by the user - tracked by git, the compiling behavior has changed slightly; see Compilation below.
-
-**[28/01/2025]:** Input file `input.nml` has changed slightly, to allow for prescribing a fixed time step size `dt_f`.
-
 ## Features
 
 Some features are:
 
  * Hybrid MPI/OpenMP parallelization
  * FFTW guru interface / cuFFT used for computing multi-dimensional vectors of 1D transforms
- * The right type of transformation (Fourier, cosine, sine, etc) is automatically determined form the input file
+ * The right type of transformation (Fourier, cosine, sine, etc) is automatically determined from the input file
  * [cuDecomp](https://github.com/NVIDIA/cuDecomp) pencil decomposition library for _hardware-adaptive_ distributed memory calculations on _many GPUs_
  * [diezDecomp](https://github.com/Rafael10Diez/diezDecomp) pencil decomposition library distributed memory calculations on various GPU/CPU hardware platforms
  * [2DECOMP&FFT](https://github.com/xcompact3d/2decomp-fft) library used for performing global data transpositions on CPUs and some of the data I/O
