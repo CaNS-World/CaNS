@@ -35,11 +35,7 @@ runs:
       shell: bash
       run: |
         source .github/actions/build/scripts/setenv-${{ inputs.compiler }}.sh
-        if [ "${{ inputs.compiler }}" = "NVIDIA" ]; then
-          make libs FCOMP=${{ inputs.compiler }} 'FFLAGS+= -tp=px'
-        else
-          make libs FCOMP=${{ inputs.compiler }}
-        fi
+        make libs FCOMP=${{ inputs.compiler }}
     - name: Put dependencies
       if: ${{ inputs.no-rebuild != 'true' }}
       uses: actions/upload-artifact@v7
