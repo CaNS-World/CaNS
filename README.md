@@ -3,7 +3,7 @@
 
 ## Synopsis
 
-**CaNS (Canonical Navier-Stokes)** is a code for massively-parallel numerical simulations of fluid flows. It aims at solving any fluid flow of an incompressible, Newtonian fluid that can benefit from a FFT-based solver for the second-order finite-difference Poisson equation in a 3D Cartesian grid. In two directions the grid is regular and the solver supports the following combination of (homogeneous) boundary conditions:
+**CaNS (Canonical Navier-Stokes)** is a code for massively-parallel numerical simulations of fluid flows. It aims at solving any fluid flow of an incompressible, Newtonian fluid that can benefit from an FFT-based solver for the second-order finite-difference Poisson equation in a 3D Cartesian grid. In two directions the grid is regular and the solver supports the following combination of (homogeneous) boundary conditions:
 
  * Neumann-Neumann
  * Dirichlet-Dirichlet
@@ -23,23 +23,11 @@ P. Costa. *A FFT-based finite-difference solver for massively-parallel direct nu
 ### _Major Update:_ `CaNS 4.0` _is out!_ :tada:
 See the [Release Notes](https://github.com/CaNS-World/CaNS/releases/tag/v4.0.0) for more details.
 
-**[26/03/2026]:** We have extended the I/O capabilities of CaNS for checkpointing and data visualization of structured subset outputs, and support two new backends that enable data compression: HDF5 and ADIOS2. See the updated [`docs/INFO_INPUT.md`](docs/INFO_INPUT.md) and [`docs/INFO_VISU.md`](docs/INFO_VISU.md) for more details.
+**[26/03/2026]:** We have extended the I/O capabilities of CaNS for checkpointing and data visualization of structured subset outputs, and added support for two new backends that enable data compression: HDF5 and ADIOS2. See the updated [`docs/INFO_INPUT.md`](docs/INFO_INPUT.md) and [`docs/INFO_VISU.md`](docs/INFO_VISU.md) for more details.
 
 **[06/08/2025]:** An OpenMP GPU backend is available in the [`openmp-port` branch](https://github.com/CaNS-World/CaNS/tree/openmp-port). See that branch for the corresponding implementation updates and GPU-backend compilation details.
 
-**[06/08/2025]:** Support for running on AMD-based supercomputers and new GPU communication backend available! CaNS has been ported using to other platforms using HIP and thanks to the recently developed [diezDecomp library](https://github.com/Rafael10Diez/diezDecomp). See the updated `[docs/INFO_COMPILING.md](docs/INFO_COMPILING.md)` for more details.
-
-**[10/04/2025]:** The writing of checkpoint files has changed. To allow for more flexibility, CaNS now writes one file per scalar field, where each velocity component, pressure, and scalar fields is stored in a different checkpoint file.
-
-**[14/02/2025]:** Most pre-processor macros have been turned into runtime arguments, which allow for a much simpler control of the computational setup without re-compiling the source. See the updated [`docs/INFO_INPUT.md`](docs/INFO_INPUT.md) and [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details.
-
-**[08/02/2025]:** A new approach for solving the Poisson equation based on a Parallel Cyclic Reduction -- Tridiagonal Matrix Algorithm (PCR-TDMA) approach. See [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details.
-
-**[31/01/2025]:** CaNS now can solve the transport equations associated with an arbritrary number of scalars :tada:, with a versatile discretization of the diffusion term. Thermal convection under the Boussinesq approximation is also supported. See the updated [`docs/INFO_INPUT.md`](docs/INFO_INPUT.md) and [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) files for more details, and some of the new cases under `examples/`.
-
-**[29/01/2025]:** To avoid having the `build.conf` and `configs/*.mk` files - often changed by the user - tracked by git, the compiling behavior has changed slightly; see Compilation below.
-
-**[28/01/2025]:** Input file `input.nml` has changed slightly, to allow for prescribing a fixed time step size `dt_f`.
+**[06/08/2025]:** Support for running on AMD-based supercomputers and a new GPU communication backend are available! CaNS has been ported to other platforms using HIP, thanks to the recently developed [diezDecomp library](https://github.com/Rafael10Diez/diezDecomp). See the updated [`docs/INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details.
 
 ## Features
 
@@ -47,9 +35,9 @@ Some features are:
 
  * Hybrid MPI/OpenMP parallelization
  * FFTW guru interface / cuFFT used for computing multi-dimensional vectors of 1D transforms
- * The right type of transformation (Fourier, cosine, sine, etc) is automatically determined form the input file
+ * The right type of transformation (Fourier, cosine, sine, etc.) is automatically determined from the input file
  * [cuDecomp](https://github.com/NVIDIA/cuDecomp) pencil decomposition library for _hardware-adaptive_ distributed memory calculations on _many GPUs_
- * [diezDecomp](https://github.com/Rafael10Diez/diezDecomp) pencil decomposition library distributed memory calculations on various GPU/CPU hardware platforms
+ * [diezDecomp](https://github.com/Rafael10Diez/diezDecomp) pencil decomposition library for distributed memory calculations on various GPU/CPU hardware platforms
  * [2DECOMP&FFT](https://github.com/xcompact3d/2decomp-fft) library used for performing global data transpositions on CPUs and some of the data I/O
  * GPU acceleration using OpenACC directives (and option to switch to OpenMP target offload in the [`openmp-port` branch](https://github.com/CaNS-World/CaNS/tree/openmp-port))
  * A different canonical flow can be simulated just by changing the input files
@@ -67,7 +55,7 @@ This project aimed first at being a modern alternative to the well-known FISHPAC
 
 ## Method
 
-The fluid flow is solved with a second-order finite difference pressure correction scheme, discretized in a MAC grid arrangement. Time is advanced with a three-step low storage Runge-Kutta scheme. Optionally, for increased stability at low Reynolds numbers, at the price of higher computational demand, the diffusion term can be treated implicitly. See the reference above for details.
+The fluid flow is solved with a second-order finite-difference pressure-correction scheme, discretized in a MAC grid arrangement. Time is advanced with a three-step low-storage Runge-Kutta scheme. Optionally, for increased stability at low Reynolds numbers, at the price of higher computational demand, the diffusion term can be treated implicitly. See the reference above for details.
 
 ## Usage
 
@@ -99,7 +87,7 @@ The prerequisites for compiling CaNS are the following:
 For most systems, CaNS can be compiled from the root directory with the following commands `make libs && make`, which will compile the 2DECOMP&FFT/cuDecomp libraries, and CaNS.
 
 #### Detailed instructions
-The `Makefile` in root directory is used to compile the code, and is expected to work out-of-the-box for most systems. The `build.conf` file in the root directory can be used to choose the Fortran compiler (MPI wrapper), and a few pre-defined profiles depending on the nature of the run (e.g., production vs debugging), and pre-processing options; see [`INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details. The default `build.conf` file is created from `configs/defaults/build-default.conf` at the first compilation. Concerning the pre-processing options, the following are available:
+The `Makefile` in the root directory is used to compile the code, and is expected to work out-of-the-box for most systems. The `build.conf` file in the root directory can be used to choose the Fortran compiler (MPI wrapper), and a few pre-defined profiles depending on the nature of the run (e.g., production vs debugging), and pre-processing options; see [`INFO_COMPILING.md`](docs/INFO_COMPILING.md) for more details. The default `build.conf` file is created from `configs/defaults/build-default.conf` at the first compilation. Concerning the pre-processing options, the following are available:
 
  * `SINGLE_PRECISION` : calculation will be carried out in single precision (the default precision is double)
  * `GPU`              : enable GPU-accelerated runs
@@ -112,7 +100,7 @@ Files `out1d.h90`, `out2d.h90` and `out3d.h90` in `src/` set which data are writ
 
 ### Running the code
 
-Run the executable with `mpirun` with a number of tasks complying to what has been set in the input file `dns.in`. Data will be written by default in a folder named `data/`, which must be located where the executable is run (by default in the `run/` folder).
+Run the executable with `mpirun` using a number of tasks that complies with what has been set in the input file `input.nml`. Data will be written by default to a folder named `data/`, which must be located where the executable is run (by default, the `run/` folder).
 
 ### Visualizing field data
 
@@ -120,7 +108,7 @@ See [`INFO_VISU.md`](docs/INFO_VISU.md).
 
 ## Contributing
 
-We appreciate any contributions and feedback that can improve CaNS. If you wish to contribute to the tool, please get in touch with the maintainers or open an Issue in the repository / a thread in Discussions. Pull Requests are welcome, but please propose/discuss the changes in an linked Issue first.
+We appreciate any contributions and feedback that can improve CaNS. If you wish to contribute to the tool, please get in touch with the maintainers or open an Issue in the repository / a thread in Discussions. Pull Requests are welcome, but please propose/discuss the changes in a linked Issue first.
 
 ## Final notes
 
