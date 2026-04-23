@@ -10,7 +10,6 @@ import h5py
 #
 # define some custom parameters, not defined in the DNS code
 #
-iseek      = 0            # number of bytes to skip relative to the origin of the binary file (0 for CaNS)
 iprecision = 8            # precision of real-valued data
 if(    iprecision == 4):
     my_dtype = 'float32'
@@ -69,7 +68,7 @@ y = np.arange(r0[1]+dl[1]/2.,r0[1]+l[1],dl[1])
 z = np.arange(r0[2]+dl[2]/2.,r0[2]+l[2],dl[2])
 if(os.path.exists('grid.h5')):
     hf = h5py.File('grid.h5','r')
-    z = np.asarray(hf["z"])
+    z = np.asarray(hf['rc'])
     hf.close()
 elif(os.path.exists('grid.bin')):
     f   = open('grid.bin','rb')
@@ -96,12 +95,12 @@ Xdmf = Element("Xdmf", attrib = {"xmlns:xi": "http://www.w3.org/2001/XInclude", 
 domain = SubElement(Xdmf, "Domain")
 topology = SubElement(domain,"Topology", attrib = {"name": "TOPO", "TopologyType": "3DRectMesh", "Dimensions" : "{} {} {}".format(n[2], n[1], n[0])})
 geometry = SubElement(domain,"Geometry", attrib = {"name": "GEO", "GeometryType": "VXVYVZ"})
-dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "HDF", "DataType": "Float", "Precision": "{}".format(iprecision), "Endian": "Native", "Dimensions": "{}".format(n[0])})
-dataitem.text = gridfile + ':x'
-dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "HDF", "DataType": "Float", "Precision": "{}".format(iprecision), "Endian": "Native", "Dimensions": "{}".format(n[1])})
-dataitem.text = gridfile + ':y'
-dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "HDF", "DataType": "Float", "Precision": "{}".format(iprecision), "Endian": "Native", "Dimensions": "{}".format(n[2])})
-dataitem.text = gridfile + ':z'
+dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "HDF", "NumberType": "Float", "Precision": "{}".format(iprecision), "Dimensions": "{}".format(n[0])})
+dataitem.text = gridfile + ':/x'
+dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "HDF", "NumberType": "Float", "Precision": "{}".format(iprecision), "Dimensions": "{}".format(n[1])})
+dataitem.text = gridfile + ':/y'
+dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "HDF", "NumberType": "Float", "Precision": "{}".format(iprecision), "Dimensions": "{}".format(n[2])})
+dataitem.text = gridfile + ':/z'
 grid = SubElement(domain, "Grid", attrib = {"Name": "TimeSeries", "GridType": "Collection",  "CollectionType": "Temporal"})
 time = SubElement(grid, "Time", attrib = {"TimeType":"List"})
 dataitem = SubElement(time, "DataItem", attrib = {"Format": "XML", "NumberType": "Float", "Dimensions": "{}".format(nsaves)})
@@ -135,15 +134,15 @@ for ii in range(nsaves):
            attribute = SubElement(grid_fld, "Attribute", attrib = {"AttributeType": "Vector", "Name": "{}".format(saves['variable'][index][:-2]), "Center": "Node"})
            attribute = SubElement(attribute, "DataItem", attrib = {"Function": "JOIN($0, $1, $2)", "ItemType": "Function", "Dimensions": "{} {} {} {}".format(n[2], n[1], n[0], 3)})
            for q in range(3):
-              dataitem = SubElement(attribute, "DataItem", attrib = {"Format": "HDF", "DataType": "Float", "Precision": "{}".format(iprecision), "Endian": "Native", "Seek": "{}".format(iseek), "Dimensions": "{} {} {}".format(n[2], n[1], n[0])})
-              dataitem.text = saves['file'][index+q] + ':fields/'+saves['variable'][index+q]
+              dataitem = SubElement(attribute, "DataItem", attrib = {"Format": "HDF", "NumberType": "Float", "Precision": "{}".format(iprecision), "Dimensions": "{} {} {}".format(n[2], n[1], n[0])})
+              dataitem.text = saves['file'][index+q] + ':/fields/' + saves['variable'][index+q]
         #
         # scalar
         #
         else:
            attribute = SubElement(grid_fld, "Attribute", attrib = {"AttributeType": "Scalar", "Name": "{}".format(saves['variable'][index]), "Center": "Node"})
-           dataitem = SubElement(attribute, "DataItem", attrib = {"Format": "HDF", "DataType": "Float", "Precision": "{}".format(iprecision), "Endian": "Native", "Seek": "{}".format(iseek), "Dimensions": "{} {} {}".format(n[2], n[1], n[0])})
-           dataitem.text = saves['file'][index] + ':fields/'+saves['variable'][index]
+           dataitem = SubElement(attribute, "DataItem", attrib = {"Format": "HDF", "NumberType": "Float", "Precision": "{}".format(iprecision), "Dimensions": "{} {} {}".format(n[2], n[1], n[0])})
+           dataitem.text = saves['file'][index] + ':/fields/' + saves['variable'][index]
 output = ElementTree.tostring(Xdmf, 'utf-8')
 output = minidom.parseString(output)
 output = output.toprettyxml(indent="    ",newl='\n')

@@ -54,8 +54,8 @@ def read_single_field_hdf5(data_dir,filenamei,varname=""):
     zw = zp + dl[2]/2.                              # staggered z grid
     if(os.path.exists(data_dir+"/grid.h5")):
         hf = h5py.File(data_dir+"/grid.h5","r")
-        zp = np.asarray(hf["z"])
-        zw = np.asarray(hf["zf"])
+        zp = np.asarray(hf["rc"])
+        zw = np.asarray(hf["rf"])
         hf.close()
     elif(os.path.exists(data_dir+"/grid.bin")):
         f = open(data_dir+'/grid.bin','rb')
