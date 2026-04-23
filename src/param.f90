@@ -114,9 +114,9 @@ contains
     use, intrinsic :: iso_fortran_env, only: iostat_end
     use mpi
     implicit none
-    character(len=*), parameter :: input_file = 'input.nml'
+    character(len=255) :: input_file,filename
     integer, intent(in) :: myid
-    integer :: iunit,ierr
+    integer :: iunit,ierr,numarg
     character(len=1024) :: c_iomsg
     logical :: is_io_fallback
     namelist /dns/ &
@@ -168,6 +168,15 @@ contains
     dt_f = -1.
     gacc(:) = 0.
     nscal = 0
+    !
+    ! use a custom input file if one was provided on the command line
+    !
+    input_file = 'input.nml'
+    numarg = command_argument_count()
+    if(numarg == 1) then
+      call get_command_argument(1,filename)
+      input_file = trim(filename)
+    end if
     open(newunit=iunit,file=input_file,status='old',action='read',iostat=ierr,iomsg=c_iomsg)
       if(ierr /= 0) then
         if(myid == 0) print*, 'ERROR: reading the input file: ', trim(c_iomsg)
