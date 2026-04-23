@@ -16,10 +16,10 @@ module mod_initgrid
     ! initializes the non-uniform grid along z
     !
     implicit none
-    integer, parameter :: CLUSTER_TWO_END              = 1, &
-                          CLUSTER_ONE_END              = 2, &
-                          CLUSTER_ONE_END_R            = 3, &
-                          CLUSTER_MIDDLE               = 4
+    integer, parameter :: CLUSTER_TWO_END   = 1, &
+                          CLUSTER_ONE_END   = 2, &
+                          CLUSTER_ONE_END_R = 3, &
+                          CLUSTER_MIDDLE    = 4
     integer , intent(in ) :: gtype,n
     real(rp), intent(in ) :: gr,lz
     real(rp), intent(out), dimension(0:n+1) :: dzc,dzf,zc,zf
@@ -234,16 +234,16 @@ module mod_initgrid
     call h5fcreate_f(trim(datadir)//trim(fname)//'.h5',H5F_ACC_TRUNC_F,file_id,ierr_h5)
     dims(1) = int(ng(3),HSIZE_T)
     call h5screate_simple_f(1,dims,space,ierr_h5)
-    call h5dcreate_f(file_id,'z',HDF5_REAL_RP(),space,dset,ierr_h5)
+    call h5dcreate_f(file_id,'rc',HDF5_REAL_RP(),space,dset,ierr_h5)
     call h5dwrite_f(dset,HDF5_REAL_RP(),zc(1:ng(3)),dims,ierr_h5)
     call h5dclose_f(dset,ierr_h5)
-    call h5dcreate_f(file_id,'zf',HDF5_REAL_RP(),space,dset,ierr_h5)
+    call h5dcreate_f(file_id,'rf',HDF5_REAL_RP(),space,dset,ierr_h5)
     call h5dwrite_f(dset,HDF5_REAL_RP(),zf(1:ng(3)),dims,ierr_h5)
     call h5dclose_f(dset,ierr_h5)
-    call h5dcreate_f(file_id,'dzc',HDF5_REAL_RP(),space,dset,ierr_h5)
+    call h5dcreate_f(file_id,'drc',HDF5_REAL_RP(),space,dset,ierr_h5)
     call h5dwrite_f(dset,HDF5_REAL_RP(),dzc(1:ng(3)),dims,ierr_h5)
     call h5dclose_f(dset,ierr_h5)
-    call h5dcreate_f(file_id,'dzf',HDF5_REAL_RP(),space,dset,ierr_h5)
+    call h5dcreate_f(file_id,'drf',HDF5_REAL_RP(),space,dset,ierr_h5)
     call h5dwrite_f(dset,HDF5_REAL_RP(),dzf(1:ng(3)),dims,ierr_h5)
     call h5dclose_f(dset,ierr_h5)
     call h5sclose_f(space,ierr_h5)
