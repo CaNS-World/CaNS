@@ -56,8 +56,8 @@ def read_single_field_adios2(data_dir,filenamei,varname=""):
     if(os.path.exists(data_dir+"/grid.h5")):
         import h5py
         hf = h5py.File(data_dir+"/grid.h5","r")
-        zp = np.asarray(hf["z"])
-        zw = np.asarray(hf["zf"])
+        zp = np.asarray(hf["rc"])
+        zw = np.asarray(hf["rf"])
         hf.close()
     elif(os.path.exists(data_dir+"/grid.bin")):
         f = open(data_dir+'/grid.bin','rb')
