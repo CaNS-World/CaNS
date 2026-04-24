@@ -23,13 +23,14 @@ r0 = np.array([0.,0.,0.]) # domain origin
 #
 # retrieve input information
 #
-filenames = input("Name of the pattern of the restart files to be visualzied [fld?*.bin]: ") or "fld?*.bin"
+filenames = input("Name of the pattern of the restart files to be visualized [fld?*.bin]: ") or "fld?*.bin"
 files     = glob.glob(filenames)
 nsaves    = np.size(files)
 gridfile  = input("Name of the grid binary file [grid.bin]: ") or "grid.bin"
 variables = input("Names of stored variables [VEX VEY VEZ PRE]: ") or "VEX VEY VEZ PRE"
 variables = variables.split(" ")
 nflds     = np.size(variables)
+fieldnames = ['u','v','w','p']
 gridname  = input("Name to be appended to the grid files to prevent overwriting [_fld]: ") or "_fld"
 xgridfile = "x"+gridname+'.bin'
 ygridfile = "y"+gridname+'.bin'
@@ -43,40 +44,72 @@ ng = data[0,:].astype('int')
 l  = data[1,:]
 dl = l/(1.*ng)
 n  = ng
+def get_split_groups(files):
+    groups = {}
+    for filename in files:
+        root, ext = os.path.splitext(filename)
+        if(ext != ".bin"): continue
+        for fieldname in fieldnames:
+            suffix = "_" + fieldname
+            if(root.endswith(suffix)):
+                groups.setdefault(root[:-len(suffix)], {})[fieldname] = filename
+    return [(prefix, groups[prefix]) for prefix in sorted(groups) \
+            if all(fieldname in groups[prefix] for fieldname in fieldnames)]
+split_groups = get_split_groups(files)
+is_split = len(split_groups) > 0
+if(is_split):
+    nflds = min(nflds,len(fieldnames))
+    nsaves = len(split_groups)
 rtimes = np.zeros(nsaves)
 isteps = np.zeros(nsaves,dtype=int)
-iseek   = n[0]*n[1]*n[2]*iprecision*nflds # file offset in bytes with respect to the origin
-                                          # (to retrieve the simulation time and time step number)
 if(iprecision == 4):
     my_format = '2f'
 else:
     my_format = '2d'
-for i in range(nsaves):
-    with open(files[i], 'rb') as f:
-        raw   = f.read()[iseek:iseek+iprecision*2]
-    rtimes[i] =     struct.unpack(my_format,raw)[0]
-    isteps[i] = int(struct.unpack(my_format,raw)[1])
-    f.close()
+if(is_split):
+    iseek = n[0]*n[1]*n[2]*iprecision
+    for i in range(nsaves):
+        with open(split_groups[i][1]['u'], 'rb') as f:
+            raw = f.read()[iseek:iseek+iprecision*2]
+        rtimes[i] =     struct.unpack(my_format,raw)[0]
+        isteps[i] = int(struct.unpack(my_format,raw)[1])
+else:
+    #
+    # offset to retrieve time and step
+    #
+    iseek = n[0]*n[1]*n[2]*iprecision*nflds
+    for i in range(nsaves):
+        with open(files[i], 'rb') as f:
+            raw = f.read()[iseek:iseek+iprecision*2]
+        rtimes[i] =     struct.unpack(my_format,raw)[0]
+        isteps[i] = int(struct.unpack(my_format,raw)[1])
 #
 # remove duplicates
 #
 isteps, indeces = np.unique(isteps,return_index=True)
 rtimes  = np.take(rtimes, indeces)
-files   = np.take(files,  indeces)
+if(is_split):
+    split_groups = [split_groups[i] for i in indeces]
+else:
+    files = np.take(files, indeces)
 nsaves  = np.size(files)
+if(is_split): nsaves = len(split_groups)
 #
 # sort by increasing istep
 #
 indeces = np.argsort(isteps)
 isteps  = np.take(isteps, indeces)
 rtimes  = np.take(rtimes, indeces)
-files   = np.take(files,  indeces)
+if(is_split):
+    split_groups = [split_groups[i] for i in indeces]
+else:
+    files = np.take(files, indeces)
 #
 # create grid files
 #
-x = np.arange(r0[0]+dl[0]/2.,r0[0]+l[0],dl[0])
-y = np.arange(r0[1]+dl[1]/2.,r0[1]+l[1],dl[1])
-z = np.arange(r0[2]+dl[2]/2.,r0[2]+l[2],dl[2])
+x = np.linspace(r0[0]+dl[0]/2.,r0[0]+l[0]-dl[0]/2.,ng[0])
+y = np.linspace(r0[1]+dl[1]/2.,r0[1]+l[1]-dl[1]/2.,ng[1])
+z = np.linspace(r0[2]+dl[2]/2.,r0[2]+l[2]-dl[2]/2.,ng[2])
 if os.path.exists(xgridfile): os.remove(xgridfile)
 if os.path.exists(ygridfile): os.remove(ygridfile)
 if os.path.exists(zgridfile): os.remove(zgridfile)
@@ -97,29 +130,28 @@ from xml.dom import minidom
 from xml.etree.ElementTree import Element, SubElement, Comment
 Xdmf = Element("Xdmf", attrib = {"xmlns:xi": "http://www.w3.org/2001/XInclude", "Version": "2.0"})
 domain = SubElement(Xdmf, "Domain")
-topology = SubElement(domain,"Topology", attrib = {"name": "TOPO", "TopologyType": "3DRectMesh", "Dimensions" : "{} {} {}".format(n[2], n[1], n[0])})
-geometry = SubElement(domain,"Geometry", attrib = {"name": "GEO", "GeometryType": "VXVYVZ"})
-dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "Binary", "DataType": "Float", "Precision": "{}".format(iprecision), "Endian": "Native", "Dimensions": "{}".format(n[0])})
-dataitem.text = xgridfile
-dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "Binary", "DataType": "Float", "Precision": "{}".format(iprecision), "Endian": "Native", "Dimensions": "{}".format(n[1])})
-dataitem.text = ygridfile
-dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "Binary", "DataType": "Float", "Precision": "{}".format(iprecision), "Endian": "Native", "Dimensions": "{}".format(n[2])})
-dataitem.text = zgridfile
 grid = SubElement(domain, "Grid", attrib = {"Name": "TimeSeries", "GridType": "Collection",  "CollectionType": "Temporal"})
-time = SubElement(grid, "Time", attrib = {"TimeType":"List"})
-dataitem = SubElement(time, "DataItem", attrib = {"Format": "XML", "NumberType": "Float", "Dimensions": "{}".format(nsaves)})
-dataitem.text = ""
-for ii in range(nsaves):
-    dataitem.text += "{:15.6E}".format(rtimes[ii]) + " "
 for ii in range(nsaves):
     grid_fld = SubElement(grid,"Grid", attrib = {"Name": "T{:7}".format(str(isteps[ii]).zfill(7)), "GridType": "Uniform"})
-    topology = SubElement(grid_fld, "Topology", attrib = {"Reference": "/Xdmf/Domain/Topology[1]"})
-    geometry = SubElement(grid_fld, "Geometry", attrib = {"Reference": "/Xdmf/Domain/Geometry[1]"})
+    time = SubElement(grid_fld, "Time", attrib = {"Value":"{:15.6E}".format(rtimes[ii])})
+    topology = SubElement(grid_fld,"Topology", attrib = {"TopologyType": "3DRectMesh", "Dimensions" : "{} {} {}".format(n[2], n[1], n[0])})
+    geometry = SubElement(grid_fld,"Geometry", attrib = {"GeometryType": "VXVYVZ"})
+    dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "Binary", "DataType": "Float", "Precision": "{}".format(iprecision), "Endian": "Native", "Dimensions": "{}".format(n[0])})
+    dataitem.text = xgridfile
+    dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "Binary", "DataType": "Float", "Precision": "{}".format(iprecision), "Endian": "Native", "Dimensions": "{}".format(n[1])})
+    dataitem.text = ygridfile
+    dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "Binary", "DataType": "Float", "Precision": "{}".format(iprecision), "Endian": "Native", "Dimensions": "{}".format(n[2])})
+    dataitem.text = zgridfile
     for jj in range(nflds):
-        iseek = jj*iprecision*n[2]*n[1]*n[0]
+        if(is_split):
+            iseek = 0
+            filename = split_groups[ii][1][fieldnames[jj]]
+        else:
+            iseek = jj*iprecision*n[2]*n[1]*n[0]
+            filename = files[ii]
         attribute = SubElement(grid_fld, "Attribute", attrib = {"Name": "{}".format(variables[jj]), "Center": "Node"})
         dataitem = SubElement(attribute, "DataItem", attrib = {"Format": "Binary", "DataType": "Float", "Precision": "{}".format(iprecision), "Endian": "Native", "Seek": "{}".format(iseek), "Dimensions": "{} {} {}".format(n[2], n[1], n[0])})
-        dataitem.text = files[ii]
+        dataitem.text = filename
 output = ElementTree.tostring(Xdmf, 'utf-8')
 output = minidom.parseString(output)
 output = output.toprettyxml(indent="    ",newl='\n')

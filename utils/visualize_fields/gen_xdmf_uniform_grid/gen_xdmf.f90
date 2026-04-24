@@ -45,52 +45,35 @@ write(unit=ixdmf,fmt='(A)') '<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>'
 write(unit=ixdmf,fmt='(A)') '<Xdmf xmlns:xi="http://www.w3.org/2001/XInclude" Version="2.0">'
 write(unit=ixdmf,fmt='(A)') '<Domain>'
 indent = indent + 4
-  write(buffer,fmt='(A,3I5,A)') repeat(' ',indent)//'<Topology name="TOPO" TopologyType="3DCoRectMesh" Dimensions="',nz,ny,nx,'"/>'
-  write(unit=ixdmf,fmt='(A)') trim(buffer)
-  write(buffer,fmt='(A)') repeat(' ',indent)//'<Geometry name="GEO" GeometryType="ORIGIN_DXDYDZ">'
-  write(unit=ixdmf,fmt='(A)')trim(buffer)
-  indent = indent + 4
-    write(buffer,fmt='(A)') repeat(' ',indent)//'<DataItem Format="XML" Dimensions="3">'
-    write(unit=ixdmf,fmt='(A)')trim(buffer)
-    write(buffer,fmt='(A,3E15.6)') repeat(' ',indent),z0,y0,x0
-    write(unit=ixdmf,fmt='(A)')trim(buffer)
-    write(buffer,fmt='(A)') repeat(' ',indent)//'</DataItem>'
-    write(unit=ixdmf,fmt='(A)')trim(buffer)
-    write(buffer,fmt='(A)') repeat(' ',indent)//'<DataItem Format="XML" Dimensions="3">'
-    write(unit=ixdmf,fmt='(A)')trim(buffer)
-    write(buffer,fmt='(A,3E15.6)') repeat(' ',indent),dz,dy,dx
-    write(unit=ixdmf,fmt='(A)')trim(buffer)
-    write(buffer,fmt='(A)') repeat(' ',indent)//'</DataItem>'
-    write(unit=ixdmf,fmt='(A)')trim(buffer)
-    indent = indent - 4
-  write(buffer,fmt='(A)') repeat(' ',indent)//'</Geometry>'
-  write(unit=ixdmf,fmt='(A)')trim(buffer)
   write(buffer,fmt='(A)') repeat(' ',indent)//'<Grid Name="TimeSeries" GridType="Collection" CollectionType="Temporal">'
   write(unit=ixdmf,fmt='(A)')trim(buffer)
   indent = indent + 4
-    write(buffer,fmt='(A)') repeat(' ',indent)//'<Time TimeType="List">'
-    write(unit=ixdmf,fmt='(A)')trim(buffer)
-    indent = indent + 4
-      write(buffer,fmt='(A,I6,A)') repeat(' ',indent)//'<DataItem Format="XML" NumberType="Float" Dimensions="',nflds*nscal,'">'
-      write(unit=ixdmf,fmt='(A)')trim(buffer) 
-      write(buffer,fmt='(A,I6)') repeat(' ',indent)
-      write(ixdmf,fmt='(A)',advance='no') trim(buffer)
-      do i = fldstart,fldend,nskip !1,nflds
-        write(ixdmf,fmt='(E15.6)',advance='no') t0 + 1.d0*(i-nskip)*dt!1.*i
-      enddo
-      write(buffer,fmt='(A)') repeat(' ',indent)//'</DataItem>'
-      write(unit=ixdmf,fmt='(A)')trim(buffer)
-      indent = indent - 4
-    write(buffer,fmt='(A)') repeat(' ',indent)//'</Time>'
-    write(unit=ixdmf,fmt='(A)')trim(buffer)
     do i = fldstart,fldend,nskip
       write(ichar,fmt='(i7.7)') i
       write(buffer,fmt='(A)') repeat(' ',indent)//'<Grid Name="T'//ichar//'" GridType="Uniform">'
       write(unit=ixdmf,fmt='(A)')trim(buffer)
       indent = indent + 4
-        write(buffer,fmt='(A)') repeat(' ',indent)//'<Topology Reference="/Xdmf/Domain/Topology[1]"/>'
+        write(buffer,fmt='(A,E15.6,A)') repeat(' ',indent)//'<Time Value="',t0 + 1.d0*i*dt,'"/>'
         write(unit=ixdmf,fmt='(A)')trim(buffer)
-        write(buffer,fmt='(A)') repeat(' ',indent)//'<Geometry Reference="/Xdmf/Domain/Geometry[1]"/>'
+        write(buffer,fmt='(A,3I5,A)') repeat(' ',indent)//'<Topology TopologyType="3DCoRectMesh" Dimensions="',nz,ny,nx,'"/>'
+        write(unit=ixdmf,fmt='(A)')trim(buffer)
+        write(buffer,fmt='(A)') repeat(' ',indent)//'<Geometry GeometryType="ORIGIN_DXDYDZ">'
+        write(unit=ixdmf,fmt='(A)')trim(buffer)
+        indent = indent + 4
+          write(buffer,fmt='(A)') repeat(' ',indent)//'<DataItem Format="XML" Dimensions="3">'
+          write(unit=ixdmf,fmt='(A)')trim(buffer)
+          write(buffer,fmt='(A,3E15.6)') repeat(' ',indent),z0,y0,x0
+          write(unit=ixdmf,fmt='(A)')trim(buffer)
+          write(buffer,fmt='(A)') repeat(' ',indent)//'</DataItem>'
+          write(unit=ixdmf,fmt='(A)')trim(buffer)
+          write(buffer,fmt='(A)') repeat(' ',indent)//'<DataItem Format="XML" Dimensions="3">'
+          write(unit=ixdmf,fmt='(A)')trim(buffer)
+          write(buffer,fmt='(A,3E15.6)') repeat(' ',indent),dz,dy,dx
+          write(unit=ixdmf,fmt='(A)')trim(buffer)
+          write(buffer,fmt='(A)') repeat(' ',indent)//'</DataItem>'
+          write(unit=ixdmf,fmt='(A)')trim(buffer)
+          indent = indent - 4
+        write(buffer,fmt='(A)') repeat(' ',indent)//'</Geometry>'
         write(unit=ixdmf,fmt='(A)')trim(buffer)
         do ii = 1,nscal
           write(buffer,fmt='(A)') repeat(' ',indent)//'<Attribute Name="'//scalname(ii)//'" Center="Node">'

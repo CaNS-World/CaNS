@@ -20,12 +20,12 @@ dl   = l./ng;
 %
 % read and generate grid
 %
-xp = linspace(r0(1)+dl(1)/2.,r0(1)+l(1),ng(1)); % centered  x grid
-yp = linspace(r0(2)+dl(2)/2.,r0(2)+l(2),ng(2)); % centered  y grid
-zp = linspace(r0(3)+dl(3)/2.,r0(3)+l(3),ng(3)); % centered  z grid
-xu = xp + dl(1)/2.;                           % staggered x grid
-yv = yp + dl(2)/2.;                           % staggered y grid
-zw = zp + dl(3)/2.;                           % staggered z grid
+xp = linspace(r0(1)+dl(1)/2.,r0(1)+l(1)-dl(1)/2.,ng(1)); % centered  x grid
+yp = linspace(r0(2)+dl(2)/2.,r0(2)+l(2)-dl(2)/2.,ng(2)); % centered  y grid
+zp = linspace(r0(3)+dl(3)/2.,r0(3)+l(3)-dl(3)/2.,ng(3)); % centered  z grid
+xu = xp + dl(1)/2.; % staggered x grid
+yv = yp + dl(2)/2.; % staggered y grid
+zw = zp + dl(3)/2.; % staggered z grid
 if(exist('grid.bin','file'))
     f   = fopen('grid.bin');
     grid_z = fread(f,[ng(3),4],precision);
@@ -43,17 +43,20 @@ iskipx      = input("Data saved every (ix, iy, iz) points. Value of ix? [1]: ")
 if isempty(iskipx)
     iskipx = 1
 end
-iskipy      = input("Data saved every (ix, iy, iz) points. Value of iy? [1]: ") or "1"
+iskipy      = input("Data saved every (ix, iy, iz) points. Value of iy? [1]: ")
 if isempty(iskipy)
     iskipy = 1
 end
-iskipz      = input("Data saved every (ix, iy, iz) points. Value of iz? [1]: ") or "1"
+iskipz      = input("Data saved every (ix, iy, iz) points. Value of iz? [1]: ")
 if isempty(iskipz)
     iskipz = 1
 end
 iskip       = [iskipx,iskipy,iskipz]
-n           = round(ng./iskip)
-data        = zeros([n(1),n(2),n(3)])
+n           = floor((ng-1)./iskip)+1
 f = fopen(filenamei);
-data(:,:,:) = reshape(fread(f,ng(1)*ng(2)*ng(3),precision),[ng(1),ng(2),ng(3)]);
+fld = fread(f,prod(n),precision);
 fclose(f);
+if numel(fld) ~= prod(n)
+    error("expected %d values for the requested skip, found %d",prod(n),numel(fld))
+end
+data = reshape(fld,[n(1),n(2),n(3)]);

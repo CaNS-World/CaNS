@@ -59,22 +59,16 @@ from xml.dom import minidom
 from xml.etree.ElementTree import Element, SubElement, Comment
 Xdmf = Element("Xdmf", attrib = {"xmlns:xi": "http://www.w3.org/2001/XInclude", "Version": "2.0"})
 domain = SubElement(Xdmf, "Domain")
-topology = SubElement(domain,"Topology", attrib = {"name": "TOPO", "TopologyType": "3DRectMesh", "Dimensions" : "{} {} {}".format(2, 2, 2)})
-geometry = SubElement(domain,"Geometry", attrib = {"name": "GEO", "GeometryType": "ORIGIN_DXDYDZ"})
-dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "XML", "NumberType": "Float", "Dimensions": "{}".format(3)})
-dataitem.text = "{:15.6E} {:15.6E} {:15.6E}".format(r0[0],r0[1],r0[2])
-dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "XML", "NumberType": "Float", "Dimensions": "{}".format(3)})
-dataitem.text = "{:15.6E} {:15.6E} {:15.6E}".format(l[0],l[1],l[2])
 grid = SubElement(domain, "Grid", attrib = {"Name": "TimeSeries", "GridType": "Collection",  "CollectionType": "Temporal"})
-time = SubElement(grid, "Time", attrib = {"TimeType":"List"})
-dataitem = SubElement(time, "DataItem", attrib = {"Format": "XML", "NumberType": "Float", "Dimensions": "{}".format(nsaves)})
-dataitem.text = ""
-for ii in range(nsaves):
-    dataitem.text += "{:15.6E}".format(saves["time"][ii*nflds]) + " "
 for ii in range(nsaves):
     grid_fld = SubElement(grid,"Grid", attrib = {"Name": "T{:7}".format(str(saves['isave'][ii*nflds]).zfill(7)), "GridType": "Uniform"})
-    topology = SubElement(grid_fld, "Topology", attrib = {"Reference": "/Xdmf/Domain/Topology[1]"})
-    geometry = SubElement(grid_fld, "Geometry", attrib = {"Reference": "/Xdmf/Domain/Geometry[1]"})
+    time = SubElement(grid_fld, "Time", attrib = {"Value":"{:15.6E}".format(saves["time"][ii*nflds])})
+    topology = SubElement(grid_fld,"Topology", attrib = {"TopologyType": "3DRectMesh", "Dimensions" : "{} {} {}".format(2, 2, 2)})
+    geometry = SubElement(grid_fld,"Geometry", attrib = {"GeometryType": "ORIGIN_DXDYDZ"})
+    dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "XML", "NumberType": "Float", "Dimensions": "{}".format(3)})
+    dataitem.text = "{:15.6E} {:15.6E} {:15.6E}".format(r0[0],r0[1],r0[2])
+    dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "XML", "NumberType": "Float", "Dimensions": "{}".format(3)})
+    dataitem.text = "{:15.6E} {:15.6E} {:15.6E}".format(l[0],l[1],l[2])
 output = ElementTree.tostring(Xdmf, 'utf-8')
 output = minidom.parseString(output)
 output = output.toprettyxml(indent="    ",newl='\n')
