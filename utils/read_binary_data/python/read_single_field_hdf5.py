@@ -24,7 +24,7 @@ def read_single_field_hdf5(data_dir,filenamei,varname=""):
         if(len(fields) != 1):
             raise ValueError("varname must be provided when the HDF5 file stores multiple fields")
         varname = fields[0]
-    data = np.asarray(hf["fields/"+varname])
+    data = np.transpose(np.asarray(hf["fields/"+varname]))
     if("meta/lo" in hf):
         lo = np.asarray(hf["meta/lo"],dtype=int)
         hi = np.asarray(hf["meta/hi"],dtype=int)
@@ -46,12 +46,12 @@ def read_single_field_hdf5(data_dir,filenamei,varname=""):
     #
     # read and generate grid
     #
-    xp = np.arange(r0[0]+dl[0]/2.,r0[0]+l[0],dl[0]) # centered  x grid
-    yp = np.arange(r0[1]+dl[1]/2.,r0[1]+l[1],dl[1]) # centered  y grid
-    zp = np.arange(r0[2]+dl[2]/2.,r0[2]+l[2],dl[2]) # centered  z grid
-    xu = xp + dl[0]/2.                              # staggered x grid
-    yv = yp + dl[1]/2.                              # staggered y grid
-    zw = zp + dl[2]/2.                              # staggered z grid
+    xp = np.linspace(r0[0]+dl[0]/2.,r0[0]+l[0]-dl[0]/2.,ng[0]) # centered grid
+    yp = np.linspace(r0[1]+dl[1]/2.,r0[1]+l[1]-dl[1]/2.,ng[1]) # centered grid
+    zp = np.linspace(r0[2]+dl[2]/2.,r0[2]+l[2]-dl[2]/2.,ng[2]) # centered grid
+    xu = xp + dl[0]/2. # staggered grid
+    yv = yp + dl[1]/2. # staggered grid
+    zw = zp + dl[2]/2. # staggered grid
     if(os.path.exists(data_dir+"/grid.h5")):
         hf = h5py.File(data_dir+"/grid.h5","r")
         zp = np.asarray(hf["rc"])

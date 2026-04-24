@@ -19,7 +19,7 @@ program gen_xdmf
 !          'XXX_fld_YYYYYYY.bin'
 !          where XXX is the name of the field set in param.h90 and 
 !          YYYYYYY the field 'number'
-!        - the cans output grid file 'grid.bin' must be locaded 
+!        - the cans output grid file 'grid.bin' must be located
 !          in the same folder as the xdmf file
 !        - output files are located in same folder as xdmf file
 !
@@ -47,70 +47,53 @@ write(unit=ixdmf,fmt='(A)') '<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>'
 write(unit=ixdmf,fmt='(A)') '<Xdmf xmlns:xi="http://www.w3.org/2001/XInclude" Version="2.0">'
 write(unit=ixdmf,fmt='(A)') '<Domain>'
 indent = indent + 4
-  write(buffer,fmt='(A,3I5,A)') repeat(' ',indent)//'<Topology name="TOPO" TopologyType="3DRectMesh" Dimensions="',nz,ny,nx,'"/>'
-  write(unit=ixdmf,fmt='(A)') trim(buffer)
-  write(buffer,fmt='(A)') repeat(' ',indent)//'<Geometry name="GEO" GeometryType="VXVYVZ">'
-  write(unit=ixdmf,fmt='(A)')trim(buffer)
-  indent = indent + 4
-write(buffer,fmt='(A,I1,A,1I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' // &
-                                                       ' DataType="Float" Precision="',iprec,'" Endian="Native"' // &
-                                                       ' Dimensions="',nx,'">'
-    write(unit=ixdmf,fmt='(A)')trim(buffer)
-              indent = indent + 4
-                write(buffer,fmt='(A,i7.7,A)') repeat(' ',indent)//'x.bin'
-                write(unit=ixdmf,fmt='(A)')trim(buffer)
-                indent = indent - 4
-    write(buffer,fmt='(A)') repeat(' ',indent)//'</DataItem>'
-    write(unit=ixdmf,fmt='(A)')trim(buffer)
-write(buffer,fmt='(A,I1,A,1I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' // &
-                                                       ' DataType="Float" Precision="',iprec,'" Endian="Native"' // &
-                                                       ' Dimensions="',ny,'">'
-    write(unit=ixdmf,fmt='(A)')trim(buffer)
-              indent = indent + 4
-                write(buffer,fmt='(A,i7.7,A)') repeat(' ',indent)//'y.bin'
-                write(unit=ixdmf,fmt='(A)')trim(buffer)
-                indent = indent - 4
-    write(buffer,fmt='(A)') repeat(' ',indent)//'</DataItem>'
-    write(unit=ixdmf,fmt='(A)')trim(buffer)
-write(buffer,fmt='(A,I1,A,1I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' // &
-                                                       ' DataType="Float" Precision="',iprec,'" Endian="Native"' // &
-                                                       ' Dimensions="',nz,'">'
-    write(unit=ixdmf,fmt='(A)')trim(buffer)
-              indent = indent + 4
-                write(buffer,fmt='(A,i7.7,A)') repeat(' ',indent)//'z.bin'
-                write(unit=ixdmf,fmt='(A)')trim(buffer)
-                indent = indent - 4
-    write(buffer,fmt='(A)') repeat(' ',indent)//'</DataItem>'
-    write(unit=ixdmf,fmt='(A)')trim(buffer)
-    indent = indent - 4
-  write(buffer,fmt='(A)') repeat(' ',indent)//'</Geometry>'
-  write(unit=ixdmf,fmt='(A)')trim(buffer)
   write(buffer,fmt='(A)') repeat(' ',indent)//'<Grid Name="TimeSeries" GridType="Collection" CollectionType="Temporal">'
   write(unit=ixdmf,fmt='(A)')trim(buffer)
   indent = indent + 4
-    write(buffer,fmt='(A)') repeat(' ',indent)//'<Time TimeType="List">'
-    write(unit=ixdmf,fmt='(A)')trim(buffer)
-    indent = indent + 4
-      write(buffer,fmt='(A,I6,A)') repeat(' ',indent)//'<DataItem Format="XML" NumberType="Float" Dimensions="',nflds*nscal,'">'
-      write(unit=ixdmf,fmt='(A)')trim(buffer) 
-      write(buffer,fmt='(A,I6)') repeat(' ',indent)
-      write(ixdmf,fmt='(A)',advance='no') trim(buffer)
-      do i = fldstart,fldend,nskip !1,nflds
-        write(ixdmf,fmt='(E15.6)',advance='no') t0 + 1.d0*(i-nskip)*dt!1.*i
-      enddo
-      write(buffer,fmt='(A)') repeat(' ',indent)//'</DataItem>'
-      write(unit=ixdmf,fmt='(A)')trim(buffer)
-      indent = indent - 4
-    write(buffer,fmt='(A)') repeat(' ',indent)//'</Time>'
-    write(unit=ixdmf,fmt='(A)')trim(buffer)
     do i = fldstart,fldend,nskip
       write(ichar,fmt='(i7.7)') i
       write(buffer,fmt='(A)') repeat(' ',indent)//'<Grid Name="T'//ichar//'" GridType="Uniform">'
       write(unit=ixdmf,fmt='(A)')trim(buffer)
       indent = indent + 4
-        write(buffer,fmt='(A)') repeat(' ',indent)//'<Topology Reference="/Xdmf/Domain/Topology[1]"/>'
+        write(buffer,fmt='(A,E15.6,A)') repeat(' ',indent)//'<Time Value="',t0 + 1.d0*i*dt,'"/>'
         write(unit=ixdmf,fmt='(A)')trim(buffer)
-        write(buffer,fmt='(A)') repeat(' ',indent)//'<Geometry Reference="/Xdmf/Domain/Geometry[1]"/>'
+        write(buffer,fmt='(A,3I5,A)') repeat(' ',indent)//'<Topology TopologyType="3DRectMesh" Dimensions="',nz,ny,nx,'"/>'
+        write(unit=ixdmf,fmt='(A)')trim(buffer)
+        write(buffer,fmt='(A)') repeat(' ',indent)//'<Geometry GeometryType="VXVYVZ">'
+        write(unit=ixdmf,fmt='(A)')trim(buffer)
+        indent = indent + 4
+          write(buffer,fmt='(A,I1,A,1I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' // &
+                                                         ' DataType="Float" Precision="',iprec,'" Endian="Native"' // &
+                                                         ' Dimensions="',nx,'">'
+          write(unit=ixdmf,fmt='(A)')trim(buffer)
+          indent = indent + 4
+            write(buffer,fmt='(A)') repeat(' ',indent)//'x.bin'
+            write(unit=ixdmf,fmt='(A)')trim(buffer)
+            indent = indent - 4
+          write(buffer,fmt='(A)') repeat(' ',indent)//'</DataItem>'
+          write(unit=ixdmf,fmt='(A)')trim(buffer)
+          write(buffer,fmt='(A,I1,A,1I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' // &
+                                                         ' DataType="Float" Precision="',iprec,'" Endian="Native"' // &
+                                                         ' Dimensions="',ny,'">'
+          write(unit=ixdmf,fmt='(A)')trim(buffer)
+          indent = indent + 4
+            write(buffer,fmt='(A)') repeat(' ',indent)//'y.bin'
+            write(unit=ixdmf,fmt='(A)')trim(buffer)
+            indent = indent - 4
+          write(buffer,fmt='(A)') repeat(' ',indent)//'</DataItem>'
+          write(unit=ixdmf,fmt='(A)')trim(buffer)
+          write(buffer,fmt='(A,I1,A,1I5,A)') repeat(' ',indent)//'<DataItem Format="Binary"' // &
+                                                         ' DataType="Float" Precision="',iprec,'" Endian="Native"' // &
+                                                         ' Dimensions="',nz,'">'
+          write(unit=ixdmf,fmt='(A)')trim(buffer)
+          indent = indent + 4
+            write(buffer,fmt='(A)') repeat(' ',indent)//'z.bin'
+            write(unit=ixdmf,fmt='(A)')trim(buffer)
+            indent = indent - 4
+          write(buffer,fmt='(A)') repeat(' ',indent)//'</DataItem>'
+          write(unit=ixdmf,fmt='(A)')trim(buffer)
+          indent = indent - 4
+        write(buffer,fmt='(A)') repeat(' ',indent)//'</Geometry>'
         write(unit=ixdmf,fmt='(A)')trim(buffer)
         do ii = 1,nscal
           write(buffer,fmt='(A)') repeat(' ',indent)//'<Attribute Name="'//scalname(ii)//'" Center="Node">'
