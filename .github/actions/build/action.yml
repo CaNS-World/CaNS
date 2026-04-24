@@ -17,6 +17,14 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Set up Intel oneAPI
+      if: ${{ inputs.compiler == 'INTEL' }}
+      uses: rscohn2/setup-oneapi@v0
+      with:
+        components: |
+          ifx
+          impi
+
     - name: Install compiler
       shell: bash
       run: |
