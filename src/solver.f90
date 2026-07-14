@@ -139,7 +139,7 @@ module mod_solver
       !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(z)
       do j=1,ny
         do i=1,nx
-          z = 1./(b(1) + lambdaxy(i,j) + eps)
+          z = b(1) + lambdaxy(i,j); z = z + eps; z = 1._rp/z
           d(i,j,1) = c(1)*z
           p(i,j,1) = p(i,j,1)*norm*z
         end do
@@ -149,14 +149,14 @@ module mod_solver
         !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(z)
         do j=1,ny
           do i=1,nx
-            z = 1./(b(k) + lambdaxy(i,j) - a(k)*d(i,j,k-1) + eps)
+            z = b(k) + lambdaxy(i,j) - a(k)*d(i,j,k-1); z = z + eps; z = 1._rp/z
             d(i,j,k) = c(k)*z
             p(i,j,k) = (p(i,j,k)*norm - a(k)*p(i,j,k-1))*z
           end do
         end do
       end do
     else
-      z = 1./(b(1) + eps)
+      z = b(1); z = z + eps; z = 1._rp/z
       !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
       do j=1,ny
         do i=1,nx
@@ -166,7 +166,7 @@ module mod_solver
       end do
       !
       do k=2,nn
-        z = 1./(b(k) - a(k)*d(1,1,k-1) + eps)
+        z = b(k) - a(k)*d(1,1,k-1); z = z + eps; z = 1._rp/z
         !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
         do j=1,ny
           do i=1,nx
@@ -210,7 +210,7 @@ module mod_solver
         !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(z)
         do j=1,ny
           do i=1,nx
-            z = 1./(b(1) + lambdaxy(i,j) + eps)
+            z = b(1) + lambdaxy(i,j); z = z + eps; z = 1._rp/z
             d(i,j,1) = c(1)*z
             p2(i,j,1) = p2(i,j,1)*z
           end do
@@ -219,14 +219,14 @@ module mod_solver
           !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(z)
           do j=1,ny
             do i=1,nx
-              z = 1./(b(k) + lambdaxy(i,j) - a(k)*d(i,j,k-1) + eps)
+              z = b(k) + lambdaxy(i,j) - a(k)*d(i,j,k-1); z = z + eps; z = 1._rp/z
               d(i,j,k) = c(k)*z
               p2(i,j,k) = (p2(i,j,k) - a(k)*p2(i,j,k-1))*z
             end do
           end do
         end do
       else
-        z = 1./(b(1) + eps)
+        z = b(1); z = z + eps; z = 1._rp/z
         !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
         do j=1,ny
           do i=1,nx
@@ -235,7 +235,7 @@ module mod_solver
           end do
         end do
         do k=2,nn
-          z = 1./(b(k) - a(k)*d(1,1,k-1) + eps)
+          z = b(k) - a(k)*d(1,1,k-1); z = z + eps; z = 1._rp/z
           !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
           do j=1,ny
             do i=1,nx
@@ -260,19 +260,19 @@ module mod_solver
       ! solve for the periodic closure value and correct the interior solution
       !
       if(present(lambdaxy)) then
-        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
+        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(z)
         do j=1,ny
           do i=1,nx
-            p(i,j,nn+1) = (p(i,j,nn+1)*norm        - c(nn+1)*p( i,j,1) - a(nn+1)*p(i,j,nn)) / &
-                          (b(nn+1) + lambdaxy(i,j) + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn) + eps)
+            z = b(nn+1) + lambdaxy(i,j) + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn); z = z + eps; z = 1._rp/z
+            p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn))*z
           end do
         end do
       else
-        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
+        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(z)
         do j=1,ny
           do i=1,nx
-            p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p( i,j,1) - a(nn+1)*p( i,j,nn)) / &
-                          (b(nn+1)          + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn) + eps)
+            z = b(nn+1) + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn); z = z + eps; z = 1._rp/z
+            p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn))*z
           end do
         end do
       end if
@@ -336,7 +336,7 @@ module mod_solver
         do i=1,nx
           !
           bb(:) = b(1:n) + lambdaxy(i,j)
-          zz(:) = 1./(bb(1:2)+eps)
+          zz(:) = bb(1:2); zz(:) = zz(:) + eps; zz(:) = 1._rp/zz(:)
           aa(i,j,1:2) = a(1:2)*zz(:)
           cc(i,j,1:2) = c(1:2)*zz(:)
           p( i,j,1:2) = p(i,j,1:2)*norm*zz(:)
@@ -344,7 +344,7 @@ module mod_solver
           ! elimination of lower diagonals
           !
           do k=3,n
-            z = 1./(bb(k)-a(k)*cc(i,j,k-1)+eps)
+            z = bb(k) - a(k)*cc(i,j,k-1); z = z + eps; z = 1._rp/z
             p(i,j,k) = (p(i,j,k)*norm-a(k)*p(i,j,k-1))*z
             aa(i,j,k) = -a(k)*aa(i,j,k-1)*z
             cc(i,j,k) = c(k)*z
@@ -357,7 +357,7 @@ module mod_solver
             aa(i,j,k) =  aa(i,j,k)-cc(i,j,k)*aa(i,j,k+1)
             cc(i,j,k) = -cc(i,j,k)*cc(i,j,k+1)
           end do
-          z = 1./(1.-aa(i,j,2)*cc(i,j,1)+eps)
+          z = 1._rp - aa(i,j,2)*cc(i,j,1); z = z + eps; z = 1._rp/z
           p(i,j,1) = (p(i,j,1)-cc(i,j,1)*p(i,j,2))*z
           aa(i,j,1) = aa(i,j,1)*z
           cc(i,j,1) = -cc(i,j,1)*cc(i,j,2)*z
@@ -375,7 +375,7 @@ module mod_solver
       !$OMP DO COLLAPSE(2)
       do j=1,ny
         do i=1,nx
-          zz(:) = 1./(b(1:2)+eps)
+          zz(:) = b(1:2); zz(:) = zz(:) + eps; zz(:) = 1._rp/zz(:)
           aa(i,j,1:2) = a(1:2)*zz(:)
           cc(i,j,1:2) = c(1:2)*zz(:)
           p( i,j,1:2) = p(i,j,1:2)*norm*zz(:)
@@ -383,7 +383,7 @@ module mod_solver
           ! elimination of lower diagonals
           !
           do k=3,n
-            z = 1./(b(k)-a(k)*cc(i,j,k-1)+eps)
+            z = b(k) - a(k)*cc(i,j,k-1); z = z + eps; z = 1._rp/z
             p(i,j,k) = (p(i,j,k)*norm-a(k)*p(i,j,k-1))*z
             aa(i,j,k) = -a(k)*aa(i,j,k-1)*z
             cc(i,j,k) = c(k)*z
@@ -396,7 +396,7 @@ module mod_solver
             aa(i,j,k) =  aa(i,j,k)-cc(i,j,k)*aa(i,j,k+1)
             cc(i,j,k) = -cc(i,j,k)*cc(i,j,k+1)
           end do
-          z = 1./(1.-aa(i,j,2)*cc(i,j,1)+eps)
+          z = 1._rp - aa(i,j,2)*cc(i,j,1); z = z + eps; z = 1._rp/z
           p(i,j,1) = (p(i,j,1)-cc(i,j,1)*p(i,j,2))*z
           aa(i,j,1) = aa(i,j,1)*z
           cc(i,j,1) = -cc(i,j,1)*cc(i,j,2)*z
@@ -441,7 +441,7 @@ module mod_solver
     do j=1,ny_r
       do i=1,nx_r
         do k=2,nn
-          z = 1./(1.-aa_z(i,j,k)*cc_z(i,j,k-1)+eps)
+          z = 1._rp - aa_z(i,j,k)*cc_z(i,j,k-1); z = z + eps; z = 1._rp/z
           pp_z(i,j,k) = (pp_z(i,j,k)-aa_z(i,j,k)*pp_z(i,j,k-1))*z
           cc_z(i,j,k) = cc_z(i,j,k)*z
         end do
@@ -462,7 +462,7 @@ module mod_solver
           pp_z_2(i,j,nn) = pp_z_2(i,j,nn) - cc_z(i,j,nn)
           !
           do k=2,nn
-            z = 1./(1.-aa_z(i,j,k)*cc_z(i,j,k-1)+eps)
+            z = 1._rp - aa_z(i,j,k)*cc_z(i,j,k-1); z = z + eps; z = 1._rp/z
             pp_z_2(i,j,k) = (pp_z_2(i,j,k)-aa_z(i,j,k)*pp_z_2(i,j,k-1))*z
             cc_z(i,j,k) = cc_z(i,j,k)*z
           end do
@@ -470,8 +470,8 @@ module mod_solver
           do k=nn-1,1,-1
             pp_z_2(i,j,k) = pp_z_2(i,j,k) - cc_z(i,j,k)*pp_z_2(i,j,k+1)
           end do
-          pp_z(i,j,nn+1) = (pp_z(i,j,nn+1) - cc_z(i,j,nn+1)*pp_z(  i,j,1) - aa_z(i,j,nn+1)*pp_z(  i,j,nn)) / &
-                           (1.             + cc_z(i,j,nn+1)*pp_z_2(i,j,1) + aa_z(i,j,nn+1)*pp_z_2(i,j,nn)+eps)
+          z = 1._rp + cc_z(i,j,nn+1)*pp_z_2(i,j,1) + aa_z(i,j,nn+1)*pp_z_2(i,j,nn); z = z + eps; z = 1._rp/z
+          pp_z(i,j,nn+1) = (pp_z(i,j,nn+1) - cc_z(i,j,nn+1)*pp_z(i,j,1) - aa_z(i,j,nn+1)*pp_z(i,j,nn))*z
           do k=1,nn
             pp_z(i,j,k) = pp_z(i,j,k) + pp_z_2(i,j,k)*pp_z(i,j,nn+1)
           end do
@@ -514,11 +514,11 @@ module mod_solver
     !
     ! Gauss elimination
     !
-    z = 1./(b(1)+eps)
+    z = b(1); z = z + eps; z = 1._rp/z
     d(1) = c(1)*z
     p(1) = p(1)*norm*z
     do l=2,n
-      z    = 1./(b(l)-a(l)*d(l-1)+eps)
+      z = b(l) - a(l)*d(l-1); z = z + eps; z = 1._rp/z
       d(l) = c(l)*z
       p(l) = (p(l)*norm-a(l)*p(l-1))*z
     end do

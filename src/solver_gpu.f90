@@ -299,12 +299,12 @@ module mod_solver_gpu
         do i=1,nx
           lxy = lambdaxy(i,j)
           !
-          z = 1./(b(1)+lxy+eps)
+          z = b(1) + lxy; z = z + eps; z = 1._rp/z
           d(i,j,1) = c(1)*z
           p(i,j,1) = p(i,j,1)*norm*z
           !$acc loop seq
           do k=2,nn
-            z        = 1./(b(k)+lxy-a(k)*d(i,j,k-1)+eps)
+            z = b(k) + lxy - a(k)*d(i,j,k-1); z = z + eps; z = 1._rp/z
             p(i,j,k) = (p(i,j,k)*norm-a(k)*p(i,j,k-1))*z
             d(i,j,k) = c(k)*z
           end do
@@ -328,12 +328,12 @@ module mod_solver_gpu
             p2(i,j,1 ) = -a(1 )
             p2(i,j,nn) = -c(nn)
             !
-            z = 1./(b(1)+lxy+eps)
+            z = b(1) + lxy; z = z + eps; z = 1._rp/z
             d( i,j,1) = c(1)*z
             p2(i,j,1) = p2(i,j,1)*z
             !$acc loop seq
             do k=2,nn
-              z         = 1./(b(k)+lxy-a(k)*d(i,j,k-1)+eps)
+              z = b(k) + lxy - a(k)*d(i,j,k-1); z = z + eps; z = 1._rp/z
               p2(i,j,k) = (p2(i,j,k)-a(k)*p2(i,j,k-1))*z
               d(i,j,k)  = c(k)*z
             end do
@@ -343,8 +343,8 @@ module mod_solver_gpu
               p2(i,j,k) = p2(i,j,k) - d(i,j,k)*p2(i,j,k+1)
             end do
             !
-            p(i,j,nn+1) = (p(i,j,nn+1)*norm       - c(nn+1)*p( i,j,1) - a(nn+1)*p( i,j,nn)) / &
-                          (b(    nn+1)      + lxy + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn)+eps)
+            z = b(nn+1) + lxy + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn); z = z + eps; z = 1._rp/z
+            p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn))*z
             !$acc loop seq
             do k=1,nn
               p(i,j,k) = p(i,j,k) + p2(i,j,k)*p(i,j,nn+1)
@@ -360,12 +360,12 @@ module mod_solver_gpu
       !$acc parallel loop gang vector collapse(2) default(present) private(z) async(1)
       do j=1,ny
         do i=1,nx
-          z = 1./(b(1)+eps)
+          z = b(1); z = z + eps; z = 1._rp/z
           dd(1) = c(1)*z
           p(i,j,1) = p(i,j,1)*norm*z
           !$acc loop seq
           do k=2,nn
-            z        = 1./(b(k)-a(k)*dd(k-1)+eps)
+            z = b(k) - a(k)*dd(k-1); z = z + eps; z = 1._rp/z
             p(i,j,k) = (p(i,j,k)*norm-a(k)*p(i,j,k-1))*z
             dd(k)    = c(k)*z
           end do
@@ -391,12 +391,12 @@ module mod_solver_gpu
             pp2(1 ) = -a(1 )
             pp2(nn) = -c(nn)
             !
-            z = 1./(b(1)+eps)
+            z = b(1); z = z + eps; z = 1._rp/z
             dd( 1) = c(1)*z
             pp2(1) = pp2(1)*z
             !$acc loop seq
             do k=2,nn
-              z      = 1./(b(k)-a(k)*dd(k-1)+eps)
+              z = b(k) - a(k)*dd(k-1); z = z + eps; z = 1._rp/z
               pp2(k) = (pp2(k)-a(k)*pp2(k-1))*z
               dd(k)  = c(k)*z
             end do
@@ -406,8 +406,8 @@ module mod_solver_gpu
               pp2(k) = pp2(k) - dd(k)*pp2(k+1)
             end do
             !
-            p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p( i,j,1) - a(nn+1)*p( i,j,nn)) / &
-                          (b(    nn+1)      + c(nn+1)*pp2(   1) + a(nn+1)*pp2(   nn)+eps)
+            z = b(nn+1) + c(nn+1)*pp2(1) + a(nn+1)*pp2(nn); z = z + eps; z = 1._rp/z
+            p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn))*z
             !$acc loop seq
             do k=1,nn-1
               p(i,j,k) = p(i,j,k) + pp2(k)*p(i,j,nn+1)
@@ -468,8 +468,8 @@ module mod_solver_gpu
         do i=1,nx
           lxy = lambdaxy(i,j)
           !
-          z1 = 1./(b(1+dk_g)+lxy+eps)
-          z2 = 1./(b(2+dk_g)+lxy+eps)
+          z = b(1+dk_g) + lxy; z = z + eps; z1 = 1._rp/z
+          z = b(2+dk_g) + lxy; z = z + eps; z2 = 1._rp/z
           aa(i,j,1) = a(1+dk_g)*z1
           aa(i,j,2) = a(2+dk_g)*z2
           cc(i,j,1) = c(1+dk_g)*z1
@@ -481,7 +481,7 @@ module mod_solver_gpu
           !
           !$acc loop seq
           do k=3,n
-            z = 1./(b(k+dk_g)+lxy-a(k+dk_g)*cc(i,j,k-1)+eps)
+            z = b(k+dk_g) + lxy - a(k+dk_g)*cc(i,j,k-1); z = z + eps; z = 1._rp/z
             p(i,j,k) = (p(i,j,k)*norm-a(k+dk_g)*p(i,j,k-1))*z
             aa(i,j,k) = -a(k+dk_g)*aa(i,j,k-1)*z
             cc(i,j,k) = c(k+dk_g)*z
@@ -495,7 +495,7 @@ module mod_solver_gpu
             aa(i,j,k) = aa(i,j,k)-cc(i,j,k)*aa(i,j,k+1)
             cc(i,j,k) =          -cc(i,j,k)*cc(i,j,k+1)
           end do
-          z = 1./(1.-aa(i,j,2)*cc(i,j,1)+eps)
+          z = 1._rp - aa(i,j,2)*cc(i,j,1); z = z + eps; z = 1._rp/z
           p(i,j,1) = (p(i,j,1)-cc(i,j,1)*p(i,j,2))*z
           aa(i,j,1) = aa(i,j,1)*z
           cc(i,j,1) = -cc(i,j,1)*cc(i,j,2)*z
@@ -514,8 +514,8 @@ module mod_solver_gpu
       !$acc parallel loop gang vector collapse(2) default(present) private(z,z1,z2) async(1)
       do j=1,ny
         do i=1,nx
-          z1 = 1./(b(1+dk_g)+eps)
-          z2 = 1./(b(2+dk_g)+eps)
+          z = b(1+dk_g); z = z + eps; z1 = 1._rp/z
+          z = b(2+dk_g); z = z + eps; z2 = 1._rp/z
           aa(i,j,1) = a(1+dk_g)*z1
           aa(i,j,2) = a(2+dk_g)*z2
           cc(i,j,1) = c(1+dk_g)*z1
@@ -527,7 +527,7 @@ module mod_solver_gpu
           !
           !$acc loop seq
           do k=3,n
-            z = 1./(b(k+dk_g)-a(k+dk_g)*cc(i,j,k-1)+eps)
+            z = b(k+dk_g) - a(k+dk_g)*cc(i,j,k-1); z = z + eps; z = 1._rp/z
             p(i,j,k) = (p(i,j,k)*norm-a(k+dk_g)*p(i,j,k-1))*z
             aa(i,j,k) = -a(k+dk_g)*aa(i,j,k-1)*z
             cc(i,j,k) = c(k+dk_g)*z
@@ -541,7 +541,7 @@ module mod_solver_gpu
             aa(i,j,k) = aa(i,j,k)-cc(i,j,k)*aa(i,j,k+1)
             cc(i,j,k) =          -cc(i,j,k)*cc(i,j,k+1)
           end do
-          z = 1./(1.-aa(i,j,2)*cc(i,j,1)+eps)
+          z = 1._rp - aa(i,j,2)*cc(i,j,1); z = z + eps; z = 1._rp/z
           p(i,j,1) = (p(i,j,1)-cc(i,j,1)*p(i,j,2))*z
           aa(i,j,1) = aa(i,j,1)*z
           cc(i,j,1) = -cc(i,j,1)*cc(i,j,2)*z
@@ -617,7 +617,7 @@ module mod_solver_gpu
       do i=1,nx_r
         !$acc loop seq
         do k=2,nn
-          z = 1./(1.-aa_z(i,j,k)*cc_z(i,j,k-1)+eps)
+          z = 1._rp - aa_z(i,j,k)*cc_z(i,j,k-1); z = z + eps; z = 1._rp/z
           pp_z(i,j,k) = (pp_z(i,j,k)-aa_z(i,j,k)*pp_z(i,j,k-1))*z
           cc_z(i,j,k) = cc_z(i,j,k)*z
         end do
@@ -641,7 +641,7 @@ module mod_solver_gpu
           !
           !$acc loop seq
           do k=2,nn
-            z = 1./(1.-aa_z(i,j,k)*cc_z(i,j,k-1)+eps)
+            z = 1._rp - aa_z(i,j,k)*cc_z(i,j,k-1); z = z + eps; z = 1._rp/z
             pp_z_2(i,j,k) = (pp_z_2(i,j,k)-aa_z(i,j,k)*pp_z_2(i,j,k-1))*z
             cc_z(i,j,k) = cc_z(i,j,k)*z
           end do
@@ -650,8 +650,8 @@ module mod_solver_gpu
           do k=nn-1,1,-1
             pp_z_2(i,j,k) = pp_z_2(i,j,k) - cc_z(i,j,k)*pp_z_2(i,j,k+1)
           end do
-          pp_z(i,j,nn+1) = (pp_z(i,j,nn+1) - cc_z(i,j,nn+1)*pp_z(  i,j,1) - aa_z(i,j,nn+1)*pp_z(  i,j,nn)) / &
-                           (1.             + cc_z(i,j,nn+1)*pp_z_2(i,j,1) + aa_z(i,j,nn+1)*pp_z_2(i,j,nn)+eps)
+          z = 1._rp + cc_z(i,j,nn+1)*pp_z_2(i,j,1) + aa_z(i,j,nn+1)*pp_z_2(i,j,nn); z = z + eps; z = 1._rp/z
+          pp_z(i,j,nn+1) = (pp_z(i,j,nn+1) - cc_z(i,j,nn+1)*pp_z(i,j,1) - aa_z(i,j,nn+1)*pp_z(i,j,nn))*z
           !$acc loop seq
           do k=1,nn
             pp_z(i,j,k) = pp_z(i,j,k) + pp_z_2(i,j,k)*pp_z(i,j,nn+1)
