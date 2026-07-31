@@ -11,9 +11,10 @@ module mod_bound
   use mod_types
   implicit none
   private
+  integer, parameter, public :: HALO_LOWER = -1, HALO_NONE = 0, HALO_UPPER = 1
   public boundp,bounduvw,updt_rhs_b
   contains
-  subroutine bounduvw(cbc,n,bc,nb,is_bound,is_correc,dl,dzc,dzf,u,v,w)
+  subroutine bounduvw(cbc,n,bc,nb,is_bound,dl,dzc,dzf,u,v,w,preserve_normal_values,normal_halos,tangential_halos)
     !
     ! imposes velocity boundary conditions
     !
@@ -23,63 +24,108 @@ module mod_bound
     real(rp), intent(in), dimension(0:1,3,3) :: bc
     integer , intent(in), dimension(0:1,3  ) :: nb
     logical , intent(in), dimension(0:1,3  ) :: is_bound
-    logical , intent(in)                     :: is_correc
     real(rp), intent(in), dimension(3 ) :: dl
     real(rp), intent(in), dimension(0:) :: dzc,dzf
     real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
-    logical :: impose_norm_bc
+    logical , intent(in), optional :: preserve_normal_values
+    integer , intent(in), optional :: normal_halos,tangential_halos
+    logical, dimension(0:1,3) :: apply_normal_bc
+    logical, dimension(0:1) :: update_normal
+    logical :: preserve_normal,update_tangential
     integer :: idir,nh
     !
     nh = 1
+    preserve_normal = .false.
+    if(present(preserve_normal_values)) preserve_normal = preserve_normal_values
+    update_normal(:) = .true.
+    if(present(normal_halos)) then
+      select case(normal_halos)
+      case(HALO_LOWER)
+        update_normal(1) = .false.
+      case(HALO_NONE)
+        update_normal(:) = .false.
+      case(HALO_UPPER)
+        update_normal(0) = .false.
+      case default
+        error stop 'Invalid normal halo selection'
+      end select
+    end if
+    update_tangential = .true.
+    if(present(tangential_halos)) then
+      select case(tangential_halos)
+      case(HALO_LOWER,HALO_UPPER)
+      case(HALO_NONE)
+        update_tangential = .false.
+      case default
+        error stop 'Invalid tangential halo selection'
+      end select
+    end if
+    do idir = 1,3
+      apply_normal_bc(0,idir) = .not.preserve_normal .or. &
+                                (cbc(0,idir,idir)//cbc(1,idir,idir) == 'PP'.and.update_normal(0))
+      apply_normal_bc(1,idir) = .not.preserve_normal .or. &
+                                (cbc(0,idir,idir)//cbc(1,idir,idir) == 'PP'.and.update_normal(1))
+    end do
     !
 #if !defined(_OPENACC)
-    do idir = 1,3
-      call updthalo(nh,halo(idir),nb(:,idir),idir,u)
-      call updthalo(nh,halo(idir),nb(:,idir),idir,v)
-      call updthalo(nh,halo(idir),nb(:,idir),idir,w)
-    end do
+    call updthalo(nh,halo(1),nb(:,1),1,u,normal_halos)
+    call updthalo(nh,halo(1),nb(:,1),1,v,tangential_halos)
+    call updthalo(nh,halo(1),nb(:,1),1,w,tangential_halos)
+    call updthalo(nh,halo(2),nb(:,2),2,u,tangential_halos)
+    call updthalo(nh,halo(2),nb(:,2),2,v,normal_halos)
+    call updthalo(nh,halo(2),nb(:,2),2,w,tangential_halos)
+    call updthalo(nh,halo(3),nb(:,3),3,u,tangential_halos)
+    call updthalo(nh,halo(3),nb(:,3),3,v,tangential_halos)
+    call updthalo(nh,halo(3),nb(:,3),3,w,normal_halos)
 #else
-    call updthalo_gpu(nh,cbc(0,:,1)//cbc(1,:,1)==['PP','PP','PP'],u)
-    call updthalo_gpu(nh,cbc(0,:,2)//cbc(1,:,2)==['PP','PP','PP'],v)
-    call updthalo_gpu(nh,cbc(0,:,3)//cbc(1,:,3)==['PP','PP','PP'],w)
+    if(any(update_normal)) then
+      call updthalo_gpu(nh,cbc(0,:,1)//cbc(1,:,1)==['PP','PP','PP'],u,1)
+      call updthalo_gpu(nh,cbc(0,:,2)//cbc(1,:,2)==['PP','PP','PP'],v,2)
+      call updthalo_gpu(nh,cbc(0,:,3)//cbc(1,:,3)==['PP','PP','PP'],w,3)
+    end if
+    if(update_tangential) then
+      call updthalo_gpu(nh,cbc(0,:,1)//cbc(1,:,1)==['PP','PP','PP'],u,2)
+      call updthalo_gpu(nh,cbc(0,:,1)//cbc(1,:,1)==['PP','PP','PP'],u,3)
+      call updthalo_gpu(nh,cbc(0,:,2)//cbc(1,:,2)==['PP','PP','PP'],v,1)
+      call updthalo_gpu(nh,cbc(0,:,2)//cbc(1,:,2)==['PP','PP','PP'],v,3)
+      call updthalo_gpu(nh,cbc(0,:,3)//cbc(1,:,3)==['PP','PP','PP'],w,1)
+      call updthalo_gpu(nh,cbc(0,:,3)//cbc(1,:,3)==['PP','PP','PP'],w,2)
+    end if
 #endif
     !
-    impose_norm_bc = (.not.is_correc).or.(cbc(0,1,1)//cbc(1,1,1) == 'PP')
     if(is_bound(0,1)) then
-      if(impose_norm_bc) call set_bc(cbc(0,1,1),0,1,nh,.false.,bc(0,1,1),dl(1),u)
-                         call set_bc(cbc(0,1,2),0,1,nh,.true. ,bc(0,1,2),dl(1),v)
-                         call set_bc(cbc(0,1,3),0,1,nh,.true. ,bc(0,1,3),dl(1),w)
+      if(apply_normal_bc(0,1)) call set_bc(cbc(0,1,1),0,1,nh,.false.,bc(0,1,1),dl(1),u)
+      call set_bc(cbc(0,1,2),0,1,nh,.true. ,bc(0,1,2),dl(1),v)
+      call set_bc(cbc(0,1,3),0,1,nh,.true. ,bc(0,1,3),dl(1),w)
     end if
     if(is_bound(1,1)) then
-      if(impose_norm_bc) call set_bc(cbc(1,1,1),1,1,nh,.false.,bc(1,1,1),dl(1),u)
-                         call set_bc(cbc(1,1,2),1,1,nh,.true. ,bc(1,1,2),dl(1),v)
-                         call set_bc(cbc(1,1,3),1,1,nh,.true. ,bc(1,1,3),dl(1),w)
+      if(apply_normal_bc(1,1)) call set_bc(cbc(1,1,1),1,1,nh,.false.,bc(1,1,1),dl(1),u)
+      call set_bc(cbc(1,1,2),1,1,nh,.true. ,bc(1,1,2),dl(1),v)
+      call set_bc(cbc(1,1,3),1,1,nh,.true. ,bc(1,1,3),dl(1),w)
     end if
-    impose_norm_bc = (.not.is_correc).or.(cbc(0,2,2)//cbc(1,2,2) == 'PP')
     if(is_bound(0,2)) then
-                         call set_bc(cbc(0,2,1),0,2,nh,.true. ,bc(0,2,1),dl(2),u)
-      if(impose_norm_bc) call set_bc(cbc(0,2,2),0,2,nh,.false.,bc(0,2,2),dl(2),v)
-                         call set_bc(cbc(0,2,3),0,2,nh,.true. ,bc(0,2,3),dl(2),w)
+      call set_bc(cbc(0,2,1),0,2,nh,.true. ,bc(0,2,1),dl(2),u)
+      if(apply_normal_bc(0,2)) call set_bc(cbc(0,2,2),0,2,nh,.false.,bc(0,2,2),dl(2),v)
+      call set_bc(cbc(0,2,3),0,2,nh,.true. ,bc(0,2,3),dl(2),w)
     end if
     if(is_bound(1,2)) then
-                         call set_bc(cbc(1,2,1),1,2,nh,.true. ,bc(1,2,1),dl(2),u)
-      if(impose_norm_bc) call set_bc(cbc(1,2,2),1,2,nh,.false.,bc(1,2,2),dl(2),v)
-                         call set_bc(cbc(1,2,3),1,2,nh,.true. ,bc(1,2,3),dl(2),w)
+      call set_bc(cbc(1,2,1),1,2,nh,.true. ,bc(1,2,1),dl(2),u)
+      if(apply_normal_bc(1,2)) call set_bc(cbc(1,2,2),1,2,nh,.false.,bc(1,2,2),dl(2),v)
+      call set_bc(cbc(1,2,3),1,2,nh,.true. ,bc(1,2,3),dl(2),w)
     end if
-    impose_norm_bc = (.not.is_correc).or.(cbc(0,3,3)//cbc(1,3,3) == 'PP')
     if(is_bound(0,3)) then
-                         call set_bc(cbc(0,3,1),0,3,nh,.true. ,bc(0,3,1),dzc(0)   ,u)
-                         call set_bc(cbc(0,3,2),0,3,nh,.true. ,bc(0,3,2),dzc(0)   ,v)
-      if(impose_norm_bc) call set_bc(cbc(0,3,3),0,3,nh,.false.,bc(0,3,3),dzf(0)   ,w)
+      call set_bc(cbc(0,3,1),0,3,nh,.true. ,bc(0,3,1),dzc(0)   ,u)
+      call set_bc(cbc(0,3,2),0,3,nh,.true. ,bc(0,3,2),dzc(0)   ,v)
+      if(apply_normal_bc(0,3)) call set_bc(cbc(0,3,3),0,3,nh,.false.,bc(0,3,3),dzf(0)   ,w)
     end if
     if(is_bound(1,3)) then
-                         call set_bc(cbc(1,3,1),1,3,nh,.true. ,bc(1,3,1),dzc(n(3)),u)
-                         call set_bc(cbc(1,3,2),1,3,nh,.true. ,bc(1,3,2),dzc(n(3)),v)
-      if(impose_norm_bc) call set_bc(cbc(1,3,3),1,3,nh,.false.,bc(1,3,3),dzf(n(3)),w)
+      call set_bc(cbc(1,3,1),1,3,nh,.true. ,bc(1,3,1),dzc(n(3)),u)
+      call set_bc(cbc(1,3,2),1,3,nh,.true. ,bc(1,3,2),dzc(n(3)),v)
+      if(apply_normal_bc(1,3)) call set_bc(cbc(1,3,3),1,3,nh,.false.,bc(1,3,3),dzf(n(3)),w)
     end if
   end subroutine bounduvw
   !
-  subroutine boundp(cbc,n,bc,nb,is_bound,dl,dzc,p)
+  subroutine boundp(cbc,n,bc,nb,is_bound,dl,dzc,p,halo_side)
     !
     ! imposes pressure boundary conditions
     !
@@ -92,34 +138,49 @@ module mod_bound
     real(rp), intent(in), dimension(3 ) :: dl
     real(rp), intent(in), dimension(0:) :: dzc
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
+    integer , intent(in), optional :: halo_side
+    logical, dimension(0:1) :: update_halo
     integer :: idir,nh
     !
     nh = 1
+    update_halo(:) = .true.
+    if(present(halo_side)) then
+      select case(halo_side)
+      case(HALO_LOWER)
+        update_halo(1) = .false.
+      case(HALO_NONE)
+        update_halo(:) = .false.
+      case(HALO_UPPER)
+        update_halo(0) = .false.
+      case default
+        error stop 'Invalid halo selection'
+      end select
+    end if
     !
 #if !defined(_OPENACC)
     do idir = 1,3
-      call updthalo(nh,halo(idir),nb(:,idir),idir,p)
+      call updthalo(nh,halo(idir),nb(:,idir),idir,p,halo_side)
     end do
 #else
-    call updthalo_gpu(nh,cbc(0,:)//cbc(1,:)==['PP','PP','PP'],p)
+    if(any(update_halo)) call updthalo_gpu(nh,cbc(0,:)//cbc(1,:)==['PP','PP','PP'],p)
 #endif
     !
-    if(is_bound(0,1)) then
+    if(is_bound(0,1).and.update_halo(0)) then
       call set_bc(cbc(0,1),0,1,nh,.true.,bc(0,1),dl(1),p)
     end if
-    if(is_bound(1,1)) then
+    if(is_bound(1,1).and.update_halo(1)) then
       call set_bc(cbc(1,1),1,1,nh,.true.,bc(1,1),dl(1),p)
     end if
-    if(is_bound(0,2)) then
+    if(is_bound(0,2).and.update_halo(0)) then
       call set_bc(cbc(0,2),0,2,nh,.true.,bc(0,2),dl(2),p)
-     end if
-    if(is_bound(1,2)) then
+    end if
+    if(is_bound(1,2).and.update_halo(1)) then
       call set_bc(cbc(1,2),1,2,nh,.true.,bc(1,2),dl(2),p)
     end if
-    if(is_bound(0,3)) then
+    if(is_bound(0,3).and.update_halo(0)) then
       call set_bc(cbc(0,3),0,3,nh,.true.,bc(0,3),dzc(0)   ,p)
     end if
-    if(is_bound(1,3)) then
+    if(is_bound(1,3).and.update_halo(1)) then
       call set_bc(cbc(1,3),1,3,nh,.true.,bc(1,3),dzc(n(3)),p)
     end if
   end subroutine boundp
@@ -168,8 +229,8 @@ module mod_bound
           !$OMP parallel do   collapse(2) DEFAULT(shared)
          do k=1-nh,size(p,3)-nh
            do j=1-nh,size(p,2)-nh
-              p(  0-dh,j,k) = p(n-dh,j,k)
-              p(n+1+dh,j,k) = p(1+dh,j,k)
+              if(ibound == 0) p(  0-dh,j,k) = p(n-dh,j,k)
+              if(ibound == 1) p(n+1+dh,j,k) = p(1+dh,j,k)
             end do
           end do
         case(2)
@@ -177,8 +238,8 @@ module mod_bound
           !$OMP parallel do   collapse(2) DEFAULT(shared)
           do k=1-nh,size(p,3)-nh
             do i=1-nh,size(p,1)-nh
-              p(i,  0-dh,k) = p(i,n-dh,k)
-              p(i,n+1+dh,k) = p(i,1+dh,k)
+              if(ibound == 0) p(i,  0-dh,k) = p(i,n-dh,k)
+              if(ibound == 1) p(i,n+1+dh,k) = p(i,1+dh,k)
             end do
           end do
         case(3)
@@ -186,8 +247,8 @@ module mod_bound
           !$OMP parallel do   collapse(2) DEFAULT(shared)
           do j=1-nh,size(p,2)-nh
             do i=1-nh,size(p,1)-nh
-              p(i,j,  0-dh) = p(i,j,n-dh)
-              p(i,j,n+1+dh) = p(i,j,1+dh)
+              if(ibound == 0) p(i,j,  0-dh) = p(i,j,n-dh)
+              if(ibound == 1) p(i,j,n+1+dh) = p(i,j,1+dh)
             end do
           end do
         end select
@@ -515,13 +576,15 @@ module mod_bound
     end if
   end subroutine updt_rhs_b
   !
-  subroutine updthalo(nh,halo,nb,idir,p)
+  subroutine updthalo(nh,halo,nb,idir,p,halo_side)
     implicit none
     integer , intent(in) :: nh ! number of ghost points
     integer , intent(in) :: halo
     integer , intent(in), dimension(0:1) :: nb
     integer , intent(in) :: idir
     real(rp), dimension(1-nh:,1-nh:,1-nh:), intent(inout) :: p
+    integer , intent(in), optional :: halo_side
+    logical :: update_lower,update_upper
     integer , dimension(3) :: lo,hi
 #if defined(_ASYNC_HALO)
     integer :: requests(4)
@@ -530,71 +593,107 @@ module mod_bound
     !  this subroutine updates the halo that store info
     !  from the neighboring computational sub-domain
     !
-    if(idir == ipencil_axis) return
+    update_lower = .true.
+    update_upper = .true.
+    if(present(halo_side)) then
+      select case(halo_side)
+      case(HALO_LOWER)
+        update_upper = .false.
+      case(HALO_NONE)
+        update_lower = .false.
+        update_upper = .false.
+      case(HALO_UPPER)
+        update_lower = .false.
+      case default
+        error stop 'Invalid halo selection'
+      end select
+    end if
+    if(idir == ipencil_axis.or..not.(update_lower.or.update_upper)) return
     lo(:) = lbound(p)+nh
     hi(:) = ubound(p)-nh
     select case(idir)
     case(1) ! x direction
 #if !defined(_ASYNC_HALO)
-      call MPI_SENDRECV(p(lo(1)     ,lo(2)-nh,lo(3)-nh),1,halo,nb(0),0, &
-                        p(hi(1)+1   ,lo(2)-nh,lo(3)-nh),1,halo,nb(1),0, &
-                        MPI_COMM_WORLD,MPI_STATUS_IGNORE,ierr)
-      call MPI_SENDRECV(p(hi(1)-nh+1,lo(2)-nh,lo(3)-nh),1,halo,nb(1),0, &
-                        p(lo(1)-nh  ,lo(2)-nh,lo(3)-nh),1,halo,nb(0),0, &
-                        MPI_COMM_WORLD,MPI_STATUS_IGNORE,ierr)
+      if(update_upper) &
+        call MPI_SENDRECV(p(lo(1)     ,lo(2)-nh,lo(3)-nh),1,halo,nb(0),0, &
+                          p(hi(1)+1   ,lo(2)-nh,lo(3)-nh),1,halo,nb(1),0, &
+                          MPI_COMM_WORLD,MPI_STATUS_IGNORE,ierr)
+      if(update_lower) &
+        call MPI_SENDRECV(p(hi(1)-nh+1,lo(2)-nh,lo(3)-nh),1,halo,nb(1),0, &
+                          p(lo(1)-nh  ,lo(2)-nh,lo(3)-nh),1,halo,nb(0),0, &
+                          MPI_COMM_WORLD,MPI_STATUS_IGNORE,ierr)
 #else
-      call MPI_IRECV( p(hi(1)+1  ,lo(2)-nh,lo(3)-nh),1,halo,nb(1),0, &
-                      MPI_COMM_WORLD,requests(1),ierr)
-      call MPI_IRECV( p(lo(1)-nh ,lo(2)-nh,lo(3)-nh),1,halo,nb(0),1, &
-                      MPI_COMM_WORLD,requests(2),ierr)
-      call MPI_ISEND(p(lo(1)     ,lo(2)-nh,lo(3)-nh),1,halo,nb(0),0, &
-                      MPI_COMM_WORLD,requests(3),ierr)
-      call MPI_ISEND(p(hi(1)-nh+1,lo(2)-nh,lo(3)-nh),1,halo,nb(1),1, &
-                      MPI_COMM_WORLD,requests(4),ierr)
+      requests(:) = MPI_REQUEST_NULL
+      if(update_upper) then
+        call MPI_IRECV( p(hi(1)+1,lo(2)-nh,lo(3)-nh),1,halo,nb(1),0, &
+                        MPI_COMM_WORLD,requests(1),ierr)
+        call MPI_ISEND(p(lo(1)   ,lo(2)-nh,lo(3)-nh),1,halo,nb(0),0, &
+                        MPI_COMM_WORLD,requests(3),ierr)
+      end if
+      if(update_lower) then
+        call MPI_IRECV( p(lo(1)-nh  ,lo(2)-nh,lo(3)-nh),1,halo,nb(0),1, &
+                        MPI_COMM_WORLD,requests(2),ierr)
+        call MPI_ISEND(p(hi(1)-nh+1,lo(2)-nh,lo(3)-nh),1,halo,nb(1),1, &
+                        MPI_COMM_WORLD,requests(4),ierr)
+      end if
       call MPI_WAITALL(4,requests,MPI_STATUSES_IGNORE,ierr)
 #endif
     case(2) ! y direction
 #if !defined(_ASYNC_HALO)
-      call MPI_SENDRECV(p(lo(1)-nh,lo(2)     ,lo(3)-nh),1,halo,nb(0),0, &
-                        p(lo(1)-nh,hi(2)+1   ,lo(3)-nh),1,halo,nb(1),0, &
-                        MPI_COMM_WORLD,MPI_STATUS_IGNORE,ierr)
-      call MPI_SENDRECV(p(lo(1)-nh,hi(2)-nh+1,lo(3)-nh),1,halo,nb(1),0, &
-                        p(lo(1)-nh,lo(2)-nh  ,lo(3)-nh),1,halo,nb(0),0, &
-                        MPI_COMM_WORLD,MPI_STATUS_IGNORE,ierr)
+      if(update_upper) &
+        call MPI_SENDRECV(p(lo(1)-nh,lo(2)     ,lo(3)-nh),1,halo,nb(0),0, &
+                          p(lo(1)-nh,hi(2)+1   ,lo(3)-nh),1,halo,nb(1),0, &
+                          MPI_COMM_WORLD,MPI_STATUS_IGNORE,ierr)
+      if(update_lower) &
+        call MPI_SENDRECV(p(lo(1)-nh,hi(2)-nh+1,lo(3)-nh),1,halo,nb(1),0, &
+                          p(lo(1)-nh,lo(2)-nh  ,lo(3)-nh),1,halo,nb(0),0, &
+                          MPI_COMM_WORLD,MPI_STATUS_IGNORE,ierr)
 #else
-      call MPI_IRECV(p(lo(1)-nh,hi(2)+1   ,lo(3)-nh),1,halo,nb(1),0, &
-                      MPI_COMM_WORLD,requests(1),ierr)
-      call MPI_IRECV(p(lo(1)-nh,lo(2)-nh  ,lo(3)-nh),1,halo,nb(0),1, &
-                      MPI_COMM_WORLD,requests(2),ierr)
-      call MPI_ISEND(p(lo(1)-nh,lo(2)     ,lo(3)-nh),1,halo,nb(0),0, &
-                      MPI_COMM_WORLD,requests(3),ierr)
-      call MPI_ISEND(p(lo(1)-nh,hi(2)-nh+1,lo(3)-nh),1,halo,nb(1),1, &
-                      MPI_COMM_WORLD,requests(4),ierr)
+      requests(:) = MPI_REQUEST_NULL
+      if(update_upper) then
+        call MPI_IRECV(p(lo(1)-nh,hi(2)+1,lo(3)-nh),1,halo,nb(1),0, &
+                       MPI_COMM_WORLD,requests(1),ierr)
+        call MPI_ISEND(p(lo(1)-nh,lo(2)  ,lo(3)-nh),1,halo,nb(0),0, &
+                       MPI_COMM_WORLD,requests(3),ierr)
+      end if
+      if(update_lower) then
+        call MPI_IRECV(p(lo(1)-nh,lo(2)-nh  ,lo(3)-nh),1,halo,nb(0),1, &
+                       MPI_COMM_WORLD,requests(2),ierr)
+        call MPI_ISEND(p(lo(1)-nh,hi(2)-nh+1,lo(3)-nh),1,halo,nb(1),1, &
+                       MPI_COMM_WORLD,requests(4),ierr)
+      end if
       call MPI_WAITALL(4,requests,MPI_STATUSES_IGNORE,ierr)
 #endif
     case(3) ! z direction
 #if !defined(_ASYNC_HALO)
-      call MPI_SENDRECV(p(lo(1)-nh,lo(2)-nh,lo(3)     ),1,halo,nb(0),0, &
-                        p(lo(1)-nh,lo(2)-nh,hi(3)+1   ),1,halo,nb(1),0, &
-                        MPI_COMM_WORLD,MPI_STATUS_IGNORE,ierr)
-      call MPI_SENDRECV(p(lo(1)-nh,lo(2)-nh,hi(3)-nh+1),1,halo,nb(1),0, &
-                        p(lo(1)-nh,lo(2)-nh,lo(3)-nh  ),1,halo,nb(0),0, &
-                        MPI_COMM_WORLD,MPI_STATUS_IGNORE,ierr)
+      if(update_upper) &
+        call MPI_SENDRECV(p(lo(1)-nh,lo(2)-nh,lo(3)     ),1,halo,nb(0),0, &
+                          p(lo(1)-nh,lo(2)-nh,hi(3)+1   ),1,halo,nb(1),0, &
+                          MPI_COMM_WORLD,MPI_STATUS_IGNORE,ierr)
+      if(update_lower) &
+        call MPI_SENDRECV(p(lo(1)-nh,lo(2)-nh,hi(3)-nh+1),1,halo,nb(1),0, &
+                          p(lo(1)-nh,lo(2)-nh,lo(3)-nh  ),1,halo,nb(0),0, &
+                          MPI_COMM_WORLD,MPI_STATUS_IGNORE,ierr)
 #else
-      call MPI_IRECV(p(lo(1)-nh,lo(2)-nh,hi(3)+1   ),1,halo,nb(1),0, &
-                      MPI_COMM_WORLD,requests(1),ierr)
-      call MPI_IRECV(p(lo(1)-nh,lo(2)-nh,lo(3)-nh  ),1,halo,nb(0),1, &
-                      MPI_COMM_WORLD,requests(2),ierr)
-      call MPI_ISEND(p(lo(1)-nh,lo(2)-nh,lo(3)     ),1,halo,nb(0),0, &
-                      MPI_COMM_WORLD,requests(3),ierr)
-      call MPI_ISEND(p(lo(1)-nh,lo(2)-nh,hi(3)-nh+1),1,halo,nb(1),1, &
-                      MPI_COMM_WORLD,requests(4),ierr)
+      requests(:) = MPI_REQUEST_NULL
+      if(update_upper) then
+        call MPI_IRECV(p(lo(1)-nh,lo(2)-nh,hi(3)+1),1,halo,nb(1),0, &
+                       MPI_COMM_WORLD,requests(1),ierr)
+        call MPI_ISEND(p(lo(1)-nh,lo(2)-nh,lo(3)  ),1,halo,nb(0),0, &
+                       MPI_COMM_WORLD,requests(3),ierr)
+      end if
+      if(update_lower) then
+        call MPI_IRECV(p(lo(1)-nh,lo(2)-nh,lo(3)-nh  ),1,halo,nb(0),1, &
+                       MPI_COMM_WORLD,requests(2),ierr)
+        call MPI_ISEND(p(lo(1)-nh,lo(2)-nh,hi(3)-nh+1),1,halo,nb(1),1, &
+                       MPI_COMM_WORLD,requests(4),ierr)
+      end if
       call MPI_WAITALL(4,requests,MPI_STATUSES_IGNORE,ierr)
 #endif
     end select
   end subroutine updthalo
 #if defined(_OPENACC)
-  subroutine updthalo_gpu(nh,periods,p)
+  subroutine updthalo_gpu(nh,periods,p,idir_only)
     use mod_types
 #if !defined(_USE_DIEZDECOMP)
     use cudecomp
@@ -609,21 +708,25 @@ module mod_bound
     integer , intent(in) :: nh
     logical , intent(in) :: periods(3)
     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
-    integer :: istat
+    integer , intent(in), optional :: idir_only
+    integer :: idir,istat
 #if !defined(_USE_DIEZDECOMP)
     !$acc host_data use_device(p,work)
 #endif
-    select case(ipencil_axis)
-    case(1)
-      istat = cudecompUpdateHalosX(ch,gd,p,work,dtype,[nh,nh,nh],periods,2,stream=istream)
-      istat = cudecompUpdateHalosX(ch,gd,p,work,dtype,[nh,nh,nh],periods,3,stream=istream)
-    case(2)
-      istat = cudecompUpdateHalosY(ch,gd,p,work,dtype,[nh,nh,nh],periods,1,stream=istream)
-      istat = cudecompUpdateHalosY(ch,gd,p,work,dtype,[nh,nh,nh],periods,3,stream=istream)
-    case(3)
-      istat = cudecompUpdateHalosZ(ch,gd,p,work,dtype,[nh,nh,nh],periods,1,stream=istream)
-      istat = cudecompUpdateHalosZ(ch,gd,p,work,dtype,[nh,nh,nh],periods,2,stream=istream)
-    end select
+    do idir=1,3
+      if(idir == ipencil_axis) cycle
+      if(present(idir_only)) then
+        if(idir /= idir_only) cycle
+      end if
+      select case(ipencil_axis)
+      case(1)
+        istat = cudecompUpdateHalosX(ch,gd,p,work,dtype,[nh,nh,nh],periods,idir,stream=istream)
+      case(2)
+        istat = cudecompUpdateHalosY(ch,gd,p,work,dtype,[nh,nh,nh],periods,idir,stream=istream)
+      case(3)
+        istat = cudecompUpdateHalosZ(ch,gd,p,work,dtype,[nh,nh,nh],periods,idir,stream=istream)
+      end select
+    end do
 #if !defined(_USE_DIEZDECOMP)
     !$acc end host_data
 #endif
