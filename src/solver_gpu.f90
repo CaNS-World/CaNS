@@ -286,7 +286,6 @@ module mod_solver_gpu
     real(rp), intent(in), dimension(:,:), optional :: lambdaxy
     real(rp) :: den,lxy,pivot_tol,z
     integer :: i,j,k,nn
-    real(rp), allocatable, save, dimension(:) :: dd,pp2
     !
     !solve tridiagonal system
     !
@@ -369,64 +368,57 @@ module mod_solver_gpu
         end do
       end if
     else
-      if(.not.allocated(dd)) then
-        allocate(dd(n+1)) ! needs to accommodate both face-centered and cell-centered variables
-        !$acc enter data create(dd) async(1)
-      end if
+      ! Keep the sequential work arrays private to each (i,j) system.
       !$acc parallel loop gang vector collapse(2) default(present) private(z) async(1)
       do j=1,ny
         do i=1,nx
           z = 1._rp/b(1)
-          dd(1) = c(1)*z
+          d(i,j,1) = c(1)*z
           p(i,j,1) = p(i,j,1)*norm*z
           !$acc loop seq
           do k=2,nn
-            z = 1._rp/(b(k) - a(k)*dd(k-1))
+            z = 1._rp/(b(k) - a(k)*d(i,j,k-1))
             p(i,j,k) = (p(i,j,k)*norm-a(k)*p(i,j,k-1))*z
-            dd(k)    = c(k)*z
+            d(i,j,k) = c(k)*z
           end do
           !
           !$acc loop seq
           do k=nn-1,1,-1
-            p(i,j,k) = p(i,j,k) - dd(k)*p(i,j,k+1)
+            p(i,j,k) = p(i,j,k) - d(i,j,k)*p(i,j,k+1)
           end do
         end do
       end do
       if(is_periodic) then
-        if(.not.allocated(pp2)) then
-          allocate(pp2(n+1)) ! needs to accommodate both face-centered and cell-centered variables
-          !$acc enter data create(pp2) async(1)
-        end if
         !$acc parallel loop gang vector collapse(2) default(present) private(z) async(1)
         do j=1,ny
           do i=1,nx
             !$acc loop seq
             do k=1,nn
-              pp2(k) = 0.
+              p2(i,j,k) = 0.
             end do
-            pp2(1 ) = -a(1 )
-            pp2(nn) = -c(nn)
+            p2(i,j,1 ) = -a(1 )
+            p2(i,j,nn) = p2(i,j,nn) - c(nn)
             !
             z = 1._rp/b(1)
-            dd( 1) = c(1)*z
-            pp2(1) = pp2(1)*z
+            d( i,j,1) = c(1)*z
+            p2(i,j,1) = p2(i,j,1)*z
             !$acc loop seq
             do k=2,nn
-              z = 1._rp/(b(k) - a(k)*dd(k-1))
-              pp2(k) = (pp2(k)-a(k)*pp2(k-1))*z
-              dd(k)  = c(k)*z
+              z = 1._rp/(b(k) - a(k)*d(i,j,k-1))
+              p2(i,j,k) = (p2(i,j,k)-a(k)*p2(i,j,k-1))*z
+              d(i,j,k)  = c(k)*z
             end do
             !
             !$acc loop seq
             do k=nn-1,1,-1
-              pp2(k) = pp2(k) - dd(k)*pp2(k+1)
+              p2(i,j,k) = p2(i,j,k) - d(i,j,k)*p2(i,j,k+1)
             end do
             !
-            p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn)) / &
-                          (b(nn+1) + c(nn+1)*pp2(1) + a(nn+1)*pp2(nn))
+            p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p( i,j,1) - a(nn+1)*p( i,j,nn)) / &
+                          (b(nn+1)          + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn))
             !$acc loop seq
-            do k=1,nn-1
-              p(i,j,k) = p(i,j,k) + pp2(k)*p(i,j,nn+1)
+            do k=1,nn
+              p(i,j,k) = p(i,j,k) + p2(i,j,k)*p(i,j,nn+1)
             end do
           end do
         end do
@@ -665,8 +657,8 @@ module mod_solver_gpu
           do k=nn-1,1,-1
             pp_z_2(i,j,k) = pp_z_2(i,j,k) - cc_z(i,j,k)*pp_z_2(i,j,k+1)
           end do
-          pp_z(i,j,nn+1) = (pp_z(i,j,nn+1) - cc_z(i,j,nn+1)*pp_z(i,j,1) - aa_z(i,j,nn+1)*pp_z(i,j,nn)) / &
-                           (1._rp + cc_z(i,j,nn+1)*pp_z_2(i,j,1) + aa_z(i,j,nn+1)*pp_z_2(i,j,nn))
+          pp_z(i,j,nn+1) = (pp_z(i,j,nn+1) - cc_z(i,j,nn+1)*pp_z(  i,j,1) - aa_z(i,j,nn+1)*pp_z(  i,j,nn)) / &
+                           (1._rp          + cc_z(i,j,nn+1)*pp_z_2(i,j,1) + aa_z(i,j,nn+1)*pp_z_2(i,j,nn))
           !$acc loop seq
           do k=1,nn
             pp_z(i,j,k) = pp_z(i,j,k) + pp_z_2(i,j,k)*pp_z(i,j,nn+1)

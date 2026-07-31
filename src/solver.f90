@@ -287,8 +287,8 @@ module mod_solver
         !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
         do j=1,ny
           do i=1,nx
-            p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn)) / &
-                          (b(nn+1) + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn))
+            p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p( i,j,1) - a(nn+1)*p( i,j,nn)) / &
+                          (b(nn+1)          + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn))
           end do
         end do
       end if
@@ -485,8 +485,8 @@ module mod_solver
           do k=nn-1,1,-1
             pp_z_2(i,j,k) = pp_z_2(i,j,k) - cc_z(i,j,k)*pp_z_2(i,j,k+1)
           end do
-          pp_z(i,j,nn+1) = (pp_z(i,j,nn+1) - cc_z(i,j,nn+1)*pp_z(i,j,1) - aa_z(i,j,nn+1)*pp_z(i,j,nn)) / &
-                           (1._rp + cc_z(i,j,nn+1)*pp_z_2(i,j,1) + aa_z(i,j,nn+1)*pp_z_2(i,j,nn))
+          pp_z(i,j,nn+1) = (pp_z(i,j,nn+1) - cc_z(i,j,nn+1)*pp_z(  i,j,1) - aa_z(i,j,nn+1)*pp_z(  i,j,nn)) / &
+                           (1._rp          + cc_z(i,j,nn+1)*pp_z_2(i,j,1) + aa_z(i,j,nn+1)*pp_z_2(i,j,nn))
           do k=1,nn
             pp_z(i,j,k) = pp_z(i,j,k) + pp_z_2(i,j,k)*pp_z(i,j,nn+1)
           end do
