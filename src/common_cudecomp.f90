@@ -21,17 +21,17 @@ module mod_common_cudecomp
   type(cudecompHandle)     :: handle
   type(cudecompGridDesc)   :: gd_halo,gd_poi,gd_poi_io
   type(cudecompPencilInfo) :: ap_x,ap_y,ap_z,ap_x_poi,ap_y_poi,ap_z_poi
-  type(cudecompGridDesc)   :: gd_ptdma
-  type(cudecompPencilInfo) :: ap_y_ptdma,ap_z_ptdma
+  type(cudecompGridDesc)   :: gd_dtdma
+  type(cudecompPencilInfo) :: ap_y_dtdma,ap_z_dtdma
   !
   ! workspace stuff
   !
   integer(i8) :: wsize_fft
   real(rp), pointer, contiguous, dimension(:) :: work     ,work_cuda
   real(rp), pointer, contiguous, dimension(:) :: work_halo,work_halo_cuda
-  real(rp), pointer, contiguous, dimension(:) :: work_ptdma,work_ptdma_cuda
+  real(rp), pointer, contiguous, dimension(:) :: work_dtdma,work_dtdma_cuda
   !@cuf attributes(device) :: work_cuda,work_halo_cuda
-  !@cuf attributes(device) :: work_halo_cuda,work_ptdma_cuda
+  !@cuf attributes(device) :: work_halo_cuda,work_dtdma_cuda
   real(rp), target, allocatable, dimension(:) :: solver_buf_0,solver_buf_1
   real(rp), allocatable, dimension(:,:,:) :: pz_aux_1,pz_aux_2
   integer(acc_handle_kind) :: istream_acc_queue_1,istream_acc_queue_1_comm_lib

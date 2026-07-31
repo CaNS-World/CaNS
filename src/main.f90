@@ -33,7 +33,7 @@ program cans
   use mod_bound          , only: boundp,bounduvw,updt_rhs_b
   use mod_chkdiv         , only: chkdiv
   use mod_chkdt          , only: chkdt
-  use mod_common_mpi     , only: myid,ierr,dinfo_ptdma
+  use mod_common_mpi     , only: myid,ierr,dinfo_dtdma
   use mod_correc         , only: correc
   use mod_fft            , only: fftini,fftend
   use mod_fillps         , only: fillps
@@ -64,7 +64,7 @@ program cans
                                  is_debug,is_debug_poisson, &
                                  is_timing, &
                                  is_impdiff,is_impdiff_1d, &
-                                 is_poisson_pcr_tdma, &
+                                 is_poisson_dtdma, &
                                  is_mask_divergence_check
   use mod_sanity         , only: test_sanity_input,test_sanity_solver
   use mod_scal           , only: scalar,initialize_scalars,bulk_forcing_s
@@ -74,7 +74,7 @@ program cans
 #else
   use mod_solver_gpu     , only: solver => solver_gpu
   use mod_workspaces     , only: init_wspace_arrays,set_cufft_wspace,cudecomp_finalize
-  use mod_common_cudecomp, only: istream_acc_queue_1,ap_z_ptdma
+  use mod_common_cudecomp, only: istream_acc_queue_1,ap_z_dtdma
 #endif
   use mod_updatep        , only: updatep
   use mod_utils          , only: bulk_mean
@@ -98,7 +98,7 @@ program cans
   real(rp), allocatable, dimension(:) :: ap,bp,cp
   integer , dimension(3) :: n_z_d
   real(rp), allocatable, dimension(:,:,:) :: ap_d,cp_d
-  logical :: is_ptdma_update_p
+  logical :: is_dtdma_update_p
   real(rp) :: normfftp
   type(rhs_bound) :: rhsbp
   real(rp) :: alpha
@@ -172,11 +172,11 @@ program cans
            dwdtrko(n(1),n(2),n(3)))
   allocate(lambdaxyp(n_z(1),n_z(2)))
   allocate(ap(n_z(3)),bp(n_z(3)),cp(n_z(3)))
-  if(is_poisson_pcr_tdma) then
+  if(is_poisson_dtdma) then
 #if defined(_OPENACC)
-    n_z_d(:) = ap_z_ptdma%shape(:)
+    n_z_d(:) = ap_z_dtdma%shape(:)
 #else
-    n_z_d(:) = dinfo_ptdma%zsz(:)
+    n_z_d(:) = dinfo_dtdma%zsz(:)
 #endif
     allocate(ap_d(n_z_d(1),n_z_d(2),n_z_d(3)), &
              cp_d(n_z_d(1),n_z_d(2),n_z_d(3)))
@@ -298,7 +298,7 @@ program cans
                   lambdaxyp,['c','c','c'],ap,bp,cp,arrplanp,normfftp,rhsbp%x,rhsbp%y,rhsbp%z)
   !$acc enter data copyin(lambdaxyp,ap,bp,cp) async
   !$acc enter data copyin(rhsbp,rhsbp%x,rhsbp%y,rhsbp%z) async
-  if(is_poisson_pcr_tdma) then
+  if(is_poisson_dtdma) then
     !$acc enter data create(ap_d,cp_d) async
   end if
   !$acc wait
@@ -368,7 +368,7 @@ program cans
     io_vars(4+iscal)%arr => scalars(iscal)%val; c_io_vars(4+iscal) = 's_'//scalnum
   end do
   !
-  is_ptdma_update_p = .true.
+  is_dtdma_update_p = .true.
   !
   if(.not.restart) then
     istep = 0
@@ -466,7 +466,7 @@ program cans
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
       call fillps(n,dli,dzfi,dtrki,u,v,w,pp)
       call updt_rhs_b(['c','c','c'],cbcpre,n,is_bound,rhsbp%x,rhsbp%y,rhsbp%z,pp)
-      call solver(n,ng,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre,['c','c','c'],pp,is_ptdma_update_p,ap_d,cp_d)
+      call solver(n,ng,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre,['c','c','c'],pp,is_dtdma_update_p,ap_d,cp_d)
       call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,pp)
       call correc(n,dli,dzci,dtrk,pp,u,v,w)
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,.true.,dl,dzc,dzf,u,v,w)

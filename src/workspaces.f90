@@ -7,20 +7,20 @@
 module mod_workspaces
 #if defined(_OPENACC)
   use mod_types
-  use mod_common_cudecomp, only: work,work_cuda,work_halo,work_halo_cuda,work_ptdma,work_ptdma_cuda
+  use mod_common_cudecomp, only: work,work_cuda,work_halo,work_halo_cuda,work_dtdma,work_dtdma_cuda
   use mod_utils          , only: f_sizeof
   implicit none
   private
   public init_wspace_arrays,set_cufft_wspace,cudecomp_finalize
 contains
   subroutine init_wspace_arrays
-    use mod_common_cudecomp, only: handle,gd_halo,gd_poi,gd_poi_io,gd_ptdma, &
+    use mod_common_cudecomp, only: handle,gd_halo,gd_poi,gd_poi_io,gd_dtdma, &
                                    ap_x_poi,ap_y_poi,ap_z_poi, &
                                    solver_buf_0,solver_buf_1, &
                                    ap_z,pz_aux_1, &
                                    istream_acc_queue_1,istream_acc_queue_1_comm_lib
     use mod_fft            , only: wsize_fft,wsize_tmp
-    use mod_param          , only: ng,cudecomp_is_t_in_place,cbcpre,ipencil => ipencil_axis,is_poisson_pcr_tdma, &
+    use mod_param          , only: ng,cudecomp_is_t_in_place,cbcpre,ipencil => ipencil_axis,is_poisson_dtdma, &
                                    is_use_diezdecomp
 #if !defined(_USE_DIEZDECOMP)
     use cudecomp
@@ -80,21 +80,21 @@ contains
       allocate(pz_aux_1(ap_z%shape(1),ap_z%shape(2),ap_z%shape(3)))
       !$acc enter data create(pz_aux_1)
     end if
-    if(is_poisson_pcr_tdma) then
+    if(is_poisson_dtdma) then
       if(.not.allocated(pz_aux_1)) then
         allocate(pz_aux_1(ap_z%shape(1),ap_z%shape(2),ap_z%shape(3)))
         !$acc enter data create(pz_aux_1)
       end if
       !
-      ! allocate PCR-TDMA transpose workspaces: a separate buffer is needed because `work` is used along with `work_ptdma`
+      ! allocate DTDMA transpose workspaces: a separate buffer is needed because `work` is used along with `work_dtdma`
       !
-      istat = cudecompGetTransposeWorkspaceSize(handle,gd_ptdma,wsize)
-      wsize = max(wsize,(3*(ng(3)+1))) ! `work_ptdma` is also used as a buffer with this size in `gaussel_ptdma_gpu_fast_1d`
-      allocate(work_ptdma(wsize))
-      !$acc enter data create(work_ptdma) if(is_use_diezdecomp)
+      istat = cudecompGetTransposeWorkspaceSize(handle,gd_dtdma,wsize)
+      wsize = max(wsize,(3*(ng(3)+1))) ! `work_dtdma` is also used as a buffer with this size in `gaussel_dtdma_gpu_fast_1d`
+      allocate(work_dtdma(wsize))
+      !$acc enter data create(work_dtdma) if(is_use_diezdecomp)
 #if !defined(_USE_DIEZDECOMP)
-      istat = cudecompMalloc(handle,gd_ptdma,work_ptdma_cuda,wsize)
-      call acc_map_data(work_ptdma,work_ptdma_cuda,wsize*f_sizeof(work_ptdma(1)))
+      istat = cudecompMalloc(handle,gd_dtdma,work_dtdma_cuda,wsize)
+      call acc_map_data(work_dtdma,work_dtdma_cuda,wsize*f_sizeof(work_dtdma(1)))
 #endif
     end if
     !
@@ -148,15 +148,15 @@ contains
   subroutine cudecomp_finalize
 #if !defined(_USE_DIEZDECOMP)
     use cudecomp
-    use mod_common_cudecomp, only: handle,gd_halo,gd_poi,gd_poi_io,gd_ptdma
-    use mod_param          , only: is_poisson_pcr_tdma
+    use mod_common_cudecomp, only: handle,gd_halo,gd_poi,gd_poi_io,gd_dtdma
+    use mod_param          , only: is_poisson_dtdma
     !
     implicit none
     integer :: istat
     istat = cudecompGridDescDestroy(handle,gd_halo)
     istat = cudecompGridDescDestroy(handle,gd_poi)
     istat = cudecompGridDescDestroy(handle,gd_poi_io)
-    if(is_poisson_pcr_tdma) istat = cudecompGridDescDestroy(handle,gd_ptdma)
+    if(is_poisson_dtdma) istat = cudecompGridDescDestroy(handle,gd_dtdma)
     istat = cudecompFinalize(handle)
 #endif
   end subroutine cudecomp_finalize

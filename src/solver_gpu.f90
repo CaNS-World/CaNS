@@ -24,14 +24,14 @@ module mod_solver_gpu
                                  ch => handle,gd => gd_poi, gd_io => gd_poi_io, &
                                  istream => istream_acc_queue_1_comm_lib
   use mod_fft            , only: fft_gpu
-  use mod_param          , only: ipencil_axis,is_poisson_pcr_tdma, &
+  use mod_param          , only: ipencil_axis,is_poisson_dtdma, &
                                  is_use_diezdecomp,is_diezdecomp_x2z_z2x_transposes
   use mod_types
   implicit none
   private
   public solver_gpu,solver_gaussel_z_gpu
   contains
-  subroutine solver_gpu(n,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p,is_ptdma_update,aa_z,cc_z)
+  subroutine solver_gpu(n,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p,is_dtdma_update,aa_z,cc_z)
     implicit none
     integer , intent(in), dimension(3) :: n,ng
 #if !defined(_USE_HIP)
@@ -45,7 +45,7 @@ module mod_solver_gpu
     character(len=1), dimension(0:1,3), intent(in) :: bc
     character(len=1), intent(in), dimension(3) :: c_or_f
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
-    logical , intent(inout), target, optional :: is_ptdma_update
+    logical , intent(inout), target, optional :: is_dtdma_update
     real(rp), intent(inout), dimension(:,:,:), optional :: aa_z,cc_z
     real(rp), pointer, contiguous, dimension(:,:,:) :: px,py,pz,pfft_tmp_x,pfft_tmp_y
     integer :: i,j,k,q
@@ -53,13 +53,13 @@ module mod_solver_gpu
     integer, dimension(3) :: n_x,n_y,n_z,n_z_0,lo_z_0,hi_z_0,pad_io
     type(cudecompPencilInfo) :: ap_io
     integer :: istat
-    logical :: is_ptdma_update_
+    logical :: is_dtdma_update_
     real(rp) :: norm
     !
     norm = normfft
     !
-    is_ptdma_update_ = .true.
-    if(present(is_ptdma_update)) is_ptdma_update_ = is_ptdma_update
+    is_dtdma_update_ = .true.
+    if(present(is_dtdma_update)) is_dtdma_update_ = is_dtdma_update
     !
     n_z_0(:) = ap_z_0%shape(:)
     lo_z_0(:) = ap_z_0%lo(:)
@@ -67,7 +67,7 @@ module mod_solver_gpu
     n_x(:) = ap_x%shape(:)
     n_y(:) = ap_y%shape(:)
     n_z(:) = ap_z%shape(:)
-    if(is_poisson_pcr_tdma) then
+    if(is_poisson_dtdma) then
       n_z(:) = n_z_0(:) ! equal to the (unpadded) ap_y%shape(:) under initmpi.f90
     end if
     px(1:n_x(1),1:n_x(2),1:n_x(3)) => solver_buf_0(1:product(n_x(:)))
@@ -150,7 +150,7 @@ module mod_solver_gpu
     !
     q = merge(1,0,c_or_f(3) == 'f'.and.bc(1,3) == 'D'.and.hi_z_0(3) == ng(3))
     is_periodic_z = bc(0,3)//bc(1,3) == 'PP'
-    if(.not.is_poisson_pcr_tdma) then
+    if(.not.is_poisson_dtdma) then
 #if !defined(_USE_DIEZDECOMP)
       !$acc host_data use_device(py,pz,work)
 #endif
@@ -188,8 +188,8 @@ module mod_solver_gpu
         end do
       end block
       !
-      call gaussel_ptdma_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,lo_z_0(3),0,a,b,c,is_periodic_z,norm,pz,work,pz_aux_1,is_ptdma_update_,lambdaxy,aa_z,cc_z)
-      if(present(is_ptdma_update)) is_ptdma_update = is_ptdma_update_
+      call gaussel_dtdma_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,lo_z_0(3),0,a,b,c,is_periodic_z,norm,pz,work,pz_aux_1,is_dtdma_update_,lambdaxy,aa_z,cc_z)
+      if(present(is_dtdma_update)) is_dtdma_update = is_dtdma_update_
       !
       block
         use mod_common_cudecomp, only: ap_y
@@ -276,7 +276,6 @@ module mod_solver_gpu
   end subroutine solver_gpu
   !
   subroutine gaussel_gpu(nx,ny,n,nh,a,b,c,is_periodic,norm,p,d,p2,lambdaxy)
-    use mod_param, only: eps
     implicit none
     integer , intent(in) :: nx,ny,n,nh
     real(rp), intent(in), dimension(:) :: a,b,c
@@ -285,28 +284,38 @@ module mod_solver_gpu
     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
     real(rp),                dimension(nx,ny,n) :: d,p2
     real(rp), intent(in), dimension(:,:), optional :: lambdaxy
-    real(rp) :: z,lxy
+    real(rp) :: den,lxy,pivot_tol,z
     integer :: i,j,k,nn
-    real(rp), allocatable, save, dimension(:) :: dd,pp2
     !
     !solve tridiagonal system
     !
     nn = n
     if(is_periodic) nn = nn-1
     if(present(lambdaxy)) then
-      !$acc parallel loop gang vector collapse(2) default(present) private(lxy,z) async(1)
+      !$acc parallel loop gang vector collapse(2) default(present) private(den,lxy,pivot_tol,z) async(1)
       do j=1,ny
         do i=1,nx
           lxy = lambdaxy(i,j)
           !
-          z = 1./(b(1)+lxy+eps)
+          z = 1._rp/(b(1) + lxy)
           d(i,j,1) = c(1)*z
           p(i,j,1) = p(i,j,1)*norm*z
           !$acc loop seq
           do k=2,nn
-            z        = 1./(b(k)+lxy-a(k)*d(i,j,k-1)+eps)
-            p(i,j,k) = (p(i,j,k)*norm-a(k)*p(i,j,k-1))*z
-            d(i,j,k) = c(k)*z
+            den = b(k) + lxy - a(k)*d(i,j,k-1)
+            !
+            ! pin the constant pressure mode instead of regularizing its
+            ! singular final equation
+            !
+            pivot_tol = epsilon(den)*max(abs(b(k)+lxy),abs(a(k)*d(i,j,k-1)))
+            if(k == nn .and. abs(den) <= pivot_tol) then
+              p(i,j,k) = 0._rp
+              d(i,j,k) = 0._rp
+            else
+              z = 1._rp/den
+              p(i,j,k) = (p(i,j,k)*norm-a(k)*p(i,j,k-1))*z
+              d(i,j,k) = c(k)*z
+            end if
           end do
           !
           !$acc loop seq
@@ -316,7 +325,7 @@ module mod_solver_gpu
         end do
       end do
       if(is_periodic) then
-        !$acc parallel loop gang vector collapse(2) default(present) private(lxy,z) async(1)
+        !$acc parallel loop gang vector collapse(2) default(present) private(den,lxy,pivot_tol,z) async(1)
         do j=1,ny
           do i=1,nx
             lxy = lambdaxy(i,j)
@@ -328,12 +337,12 @@ module mod_solver_gpu
             p2(i,j,1 ) = -a(1 )
             p2(i,j,nn) = -c(nn)
             !
-            z = 1./(b(1)+lxy+eps)
+            z = 1._rp/(b(1) + lxy)
             d( i,j,1) = c(1)*z
             p2(i,j,1) = p2(i,j,1)*z
             !$acc loop seq
             do k=2,nn
-              z         = 1./(b(k)+lxy-a(k)*d(i,j,k-1)+eps)
+              z = 1._rp/(b(k) + lxy - a(k)*d(i,j,k-1))
               p2(i,j,k) = (p2(i,j,k)-a(k)*p2(i,j,k-1))*z
               d(i,j,k)  = c(k)*z
             end do
@@ -343,8 +352,14 @@ module mod_solver_gpu
               p2(i,j,k) = p2(i,j,k) - d(i,j,k)*p2(i,j,k+1)
             end do
             !
-            p(i,j,nn+1) = (p(i,j,nn+1)*norm       - c(nn+1)*p( i,j,1) - a(nn+1)*p( i,j,nn)) / &
-                          (b(    nn+1)      + lxy + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn)+eps)
+            den = b(nn+1) + lxy + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn)
+            pivot_tol = epsilon(den)*max(abs(b(nn+1)+lxy), &
+                                         abs(c(nn+1)*p2(i,j,1)+a(nn+1)*p2(i,j,nn)))
+            if(abs(den) <= pivot_tol) then
+              p(i,j,nn+1) = 0._rp
+            else
+              p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn))/den
+            end if
             !$acc loop seq
             do k=1,nn
               p(i,j,k) = p(i,j,k) + p2(i,j,k)*p(i,j,nn+1)
@@ -353,64 +368,57 @@ module mod_solver_gpu
         end do
       end if
     else
-      if(.not.allocated(dd)) then
-        allocate(dd(n+1)) ! needs to accommodate both face-centered and cell-centered variables
-        !$acc enter data create(dd) async(1)
-      end if
+      ! Keep the sequential work arrays private to each (i,j) system.
       !$acc parallel loop gang vector collapse(2) default(present) private(z) async(1)
       do j=1,ny
         do i=1,nx
-          z = 1./(b(1)+eps)
-          dd(1) = c(1)*z
+          z = 1._rp/b(1)
+          d(i,j,1) = c(1)*z
           p(i,j,1) = p(i,j,1)*norm*z
           !$acc loop seq
           do k=2,nn
-            z        = 1./(b(k)-a(k)*dd(k-1)+eps)
+            z = 1._rp/(b(k) - a(k)*d(i,j,k-1))
             p(i,j,k) = (p(i,j,k)*norm-a(k)*p(i,j,k-1))*z
-            dd(k)    = c(k)*z
+            d(i,j,k) = c(k)*z
           end do
           !
           !$acc loop seq
           do k=nn-1,1,-1
-            p(i,j,k) = p(i,j,k) - dd(k)*p(i,j,k+1)
+            p(i,j,k) = p(i,j,k) - d(i,j,k)*p(i,j,k+1)
           end do
         end do
       end do
       if(is_periodic) then
-        if(.not.allocated(pp2)) then
-          allocate(pp2(n+1)) ! needs to accommodate both face-centered and cell-centered variables
-          !$acc enter data create(pp2) async(1)
-        end if
         !$acc parallel loop gang vector collapse(2) default(present) private(z) async(1)
         do j=1,ny
           do i=1,nx
             !$acc loop seq
             do k=1,nn
-              pp2(k) = 0.
+              p2(i,j,k) = 0.
             end do
-            pp2(1 ) = -a(1 )
-            pp2(nn) = -c(nn)
+            p2(i,j,1 ) = -a(1 )
+            p2(i,j,nn) = p2(i,j,nn) - c(nn)
             !
-            z = 1./(b(1)+eps)
-            dd( 1) = c(1)*z
-            pp2(1) = pp2(1)*z
+            z = 1._rp/b(1)
+            d( i,j,1) = c(1)*z
+            p2(i,j,1) = p2(i,j,1)*z
             !$acc loop seq
             do k=2,nn
-              z      = 1./(b(k)-a(k)*dd(k-1)+eps)
-              pp2(k) = (pp2(k)-a(k)*pp2(k-1))*z
-              dd(k)  = c(k)*z
+              z = 1._rp/(b(k) - a(k)*d(i,j,k-1))
+              p2(i,j,k) = (p2(i,j,k)-a(k)*p2(i,j,k-1))*z
+              d(i,j,k)  = c(k)*z
             end do
             !
             !$acc loop seq
             do k=nn-1,1,-1
-              pp2(k) = pp2(k) - dd(k)*pp2(k+1)
+              p2(i,j,k) = p2(i,j,k) - d(i,j,k)*p2(i,j,k+1)
             end do
             !
             p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p( i,j,1) - a(nn+1)*p( i,j,nn)) / &
-                          (b(    nn+1)      + c(nn+1)*pp2(   1) + a(nn+1)*pp2(   nn)+eps)
+                          (b(nn+1)          + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn))
             !$acc loop seq
-            do k=1,nn-1
-              p(i,j,k) = p(i,j,k) + pp2(k)*p(i,j,nn+1)
+            do k=1,nn
+              p(i,j,k) = p(i,j,k) + p2(i,j,k)*p(i,j,nn+1)
             end do
           end do
         end do
@@ -418,12 +426,11 @@ module mod_solver_gpu
     end if
   end subroutine gaussel_gpu
   !
-  subroutine gaussel_ptdma_gpu(nx,ny,n,lo,nh,a,b,c,is_periodic,norm,p,aa,cc,is_update,lambdaxy,aa_z_save,cc_z_save)
+  subroutine gaussel_dtdma_gpu(nx,ny,n,lo,nh,a,b,c,is_periodic,norm,p,aa,cc,is_update,lambdaxy,aa_z_save,cc_z_save)
     !
     ! distributed TDMA solver
     !
-    use mod_common_cudecomp, only: gd_ptdma,ap_z_ptdma,work => work_ptdma
-    use mod_param          , only: eps
+    use mod_common_cudecomp, only: gd_dtdma,ap_z_dtdma,work => work_dtdma
     !
     implicit none
     integer , intent(in) :: nx,ny,n,lo,nh
@@ -443,7 +450,7 @@ module mod_solver_gpu
     integer :: nx_r,ny_r,nn,dk_g
     integer :: istat
     !
-    nr_z(:) = ap_z_ptdma%shape(:)
+    nr_z(:) = ap_z_dtdma%shape(:)
     if(.not.allocated(pp_y)) then
       allocate(aa_y(nx,ny,2), &
                cc_y(nx,ny,2), &
@@ -468,8 +475,8 @@ module mod_solver_gpu
         do i=1,nx
           lxy = lambdaxy(i,j)
           !
-          z1 = 1./(b(1+dk_g)+lxy+eps)
-          z2 = 1./(b(2+dk_g)+lxy+eps)
+          z1 = 1._rp/(b(1+dk_g) + lxy)
+          z2 = 1._rp/(b(2+dk_g) + lxy)
           aa(i,j,1) = a(1+dk_g)*z1
           aa(i,j,2) = a(2+dk_g)*z2
           cc(i,j,1) = c(1+dk_g)*z1
@@ -481,7 +488,7 @@ module mod_solver_gpu
           !
           !$acc loop seq
           do k=3,n
-            z = 1./(b(k+dk_g)+lxy-a(k+dk_g)*cc(i,j,k-1)+eps)
+            z = 1._rp/(b(k+dk_g) + lxy - a(k+dk_g)*cc(i,j,k-1))
             p(i,j,k) = (p(i,j,k)*norm-a(k+dk_g)*p(i,j,k-1))*z
             aa(i,j,k) = -a(k+dk_g)*aa(i,j,k-1)*z
             cc(i,j,k) = c(k+dk_g)*z
@@ -495,7 +502,7 @@ module mod_solver_gpu
             aa(i,j,k) = aa(i,j,k)-cc(i,j,k)*aa(i,j,k+1)
             cc(i,j,k) =          -cc(i,j,k)*cc(i,j,k+1)
           end do
-          z = 1./(1.-aa(i,j,2)*cc(i,j,1)+eps)
+          z = 1._rp/(1._rp - aa(i,j,2)*cc(i,j,1))
           p(i,j,1) = (p(i,j,1)-cc(i,j,1)*p(i,j,2))*z
           aa(i,j,1) = aa(i,j,1)*z
           cc(i,j,1) = -cc(i,j,1)*cc(i,j,2)*z
@@ -514,8 +521,8 @@ module mod_solver_gpu
       !$acc parallel loop gang vector collapse(2) default(present) private(z,z1,z2) async(1)
       do j=1,ny
         do i=1,nx
-          z1 = 1./(b(1+dk_g)+eps)
-          z2 = 1./(b(2+dk_g)+eps)
+          z1 = 1._rp/b(1+dk_g)
+          z2 = 1._rp/b(2+dk_g)
           aa(i,j,1) = a(1+dk_g)*z1
           aa(i,j,2) = a(2+dk_g)*z2
           cc(i,j,1) = c(1+dk_g)*z1
@@ -527,7 +534,7 @@ module mod_solver_gpu
           !
           !$acc loop seq
           do k=3,n
-            z = 1./(b(k+dk_g)-a(k+dk_g)*cc(i,j,k-1)+eps)
+            z = 1._rp/(b(k+dk_g) - a(k+dk_g)*cc(i,j,k-1))
             p(i,j,k) = (p(i,j,k)*norm-a(k+dk_g)*p(i,j,k-1))*z
             aa(i,j,k) = -a(k+dk_g)*aa(i,j,k-1)*z
             cc(i,j,k) = c(k+dk_g)*z
@@ -541,7 +548,7 @@ module mod_solver_gpu
             aa(i,j,k) = aa(i,j,k)-cc(i,j,k)*aa(i,j,k+1)
             cc(i,j,k) =          -cc(i,j,k)*cc(i,j,k+1)
           end do
-          z = 1./(1.-aa(i,j,2)*cc(i,j,1)+eps)
+          z = 1._rp/(1._rp - aa(i,j,2)*cc(i,j,1))
           p(i,j,1) = (p(i,j,1)-cc(i,j,1)*p(i,j,2))*z
           aa(i,j,1) = aa(i,j,1)*z
           cc(i,j,1) = -cc(i,j,1)*cc(i,j,2)*z
@@ -566,8 +573,8 @@ module mod_solver_gpu
 #if !defined(_USE_DIEZDECOMP)
         !$acc host_data use_device(aa_y,cc_y,aa_z_save,cc_z_save,work)
 #endif
-        istat = cudecompTransposeYtoZ(ch,gd_ptdma,aa_y,aa_z_save,work,dtype_rp,stream=istream)
-        istat = cudecompTransposeYtoZ(ch,gd_ptdma,cc_y,cc_z_save,work,dtype_rp,stream=istream)
+        istat = cudecompTransposeYtoZ(ch,gd_dtdma,aa_y,aa_z_save,work,dtype_rp,stream=istream)
+        istat = cudecompTransposeYtoZ(ch,gd_dtdma,cc_y,cc_z_save,work,dtype_rp,stream=istream)
 #if !defined(_USE_DIEZDECOMP)
         !$acc end host_data
 #endif
@@ -585,8 +592,8 @@ module mod_solver_gpu
 #if !defined(_USE_DIEZDECOMP)
       !$acc host_data use_device(aa_y,cc_y,aa_z,cc_z,work)
 #endif
-      istat = cudecompTransposeYtoZ(ch,gd_ptdma,aa_y,aa_z,work,dtype_rp,stream=istream)
-      istat = cudecompTransposeYtoZ(ch,gd_ptdma,cc_y,cc_z,work,dtype_rp,stream=istream)
+      istat = cudecompTransposeYtoZ(ch,gd_dtdma,aa_y,aa_z,work,dtype_rp,stream=istream)
+      istat = cudecompTransposeYtoZ(ch,gd_dtdma,cc_y,cc_z,work,dtype_rp,stream=istream)
 #if !defined(_USE_DIEZDECOMP)
       !$acc end host_data
 #endif
@@ -594,7 +601,7 @@ module mod_solver_gpu
 #if !defined(_USE_DIEZDECOMP)
     !$acc host_data use_device(pp_y,pp_z,work)
 #endif
-    istat = cudecompTransposeYtoZ(ch,gd_ptdma,pp_y,pp_z,work,dtype_rp,stream=istream)
+    istat = cudecompTransposeYtoZ(ch,gd_dtdma,pp_y,pp_z,work,dtype_rp,stream=istream)
 #if !defined(_USE_DIEZDECOMP)
     !$acc end host_data
 #endif
@@ -617,7 +624,7 @@ module mod_solver_gpu
       do i=1,nx_r
         !$acc loop seq
         do k=2,nn
-          z = 1./(1.-aa_z(i,j,k)*cc_z(i,j,k-1)+eps)
+          z = 1._rp/(1._rp - aa_z(i,j,k)*cc_z(i,j,k-1))
           pp_z(i,j,k) = (pp_z(i,j,k)-aa_z(i,j,k)*pp_z(i,j,k-1))*z
           cc_z(i,j,k) = cc_z(i,j,k)*z
         end do
@@ -641,7 +648,7 @@ module mod_solver_gpu
           !
           !$acc loop seq
           do k=2,nn
-            z = 1./(1.-aa_z(i,j,k)*cc_z(i,j,k-1)+eps)
+            z = 1._rp/(1._rp - aa_z(i,j,k)*cc_z(i,j,k-1))
             pp_z_2(i,j,k) = (pp_z_2(i,j,k)-aa_z(i,j,k)*pp_z_2(i,j,k-1))*z
             cc_z(i,j,k) = cc_z(i,j,k)*z
           end do
@@ -651,7 +658,7 @@ module mod_solver_gpu
             pp_z_2(i,j,k) = pp_z_2(i,j,k) - cc_z(i,j,k)*pp_z_2(i,j,k+1)
           end do
           pp_z(i,j,nn+1) = (pp_z(i,j,nn+1) - cc_z(i,j,nn+1)*pp_z(  i,j,1) - aa_z(i,j,nn+1)*pp_z(  i,j,nn)) / &
-                           (1.             + cc_z(i,j,nn+1)*pp_z_2(i,j,1) + aa_z(i,j,nn+1)*pp_z_2(i,j,nn)+eps)
+                           (1._rp          + cc_z(i,j,nn+1)*pp_z_2(i,j,1) + aa_z(i,j,nn+1)*pp_z_2(i,j,nn))
           !$acc loop seq
           do k=1,nn
             pp_z(i,j,k) = pp_z(i,j,k) + pp_z_2(i,j,k)*pp_z(i,j,nn+1)
@@ -666,7 +673,7 @@ module mod_solver_gpu
 #if !defined(_USE_DIEZDECOMP)
     !$acc host_data use_device(pp_z,pp_y,work)
 #endif
-    istat = cudecompTransposeZtoY(ch,gd_ptdma,pp_z,pp_y,work,dtype_rp,stream=istream)
+    istat = cudecompTransposeZtoY(ch,gd_dtdma,pp_z,pp_y,work,dtype_rp,stream=istream)
 #if !defined(_USE_DIEZDECOMP)
     !$acc end host_data
 #endif
@@ -684,19 +691,18 @@ module mod_solver_gpu
         end do
       end do
     end do
-  end subroutine gaussel_ptdma_gpu
+  end subroutine gaussel_dtdma_gpu
   !
-  subroutine gaussel_ptdma_gpu_fast_1d(nx,ny,n,lo,nh,a_g,b_g,c_g,is_periodic,norm,p)
+  subroutine gaussel_dtdma_gpu_fast_1d(nx,ny,n,lo,nh,a_g,b_g,c_g,is_periodic,norm,p)
     !
     ! distributed TDMA solver for many 1D systems on GPUs
     !
     ! original author - Rafael Diez (TU Delft)
     !
-    use mod_common_cudecomp, only: gd_ptdma,ap_z_ptdma,ap_y_ptdma,work => work_ptdma
+    use mod_common_cudecomp, only: gd_dtdma,ap_z_dtdma,ap_y_dtdma,work => work_dtdma
     use mod_common_cudecomp, only: buf => work
     use mod_common_mpi     , only: myid
     use mod_param, only: dims
-    use mod_param, only: eps
     !
     implicit none
     integer , intent(in) :: nx,ny,n,lo,nh
@@ -714,8 +720,8 @@ module mod_solver_gpu
     integer :: nx_r,ny_r,nng
     integer :: istat
     !
-    nr_y(:) = ap_y_ptdma%shape(:)
-    nr_z(:) = ap_z_ptdma%shape(:)
+    nr_y(:) = ap_y_dtdma%shape(:)
+    nr_z(:) = ap_z_dtdma%shape(:)
     if(.not.allocated(pp_z)) then
       allocate(aa(n+1), & ! n+1 just in case one solves for a boundary normal variable in the first call
                bb(n+1), &
@@ -872,11 +878,11 @@ module mod_solver_gpu
     !$acc host_data use_device(pp_x,pp_y,pp_z,work)
 #endif
     if(.not.is_diezdecomp_x2z_z2x_transposes) then
-      istat = cudecompTransposeXtoY(ch,gd_ptdma,pp_x,pp_y,work,dtype_rp,stream=istream)
-      istat = cudecompTransposeYtoZ(ch,gd_ptdma,pp_y,pp_z,work,dtype_rp,stream=istream)
+      istat = cudecompTransposeXtoY(ch,gd_dtdma,pp_x,pp_y,work,dtype_rp,stream=istream)
+      istat = cudecompTransposeYtoZ(ch,gd_dtdma,pp_y,pp_z,work,dtype_rp,stream=istream)
     else
 #if defined(_USE_DIEZDECOMP)
-      istat = diezdecompTransposeXtoZ(ch,gd_ptdma,pp_x,pp_z,work,dtype_rp,stream=istream)
+      istat = diezdecompTransposeXtoZ(ch,gd_dtdma,pp_x,pp_z,work,dtype_rp,stream=istream)
 #endif
     end if
 #if !defined(_USE_DIEZDECOMP)
@@ -917,11 +923,11 @@ module mod_solver_gpu
     !$acc host_data use_device(pp_z,pp_y,pp_x,work)
 #endif
     if(.not.is_diezdecomp_x2z_z2x_transposes) then
-      istat = cudecompTransposeZtoY(ch,gd_ptdma,pp_z,pp_y,work,dtype_rp,stream=istream)
-      istat = cudecompTransposeYtoX(ch,gd_ptdma,pp_y,pp_x,work,dtype_rp,stream=istream)
+      istat = cudecompTransposeZtoY(ch,gd_dtdma,pp_z,pp_y,work,dtype_rp,stream=istream)
+      istat = cudecompTransposeYtoX(ch,gd_dtdma,pp_y,pp_x,work,dtype_rp,stream=istream)
     else
 #if defined(_USE_DIEZDECOMP)
-      istat = diezdecompTransposeZtoX(ch,gd_ptdma,pp_z,pp_x,work,dtype_rp,stream=istream)
+      istat = diezdecompTransposeZtoX(ch,gd_dtdma,pp_z,pp_x,work,dtype_rp,stream=istream)
 #endif
     end if
 #if !defined(_USE_DIEZDECOMP)
@@ -944,10 +950,9 @@ module mod_solver_gpu
         end do
       end do
     end do
-  end subroutine gaussel_ptdma_gpu_fast_1d
+  end subroutine gaussel_dtdma_gpu_fast_1d
   !
   subroutine solver_gaussel_z_gpu(n,ng,hi,a,b,c,bcz,c_or_f,norm,p)
-    use mod_param, only: eps
     implicit none
     integer , intent(in), dimension(3) :: n,ng,hi
     real(rp), intent(in), dimension(:) :: a,b,c
@@ -966,7 +971,7 @@ module mod_solver_gpu
     n_z_0(:) = ap_z_0%shape(:)
     hi_z = hi(3)
     lo_z = hi(3)-n(3)+1
-    if(.not.is_poisson_pcr_tdma) then
+    if(.not.is_poisson_dtdma) then
       n_x(:) = ap_x%shape(:)
       n_y(:) = ap_y%shape(:)
       n_z(:) = ap_z%shape(:)
@@ -1040,16 +1045,16 @@ module mod_solver_gpu
     q = merge(1,0,c_or_f(3) == 'f'.and.bcz(1) == 'D'.and.hi_z == ng(3))
     is_periodic_z = bcz(0)//bcz(1) == 'PP'
     if(.not.is_no_decomp_z) then
-      if(.not.is_poisson_pcr_tdma) then
+      if(.not.is_poisson_dtdma) then
         call gaussel_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,0,a,b,c,is_periodic_z,norm,pz,work,pz_aux_1)
       else
-        call gaussel_ptdma_gpu_fast_1d(n(1),n(2),n(3)-q,lo_z,1,a,b,c,is_periodic_z,norm,p)
+        call gaussel_dtdma_gpu_fast_1d(n(1),n(2),n(3)-q,lo_z,1,a,b,c,is_periodic_z,norm,p)
       end if
     else
       call gaussel_gpu(n(1),n(2),n(3)-q,1,a,b,c,is_periodic_z,norm,p,work,pz_aux_1)
     end if
     !
-    if(.not.is_poisson_pcr_tdma .and. .not.is_no_decomp_z) then
+    if(.not.is_poisson_dtdma .and. .not.is_no_decomp_z) then
       select case(ipencil_axis)
       case(1)
 #if !defined(_USE_DIEZDECOMP)
@@ -1098,14 +1103,13 @@ module mod_solver_gpu
     end if
   end subroutine solver_gaussel_z_gpu
 #if 0
-  subroutine gaussel_ptdma_gpu_fast(nx,ny,n,lo,nh,a_g,b_g,c_g,is_periodic,norm,p,is_update,lambdaxy,aa,bb,cc,aa_z,bb_z,cc_z,pp_z_2)
+  subroutine gaussel_dtdma_gpu_fast(nx,ny,n,lo,nh,a_g,b_g,c_g,is_periodic,norm,p,is_update,lambdaxy,aa,bb,cc,aa_z,bb_z,cc_z,pp_z_2)
     !
     ! distributed TDMA solver using pre-computed coefficients
     !
     ! original author - Rafael Diez (TU Delft)
     !
-    use mod_common_cudecomp, only: gd_ptdma,ap_z_ptdma,work => work_ptdma
-    use mod_param          , only: eps
+    use mod_common_cudecomp, only: gd_dtdma,ap_z_dtdma,work => work_dtdma
     !
     implicit none
     integer , intent(in) :: nx,ny,n,lo,nh
@@ -1123,7 +1127,7 @@ module mod_solver_gpu
     integer :: nx_r,ny_r,nn
     integer :: istat
     !
-    nr_z(:) = ap_z_ptdma%shape(:)
+    nr_z(:) = ap_z_dtdma%shape(:)
     if(.not.allocated(pp_y)) then
       allocate(aa_y(nx,ny,2), &
                bb_y(nx,ny,2), &
@@ -1199,9 +1203,9 @@ module mod_solver_gpu
 #if !defined(_USE_DIEZDECOMP)
       !$acc host_data use_device(aa_y,bb_y,cc_y,aa_z,bb_z,cc_z,work)
 #endif
-      istat = cudecompTransposeYtoZ(ch,gd_ptdma,aa_y,aa_z,work,dtype_rp,stream=istream)
-      istat = cudecompTransposeYtoZ(ch,gd_ptdma,bb_y,bb_z,work,dtype_rp,stream=istream)
-      istat = cudecompTransposeYtoZ(ch,gd_ptdma,cc_y,cc_z,work,dtype_rp,stream=istream)
+      istat = cudecompTransposeYtoZ(ch,gd_dtdma,aa_y,aa_z,work,dtype_rp,stream=istream)
+      istat = cudecompTransposeYtoZ(ch,gd_dtdma,bb_y,bb_z,work,dtype_rp,stream=istream)
+      istat = cudecompTransposeYtoZ(ch,gd_dtdma,cc_y,cc_z,work,dtype_rp,stream=istream)
 #if !defined(_USE_DIEZDECOMP)
       !$acc end host_data
 #endif
@@ -1291,7 +1295,7 @@ module mod_solver_gpu
 #if !defined(_USE_DIEZDECOMP)
     !$acc host_data use_device(pp_y,pp_z,work)
 #endif
-    istat = cudecompTransposeYtoZ(ch,gd_ptdma,pp_y,pp_z,work,dtype_rp,stream=istream)
+    istat = cudecompTransposeYtoZ(ch,gd_dtdma,pp_y,pp_z,work,dtype_rp,stream=istream)
 #if !defined(_USE_DIEZDECOMP)
     !$acc end host_data
 #endif
@@ -1329,7 +1333,7 @@ module mod_solver_gpu
 #if !defined(_USE_DIEZDECOMP)
     !$acc host_data use_device(pp_z,pp_y,work)
 #endif
-    istat = cudecompTransposeZtoY(ch,gd_ptdma,pp_z,pp_y,work,dtype_rp,stream=istream)
+    istat = cudecompTransposeZtoY(ch,gd_dtdma,pp_z,pp_y,work,dtype_rp,stream=istream)
 #if !defined(_USE_DIEZDECOMP)
     !$acc end host_data
 #endif
@@ -1350,7 +1354,7 @@ module mod_solver_gpu
         end do
       end do
     end do
-  end subroutine gaussel_ptdma_gpu_fast
+  end subroutine gaussel_dtdma_gpu_fast
 #endif
 #endif
 end module mod_solver_gpu

@@ -15,11 +15,6 @@ public
 ! parameters
 !
 real(rp), parameter :: pi = acos(-1._rp)
-#if !defined(_EPS_EXACT_ZERO) /* recommended */
-real(rp), parameter :: eps = epsilon(1._rp)
-#else
-real(rp), parameter :: eps = 0._rp
-#endif
 real(rp), parameter :: small = epsilon(1._rp)*10**(precision(1._rp)/2)
 character(len=100), parameter :: datadir = 'data/'
 real(rp), parameter, dimension(2,3) :: rkcoeff = reshape([32._rp/60._rp,  0._rp        , &
@@ -99,7 +94,7 @@ logical, protected :: is_debug = .true., is_debug_poisson = .false., &
 ! other options: numerics
 !
 logical, protected :: is_impdiff = .false., is_impdiff_1d = .false., &
-                      is_poisson_pcr_tdma = .false., &
+                      is_poisson_dtdma = .false., &
                       is_fast_mom_kernels = .true., &
                       is_gridpoint_natural_channel = .false.
 !
@@ -156,7 +151,7 @@ contains
                      is_boussinesq_buoyancy
     namelist /numerics/ &
                        is_impdiff,is_impdiff_1d, &
-                       is_poisson_pcr_tdma, &
+                       is_poisson_dtdma, &
                        is_gridpoint_natural_channel
     namelist /other_options/ &
                             is_debug,is_debug_poisson, &
