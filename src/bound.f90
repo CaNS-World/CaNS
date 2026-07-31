@@ -11,10 +11,10 @@ module mod_bound
   use mod_types
   implicit none
   private
-  integer, parameter, public :: HALO_LOWER = -1, HALO_NONE = 0, HALO_UPPER = 1
+  integer, parameter :: HALO_LOWER = -1, HALO_NONE = 0, HALO_UPPER = 1
   public boundp,bounduvw,updt_rhs_b
   contains
-  subroutine bounduvw(cbc,n,bc,nb,is_bound,dl,dzc,dzf,u,v,w,preserve_normal_values,normal_halos,tangential_halos)
+  subroutine bounduvw(cbc,n,bc,nb,is_bound,dl,dzc,dzf,u,v,w,keep_norm_values,halos_norm,halos_tang)
     !
     ! imposes velocity boundary conditions
     !
@@ -27,63 +27,59 @@ module mod_bound
     real(rp), intent(in), dimension(3 ) :: dl
     real(rp), intent(in), dimension(0:) :: dzc,dzf
     real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
-    logical , intent(in), optional :: preserve_normal_values
-    integer , intent(in), optional :: normal_halos,tangential_halos
-    logical, dimension(0:1,3) :: apply_normal_bc
-    logical, dimension(0:1) :: update_normal
-    logical :: preserve_normal,update_tangential
+    logical , intent(in), optional :: keep_norm_values
+    integer , intent(in), optional :: halos_norm,halos_tang
+    logical, dimension(0:1,3) :: apply_norm_bc
+    logical, dimension(0:1) :: updt_norm
+    logical :: keep_norm,updt_tang
     integer :: idir,nh
     !
     nh = 1
-    preserve_normal = .false.
-    if(present(preserve_normal_values)) preserve_normal = preserve_normal_values
-    update_normal(:) = .true.
-    if(present(normal_halos)) then
-      select case(normal_halos)
+    keep_norm = .false.
+    if(present(keep_norm_values)) keep_norm = keep_norm_values
+    updt_norm(:) = .true.
+    if(present(halos_norm)) then
+      select case(halos_norm)
       case(HALO_LOWER)
-        update_normal(1) = .false.
+        updt_norm(1) = .false.
       case(HALO_NONE)
-        update_normal(:) = .false.
+        updt_norm(:) = .false.
       case(HALO_UPPER)
-        update_normal(0) = .false.
-      case default
-        error stop 'Invalid normal halo selection'
+        updt_norm(0) = .false.
       end select
     end if
-    update_tangential = .true.
-    if(present(tangential_halos)) then
-      select case(tangential_halos)
+    updt_tang = .true.
+    if(present(halos_tang)) then
+      select case(halos_tang)
       case(HALO_LOWER,HALO_UPPER)
       case(HALO_NONE)
-        update_tangential = .false.
-      case default
-        error stop 'Invalid tangential halo selection'
+        updt_tang = .false.
       end select
     end if
     do idir = 1,3
-      apply_normal_bc(0,idir) = .not.preserve_normal .or. &
-                                (cbc(0,idir,idir)//cbc(1,idir,idir) == 'PP'.and.update_normal(0))
-      apply_normal_bc(1,idir) = .not.preserve_normal .or. &
-                                (cbc(0,idir,idir)//cbc(1,idir,idir) == 'PP'.and.update_normal(1))
+      apply_norm_bc(0,idir) = .not.keep_norm .or. &
+                              (cbc(0,idir,idir)//cbc(1,idir,idir) == 'PP'.and.updt_norm(0))
+      apply_norm_bc(1,idir) = .not.keep_norm .or. &
+                              (cbc(0,idir,idir)//cbc(1,idir,idir) == 'PP'.and.updt_norm(1))
     end do
     !
 #if !defined(_OPENACC)
-    call updthalo(nh,halo(1),nb(:,1),1,u,normal_halos)
-    call updthalo(nh,halo(1),nb(:,1),1,v,tangential_halos)
-    call updthalo(nh,halo(1),nb(:,1),1,w,tangential_halos)
-    call updthalo(nh,halo(2),nb(:,2),2,u,tangential_halos)
-    call updthalo(nh,halo(2),nb(:,2),2,v,normal_halos)
-    call updthalo(nh,halo(2),nb(:,2),2,w,tangential_halos)
-    call updthalo(nh,halo(3),nb(:,3),3,u,tangential_halos)
-    call updthalo(nh,halo(3),nb(:,3),3,v,tangential_halos)
-    call updthalo(nh,halo(3),nb(:,3),3,w,normal_halos)
+    call updthalo(nh,halo(1),nb(:,1),1,u,halos_norm)
+    call updthalo(nh,halo(1),nb(:,1),1,v,halos_tang)
+    call updthalo(nh,halo(1),nb(:,1),1,w,halos_tang)
+    call updthalo(nh,halo(2),nb(:,2),2,u,halos_tang)
+    call updthalo(nh,halo(2),nb(:,2),2,v,halos_norm)
+    call updthalo(nh,halo(2),nb(:,2),2,w,halos_tang)
+    call updthalo(nh,halo(3),nb(:,3),3,u,halos_tang)
+    call updthalo(nh,halo(3),nb(:,3),3,v,halos_tang)
+    call updthalo(nh,halo(3),nb(:,3),3,w,halos_norm)
 #else
-    if(any(update_normal)) then
+    if(any(updt_norm(:))) then
       call updthalo_gpu(nh,cbc(0,:,1)//cbc(1,:,1)==['PP','PP','PP'],u,1)
       call updthalo_gpu(nh,cbc(0,:,2)//cbc(1,:,2)==['PP','PP','PP'],v,2)
       call updthalo_gpu(nh,cbc(0,:,3)//cbc(1,:,3)==['PP','PP','PP'],w,3)
     end if
-    if(update_tangential) then
+    if(updt_tang) then
       call updthalo_gpu(nh,cbc(0,:,1)//cbc(1,:,1)==['PP','PP','PP'],u,2)
       call updthalo_gpu(nh,cbc(0,:,1)//cbc(1,:,1)==['PP','PP','PP'],u,3)
       call updthalo_gpu(nh,cbc(0,:,2)//cbc(1,:,2)==['PP','PP','PP'],v,1)
@@ -94,34 +90,34 @@ module mod_bound
 #endif
     !
     if(is_bound(0,1)) then
-      if(apply_normal_bc(0,1)) call set_bc(cbc(0,1,1),0,1,nh,.false.,bc(0,1,1),dl(1),u)
-      call set_bc(cbc(0,1,2),0,1,nh,.true. ,bc(0,1,2),dl(1),v)
-      call set_bc(cbc(0,1,3),0,1,nh,.true. ,bc(0,1,3),dl(1),w)
+      if(apply_norm_bc(0,1)) call set_bc(cbc(0,1,1),0,1,nh,.false.,bc(0,1,1),dl(1),u)
+                             call set_bc(cbc(0,1,2),0,1,nh,.true. ,bc(0,1,2),dl(1),v)
+                             call set_bc(cbc(0,1,3),0,1,nh,.true. ,bc(0,1,3),dl(1),w)
     end if
     if(is_bound(1,1)) then
-      if(apply_normal_bc(1,1)) call set_bc(cbc(1,1,1),1,1,nh,.false.,bc(1,1,1),dl(1),u)
-      call set_bc(cbc(1,1,2),1,1,nh,.true. ,bc(1,1,2),dl(1),v)
-      call set_bc(cbc(1,1,3),1,1,nh,.true. ,bc(1,1,3),dl(1),w)
+      if(apply_norm_bc(1,1)) call set_bc(cbc(1,1,1),1,1,nh,.false.,bc(1,1,1),dl(1),u)
+                             call set_bc(cbc(1,1,2),1,1,nh,.true. ,bc(1,1,2),dl(1),v)
+                             call set_bc(cbc(1,1,3),1,1,nh,.true. ,bc(1,1,3),dl(1),w)
     end if
     if(is_bound(0,2)) then
-      call set_bc(cbc(0,2,1),0,2,nh,.true. ,bc(0,2,1),dl(2),u)
-      if(apply_normal_bc(0,2)) call set_bc(cbc(0,2,2),0,2,nh,.false.,bc(0,2,2),dl(2),v)
-      call set_bc(cbc(0,2,3),0,2,nh,.true. ,bc(0,2,3),dl(2),w)
+                             call set_bc(cbc(0,2,1),0,2,nh,.true. ,bc(0,2,1),dl(2),u)
+      if(apply_norm_bc(0,2)) call set_bc(cbc(0,2,2),0,2,nh,.false.,bc(0,2,2),dl(2),v)
+                             call set_bc(cbc(0,2,3),0,2,nh,.true. ,bc(0,2,3),dl(2),w)
     end if
     if(is_bound(1,2)) then
-      call set_bc(cbc(1,2,1),1,2,nh,.true. ,bc(1,2,1),dl(2),u)
-      if(apply_normal_bc(1,2)) call set_bc(cbc(1,2,2),1,2,nh,.false.,bc(1,2,2),dl(2),v)
-      call set_bc(cbc(1,2,3),1,2,nh,.true. ,bc(1,2,3),dl(2),w)
+                             call set_bc(cbc(1,2,1),1,2,nh,.true. ,bc(1,2,1),dl(2),u)
+      if(apply_norm_bc(1,2)) call set_bc(cbc(1,2,2),1,2,nh,.false.,bc(1,2,2),dl(2),v)
+                             call set_bc(cbc(1,2,3),1,2,nh,.true. ,bc(1,2,3),dl(2),w)
     end if
     if(is_bound(0,3)) then
-      call set_bc(cbc(0,3,1),0,3,nh,.true. ,bc(0,3,1),dzc(0)   ,u)
-      call set_bc(cbc(0,3,2),0,3,nh,.true. ,bc(0,3,2),dzc(0)   ,v)
-      if(apply_normal_bc(0,3)) call set_bc(cbc(0,3,3),0,3,nh,.false.,bc(0,3,3),dzf(0)   ,w)
+                             call set_bc(cbc(0,3,1),0,3,nh,.true. ,bc(0,3,1),dzc(0)   ,u)
+                             call set_bc(cbc(0,3,2),0,3,nh,.true. ,bc(0,3,2),dzc(0)   ,v)
+      if(apply_norm_bc(0,3)) call set_bc(cbc(0,3,3),0,3,nh,.false.,bc(0,3,3),dzf(0)   ,w)
     end if
     if(is_bound(1,3)) then
-      call set_bc(cbc(1,3,1),1,3,nh,.true. ,bc(1,3,1),dzc(n(3)),u)
-      call set_bc(cbc(1,3,2),1,3,nh,.true. ,bc(1,3,2),dzc(n(3)),v)
-      if(apply_normal_bc(1,3)) call set_bc(cbc(1,3,3),1,3,nh,.false.,bc(1,3,3),dzf(n(3)),w)
+                             call set_bc(cbc(1,3,1),1,3,nh,.true. ,bc(1,3,1),dzc(n(3)),u)
+                             call set_bc(cbc(1,3,2),1,3,nh,.true. ,bc(1,3,2),dzc(n(3)),v)
+      if(apply_norm_bc(1,3)) call set_bc(cbc(1,3,3),1,3,nh,.false.,bc(1,3,3),dzf(n(3)),w)
     end if
   end subroutine bounduvw
   !
@@ -152,8 +148,6 @@ module mod_bound
         update_halo(:) = .false.
       case(HALO_UPPER)
         update_halo(0) = .false.
-      case default
-        error stop 'Invalid halo selection'
       end select
     end if
     !
@@ -162,7 +156,7 @@ module mod_bound
       call updthalo(nh,halo(idir),nb(:,idir),idir,p,halo_side)
     end do
 #else
-    if(any(update_halo)) call updthalo_gpu(nh,cbc(0,:)//cbc(1,:)==['PP','PP','PP'],p)
+    if(any(update_halo(:))) call updthalo_gpu(nh,cbc(0,:)//cbc(1,:)==['PP','PP','PP'],p)
 #endif
     !
     if(is_bound(0,1).and.update_halo(0)) then
@@ -225,32 +219,59 @@ module mod_bound
         !
         select case(idir)
         case(1)
-          !$acc parallel loop collapse(2) default(present) async(1)
-          !$OMP parallel do   collapse(2) DEFAULT(shared)
-         do k=1-nh,size(p,3)-nh
-           do j=1-nh,size(p,2)-nh
-              if(ibound == 0) p(  0-dh,j,k) = p(n-dh,j,k)
-              if(ibound == 1) p(n+1+dh,j,k) = p(1+dh,j,k)
+          if     (ibound == 0) then
+            !$acc parallel loop collapse(2) default(present) async(1)
+            !$OMP parallel do   collapse(2) DEFAULT(shared)
+            do k=1-nh,size(p,3)-nh
+              do j=1-nh,size(p,2)-nh
+                p(  0-dh,j,k) = p(n-dh,j,k)
+              end do
             end do
-          end do
+          else if(ibound == 1) then
+            !$acc parallel loop collapse(2) default(present) async(1)
+            !$OMP parallel do   collapse(2) DEFAULT(shared)
+            do k=1-nh,size(p,3)-nh
+              do j=1-nh,size(p,2)-nh
+                p(n+1+dh,j,k) = p(1+dh,j,k)
+              end do
+            end do
+          end if
         case(2)
-          !$acc parallel loop collapse(2) default(present) async(1)
-          !$OMP parallel do   collapse(2) DEFAULT(shared)
-          do k=1-nh,size(p,3)-nh
-            do i=1-nh,size(p,1)-nh
-              if(ibound == 0) p(i,  0-dh,k) = p(i,n-dh,k)
-              if(ibound == 1) p(i,n+1+dh,k) = p(i,1+dh,k)
+          if     (ibound == 0) then
+            !$acc parallel loop collapse(2) default(present) async(1)
+            !$OMP parallel do   collapse(2) DEFAULT(shared)
+            do k=1-nh,size(p,3)-nh
+              do i=1-nh,size(p,1)-nh
+                p(i,  0-dh,k) = p(i,n-dh,k)
+              end do
             end do
-          end do
+          else if(ibound == 1) then
+            !$acc parallel loop collapse(2) default(present) async(1)
+            !$OMP parallel do   collapse(2) DEFAULT(shared)
+            do k=1-nh,size(p,3)-nh
+              do i=1-nh,size(p,1)-nh
+                p(i,n+1+dh,k) = p(i,1+dh,k)
+              end do
+            end do
+          end if
         case(3)
-          !$acc parallel loop collapse(2) default(present) async(1)
-          !$OMP parallel do   collapse(2) DEFAULT(shared)
-          do j=1-nh,size(p,2)-nh
-            do i=1-nh,size(p,1)-nh
-              if(ibound == 0) p(i,j,  0-dh) = p(i,j,n-dh)
-              if(ibound == 1) p(i,j,n+1+dh) = p(i,j,1+dh)
+          if     (ibound == 0) then
+            !$acc parallel loop collapse(2) default(present) async(1)
+            !$OMP parallel do   collapse(2) DEFAULT(shared)
+            do j=1-nh,size(p,2)-nh
+              do i=1-nh,size(p,1)-nh
+                p(i,j,  0-dh) = p(i,j,n-dh)
+              end do
             end do
-          end do
+          else if(ibound == 1) then
+            !$acc parallel loop collapse(2) default(present) async(1)
+            !$OMP parallel do   collapse(2) DEFAULT(shared)
+            do j=1-nh,size(p,2)-nh
+              do i=1-nh,size(p,1)-nh
+                p(i,j,n+1+dh) = p(i,j,1+dh)
+              end do
+            end do
+          end if
         end select
       case('D','N')
         if(centered) then
@@ -604,8 +625,6 @@ module mod_bound
         update_upper = .false.
       case(HALO_UPPER)
         update_lower = .false.
-      case default
-        error stop 'Invalid halo selection'
       end select
     end if
     if(idir == ipencil_axis.or..not.(update_lower.or.update_upper)) return
