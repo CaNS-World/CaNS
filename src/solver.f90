@@ -8,13 +8,13 @@ module mod_solver
   use, intrinsic :: iso_c_binding, only: C_PTR
   use decomp_2d
   use mod_fft       , only: fft
-  use mod_param     , only: ipencil_axis,is_poisson_pcr_tdma
+  use mod_param     , only: ipencil_axis,is_poisson_dtdma
   use mod_types
   implicit none
   private
   public solver,solver_gaussel_z
   contains
-  subroutine solver(n,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p,is_ptdma_update,aa_z,cc_z)
+  subroutine solver(n,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p,is_dtdma_update,aa_z,cc_z)
     !
     ! note: some of the transposes below are suboptimal in slab decompositions,
     ! as they would be a no-op if done in-place (e.g., `px = py` for xy slabs)
@@ -28,22 +28,22 @@ module mod_solver
     character(len=1), dimension(0:1,3), intent(in) :: bc
     character(len=1), intent(in), dimension(3) :: c_or_f
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
-    logical , intent(inout), optional :: is_ptdma_update
+    logical , intent(inout), optional :: is_dtdma_update
     real(rp), intent(inout), dimension(:,:,:), optional :: aa_z,cc_z
     real(rp), allocatable, dimension(:,:,:) :: px,py,pz
     integer :: q
     logical :: is_periodic_z
     integer, dimension(3) :: n_z,hi_z
-    logical :: is_ptdma_update_
+    logical :: is_dtdma_update_
     real(rp) :: norm
     !
     norm = normfft
     !
-    is_ptdma_update_ = .true.
-    if(present(is_ptdma_update)) is_ptdma_update_ = is_ptdma_update
+    is_dtdma_update_ = .true.
+    if(present(is_dtdma_update)) is_dtdma_update_ = is_dtdma_update
     n_z(:)  = zsize(:)
     hi_z(:) = zend(:)
-    if(is_poisson_pcr_tdma) then
+    if(is_poisson_dtdma) then
       n_z(:)  = ysize(:)
       hi_z(:) = yend(:)
     end if
@@ -76,15 +76,15 @@ module mod_solver
     !
     q = merge(1,0,c_or_f(3) == 'f'.and.bc(1,3) == 'D'.and.hi_z(3) == ng(3))
     is_periodic_z = bc(0,3)//bc(1,3) == 'PP'
-    if(.not.is_poisson_pcr_tdma) then
+    if(.not.is_poisson_dtdma) then
       call transpose_y_to_z(py,pz)
       !
       call gaussel(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,norm,pz,lambdaxy)
       !
       call transpose_z_to_y(pz,py)
     else
-      call gaussel_ptdma(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,norm,py,lambdaxy,is_ptdma_update_,aa_z,cc_z)
-      if(present(is_ptdma_update)) is_ptdma_update = is_ptdma_update_
+      call gaussel_dtdma(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,norm,py,lambdaxy,is_dtdma_update_,aa_z,cc_z)
+      if(present(is_dtdma_update)) is_dtdma_update = is_dtdma_update_
     end if
     call fft(arrplan(2,2),py) ! bwd transform in y
     !
@@ -306,11 +306,11 @@ module mod_solver
     end if
   end subroutine gaussel
   !
-  subroutine gaussel_ptdma(nx,ny,n,nh,a,b,c,is_periodic,norm,p,lambdaxy,is_update,aa_z_save,cc_z_save)
+  subroutine gaussel_dtdma(nx,ny,n,nh,a,b,c,is_periodic,norm,p,lambdaxy,is_update,aa_z_save,cc_z_save)
     !
     ! distributed TDMA solver
     !
-    use mod_common_mpi, only: dinfo_ptdma
+    use mod_common_mpi, only: dinfo_dtdma
     !
     implicit none
     integer , intent(in) :: nx,ny,n,nh
@@ -329,7 +329,7 @@ module mod_solver
     integer , dimension(3) :: nr_z
     integer :: nx_r,ny_r,nn
     !
-    nr_z(:) = dinfo_ptdma%zsz(:)
+    nr_z(:) = dinfo_dtdma%zsz(:)
     allocate(aa_y(nx,ny,2), &
              cc_y(nx,ny,2), &
              pp_y(nx,ny,2), &
@@ -431,16 +431,16 @@ module mod_solver
     if(present(is_update) .and. present(aa_z_save) .and. present(cc_z_save)) then
       if(is_update) then
         is_update = .false.
-        call transpose_y_to_z(aa_y,aa_z_save,dinfo_ptdma)
-        call transpose_y_to_z(cc_y,cc_z_save,dinfo_ptdma)
+        call transpose_y_to_z(aa_y,aa_z_save,dinfo_dtdma)
+        call transpose_y_to_z(cc_y,cc_z_save,dinfo_dtdma)
       end if
       aa_z(:,:,:) = aa_z_save(:,:,:)
       cc_z(:,:,:) = cc_z_save(:,:,:)
     else
-      call transpose_y_to_z(aa_y,aa_z,dinfo_ptdma)
-      call transpose_y_to_z(cc_y,cc_z,dinfo_ptdma)
+      call transpose_y_to_z(aa_y,aa_z,dinfo_dtdma)
+      call transpose_y_to_z(cc_y,cc_z,dinfo_dtdma)
     end if
-    call transpose_y_to_z(pp_y,pp_z,dinfo_ptdma)
+    call transpose_y_to_z(pp_y,pp_z,dinfo_dtdma)
     !
     ! solve reduced systems
     !
@@ -498,7 +498,7 @@ module mod_solver
     !
     ! transpose solution to the original z-distributed form
     !
-    call transpose_z_to_y(pp_z,pp_y,dinfo_ptdma)
+    call transpose_z_to_y(pp_z,pp_y,dinfo_dtdma)
     !
     ! obtain final solution on the inner points
     !
@@ -514,7 +514,7 @@ module mod_solver
       end do
     end do
     !$OMP END PARALLEL
-  end subroutine gaussel_ptdma
+  end subroutine gaussel_dtdma
   !
   subroutine dgtsv_homebrewed(n,a,b,c,norm,p)
     implicit none
@@ -560,12 +560,12 @@ module mod_solver
     !
     n_z(:)  = zsize(:)
     hi_z(:) = zend(:)
-    if(is_poisson_pcr_tdma) then
+    if(is_poisson_dtdma) then
       n_z(:)  = ysize(:)
       hi_z(:) = yend(:)
     end if
     is_no_decomp_z = xsize(3) == n_z(3).or.ipencil_axis == 3 ! not decomposed along z: xsize(3) == ysize(3) == ng(3) when dims(2) = 1
-    if(.not.is_poisson_pcr_tdma .and. .not.is_no_decomp_z) then
+    if(.not.is_poisson_dtdma .and. .not.is_no_decomp_z) then
       allocate(px(xsize(1),xsize(2),xsize(3)))
       allocate(py(ysize(1),ysize(2),ysize(3)))
       allocate(pz(zsize(1),zsize(2),zsize(3)))
@@ -588,16 +588,16 @@ module mod_solver
     q = merge(1,0,c_or_f(3) == 'f'.and.bcz(1) == 'D'.and.hi_z(3) == ng(3))
     is_periodic_z = bcz(0)//bcz(1) == 'PP'
     if(.not.is_no_decomp_z) then
-      if(.not.is_poisson_pcr_tdma) then
+      if(.not.is_poisson_dtdma) then
         call gaussel(      n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,norm,pz)
       else
-        call gaussel_ptdma(n_z(1),n_z(2),n_z(3)-q,1,a,b,c,is_periodic_z,norm,p)
+        call gaussel_dtdma(n_z(1),n_z(2),n_z(3)-q,1,a,b,c,is_periodic_z,norm,p)
       end if
     else
       call gaussel(n(1),n(2),n(3)-q,1,a,b,c,is_periodic_z,norm,p)
     end if
     !
-    if(.not.is_poisson_pcr_tdma .and. .not.is_no_decomp_z) then
+    if(.not.is_poisson_dtdma .and. .not.is_no_decomp_z) then
       select case(ipencil_axis)
       case(1)
         !call transpose_z_to_x(pz,px)

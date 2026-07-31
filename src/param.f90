@@ -94,7 +94,7 @@ logical, protected :: is_debug = .true., is_debug_poisson = .false., &
 ! other options: numerics
 !
 logical, protected :: is_impdiff = .false., is_impdiff_1d = .false., &
-                      is_poisson_pcr_tdma = .false., &
+                      is_poisson_dtdma = .false., &
                       is_fast_mom_kernels = .true., &
                       is_gridpoint_natural_channel = .false.
 !
@@ -151,7 +151,7 @@ contains
                      is_boussinesq_buoyancy
     namelist /numerics/ &
                        is_impdiff,is_impdiff_1d, &
-                       is_poisson_pcr_tdma, &
+                       is_poisson_dtdma, &
                        is_gridpoint_natural_channel
     namelist /other_options/ &
                             is_debug,is_debug_poisson, &

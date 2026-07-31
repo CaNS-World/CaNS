@@ -18,7 +18,7 @@ module mod_sanity
   use mod_initflow  , only: add_noise
   use mod_initmpi   , only: initmpi
   use mod_initsolver, only: initsolver
-  use mod_param     , only: ipencil_axis,is_impdiff,is_impdiff_1d,is_poisson_pcr_tdma,small
+  use mod_param     , only: ipencil_axis,is_impdiff,is_impdiff_1d,is_poisson_dtdma,small
 #if !defined(_OPENACC)
   use mod_solver    , only: solver
 #else
@@ -51,14 +51,14 @@ module mod_sanity
     if(is_impdiff_1d .and. .not.is_impdiff) then
       if(myid == 0)  print*, 'ERROR: `is_impdiff_1d = T` requires `is_impdiff = T` (forced in `param.f90`).'; call abortit
     end if
-    if(is_impdiff_1d .and. .not.(ipencil_axis == 3) .and. .not.is_poisson_pcr_tdma) then
+    if(is_impdiff_1d .and. .not.(ipencil_axis == 3) .and. .not.is_poisson_dtdma) then
       if(dims(2) > 1) then
         if(myid == 0)  print*, 'Warning: a run with implicit Z diffusion (`is_impdiff_1d = T`) is much more efficient &
                                        & when the flow is not decomposed along the Z direction.'
       end if
     end if
-    if(is_poisson_pcr_tdma .and. (ipencil_axis == 3)) then
-      if(myid == 0)  print*, 'ERROR: `is_poisson_pcr_tdma = T` requires X/Y-aligned pencils.'; call abortit
+    if(is_poisson_dtdma .and. (ipencil_axis == 3)) then
+      if(myid == 0)  print*, 'ERROR: `is_poisson_dtdma = T` requires X/Y-aligned pencils.'; call abortit
     end if
   end subroutine test_sanity_input
   !
