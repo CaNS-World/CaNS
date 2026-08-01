@@ -19,6 +19,7 @@ module mod_fft
   public fft_gpu
   integer(i8), public :: wsize_fft,wsize_tmp
   real(rp), allocatable, target :: sincos_theta_x(:,:),sincos_theta_y(:,:)
+  integer :: n_sincos_theta_x,n_sincos_theta_y
 #endif
   contains
   subroutine fftini(ng,n_x,n_y,bcxy,c_or_f,arrplan,normfft)
@@ -107,6 +108,7 @@ module mod_fft
     if(bcxy(0,1)//bcxy(1,1) /= 'PP') then
       if(.not.allocated(sincos_theta_x)) then
         allocate(sincos_theta_x(0:ng(1)/2,1:2))
+        n_sincos_theta_x = ng(1)
         do ii=0,ng(1)/2
           theta = pi*ii/(2._rp*ng(1))
           sincos_theta_x(ii,1) = sin(theta)
@@ -167,6 +169,7 @@ module mod_fft
     if(bcxy(0,2)//bcxy(1,2) /= 'PP') then
       if(.not.allocated(sincos_theta_y)) then
         allocate(sincos_theta_y(0:ng(2)/2,1:2))
+        n_sincos_theta_y = ng(2)
         do ii=0,ng(2)/2
           theta = pi*ii/(2._rp*ng(2))
           sincos_theta_y(ii,1) = sin(theta)
@@ -507,13 +510,13 @@ module mod_fft
     case(1)
       if(allocated(sincos_theta_x) .or. allocated(sincos_theta_y)) then
         if(allocated(sincos_theta_x)) then
-          if(ubound(sincos_theta_x,1) == nn/2) then
+          if(n_sincos_theta_x == nn) then
             sin_theta(0:nn/2) => sincos_theta_x(:,1)
             cos_theta(0:nn/2) => sincos_theta_x(:,2)
           end if
         end if
         if(.not.associated(sin_theta) .and. allocated(sincos_theta_y)) then
-          if(ubound(sincos_theta_y,1) == nn/2) then
+          if(n_sincos_theta_y == nn) then
             sin_theta(0:nn/2) => sincos_theta_y(:,1)
             cos_theta(0:nn/2) => sincos_theta_y(:,2)
           end if
@@ -569,13 +572,13 @@ module mod_fft
     case(1)
       if(allocated(sincos_theta_x) .or. allocated(sincos_theta_y)) then
         if(allocated(sincos_theta_x)) then
-          if(ubound(sincos_theta_x,1) == nn/2) then
+          if(n_sincos_theta_x == nn) then
             sin_theta(0:nn/2) => sincos_theta_x(:,1)
             cos_theta(0:nn/2) => sincos_theta_x(:,2)
           end if
         end if
         if(.not.associated(sin_theta) .and. allocated(sincos_theta_y)) then
-          if(ubound(sincos_theta_y,1) == nn/2) then
+          if(n_sincos_theta_y == nn) then
             sin_theta(0:nn/2) => sincos_theta_y(:,1)
             cos_theta(0:nn/2) => sincos_theta_y(:,2)
           end if
