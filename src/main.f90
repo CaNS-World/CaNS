@@ -579,11 +579,11 @@ program cans
       include 'out3d.h90'
     end if
     if(isave > 0.and.((mod(istep,max(isave,1)) == 0).or.(is_done.and..not.kill))) then
-      if(is_overwrite_save) then
+      if(is_overwrite_save.and.nsaves_max <= 0) then
         filename = 'fld'
       else
         filename = 'fld_'//fldnum
-        if(nsaves_max > 0) then
+        if(is_overwrite_save) then
           if(savecounter >= nsaves_max) savecounter = 0
           savecounter = savecounter + 1
           write(chkptnum,'(i4.4)') savecounter
@@ -619,7 +619,7 @@ program cans
                         xc_g,yc_g,zc_g)
         end select
       end do
-      if(.not.is_overwrite_save) then
+      if(.not.is_overwrite_save.or.nsaves_max > 0) then
         !
         ! fld_*.<ext> -> last checkpoint file (symbolic link)
         !
