@@ -282,7 +282,8 @@ module mod_solver_gpu
     logical , intent(in) :: is_periodic
     real(rp), intent(in) :: norm
     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
-    real(rp),                dimension(nx,ny,n) :: d,p2
+    real(rp),                dimension(nx,ny,n) :: d
+    real(rp), intent(inout), dimension(nx,ny,n), optional :: p2
     real(rp), intent(in), dimension(:,:), optional :: lambdaxy
     real(rp) :: den,lxy,pivot_tol,z
     integer :: i,j,k,nn
