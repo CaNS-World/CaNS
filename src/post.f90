@@ -14,8 +14,6 @@ module mod_post
     !
     ! computes the vorticity components at their natural edge centers:
     !   vox: (cell,face,face), voy: (face,cell,face), voz: (face,face,cell)
-    ! valid ranges are vox(1:nx,0:ny,0:nz), voy(0:nx,1:ny,0:nz),
-    ! and voz(0:nx,0:ny,1:nz); velocity halos must be current.
     !
     implicit none
     integer , intent(in ), dimension(3)        :: n
@@ -28,8 +26,6 @@ module mod_post
     dxi = dli(1)
     dyi = dli(2)
     !
-    ! x component at x-directed edge centers
-    !
     !$acc parallel loop collapse(3) default(present)
     !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
     do k=0,n(3)
@@ -40,8 +36,6 @@ module mod_post
         end do
       end do
     end do
-    !
-    ! y component at y-directed edge centers
     !
     !$acc parallel loop collapse(3) default(present)
     !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
@@ -54,8 +48,6 @@ module mod_post
       end do
     end do
     !
-    ! z component at z-directed edge centers
-    !
     !$acc parallel loop collapse(3) default(present)
     !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
     do k=1,n(3)
@@ -66,24 +58,6 @@ module mod_post
         end do
       end do
     end do
-    !
-    ! Previous cell-centered formulation, retained for reference:
-    !
-    ! vox(i,j,k) = 0.25_rp*( &
-    !   (uz(i,j+1,k  )-uz(i,j  ,k  ))*dyi - (uy(i,j  ,k+1)-uy(i,j  ,k  ))*dzci(k  ) + &
-    !   (uz(i,j+1,k-1)-uz(i,j  ,k-1))*dyi - (uy(i,j  ,k  )-uy(i,j  ,k-1))*dzci(k-1) + &
-    !   (uz(i,j  ,k  )-uz(i,j-1,k  ))*dyi - (uy(i,j-1,k+1)-uy(i,j-1,k  ))*dzci(k  ) + &
-    !   (uz(i,j  ,k-1)-uz(i,j-1,k-1))*dyi - (uy(i,j-1,k  )-uy(i,j-1,k-1))*dzci(k-1))
-    ! voy(i,j,k) = 0.25_rp*( &
-    !   (ux(i  ,j,k+1)-ux(i  ,j,k  ))*dzci(k  ) - (uz(i+1,j,k  )-uz(i  ,j,k  ))*dxi + &
-    !   (ux(i  ,j,k  )-ux(i  ,j,k-1))*dzci(k-1) - (uz(i+1,j,k-1)-uz(i  ,j,k-1))*dxi + &
-    !   (ux(i-1,j,k+1)-ux(i-1,j,k  ))*dzci(k  ) - (uz(i  ,j,k  )-uz(i-1,j,k  ))*dxi + &
-    !   (ux(i-1,j,k  )-ux(i-1,j,k-1))*dzci(k-1) - (uz(i  ,j,k-1)-uz(i-1,j,k-1))*dxi)
-    ! voz(i,j,k) = 0.25_rp*( &
-    !   (uy(i+1,j  ,k)-uy(i  ,j  ,k))*dxi - (ux(i  ,j+1,k)-ux(i  ,j  ,k))*dyi + &
-    !   (uy(i+1,j-1,k)-uy(i  ,j-1,k))*dxi - (ux(i  ,j  ,k)-ux(i  ,j-1,k))*dyi + &
-    !   (uy(i  ,j  ,k)-uy(i-1,j  ,k))*dxi - (ux(i-1,j+1,k)-ux(i-1,j  ,k))*dyi + &
-    !   (uy(i  ,j-1,k)-uy(i-1,j-1,k))*dxi - (ux(i-1,j  ,k)-ux(i-1,j-1,k))*dyi)
   end subroutine vorticity
   !
   subroutine strain_rate(n,dli,dzci,dzfi,ux,uy,uz,str)
@@ -160,24 +134,6 @@ module mod_post
     end do
     !$acc exit data delete(s12e,s13e,s23e)
     deallocate(s12e,s13e,s23e)
-    !
-    ! Previous direct cell-centered shear-strain formulation, retained for reference:
-    !
-    ! s12 = .25_rp*( &
-    !   ((ux(i  ,j+1,k)-ux(i  ,j  ,k))*dyi + (uy(i+1,j  ,k)-uy(i  ,j  ,k))*dxi)**2 + &
-    !   ((ux(i  ,j  ,k)-ux(i  ,j-1,k))*dyi + (uy(i+1,j-1,k)-uy(i  ,j-1,k))*dxi)**2 + &
-    !   ((ux(i-1,j+1,k)-ux(i-1,j  ,k))*dyi + (uy(i  ,j  ,k)-uy(i-1,j  ,k))*dxi)**2 + &
-    !   ((ux(i-1,j  ,k)-ux(i-1,j-1,k))*dyi + (uy(i  ,j-1,k)-uy(i-1,j-1,k))*dxi)**2)*.25_rp
-    ! s13 = .25_rp*( &
-    !   ((ux(i  ,j,k+1)-ux(i  ,j,k  ))*dzci(k  ) + (uz(i+1,j,k  )-uz(i  ,j,k  ))*dxi)**2 + &
-    !   ((ux(i  ,j,k  )-ux(i  ,j,k-1))*dzci(k-1) + (uz(i+1,j,k-1)-uz(i  ,j,k-1))*dxi)**2 + &
-    !   ((ux(i-1,j,k+1)-ux(i-1,j,k  ))*dzci(k  ) + (uz(i  ,j,k  )-uz(i-1,j,k  ))*dxi)**2 + &
-    !   ((ux(i-1,j,k  )-ux(i-1,j,k-1))*dzci(k-1) + (uz(i  ,j,k-1)-uz(i-1,j,k-1))*dxi)**2)*.25_rp
-    ! s23 = .25_rp*( &
-    !   ((uy(i,j  ,k+1)-uy(i,j  ,k  ))*dzci(k  ) + (uz(i,j+1,k  )-uz(i,j  ,k  ))*dyi)**2 + &
-    !   ((uy(i,j  ,k  )-uy(i,j  ,k-1))*dzci(k-1) + (uz(i,j+1,k-1)-uz(i,j  ,k-1))*dyi)**2 + &
-    !   ((uy(i,j-1,k+1)-uy(i,j-1,k  ))*dzci(k  ) + (uz(i,j  ,k  )-uz(i,j-1,k  ))*dyi)**2 + &
-    !   ((uy(i,j-1,k  )-uy(i,j-1,k-1))*dzci(k-1) + (uz(i,j  ,k-1)-uz(i,j-1,k-1))*dyi)**2)*.25_rp
   end subroutine strain_rate
   !
   subroutine rotation_rate(n,dli,dzci,ux,uy,uz,ens)
@@ -209,9 +165,10 @@ module mod_post
       do j=1,n(2)
         do i=1,n(1)
           ens(i,j,k) = .125_rp*( &
-            vox(i,j,k  )**2+vox(i,j-1,k  )**2+vox(i,j,k-1)**2+vox(i,j-1,k-1)**2 + &
-            voy(i,j,k  )**2+voy(i-1,j,k  )**2+voy(i,j,k-1)**2+voy(i-1,j,k-1)**2 + &
-            voz(i,j,k  )**2+voz(i-1,j,k  )**2+voz(i,j-1,k)**2+voz(i-1,j-1,k)**2)
+                                vox(i,j,k)**2+vox(i,j-1,k)**2+vox(i,j,k-1)**2+vox(i,j-1,k-1)**2 + &
+                                voy(i,j,k)**2+voy(i-1,j,k)**2+voy(i,j,k-1)**2+voy(i-1,j,k-1)**2 + &
+                                voz(i,j,k)**2+voz(i-1,j,k)**2+voz(i,j-1,k)**2+voz(i-1,j-1,k)**2 &
+                               )
         end do
       end do
     end do

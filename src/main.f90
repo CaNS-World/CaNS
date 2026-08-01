@@ -242,11 +242,11 @@ program cans
   call initgrid(gtype,ng(3),gr,l(3),dzc_g,dzf_g,zc_g,zf_g,cbcpre(0,3)//cbcpre(1,3) == 'PP')
   do kk=0,ng(1)+1
     xc_g(kk) = (kk-0.5_rp)*dl(1)
-    xf_g(kk) = (kk-1.0_rp)*dl(1)
+    xf_g(kk) = kk*dl(1)
   end do
   do kk=0,ng(2)+1
     yc_g(kk) = (kk-0.5_rp)*dl(2)
-    yf_g(kk) = (kk-1.0_rp)*dl(2)
+    yf_g(kk) = kk*dl(2)
   end do
   if(myid == 0) then
     open(newunit=iunit,file=trim(datadir)//'geometry.out',status='replace')
