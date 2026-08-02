@@ -324,7 +324,7 @@ module mod_rk
           end do
         end do
       end do
-    else if(any(is_forced)) then
+    else if(any(is_forced(:)) then
       !
       ! apply bulk forcing
       !
