@@ -24,8 +24,11 @@ jobs:
     uses: ./.github/workflows/run-one.yml
     with:
       compiler: "INTEL"
+      test_modes: '["dbg"]'
 
   NVIDIA:
     uses: ./.github/workflows/run-one.yml
     with:
       compiler: "NVIDIA"
+      cpu_target: "px"
+      test_modes: '["opt"]'

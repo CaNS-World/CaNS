@@ -6,6 +6,14 @@ on:
       compiler:
         required: true
         type: string
+      cpu_target:
+        description: "Portable CPU target requested by CI, if any"
+        type: string
+        default: ""
+      test_modes:
+        description: "JSON array of build modes to test"
+        type: string
+        default: '["opt", "dbg"]'
 
 jobs:
   build:
@@ -23,6 +31,7 @@ jobs:
       fail-fast: false # ensures that jobs run in parallel
     env:
       SKIP_BUILD: ${{ matrix.mode.name == 'opt-omp' }} # skipped combinations
+      NVHPC_CPU_TARGET: ${{ inputs.cpu_target }}
     name: build-${{ matrix.mode.name }}
     steps:
     - name: Checkout code
@@ -38,72 +47,30 @@ jobs:
         compiler: ${{ inputs.compiler }}
         compiler_flags: ${{ matrix.mode.flags }}
         no-rebuild: false
-
   test:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     needs: build
     strategy:
       matrix:
-        mode:
-          - name: opt
-            flags: "FFLAGS_OPT=1"
-          - name: dbg
-            flags: "FFLAGS_DEBUG_MAX=1 FFLAGS_OPT=0"
+        mode: ${{ fromJSON(inputs.test_modes) }}
         test-name: [lid_driven_cavity,differentially_heated_cavity]
       fail-fast: false # ensures that jobs run in parallel
-    name: test-${{ matrix.mode.name }}-${{ matrix.test-name }}
-    env:
-      SKIP_RUN: ${{ (matrix.mode.name == 'opt' && inputs.compiler == 'INTEL') || (matrix.mode.name == 'dbg' && inputs.compiler == 'NVIDIA') }} # skipped combinations
+    name: test-${{ matrix.mode }}-${{ matrix.test-name }}
     steps:
-    - name: Display skipped combinations
-      if: ${{ env.SKIP_RUN == 'true' }}
-      run: |
-        echo "INFO: Skipping the "${{ inputs.compiler }}" with mode "${{ matrix.mode.name }}
     - name: Checkout code
-      if: ${{ env.SKIP_RUN != 'true' }}
       uses: actions/checkout@v7
       with:
         submodules: false
     - name: Set up the environment and get packages
-      if: ${{ env.SKIP_RUN != 'true' }}
       uses: ./.github/actions/build
       with:
-        name: ${{ inputs.compiler }}-${{ matrix.mode.name }}
+        name: ${{ inputs.compiler }}-${{ matrix.mode }}
         compiler: ${{ inputs.compiler }}
-        compiler_flags: ${{ matrix.mode.flags }}
         no-rebuild: true
-    - name: Get Python
-      if: ${{ env.SKIP_RUN != 'true' }}
-      uses: actions/setup-python@v7
-      with:
-        python-version: 3.13
-    - name: Get Python packages for testing
-      if: ${{ env.SKIP_RUN != 'true' }}
-      shell: bash  # specify the shell explicitly
-      run: |
-        python -m pip install --upgrade pip
-        pip install numpy pytest
     - name: Run the test
-      if: ${{ env.SKIP_RUN != 'true' }}
-      shell: bash  # specify the shell explicitly
-      run: |
-           source .github/actions/build/scripts/setenv-${{ inputs.compiler }}.sh
-           chmod +x ./run/cans
-           cd tests/${{ matrix.test-name }}
-           bash ./testit.sh
-    - name: Upload log files
-      if: ${{ always() && env.SKIP_RUN != 'true' }}
-      uses: actions/upload-artifact@v7
+      uses: ./.github/actions/test
       with:
-        name: logs-${{ inputs.compiler }}-${{ matrix.mode.name }}-${{ matrix.test-name }}
-        path: run/*log
-    - name: Print log(s)
-      if: ${{ always() && env.SKIP_RUN != 'true' }}
-      shell: bash  # specify the shell explicitly
-      run: |
-           for f in $(ls run/*.log)
-           do
-             echo "Printing log file $f"
-             cat $f
-           done
+        name: ${{ inputs.compiler }}-${{ matrix.mode }}-${{ matrix.test-name }}
+        compiler: ${{ inputs.compiler }}
+        test_name: ${{ matrix.test-name }}

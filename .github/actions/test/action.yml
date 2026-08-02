@@ -1,0 +1,52 @@
+name: "Test"
+description: "Runs a CaNS test case and uploads its logs"
+inputs:
+  name:
+    description: "Name used for the log artifact"
+    required: true
+  compiler:
+    description: "Compiler environment used by the CaNS executable"
+    required: true
+  test_name:
+    description: "Test case name"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get Python
+      uses: actions/setup-python@v7
+      with:
+        python-version: 3.13
+
+    - name: Get Python packages for testing
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install numpy pytest
+
+    - name: Run test
+      shell: bash
+      run: |
+        source ".github/actions/build/scripts/setenv-${{ inputs.compiler }}.sh"
+        chmod +x ./run/cans
+        cd "tests/${{ inputs.test_name }}" || exit 1
+        bash ./testit.sh
+
+    - name: Upload log files
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: logs-${{ inputs.name }}
+        path: run/*.log
+
+    - name: Print log files
+      if: ${{ always() }}
+      shell: bash
+      run: |
+        for log_file in run/*.log
+        do
+          [ -e "$log_file" ] || continue
+          echo "Printing log file $log_file"
+          cat "$log_file"
+        done

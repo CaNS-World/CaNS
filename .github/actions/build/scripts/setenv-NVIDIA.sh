@@ -19,3 +19,9 @@ export LD_LIBRARY_PATH=$NVHPC_INSTALL_DIR/$NVARCH/$NVHPC_VERSION_A/comm_libs/mpi
 export LD_LIBRARY_PATH=$NVHPC_INSTALL_DIR/$NVARCH/$NVHPC_VERSION_A/math_libs/lib64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$NVHPC_INSTALL_DIR/$NVARCH/$NVHPC_VERSION_A/comm_libs/nccl/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$NVHPC_INSTALL_DIR/$NVARCH/$NVHPC_VERSION_A/comm_libs/nvshmem/lib:$LD_LIBRARY_PATH
+#
+# GitHub-hosted runners expose RDMA devices that HPC-X's UCX transport may detect but cannot use.
+# The CI tests are CPU-only and run on one node.
+#
+export OMPI_MCA_pml=ob1
+export OMPI_MCA_btl=self,sm,tcp
