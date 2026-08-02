@@ -8,8 +8,8 @@ module mod_initmpi
   use mpi
   use decomp_2d
   use decomp_2d_constants, only: D2D_LOG_QUIET
-  use mod_common_mpi     , only: myid,ierr,halo,dinfo_ptdma
-  use mod_param          , only: ipencil => ipencil_axis,is_poisson_pcr_tdma
+  use mod_common_mpi     , only: myid,ierr,halo,dinfo_dtdma
+  use mod_param          , only: ipencil => ipencil_axis,is_poisson_dtdma
   use mod_types
 #if defined(_OPENACC) || defined(_OPENMP)
 #if   defined(_OPENACC)
@@ -28,7 +28,7 @@ module mod_initmpi
   use mod_common_cudecomp, only: cudecomp_real_rp, &
                                  ch => handle,gd => gd_halo,gd_poi,gd_poi_io, &
                                  ap_x,ap_y,ap_z,ap_x_poi,ap_y_poi,ap_z_poi, &
-                                 gd_ptdma,ap_y_ptdma,ap_z_ptdma
+                                 gd_dtdma,ap_y_dtdma,ap_z_dtdma
   use mod_param, only: cudecomp_t_comm_backend     ,cudecomp_h_comm_backend    , &
                        cudecomp_is_t_comm_autotune ,cudecomp_is_h_comm_autotune, &
                        cudecomp_is_t_enable_nccl   ,cudecomp_is_h_enable_nccl  , &
@@ -59,7 +59,7 @@ module mod_initmpi
     integer :: istat
 #if !defined(_USE_DIEZDECOMP)
     type(cudecompGridDescConfig)          :: conf,conf_poi,conf_poi_io
-    type(cudecompGridDescConfig)          :: conf_ptdma
+    type(cudecompGridDescConfig)          :: conf_dtdma
     type(cudecompGridDescAutotuneOptions) :: atune_conf
 #else
     logical :: is_axis_contiguous(3)
@@ -133,7 +133,7 @@ module mod_initmpi
       atune_conf%transpose_op_weights(3) = 2. ! multiplier for Z-to-Y transpose timings
       atune_conf%transpose_op_weights(4) = 2. ! multiplier for Y-to-X transpose timings
     end select
-    if(is_poisson_pcr_tdma) then
+    if(is_poisson_dtdma) then
       atune_conf%transpose_op_weights(2) = atune_conf%transpose_op_weights(2) - 1.
       atune_conf%transpose_op_weights(3) = atune_conf%transpose_op_weights(3) - 1.
     end if
@@ -148,13 +148,13 @@ module mod_initmpi
     conf_poi_io%gdims(:) = ng(:)
     istat = cudecompGridDescCreate(ch,gd_poi_io,conf_poi_io)
     dims(:) = conf%pdims(:)
-    if(is_poisson_pcr_tdma) then
-      istat = cudecompGridDescConfigSetDefaults(conf_ptdma)
-      conf_ptdma%transpose_comm_backend = conf_poi%transpose_comm_backend
-      conf_ptdma%transpose_axis_contiguous(:) = .false.
-      conf_ptdma%gdims(:) = [ng(1),ng(2),2*dims(2)]
-      conf_ptdma%pdims(:) = dims(:)
-      istat = cudecompGridDescCreate(ch,gd_ptdma,conf_ptdma)
+    if(is_poisson_dtdma) then
+      istat = cudecompGridDescConfigSetDefaults(conf_dtdma)
+      conf_dtdma%transpose_comm_backend = conf_poi%transpose_comm_backend
+      conf_dtdma%transpose_axis_contiguous(:) = .false.
+      conf_dtdma%gdims(:) = [ng(1),ng(2),2*dims(2)]
+      conf_dtdma%pdims(:) = dims(:)
+      istat = cudecompGridDescCreate(ch,gd_dtdma,conf_dtdma)
     end if
     !
     ! setup descriptor for halo exchanges
@@ -189,8 +189,8 @@ module mod_initmpi
     gd_poi%abs_reorder(:,:,0) = 1
     gd_poi%abs_reorder(:,:,1) = 0
     gd_poi%abs_reorder(:,:,2) = 2
-    if(is_poisson_pcr_tdma) then
-      call diezDecompGridDescCreate(gd_ptdma,dims,[ng(1),ng(2),2*dims(2)],[ng(1),ng(2),2*dims(2)],[.false.,.false.,.false.],periods,ipencil)
+    if(is_poisson_dtdma) then
+      call diezDecompGridDescCreate(gd_dtdma,dims,[ng(1),ng(2),2*dims(2)],[ng(1),ng(2),2*dims(2)],[.false.,.false.,.false.],periods,ipencil)
     end if
     is_axis_contiguous(:) = .true.; is_axis_contiguous(ipencil) = .false.
     call diezdecompGridDescCreate(gd_poi_io,dims,ng,ng,is_axis_contiguous,periods,ipencil)
@@ -198,8 +198,8 @@ module mod_initmpi
 #endif
     decomp_log = D2D_LOG_QUIET
     call decomp_2d_init(ng(1),ng(2),ng(3),dims(1),dims(2),periods)
-    if(is_poisson_pcr_tdma) then
-      call decomp_info_init(ng(1),ng(2),2*dims(2),dinfo_ptdma)
+    if(is_poisson_dtdma) then
+      call decomp_info_init(ng(1),ng(2),2*dims(2),dinfo_dtdma)
     end if
     ipencil_t(:) = pack([1,2,3],[1,2,3] /= ipencil)
     is_bound(:,:) = .false.
@@ -213,10 +213,10 @@ module mod_initmpi
     istat = cudecompGetPencilInfo(ch,gd_poi,ap_x_poi,1)
     istat = cudecompGetPencilInfo(ch,gd_poi,ap_y_poi,2)
     istat = cudecompGetPencilInfo(ch,gd_poi,ap_z_poi,3)
-    if(is_poisson_pcr_tdma) then
+    if(is_poisson_dtdma) then
       ap_z  = ap_y
-      istat = cudecompGetPencilInfo(ch,gd_ptdma,ap_y_ptdma,2)
-      istat = cudecompGetPencilInfo(ch,gd_ptdma,ap_z_ptdma,3)
+      istat = cudecompGetPencilInfo(ch,gd_dtdma,ap_y_dtdma,2)
+      istat = cudecompGetPencilInfo(ch,gd_dtdma,ap_z_dtdma,3)
     end if
     select case(ipencil)
     case(1)
@@ -261,7 +261,7 @@ module mod_initmpi
     n(:)       = hi(:)-lo(:)+1
     n_x_fft(:) = xsize(:)
     n_y_fft(:) = ysize(:)
-    if(.not.is_poisson_pcr_tdma) then
+    if(.not.is_poisson_dtdma) then
       lo_z(:) = zstart(:)
       hi_z(:) = zend(:)
       n_z(:)  = zsize(:)
@@ -279,7 +279,7 @@ module mod_initmpi
     where(nb(:,:) == MPI_PROC_NULL) is_bound(:,:) = .true.
 #endif
 #if defined(_OPENACC) || defined(_OPENMP)
-    if(is_poisson_pcr_tdma) then
+    if(is_poisson_dtdma) then
       !
       ! generate global coefficient arrays a(1:ng(3)), b(1:ng(3)), c(1:ng(3)) under initsolver
       !

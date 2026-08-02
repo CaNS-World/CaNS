@@ -9,7 +9,9 @@ updates:
       - dependency-name: "dependencies/cuDecomp"
       - dependency-name: "dependencies/diezDecomp"
   - package-ecosystem: github-actions
-    directory: "/"
+    directories:
+      - "/"
+      - "/.github/actions/build"
     schedule:
       interval: weekly
     groups:

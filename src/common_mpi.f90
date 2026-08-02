@@ -11,5 +11,5 @@ module mod_common_mpi
   integer :: myid,ierr
   integer :: halo(3)
   integer :: ipencil_axis
-  type(decomp_info) :: dinfo_ptdma
+  type(decomp_info) :: dinfo_dtdma
 end module mod_common_mpi

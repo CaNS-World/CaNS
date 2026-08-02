@@ -65,7 +65,7 @@ contains
     ! estimate GPU memory footprint, assuming one MPI task <-> one GPU
     !
     use mod_types, only: i8,rp
-    use mod_param, only: is_impdiff,is_impdiff_1d,is_poisson_pcr_tdma
+    use mod_param, only: is_impdiff,is_impdiff_1d,is_poisson_dtdma
     integer, intent(in), dimension(3) :: n,n_z
     integer, intent(in) :: nscal
     integer :: nh(3)
@@ -124,12 +124,12 @@ contains
     !    taken directly from `mod_common_cudecomp`
     !
     block
-      use mod_common_cudecomp, only: work,work_halo,work_ptdma,solver_buf_0,solver_buf_1,pz_aux_1,pz_aux_2
+      use mod_common_cudecomp, only: work,work_halo,work_dtdma,solver_buf_0,solver_buf_1,pz_aux_1,pz_aux_2
       itemp = size(work        ,kind=i8) + size(work_halo   ,kind=i8) + &
               size(solver_buf_0,kind=i8) + size(solver_buf_1,kind=i8)
       if(allocated(pz_aux_1)) itemp = itemp + size(pz_aux_1,kind=i8)
       if(allocated(pz_aux_2)) itemp = itemp + size(pz_aux_2,kind=i8)
-      if(is_poisson_pcr_tdma) itemp = itemp + size(work_ptdma,kind=i8)
+      if(is_poisson_dtdma) itemp = itemp + size(work_dtdma,kind=i8)
       itotal = itotal + itemp*rp_size
     end block
   end function device_memory_footprint

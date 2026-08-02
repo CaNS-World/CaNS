@@ -9,6 +9,8 @@
 # with vtk.xml files understood by ParaView/VTK
 #
 import glob
+import os
+os.environ.setdefault("ADIOS2_ALWAYS_USE_MPI","1")
 from pathlib import Path
 import numpy as np
 import adios2
@@ -34,22 +36,50 @@ def infer_origin_spacing(arr,name):
         raise ValueError("non-uniform coordinate array "+name+" not supported by ImageData")
     return float(arr[0]),float(diff[0])
 def get_bp_data(bpdir,selected_fields):
-    with adios2.FileReader(str(bpdir)) as fh:
-        available_variables = fh.available_variables()
+    FileReader = getattr(adios2,"FileReader",None)
+    if(FileReader):
+        with FileReader(str(bpdir)) as fh:
+            available_variables = fh.available_variables()
+            fieldnames = [name for name in available_variables.keys() if name not in meta_names]
+            if(len(selected_fields) > 0):
+                fieldnames = [name for name in fieldnames if name in selected_fields]
+            if("x" not in available_variables or "y" not in available_variables or "z" not in available_variables):
+                raise ValueError("missing x/y/z arrays in "+str(bpdir))
+            x = np.asarray(fh.read("x"),dtype=float)
+            y = np.asarray(fh.read("y"),dtype=float)
+            z = np.asarray(fh.read("z"),dtype=float)
+    else:
+        adios = adios2.ADIOS()
+        io = adios.DeclareIO("reader")
+        io.SetEngine("BP5")
+        engine = io.Open(str(bpdir),adios2.Mode.Read)
+        engine.BeginStep()
+        available_variables = io.AvailableVariables()
         fieldnames = [name for name in available_variables.keys() if name not in meta_names]
         if(len(selected_fields) > 0):
             fieldnames = [name for name in fieldnames if name in selected_fields]
         if("x" not in available_variables or "y" not in available_variables or "z" not in available_variables):
             raise ValueError("missing x/y/z arrays in "+str(bpdir))
-        x = np.asarray(fh.read("x"),dtype=float)
-        y = np.asarray(fh.read("y"),dtype=float)
-        z = np.asarray(fh.read("z"),dtype=float)
+        def read_1d(name):
+            var = io.InquireVariable(name)
+            arr = np.empty(tuple(var.Shape()),dtype=float)
+            engine.Get(var,arr,adios2.Mode.Sync)
+            return arr
+        x = read_1d("x")
+        y = read_1d("y")
+        z = read_1d("z")
+        engine.EndStep()
+        engine.Close()
     return fieldnames,x,y,z
 def write_vtk(bpdir,fieldnames,x,y,z):
+    #
+    # ParaView's VTX reader reverses the ADIOS2/Fortran extent into VTK dimensions
+    #
+    extent_coordinates = [z,y,x]
     origin_x,spacing_x = infer_origin_spacing(x,"x")
     origin_y,spacing_y = infer_origin_spacing(y,"y")
     origin_z,spacing_z = infer_origin_spacing(z,"z")
-    extent = "{} {} {} {} {} {}".format(0,max(len(x)-1,0),0,max(len(y)-1,0),0,max(len(z)-1,0))
+    extent = "{} {} {} {} {} {}".format(*sum(([0,max(len(coordinate)-1,0)] for coordinate in extent_coordinates),[]))
     VTKFile = Element("VTKFile",attrib={"type":"ImageData","version":"0.1","byte_order":"LittleEndian"})
     image = SubElement(VTKFile,"ImageData",attrib={"WholeExtent":extent, \
                                                    "Origin":"{:0.16E} {:0.16E} {:0.16E}".format(origin_x,origin_y,origin_z), \

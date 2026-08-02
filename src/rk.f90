@@ -10,7 +10,7 @@ module mod_rk
                        momz_a => momz_a_vv, &
                        momx_d,momy_d,momz_d, &
                        momx_p,momy_p,momz_p, &
-                       cmpt_wallshear, &
+                       cmpt_wallshear,bulk_forcing, &
                        momx_d_xy,momy_d_xy,momz_d_xy, &
                        momx_d_z ,momy_d_z ,momz_d_z, &
                        mom_xyz_ad
@@ -55,8 +55,8 @@ module mod_rk
     real(rp), pointer      , contiguous , dimension(:,:,:), save :: dudtrk  ,dvdtrk  ,dwdtrk
     real(rp),                allocatable, dimension(:,:,:), save :: dudtrkd ,dvdtrkd ,dwdtrkd
     logical, save :: is_first = .true.
-    real(rp) :: factor1,factor2,factor12
-    logical :: is_buoyancy
+    real(rp) :: factor1,factor2,factor12,forcing_u,forcing_v,forcing_w
+    logical  :: is_buoyancy
     integer  :: i,j,k
     !
     factor1 = rkpar(1)*dt
@@ -147,10 +147,10 @@ module mod_rk
           call momy_d_z( n(1),n(2),n(3),dzci  ,dzfi  ,visc,v,dvdtrkd)
           call momz_d_z( n(1),n(2),n(3),dzci  ,dzfi  ,visc,w,dwdtrkd)
         end if
-        call momx_a(n(1),n(2),n(3),dli(1),dli(2),dzfi,u,v,w,dudtrk)
-        call momy_a(n(1),n(2),n(3),dli(1),dli(2),dzfi,u,v,w,dvdtrk)
-        call momz_a(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,u,v,w,dwdtrk)
       end if
+      call momx_a(n(1),n(2),n(3),dli(1),dli(2),dzfi,u,v,w,dudtrk)
+      call momy_a(n(1),n(2),n(3),dli(1),dli(2),dzfi,u,v,w,dvdtrk)
+      call momz_a(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,u,v,w,dwdtrk)
     end if
     !
 #if !defined(_LOOP_UNSWITCHING)
@@ -306,22 +306,30 @@ module mod_rk
     ! compute bulk velocity forcing
     !
     call cmpt_bulk_forcing(n,is_forced,velf,grid_vol_ratio_c,grid_vol_ratio_f,u,v,w,f)
+    forcing_u = f(1)
+    forcing_v = f(2)
+    forcing_w = f(3)
     !
     if(is_impdiff) then
       !
-      ! compute rhs of Helmholtz equation
+      ! apply bulk forcing and compute rhs of the Helmholtz equation
       !
       !$acc parallel     loop collapse(3) default(present) async(1)
       !$omp target teams loop collapse(3)
       do k=1,n(3)
         do j=1,n(2)
           do i=1,n(1)
-            u(i,j,k) = u(i,j,k) - .5_rp*factor12*dudtrkd(i,j,k)
-            v(i,j,k) = v(i,j,k) - .5_rp*factor12*dvdtrkd(i,j,k)
-            w(i,j,k) = w(i,j,k) - .5_rp*factor12*dwdtrkd(i,j,k)
+            u(i,j,k) = (u(i,j,k) - .5_rp*factor12*dudtrkd(i,j,k)) + forcing_u
+            v(i,j,k) = (v(i,j,k) - .5_rp*factor12*dvdtrkd(i,j,k)) + forcing_v
+            w(i,j,k) = (w(i,j,k) - .5_rp*factor12*dwdtrkd(i,j,k)) + forcing_w
           end do
         end do
       end do
+    else if(any(is_forced)) then
+      !
+      ! apply bulk forcing
+      !
+      call bulk_forcing(n,is_forced,f,u,v,w)
     end if
   end subroutine rk
   !

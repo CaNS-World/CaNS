@@ -45,7 +45,7 @@ cudecomp_h_comm_backend = 0, cudecomp_is_h_enable_nccl = T, cudecomp_is_h_enable
 
 &numerics
 is_impdiff = F, is_impdiff_1d = F
-is_poisson_pcr_tdma = F
+is_poisson_dtdma = F
 /
 
 &other_options

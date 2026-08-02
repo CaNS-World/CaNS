@@ -33,7 +33,7 @@ program cans
   use mod_bound          , only: boundp,bounduvw,updt_rhs_b
   use mod_chkdiv         , only: chkdiv
   use mod_chkdt          , only: chkdt
-  use mod_common_mpi     , only: myid,ierr,dinfo_ptdma
+  use mod_common_mpi     , only: myid,ierr,dinfo_dtdma
   use mod_correc         , only: correc
   use mod_fft            , only: fftini,fftend
   use mod_fillps         , only: fillps
@@ -42,7 +42,6 @@ program cans
   use mod_initmpi        , only: initmpi
   use mod_initsolver     , only: initsolver
   use mod_load           , only: load_one
-  use mod_mom            , only: bulk_forcing
   use mod_rk             , only: rk,rk_scal
   use mod_output         , only: out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
   use mod_param          , only: ng,l,dl,dli, &
@@ -64,7 +63,7 @@ program cans
                                  is_debug,is_debug_poisson, &
                                  is_timing, &
                                  is_impdiff,is_impdiff_1d, &
-                                 is_poisson_pcr_tdma, &
+                                 is_poisson_dtdma, &
                                  is_mask_divergence_check
   use mod_sanity         , only: test_sanity_input,test_sanity_solver
   use mod_scal           , only: scalar,initialize_scalars,bulk_forcing_s
@@ -74,7 +73,7 @@ program cans
 #else
   use mod_solver_gpu     , only: solver => solver_gpu
   use mod_workspaces     , only: init_wspace_arrays,set_cufft_wspace,cudecomp_finalize
-  use mod_common_cudecomp, only: istream_acc_queue_1,ap_z_ptdma
+  use mod_common_cudecomp, only: istream_acc_queue_1,ap_z_dtdma
 #endif
   use mod_updatep        , only: updatep
   use mod_utils          , only: bulk_mean
@@ -98,7 +97,7 @@ program cans
   real(rp), allocatable, dimension(:) :: ap,bp,cp
   integer , dimension(3) :: n_z_d
   real(rp), allocatable, dimension(:,:,:) :: ap_d,cp_d
-  logical :: is_ptdma_update_p
+  logical :: is_dtdma_update_p
   real(rp) :: normfftp
   type(rhs_bound) :: rhsbp
   real(rp) :: alpha
@@ -171,11 +170,11 @@ program cans
            dwdtrko(n(1),n(2),n(3)))
   allocate(lambdaxyp(n_z(1),n_z(2)))
   allocate(ap(n_z(3)),bp(n_z(3)),cp(n_z(3)))
-  if(is_poisson_pcr_tdma) then
+  if(is_poisson_dtdma) then
 #if defined(_OPENACC) || defined(_OPENMP)
-    n_z_d(:) = ap_z_ptdma%shape(:)
+    n_z_d(:) = ap_z_dtdma%shape(:)
 #else
-    n_z_d(:) = dinfo_ptdma%zsz(:)
+    n_z_d(:) = dinfo_dtdma%zsz(:)
 #endif
     allocate(ap_d(n_z_d(1),n_z_d(2),n_z_d(3)), &
              cp_d(n_z_d(1),n_z_d(2),n_z_d(3)))
@@ -241,11 +240,11 @@ program cans
   call initgrid(gtype,ng(3),gr,l(3),dzc_g,dzf_g,zc_g,zf_g,cbcpre(0,3)//cbcpre(1,3) == 'PP')
   do kk=0,ng(1)+1
     xc_g(kk) = (kk-0.5_rp)*dl(1)
-    xf_g(kk) = (kk-1.0_rp)*dl(1)
+    xf_g(kk) = kk*dl(1)
   end do
   do kk=0,ng(2)+1
     yc_g(kk) = (kk-0.5_rp)*dl(2)
-    yf_g(kk) = (kk-1.0_rp)*dl(2)
+    yf_g(kk) = kk*dl(2)
   end do
   if(myid == 0) then
     open(newunit=iunit,file=trim(datadir)//'geometry.out',status='replace')
@@ -312,7 +311,7 @@ program cans
   !$omp target enter data map(to:lambdaxyp,ap,bp,cp)
   !$acc        enter data copyin(rhsbp,rhsbp%x,rhsbp%y,rhsbp%z) async
   !$omp target enter data map(to:rhsbp,rhsbp%x,rhsbp%y,rhsbp%z)
-  if(is_poisson_pcr_tdma) then
+  if(is_poisson_dtdma) then
     !$acc        enter data create(   ap_d,cp_d) async
     !$omp target enter data map(alloc:ap_d,cp_d)
   end if
@@ -389,7 +388,7 @@ program cans
     io_vars(4+iscal)%arr => scalars(iscal)%val; c_io_vars(4+iscal) = 's_'//scalnum
   end do
   !
-  is_ptdma_update_p = .true.
+  is_dtdma_update_p = .true.
   !
   if(.not.restart) then
     istep = 0
@@ -409,8 +408,8 @@ program cans
   end if
   !$acc        enter data copyin(u,v,w,p,dudtrko,dvdtrko,dwdtrko) create(   pp)
   !$omp target enter data map(to:u,v,w,p,dudtrko,dvdtrko,dwdtrko) map(alloc:pp)
-  call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
-  call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
+  call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,restart)
+  call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p,1)
   do iscal=1,nscal
     s => scalars(iscal)
     !$acc        enter data copyin(s%val,s%dsdtrko) async(1)
@@ -477,7 +476,6 @@ program cans
       end do
       call rk(rkcoeff(:,irk),n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,dt,visc,p, &
               is_forced,velf,bforce,gacc,beta,scalars,dudtrko,dvdtrko,dwdtrko,u,v,w,f)
-      call bulk_forcing(n,is_forced,f,u,v,w)
       dpdl(:) = dpdl(:) + f(:)
       if(is_impdiff) then
         alpha = -.5*visc*dtrk
@@ -488,15 +486,15 @@ program cans
         call solve_helmholtz(n,ng,hi,arrplanw,normfftw,alpha, &
                              lambdaxyw,aw,bw,cw,rhsbw%x,rhsbw%y,rhsbw%z,is_bound,cbcvel(:,:,3),['c','c','f'],w)
       end if
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
+      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,.false.,-1)
       call fillps(n,dli,dzfi,dtrki,u,v,w,pp)
       call updt_rhs_b(['c','c','c'],cbcpre,n,is_bound,rhsbp%x,rhsbp%y,rhsbp%z,pp)
-      call solver(n,ng,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre,['c','c','c'],pp,is_ptdma_update_p,ap_d,cp_d)
+      call solver(n,ng,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre,['c','c','c'],pp,is_dtdma_update_p,ap_d,cp_d)
       call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,pp)
       call correc(n,dli,dzci,dtrk,pp,u,v,w)
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.true.,dl,dzc,dzf,u,v,w)
+      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,.true.,1,0)
       call updatep(n,dli,dzci,dzfi,alpha,pp,p)
-      call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
+      call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p,1)
     end do
     dpdl(:)     = -dpdl(:)*dti
     fs(1:nscal) = fs(1:nscal)*dti
@@ -610,11 +608,11 @@ program cans
       include 'out3d.h90'
     end if
     if(isave > 0.and.((mod(istep,max(isave,1)) == 0).or.(is_done.and..not.kill))) then
-      if(is_overwrite_save) then
+      if(is_overwrite_save.and.nsaves_max <= 0) then
         filename = 'fld'
       else
         filename = 'fld_'//fldnum
-        if(nsaves_max > 0) then
+        if(is_overwrite_save) then
           if(savecounter >= nsaves_max) savecounter = 0
           savecounter = savecounter + 1
           write(chkptnum,'(i4.4)') savecounter
@@ -652,7 +650,7 @@ program cans
                         xc_g,yc_g,zc_g)
         end select
       end do
-      if(.not.is_overwrite_save) then
+      if(.not.is_overwrite_save.or.nsaves_max > 0) then
         !
         ! fld_*.<ext> -> last checkpoint file (symbolic link)
         !

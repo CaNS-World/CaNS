@@ -8,13 +8,13 @@ module mod_solver
   use, intrinsic :: iso_c_binding, only: C_PTR
   use decomp_2d
   use mod_fft       , only: fft
-  use mod_param     , only: ipencil_axis,is_poisson_pcr_tdma
+  use mod_param     , only: ipencil_axis,is_poisson_dtdma
   use mod_types
   implicit none
   private
   public solver,solver_gaussel_z
   contains
-  subroutine solver(n,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p,is_ptdma_update,aa_z,cc_z)
+  subroutine solver(n,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p,is_dtdma_update,aa_z,cc_z)
     !
     ! note: some of the transposes below are suboptimal in slab decompositions,
     ! as they would be a no-op if done in-place (e.g., `px = py` for xy slabs)
@@ -28,22 +28,22 @@ module mod_solver
     character(len=1), dimension(0:1,3), intent(in) :: bc
     character(len=1), intent(in), dimension(3) :: c_or_f
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
-    logical , intent(inout), optional :: is_ptdma_update
+    logical , intent(inout), optional :: is_dtdma_update
     real(rp), intent(inout), dimension(:,:,:), optional :: aa_z,cc_z
     real(rp), allocatable, dimension(:,:,:) :: px,py,pz
     integer :: q
     logical :: is_periodic_z
     integer, dimension(3) :: n_z,hi_z
-    logical :: is_ptdma_update_
+    logical :: is_dtdma_update_
     real(rp) :: norm
     !
     norm = normfft
     !
-    is_ptdma_update_ = .true.
-    if(present(is_ptdma_update)) is_ptdma_update_ = is_ptdma_update
+    is_dtdma_update_ = .true.
+    if(present(is_dtdma_update)) is_dtdma_update_ = is_dtdma_update
     n_z(:)  = zsize(:)
     hi_z(:) = zend(:)
-    if(is_poisson_pcr_tdma) then
+    if(is_poisson_dtdma) then
       n_z(:)  = ysize(:)
       hi_z(:) = yend(:)
     end if
@@ -70,15 +70,15 @@ module mod_solver
     !
     q = merge(1,0,c_or_f(3) == 'f'.and.bc(1,3) == 'D'.and.hi_z(3) == ng(3))
     is_periodic_z = bc(0,3)//bc(1,3) == 'PP'
-    if(.not.is_poisson_pcr_tdma) then
+    if(.not.is_poisson_dtdma) then
       call transpose_y_to_z(py,pz)
       !
       call gaussel(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,norm,pz,lambdaxy)
       !
       call transpose_z_to_y(pz,py)
     else
-      call gaussel_ptdma(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,norm,py,lambdaxy,is_ptdma_update_,aa_z,cc_z)
-      if(present(is_ptdma_update)) is_ptdma_update = is_ptdma_update_
+      call gaussel_dtdma(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,norm,py,lambdaxy,is_dtdma_update_,aa_z,cc_z)
+      if(present(is_dtdma_update)) is_dtdma_update = is_dtdma_update_
     end if
     call fft(arrplan(2,2),py) ! bwd transform in y
     !
@@ -100,7 +100,6 @@ module mod_solver
   end subroutine solver
   !
   subroutine gaussel(nx,ny,n,nh,a,b,c,is_periodic,norm,p,lambdaxy)
-    use mod_param, only: eps
     implicit none
     integer , intent(in) :: nx,ny,n,nh
     real(rp), intent(in), dimension(:) :: a,b,c
@@ -109,7 +108,7 @@ module mod_solver
     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
     real(rp), intent(in), dimension(nx,ny), optional :: lambdaxy
     real(rp), allocatable, dimension(:,:,:) :: d,p2
-    real(rp) :: z
+    real(rp) :: den,pivot_tol,z
     integer :: i,j,k,nn
     !
     ! solve tridiagonal system
@@ -123,28 +122,39 @@ module mod_solver
     !
     ! forward elimination
     !
-        if(present(lambdaxy)) then
+    if(present(lambdaxy)) then
       !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(z)
       do j=1,ny
         do i=1,nx
-          z = 1./(b(1) + lambdaxy(i,j) + eps)
+          z = 1._rp/(b(1) + lambdaxy(i,j))
           d(i,j,1) = c(1)*z
           p(i,j,1) = p(i,j,1)*norm*z
         end do
       end do
       !
       do k=2,nn
-        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(z)
+        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(den,pivot_tol,z)
         do j=1,ny
           do i=1,nx
-            z = 1./(b(k) + lambdaxy(i,j) - a(k)*d(i,j,k-1) + eps)
-            d(i,j,k) = c(k)*z
-            p(i,j,k) = (p(i,j,k)*norm - a(k)*p(i,j,k-1))*z
+            den = b(k) + lambdaxy(i,j) - a(k)*d(i,j,k-1)
+            !
+            ! pin the constant pressure mode instead of regularizing its
+            ! singular final equation
+            !
+            pivot_tol = epsilon(den)*max(abs(b(k)+lambdaxy(i,j)),abs(a(k)*d(i,j,k-1)))
+            if(k == nn .and. abs(den) <= pivot_tol) then
+              d(i,j,k) = 0._rp
+              p(i,j,k) = 0._rp
+            else
+              z = 1._rp/den
+              d(i,j,k) = c(k)*z
+              p(i,j,k) = (p(i,j,k)*norm - a(k)*p(i,j,k-1))*z
+            end if
           end do
         end do
       end do
-        else
-      z = 1./(b(1) + eps)
+    else
+      z = 1._rp/b(1)
       !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
       do j=1,ny
         do i=1,nx
@@ -154,7 +164,7 @@ module mod_solver
       end do
       !
       do k=2,nn
-        z = 1./(b(k) - a(k)*d(1,1,k-1) + eps)
+        z = 1._rp/(b(k) - a(k)*d(1,1,k-1))
         !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
         do j=1,ny
           do i=1,nx
@@ -194,11 +204,11 @@ module mod_solver
       !
       ! forward elimination for the auxiliary system
       !
-            if(present(lambdaxy)) then
+      if(present(lambdaxy)) then
         !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(z)
         do j=1,ny
           do i=1,nx
-            z = 1./(b(1) + lambdaxy(i,j) + eps)
+            z = 1._rp/(b(1) + lambdaxy(i,j))
             d(i,j,1) = c(1)*z
             p2(i,j,1) = p2(i,j,1)*z
           end do
@@ -207,14 +217,14 @@ module mod_solver
           !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(z)
           do j=1,ny
             do i=1,nx
-              z = 1./(b(k) + lambdaxy(i,j) - a(k)*d(i,j,k-1) + eps)
+              z = 1._rp/(b(k) + lambdaxy(i,j) - a(k)*d(i,j,k-1))
               d(i,j,k) = c(k)*z
               p2(i,j,k) = (p2(i,j,k) - a(k)*p2(i,j,k-1))*z
             end do
           end do
         end do
-            else
-        z = 1./(b(1) + eps)
+      else
+        z = 1._rp/b(1)
         !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
         do j=1,ny
           do i=1,nx
@@ -223,7 +233,7 @@ module mod_solver
           end do
         end do
         do k=2,nn
-          z = 1./(b(k) - a(k)*d(1,1,k-1) + eps)
+          z = 1._rp/(b(k) - a(k)*d(1,1,k-1))
           !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
           do j=1,ny
             do i=1,nx
@@ -248,11 +258,17 @@ module mod_solver
       ! solve for the periodic closure value and correct the interior solution
       !
       if(present(lambdaxy)) then
-        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
+        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(den,pivot_tol)
         do j=1,ny
           do i=1,nx
-            p(i,j,nn+1) = (p(i,j,nn+1)*norm        - c(nn+1)*p( i,j,1) - a(nn+1)*p(i,j,nn)) / &
-                          (b(nn+1) + lambdaxy(i,j) + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn) + eps)
+            den = b(nn+1) + lambdaxy(i,j) + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn)
+            pivot_tol = epsilon(den)*max(abs(b(nn+1)+lambdaxy(i,j)), &
+                                         abs(c(nn+1)*p2(i,j,1)+a(nn+1)*p2(i,j,nn)))
+            if(abs(den) <= pivot_tol) then
+              p(i,j,nn+1) = 0._rp
+            else
+              p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p(i,j,1) - a(nn+1)*p(i,j,nn))/den
+            end if
           end do
         end do
       else
@@ -260,7 +276,7 @@ module mod_solver
         do j=1,ny
           do i=1,nx
             p(i,j,nn+1) = (p(i,j,nn+1)*norm - c(nn+1)*p( i,j,1) - a(nn+1)*p( i,j,nn)) / &
-                          (b(nn+1)          + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn) + eps)
+                          (b(nn+1)          + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn))
           end do
         end do
       end if
@@ -278,12 +294,11 @@ module mod_solver
     end if
   end subroutine gaussel
   !
-  subroutine gaussel_ptdma(nx,ny,n,nh,a,b,c,is_periodic,norm,p,lambdaxy,is_update,aa_z_save,cc_z_save)
+  subroutine gaussel_dtdma(nx,ny,n,nh,a,b,c,is_periodic,norm,p,lambdaxy,is_update,aa_z_save,cc_z_save)
     !
     ! distributed TDMA solver
     !
-    use mod_common_mpi, only: dinfo_ptdma
-    use mod_param     , only: eps
+    use mod_common_mpi, only: dinfo_dtdma
     !
     implicit none
     integer , intent(in) :: nx,ny,n,nh
@@ -302,7 +317,7 @@ module mod_solver
     integer , dimension(3) :: nr_z
     integer :: nx_r,ny_r,nn
     !
-    nr_z(:) = dinfo_ptdma%zsz(:)
+    nr_z(:) = dinfo_dtdma%zsz(:)
     allocate(aa_y(nx,ny,2), &
              cc_y(nx,ny,2), &
              pp_y(nx,ny,2), &
@@ -322,7 +337,7 @@ module mod_solver
         do i=1,nx
           !
           bb(:) = b(1:n) + lambdaxy(i,j)
-          zz(:) = 1./(bb(1:2)+eps)
+          zz(:) = 1._rp/bb(1:2)
           aa(i,j,1:2) = a(1:2)*zz(:)
           cc(i,j,1:2) = c(1:2)*zz(:)
           p( i,j,1:2) = p(i,j,1:2)*norm*zz(:)
@@ -330,7 +345,7 @@ module mod_solver
           ! elimination of lower diagonals
           !
           do k=3,n
-            z = 1./(bb(k)-a(k)*cc(i,j,k-1)+eps)
+            z = 1._rp/(bb(k) - a(k)*cc(i,j,k-1))
             p(i,j,k) = (p(i,j,k)*norm-a(k)*p(i,j,k-1))*z
             aa(i,j,k) = -a(k)*aa(i,j,k-1)*z
             cc(i,j,k) = c(k)*z
@@ -343,7 +358,7 @@ module mod_solver
             aa(i,j,k) =  aa(i,j,k)-cc(i,j,k)*aa(i,j,k+1)
             cc(i,j,k) = -cc(i,j,k)*cc(i,j,k+1)
           end do
-          z = 1./(1.-aa(i,j,2)*cc(i,j,1)+eps)
+          z = 1._rp/(1._rp - aa(i,j,2)*cc(i,j,1))
           p(i,j,1) = (p(i,j,1)-cc(i,j,1)*p(i,j,2))*z
           aa(i,j,1) = aa(i,j,1)*z
           cc(i,j,1) = -cc(i,j,1)*cc(i,j,2)*z
@@ -358,7 +373,7 @@ module mod_solver
     else
       do j=1,ny
         do i=1,nx
-          zz(:) = 1./(b(1:2)+eps)
+          zz(:) = 1._rp/b(1:2)
           aa(i,j,1:2) = a(1:2)*zz(:)
           cc(i,j,1:2) = c(1:2)*zz(:)
           p( i,j,1:2) = p(i,j,1:2)*norm*zz(:)
@@ -366,7 +381,7 @@ module mod_solver
           ! elimination of lower diagonals
           !
           do k=3,n
-            z = 1./(b(k)-a(k)*cc(i,j,k-1)+eps)
+            z = 1._rp/(b(k) - a(k)*cc(i,j,k-1))
             p(i,j,k) = (p(i,j,k)*norm-a(k)*p(i,j,k-1))*z
             aa(i,j,k) = -a(k)*aa(i,j,k-1)*z
             cc(i,j,k) = c(k)*z
@@ -379,7 +394,7 @@ module mod_solver
             aa(i,j,k) =  aa(i,j,k)-cc(i,j,k)*aa(i,j,k+1)
             cc(i,j,k) = -cc(i,j,k)*cc(i,j,k+1)
           end do
-          z = 1./(1.-aa(i,j,2)*cc(i,j,1)+eps)
+          z = 1._rp/(1._rp - aa(i,j,2)*cc(i,j,1))
           p(i,j,1) = (p(i,j,1)-cc(i,j,1)*p(i,j,2))*z
           aa(i,j,1) = aa(i,j,1)*z
           cc(i,j,1) = -cc(i,j,1)*cc(i,j,2)*z
@@ -398,16 +413,16 @@ module mod_solver
     if(present(is_update) .and. present(aa_z_save) .and. present(cc_z_save)) then
       if(is_update) then
         is_update = .false.
-        call transpose_y_to_z(aa_y,aa_z_save,dinfo_ptdma)
-        call transpose_y_to_z(cc_y,cc_z_save,dinfo_ptdma)
+        call transpose_y_to_z(aa_y,aa_z_save,dinfo_dtdma)
+        call transpose_y_to_z(cc_y,cc_z_save,dinfo_dtdma)
       end if
       aa_z(:,:,:) = aa_z_save(:,:,:)
       cc_z(:,:,:) = cc_z_save(:,:,:)
     else
-      call transpose_y_to_z(aa_y,aa_z,dinfo_ptdma)
-      call transpose_y_to_z(cc_y,cc_z,dinfo_ptdma)
+      call transpose_y_to_z(aa_y,aa_z,dinfo_dtdma)
+      call transpose_y_to_z(cc_y,cc_z,dinfo_dtdma)
     end if
-    call transpose_y_to_z(pp_y,pp_z,dinfo_ptdma)
+    call transpose_y_to_z(pp_y,pp_z,dinfo_dtdma)
     !
     ! solve reduced systems
     !
@@ -421,7 +436,7 @@ module mod_solver
     do j=1,ny_r
       do i=1,nx_r
         do k=2,nn
-          z = 1./(1.-aa_z(i,j,k)*cc_z(i,j,k-1)+eps)
+          z = 1._rp/(1._rp - aa_z(i,j,k)*cc_z(i,j,k-1))
           pp_z(i,j,k) = (pp_z(i,j,k)-aa_z(i,j,k)*pp_z(i,j,k-1))*z
           cc_z(i,j,k) = cc_z(i,j,k)*z
         end do
@@ -439,7 +454,7 @@ module mod_solver
           pp_z_2(i,j,nn) = pp_z_2(i,j,nn) - cc_z(i,j,nn)
           !
           do k=2,nn
-            z = 1./(1.-aa_z(i,j,k)*cc_z(i,j,k-1)+eps)
+            z = 1._rp/(1._rp - aa_z(i,j,k)*cc_z(i,j,k-1))
             pp_z_2(i,j,k) = (pp_z_2(i,j,k)-aa_z(i,j,k)*pp_z_2(i,j,k-1))*z
             cc_z(i,j,k) = cc_z(i,j,k)*z
           end do
@@ -448,7 +463,7 @@ module mod_solver
             pp_z_2(i,j,k) = pp_z_2(i,j,k) - cc_z(i,j,k)*pp_z_2(i,j,k+1)
           end do
           pp_z(i,j,nn+1) = (pp_z(i,j,nn+1) - cc_z(i,j,nn+1)*pp_z(  i,j,1) - aa_z(i,j,nn+1)*pp_z(  i,j,nn)) / &
-                           (1.             + cc_z(i,j,nn+1)*pp_z_2(i,j,1) + aa_z(i,j,nn+1)*pp_z_2(i,j,nn)+eps)
+                           (1._rp          + cc_z(i,j,nn+1)*pp_z_2(i,j,1) + aa_z(i,j,nn+1)*pp_z_2(i,j,nn))
           do k=1,nn
             pp_z(i,j,k) = pp_z(i,j,k) + pp_z_2(i,j,k)*pp_z(i,j,nn+1)
           end do
@@ -459,7 +474,7 @@ module mod_solver
     !
     ! transpose solution to the original z-distributed form
     !
-    call transpose_z_to_y(pp_z,pp_y,dinfo_ptdma)
+    call transpose_z_to_y(pp_z,pp_y,dinfo_dtdma)
     !
     ! obtain final solution on the inner points
     !
@@ -472,10 +487,9 @@ module mod_solver
         end do
       end do
     end do
-  end subroutine gaussel_ptdma
+  end subroutine gaussel_dtdma
   !
   subroutine dgtsv_homebrewed(n,a,b,c,norm,p)
-    use mod_param, only: eps
     implicit none
     integer , intent(in) :: n
     real(rp), intent(in   ), dimension(:) :: a,b,c
@@ -487,11 +501,11 @@ module mod_solver
     !
     ! Gauss elimination
     !
-    z = 1./(b(1)+eps)
+    z = 1._rp/b(1)
     d(1) = c(1)*z
     p(1) = p(1)*norm*z
     do l=2,n
-      z    = 1./(b(l)-a(l)*d(l-1)+eps)
+      z = 1._rp/(b(l) - a(l)*d(l-1))
       d(l) = c(l)*z
       p(l) = (p(l)*norm-a(l)*p(l-1))*z
     end do
@@ -519,12 +533,12 @@ module mod_solver
     !
     n_z(:)  = zsize(:)
     hi_z(:) = zend(:)
-    if(is_poisson_pcr_tdma) then
+    if(is_poisson_dtdma) then
       n_z(:)  = ysize(:)
       hi_z(:) = yend(:)
     end if
     is_no_decomp_z = xsize(3) == n_z(3).or.ipencil_axis == 3 ! not decomposed along z: xsize(3) == ysize(3) == ng(3) when dims(2) = 1
-    if(.not.is_poisson_pcr_tdma .and. .not.is_no_decomp_z) then
+    if(.not.is_poisson_dtdma .and. .not.is_no_decomp_z) then
       allocate(px(xsize(1),xsize(2),xsize(3)))
       allocate(py(ysize(1),ysize(2),ysize(3)))
       allocate(pz(zsize(1),zsize(2),zsize(3)))
@@ -543,16 +557,16 @@ module mod_solver
     q = merge(1,0,c_or_f(3) == 'f'.and.bcz(1) == 'D'.and.hi_z(3) == ng(3))
     is_periodic_z = bcz(0)//bcz(1) == 'PP'
     if(.not.is_no_decomp_z) then
-      if(.not.is_poisson_pcr_tdma) then
+      if(.not.is_poisson_dtdma) then
         call gaussel(      n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,norm,pz)
       else
-        call gaussel_ptdma(n_z(1),n_z(2),n_z(3)-q,1,a,b,c,is_periodic_z,norm,p)
+        call gaussel_dtdma(n_z(1),n_z(2),n_z(3)-q,1,a,b,c,is_periodic_z,norm,p)
       end if
     else
       call gaussel(n(1),n(2),n(3)-q,1,a,b,c,is_periodic_z,norm,p)
     end if
     !
-    if(.not.is_poisson_pcr_tdma .and. .not.is_no_decomp_z) then
+    if(.not.is_poisson_dtdma .and. .not.is_no_decomp_z) then
       select case(ipencil_axis)
       case(1)
         !call transpose_z_to_x(pz,px)

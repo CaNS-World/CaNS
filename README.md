@@ -33,13 +33,13 @@ See the [Release Notes](https://github.com/CaNS-World/CaNS/releases/tag/v4.0.0) 
 
 Some features are:
 
- * Hybrid MPI/OpenMP parallelization
+ * MPI parallelization with OpenACC or OpenMP target offload on GPUs
  * FFTW guru interface / cuFFT used for computing multi-dimensional vectors of 1D transforms
  * The right type of transformation (Fourier, cosine, sine, etc.) is automatically determined from the input file
  * [cuDecomp](https://github.com/NVIDIA/cuDecomp) pencil decomposition library for _hardware-adaptive_ distributed memory calculations on _many GPUs_
  * [diezDecomp](https://github.com/Rafael10Diez/diezDecomp) pencil decomposition library for distributed memory calculations on various GPU/CPU hardware platforms
  * [2DECOMP&FFT](https://github.com/xcompact3d/2decomp-fft) library used for performing global data transpositions on CPUs and some of the data I/O
- * GPU acceleration using OpenACC directives (and option to switch to OpenMP target offload in the [`openmp-port` branch](https://github.com/CaNS-World/CaNS/tree/openmp-port))
+ * GPU acceleration using OpenACC or OpenMP target offload directives
  * A different canonical flow can be simulated just by changing the input files
 
 Some examples of flows that this code can solve are:
