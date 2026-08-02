@@ -25,3 +25,4 @@ export LD_LIBRARY_PATH=$NVHPC_INSTALL_DIR/$NVARCH/$NVHPC_VERSION_A/comm_libs/nvs
 #
 export OMPI_MCA_pml=ob1
 export OMPI_MCA_btl=self,sm,tcp
+export OMPI_MCA_coll=^hcoll,ucc
