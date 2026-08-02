@@ -33,6 +33,8 @@ In this file, `FCOMP` can be one of `GNU` (`gfortran`), `INTEL` (`ifort`), `NVID
 
 At present, the GPU-enabled path documented in this branch corresponds to the OpenACC implementation. The OpenMP GPU backend (OpenMP target offload) is being maintained in the [`openmp-port` branch](https://github.com/CaNS-World/CaNS/tree/openmp-port); see its [`docs/INFO_COMPILING.md`](https://github.com/CaNS-World/CaNS/blob/openmp-port/docs/INFO_COMPILING.md) file for the OpenMP target offload build path.
 
+NVIDIA GPU builds generate code for the major compute capabilities selected by the compiler (`NVHPC_GPU_TARGET=ccall-major`). This can be overridden for a specific GPU, for example with `make NVHPC_GPU_TARGET=cc89`, or set to `ccnative` to target the GPUs visible on the build system.
+
 Typing `make libs` will build the 2DECOMP&FFT/cuDecomp/diezDecomp libraries; then typing `make` will compile the code and copy the executable `cans` to a `run/` folder; `make run` will also copy the default input files `*.in` under `src/` to the same `run/` folder.
 
 Note that cuDecomp needs to be dynamically linked before performing a GPU run. To do this, one should update the `LD_LIBRARY_PATH` environment variable as follows (from the root directory):
