@@ -633,8 +633,8 @@ module mod_fft
     !
     implicit none
     integer , intent(in   ) :: nn
-    integer , intent(in   ), dimension(3) :: n            ! dimensions of input/output array
-    integer , intent(in   ) :: idir                       ! array direction where the transform is taken
+    integer , intent(in   ), dimension(3) :: n           ! dimensions of input/output array
+    integer , intent(in   ) :: idir                      ! array direction where the transform is taken
     real(rp), intent(in   ), dimension(:,:,:) :: arr     ! input/output array
     real(rp), intent(out  ), dimension(:,:,:) :: arr_out ! output array
     logical, intent(in) :: is_swap_order  ! swap order of the elements of the input array? (for DST)
