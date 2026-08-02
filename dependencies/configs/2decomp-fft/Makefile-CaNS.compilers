@@ -144,7 +144,13 @@ else ifeq ($(CMP),NVIDIA)
       FFLAGS += -Mbounds -Mchkptr
       FFLAGS += -Ktrap=fp # Trap floating-point errors
     else
-      FFLAGS += -O3 -fast -tp=native
+      FFLAGS += -O3 -fast
+      ifeq ($(strip $(NVHPC_CPU_TARGET)),)
+        FFLAGS += -tp=native
+      endif
+    endif
+    ifneq ($(strip $(NVHPC_CPU_TARGET)),)
+      FFLAGS += -tp=$(NVHPC_CPU_TARGET)
     endif
   endif
   #FFLAGS += -cpp -O3 -Minfo=accel -stdpar -acc -target=multicore

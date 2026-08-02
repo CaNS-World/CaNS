@@ -40,10 +40,26 @@ ng = data[0,:].astype('int')
 l  = data[1,:]
 dl = l/(1.*ng)
 n  = ng
+def get_split_groups(files):
+    groups = {}
+    for filename in files:
+        root, ext = os.path.splitext(filename)
+        if(ext != ".h5"): continue
+        for fieldname in fieldnames:
+            suffix = "_" + fieldname
+            if(root.endswith(suffix)):
+                groups.setdefault(root[:-len(suffix)], {})[fieldname] = filename
+    return [(prefix, groups[prefix]) for prefix in sorted(groups) \
+            if all(fieldname in groups[prefix] for fieldname in fieldnames)]
+split_groups = get_split_groups(files)
+is_split = len(split_groups) > 0
+if(is_split):
+    nsaves = len(split_groups)
 rtimes = np.zeros(nsaves)
 isteps = np.zeros(nsaves,dtype=int)
 for i in range(nsaves):
-    hf = h5py.File(files[i],'r')
+    filename = split_groups[i][1]['u'] if is_split else files[i]
+    hf = h5py.File(filename,'r')
     rtimes[i] = float(np.asarray(hf["meta/time"])[0])
     isteps[i] = int(np.asarray(hf["meta/istep"])[0])
     hf.close()
@@ -52,21 +68,28 @@ for i in range(nsaves):
 #
 isteps, indeces = np.unique(isteps,return_index=True)
 rtimes  = np.take(rtimes, indeces)
-files   = np.take(files,  indeces)
+if(is_split):
+    split_groups = [split_groups[i] for i in indeces]
+else:
+    files = np.take(files, indeces)
 nsaves  = np.size(files)
+if(is_split): nsaves = len(split_groups)
 #
 # sort by increasing istep
 #
 indeces = np.argsort(isteps)
 isteps  = np.take(isteps, indeces)
 rtimes  = np.take(rtimes, indeces)
-files   = np.take(files,  indeces)
+if(is_split):
+    split_groups = [split_groups[i] for i in indeces]
+else:
+    files = np.take(files, indeces)
 #
 # create grid files
 #
-x = np.arange(r0[0]+dl[0]/2.,r0[0]+l[0],dl[0])
-y = np.arange(r0[1]+dl[1]/2.,r0[1]+l[1],dl[1])
-z = np.arange(r0[2]+dl[2]/2.,r0[2]+l[2],dl[2])
+x = np.linspace(r0[0]+dl[0]/2.,r0[0]+l[0]-dl[0]/2.,ng[0])
+y = np.linspace(r0[1]+dl[1]/2.,r0[1]+l[1]-dl[1]/2.,ng[1])
+z = np.linspace(r0[2]+dl[2]/2.,r0[2]+l[2]-dl[2]/2.,ng[2])
 if(os.path.exists('grid.h5')):
     hf = h5py.File('grid.h5','r')
     z = np.asarray(hf['rc'])
@@ -91,28 +114,23 @@ from xml.dom import minidom
 from xml.etree.ElementTree import Element, SubElement
 Xdmf = Element("Xdmf", attrib = {"xmlns:xi": "http://www.w3.org/2001/XInclude", "Version": "2.0"})
 domain = SubElement(Xdmf, "Domain")
-topology = SubElement(domain,"Topology", attrib = {"name": "TOPO", "TopologyType": "3DRectMesh", "Dimensions" : "{} {} {}".format(n[2], n[1], n[0])})
-geometry = SubElement(domain,"Geometry", attrib = {"name": "GEO", "GeometryType": "VXVYVZ"})
-dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "HDF", "NumberType": "Float", "Precision": "{}".format(iprecision), "Dimensions": "{}".format(n[0])})
-dataitem.text = gridfile + ':/x'
-dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "HDF", "NumberType": "Float", "Precision": "{}".format(iprecision), "Dimensions": "{}".format(n[1])})
-dataitem.text = gridfile + ':/y'
-dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "HDF", "NumberType": "Float", "Precision": "{}".format(iprecision), "Dimensions": "{}".format(n[2])})
-dataitem.text = gridfile + ':/z'
 grid = SubElement(domain, "Grid", attrib = {"Name": "TimeSeries", "GridType": "Collection",  "CollectionType": "Temporal"})
-time = SubElement(grid, "Time", attrib = {"TimeType":"List"})
-dataitem = SubElement(time, "DataItem", attrib = {"Format": "XML", "NumberType": "Float", "Dimensions": "{}".format(nsaves)})
-dataitem.text = ""
-for ii in range(nsaves):
-    dataitem.text += "{:15.6E}".format(rtimes[ii]) + " "
 for ii in range(nsaves):
     grid_fld = SubElement(grid,"Grid", attrib = {"Name": "T{:7}".format(str(isteps[ii]).zfill(7)), "GridType": "Uniform"})
-    topology = SubElement(grid_fld, "Topology", attrib = {"Reference": "/Xdmf/Domain/Topology[1]"})
-    geometry = SubElement(grid_fld, "Geometry", attrib = {"Reference": "/Xdmf/Domain/Geometry[1]"})
+    time = SubElement(grid_fld, "Time", attrib = {"Value":"{:15.6E}".format(rtimes[ii])})
+    topology = SubElement(grid_fld,"Topology", attrib = {"TopologyType": "3DRectMesh", "Dimensions" : "{} {} {}".format(n[2], n[1], n[0])})
+    geometry = SubElement(grid_fld,"Geometry", attrib = {"GeometryType": "VXVYVZ"})
+    dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "HDF", "NumberType": "Float", "Precision": "{}".format(iprecision), "Dimensions": "{}".format(n[0])})
+    dataitem.text = gridfile + ':/x'
+    dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "HDF", "NumberType": "Float", "Precision": "{}".format(iprecision), "Dimensions": "{}".format(n[1])})
+    dataitem.text = gridfile + ':/y'
+    dataitem = SubElement(geometry, "DataItem", attrib = {"Format": "HDF", "NumberType": "Float", "Precision": "{}".format(iprecision), "Dimensions": "{}".format(n[2])})
+    dataitem.text = gridfile + ':/z'
     for jj in range(min(len(variables),len(fieldnames))):
+        filename = split_groups[ii][1][fieldnames[jj]] if is_split else files[ii]
         attribute = SubElement(grid_fld, "Attribute", attrib = {"Name": "{}".format(variables[jj]), "Center": "Node"})
         dataitem = SubElement(attribute, "DataItem", attrib = {"Format": "HDF", "NumberType": "Float", "Precision": "{}".format(iprecision), "Dimensions": "{} {} {}".format(n[2], n[1], n[0])})
-        dataitem.text = files[ii] + ':/fields/' + fieldnames[jj]
+        dataitem.text = filename + ':/fields/' + fieldnames[jj]
 output = ElementTree.tostring(Xdmf, 'utf-8')
 output = minidom.parseString(output)
 output = output.toprettyxml(indent="    ",newl='\n')

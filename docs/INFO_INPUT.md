@@ -355,7 +355,7 @@ This namelist defines parameters related to the numerical discretization and com
 ```fortran
 &numerics
 is_impdiff = F, is_impdiff_1d = F
-is_poisson_pcr_tdma = F
+is_poisson_dtdma = F
 /
 ```
 
@@ -364,7 +364,7 @@ In these lines, `is_impdiff` and `is_impdiff_1d` enable the (semi-) **implicit t
 * `is_impdiff`, if `.true.`, the diffusion term of the Navier-Stokes and scalar equations is integrated in time implicitly, which may improve the stability of the numerical algorithm for viscous-dominated flows.
 * `is_impdiff_1d` is similar to `is_impdiff`, but with implicit diffusion *only* along Z, which may be advantageous when the grid along Z is much finer than along the other directions; *for optimal parallel performance, the domain should not be decomposed along Z* (`ipencil_axis=3`, or `ipencil_axis = 1/2` with `dims(2) = 1`)
 
-Finally, `is_poisson_pcr_tdma`, if `.true.`, allows for solving the Poisson/Helmholtz equations along Z with a parallel cyclic reduction--tridiagonal matrix algorithm (PCR-TDMA) method. This approach may result in major gains in scalability for pencil-distributed simulations at scale, on many GPUs.
+Finally, `is_poisson_dtdma`, if `.true.`, allows for solving the Poisson/Helmholtz equations along Z with a parallel cyclic reduction--tridiagonal matrix algorithm (DTDMA) method. This approach may result in major gains in scalability for pencil-distributed simulations at scale, on many GPUs.
 
 # About the `&other_options` namelist under `input.nml`
 

@@ -18,7 +18,7 @@ module mod_sanity
   use mod_initflow  , only: add_noise
   use mod_initmpi   , only: initmpi
   use mod_initsolver, only: initsolver
-  use mod_param     , only: ipencil_axis,is_impdiff,is_impdiff_1d,is_poisson_pcr_tdma,small
+  use mod_param     , only: ipencil_axis,is_impdiff,is_impdiff_1d,is_poisson_dtdma,small
 #if !(defined(_OPENACC) || defined(_OPENMP))
   use mod_solver    , only: solver
 #else
@@ -51,14 +51,14 @@ module mod_sanity
     if(is_impdiff_1d .and. .not.is_impdiff) then
       if(myid == 0)  print*, 'ERROR: `is_impdiff_1d = T` requires `is_impdiff = T` (forced in `param.f90`).'; call abortit
     end if
-    if(is_impdiff_1d .and. .not.(ipencil_axis == 3) .and. .not.is_poisson_pcr_tdma) then
+    if(is_impdiff_1d .and. .not.(ipencil_axis == 3) .and. .not.is_poisson_dtdma) then
       if(dims(2) > 1) then
         if(myid == 0)  print*, 'Warning: a run with implicit Z diffusion (`is_impdiff_1d = T`) is much more efficient &
                                        & when the flow is not decomposed along the Z direction.'
       end if
     end if
-    if(is_poisson_pcr_tdma .and. (ipencil_axis == 3)) then
-      if(myid == 0)  print*, 'ERROR: `is_poisson_pcr_tdma = T` requires X/Y-aligned pencils.'; call abortit
+    if(is_poisson_dtdma .and. (ipencil_axis == 3)) then
+      if(myid == 0)  print*, 'ERROR: `is_poisson_dtdma = T` requires X/Y-aligned pencils.'; call abortit
     end if
   end subroutine test_sanity_input
   !
@@ -149,7 +149,7 @@ module mod_sanity
     if(myid == 0.and.(.not.passed_loc)) &
       print*, 'ERROR: pressure BCs in directions x and y must be homogeneous (value = 0.).'
     passed = passed.and.passed_loc
-    if(is_impdiff) then
+    if(is_impdiff .and. .not.is_impdiff_1d) then
       passed_loc = .true.
       do ivel = 1,3
         do idir=1,2
@@ -172,6 +172,7 @@ module mod_sanity
       passed = passed.and.passed_loc
     end if
 #if defined(_OPENACC) || defined(_OPENMP)
+    passed_loc = .true.
     do idir=1,2
       bc01p = cbcpre(0,idir)//cbcpre(1,idir)
       passed_loc = passed_loc.and..not.( (bc01p == 'DN').or. &
@@ -179,6 +180,7 @@ module mod_sanity
     end do
     if(myid == 0.and.(.not.passed_loc)) &
       print*, 'ERROR: pressure BCs "ND" or "DN" along x or y not implemented on GPUs yet.'
+    passed = passed.and.passed_loc
 #endif
   end subroutine chk_bc
   !
@@ -271,13 +273,13 @@ module mod_sanity
     dl  = dli**(-1)
     dt  = acos(-1.) ! value is irrelevant
     dti = dt**(-1)
-    call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
+    call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,.false.,-1)
     call fillps(n,dli,dzfi,dti,u,v,w,p)
     call updt_rhs_b(['c','c','c'],cbcpre,n,is_bound,rhsbx,rhsby,rhsbz,p)
     call solver(n,ng,arrplan,normfft,lambdaxy,a,b,c,cbcpre,['c','c','c'],p)
     call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
     call correc(n,dli,dzci,dt,p,u,v,w)
-    call bounduvw(cbcvel,n,bcvel,nb,is_bound,.true.,dl,dzc,dzf,u,v,w)
+    call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,.true.,1,0)
     call chkdiv(lo,hi,l,dli,dzfi,u,v,w,divtot,divmax)
     passed_loc = divmax < small
     if(myid == 0.and.(.not.passed_loc)) &
@@ -314,7 +316,7 @@ module mod_sanity
 #if defined(_OPENACC) || defined(_OPENMP)
       call set_cufft_wspace(pack(arrplan,.true.),istream_acc_queue_1)
 #endif
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
+      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
       !$acc parallel     loop collapse(3) default(present)
       !$omp target teams loop collapse(3)
       do k=0,n(3)+1
@@ -333,7 +335,7 @@ module mod_sanity
       call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,is_bound,rhsbx,rhsby,rhsbz,u)
       call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,1),['f','c','c'],u)
       call fftend(arrplan)
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w) ! actually, we are only interested in the boundary condition in `u`
+      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w) ! actually, we are only interested in the boundary condition in `u`
       call chk_helmholtz(lo,hi,l,dli,dzci,dzfi,alpha,p,u,cbcvel(:,:,1),is_bound,['f','c','c'],restot,resmax)
       passed_loc = resmax < small
       if(myid == 0.and.(.not.passed_loc)) &
@@ -347,7 +349,7 @@ module mod_sanity
 #if defined(_OPENACC) || defined(_OPENMP)
       call set_cufft_wspace(pack(arrplan,.true.),istream_acc_queue_1)
 #endif
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
+      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
       !$acc parallel     loop collapse(3) default(present)
       !$omp target teams loop collapse(3)
       do k=0,n(3)+1
@@ -366,7 +368,7 @@ module mod_sanity
       call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,is_bound,rhsbx,rhsby,rhsbz,v)
       call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,2),['c','f','c'],v)
       call fftend(arrplan)
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w) ! actually, we are only interested in the boundary condition in `v`
+      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w) ! actually, we are only interested in the boundary condition in `v`
       call chk_helmholtz(lo,hi,l,dli,dzci,dzfi,alpha,p,v,cbcvel(:,:,2),is_bound,['c','f','c'],restot,resmax)
       passed_loc = resmax < small
       if(myid == 0.and.(.not.passed_loc)) &
@@ -380,7 +382,7 @@ module mod_sanity
 #if defined(_OPENACC) || defined(_OPENMP)
       call set_cufft_wspace(pack(arrplan,.true.),istream_acc_queue_1)
 #endif
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w)
+      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
       !$acc parallel     loop collapse(3) default(present)
       !$omp target teams loop collapse(3)
       do k=0,n(3)+1
@@ -399,7 +401,7 @@ module mod_sanity
       call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,is_bound,rhsbx,rhsby,rhsbz,w)
       call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,3),['c','c','f'],w)
       call fftend(arrplan)
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,.false.,dl,dzc,dzf,u,v,w) ! actually, we are only interested in the boundary condition in `w`
+      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w) ! actually, we are only interested in the boundary condition in `w`
       call chk_helmholtz(lo,hi,l,dli,dzci,dzfi,alpha,p,w,cbcvel(:,:,3),is_bound,['c','c','f'],restot,resmax)
       passed_loc = resmax < small
       if(myid == 0.and.(.not.passed_loc)) &

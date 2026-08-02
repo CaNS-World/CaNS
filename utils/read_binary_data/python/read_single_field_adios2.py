@@ -5,6 +5,7 @@
 #
 def read_single_field_adios2(data_dir,filenamei,varname=""):
     import os
+    os.environ.setdefault("ADIOS2_ALWAYS_USE_MPI","1")
     import adios2
     import numpy as np
     #
@@ -18,24 +19,62 @@ def read_single_field_adios2(data_dir,filenamei,varname=""):
     # read field file
     #
     filepath = os.path.join(data_dir,filenamei)
-    with adios2.FileReader(filepath) as fh:
-        available_variables = fh.available_variables()
+    FileReader = getattr(adios2,"FileReader",None)
+    if(FileReader):
+        with FileReader(filepath) as fh:
+            available_variables = fh.available_variables()
+            if(len(varname) == 0):
+                meta_names = {"time","istep","lo","hi","nskip","x","y","z"}
+                fields = [name for name in available_variables.keys() if name not in meta_names]
+                if(len(fields) != 1):
+                    raise ValueError("varname must be provided when the ADIOS2 file stores multiple fields")
+                varname = fields[0]
+            data = np.transpose(np.asarray(fh.read(varname)))
+            if("lo" in available_variables):
+                lo = np.asarray(fh.read("lo"),dtype=int)
+                hi = np.asarray(fh.read("hi"),dtype=int)
+                nskip = np.asarray(fh.read("nskip"),dtype=int)
+            else:
+                ng_local = np.array(data.shape,dtype=int)
+                lo = np.array([1,1,1],dtype=int)
+                hi = ng_local.copy()
+                nskip = np.array([1,1,1],dtype=int)
+    else:
+        adios = adios2.ADIOS()
+        io = adios.DeclareIO("reader")
+        io.SetEngine("BP5")
+        engine = io.Open(filepath,adios2.Mode.Read)
+        engine.BeginStep()
+        available_variables = io.AvailableVariables()
         if(len(varname) == 0):
             meta_names = {"time","istep","lo","hi","nskip","x","y","z"}
             fields = [name for name in available_variables.keys() if name not in meta_names]
             if(len(fields) != 1):
                 raise ValueError("varname must be provided when the ADIOS2 file stores multiple fields")
             varname = fields[0]
-        data = np.asarray(fh.read(varname))
+        def read_bp_var(name,dtype=None):
+            var = io.InquireVariable(name)
+            if(var is None):
+                raise KeyError(name)
+            shape = tuple(var.Shape())
+            if(dtype is None):
+                dtype = np.float32 if var.Type() == "float" else np.float64
+                if("int" in var.Type()): dtype = np.int32
+            arr = np.empty(shape,dtype=dtype)
+            engine.Get(var,arr,adios2.Mode.Sync)
+            return arr
+        data = np.transpose(read_bp_var(varname))
         if("lo" in available_variables):
-            lo = np.asarray(fh.read("lo"),dtype=int)
-            hi = np.asarray(fh.read("hi"),dtype=int)
-            nskip = np.asarray(fh.read("nskip"),dtype=int)
+            lo = read_bp_var("lo",np.int32).astype(int)
+            hi = read_bp_var("hi",np.int32).astype(int)
+            nskip = read_bp_var("nskip",np.int32).astype(int)
         else:
             ng_local = np.array(data.shape,dtype=int)
             lo = np.array([1,1,1],dtype=int)
             hi = ng_local.copy()
             nskip = np.array([1,1,1],dtype=int)
+        engine.EndStep()
+        engine.Close()
     #
     # read geometry file
     #
@@ -47,12 +86,12 @@ def read_single_field_adios2(data_dir,filenamei,varname=""):
     #
     # read and generate grid
     #
-    xp = np.arange(r0[0]+dl[0]/2.,r0[0]+l[0],dl[0]) # centered  x grid
-    yp = np.arange(r0[1]+dl[1]/2.,r0[1]+l[1],dl[1]) # centered  y grid
-    zp = np.arange(r0[2]+dl[2]/2.,r0[2]+l[2],dl[2]) # centered  z grid
-    xu = xp + dl[0]/2.                              # staggered x grid
-    yv = yp + dl[1]/2.                              # staggered y grid
-    zw = zp + dl[2]/2.                              # staggered z grid
+    xp = np.linspace(r0[0]+dl[0]/2.,r0[0]+l[0]-dl[0]/2.,ng[0]) # centered grid
+    yp = np.linspace(r0[1]+dl[1]/2.,r0[1]+l[1]-dl[1]/2.,ng[1]) # centered grid
+    zp = np.linspace(r0[2]+dl[2]/2.,r0[2]+l[2]-dl[2]/2.,ng[2]) # centered grid
+    xu = xp + dl[0]/2. # staggered grid
+    yv = yp + dl[1]/2. # staggered grid
+    zw = zp + dl[2]/2. # staggered grid
     if(os.path.exists(data_dir+"/grid.h5")):
         import h5py
         hf = h5py.File(data_dir+"/grid.h5","r")

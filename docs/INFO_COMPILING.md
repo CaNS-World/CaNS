@@ -8,7 +8,6 @@ The `Makefile` in the root directory is used to compile the code, and is expecte
 #
 # compiler and compiling profile
 #
-At present, the GPU-enabled path documented in this branch corresponds to the OpenACC implementation. The OpenMP GPU backend is being maintained in the [`openmp-port` branch](https://github.com/CaNS-World/CaNS/tree/openmp-port); see its [`docs/INFO_COMPILING.md`](https://github.com/CaNS-World/CaNS/blob/openmp-port/docs/INFO_COMPILING.md) for the OpenMP target offload build path.
 FCOMP=GNU          # options: GNU, NVIDIA, INTEL
 FFLAGS_OPT=1       # for production runs
 FFLAGS_OPT_MAX=0   # for production runs (more aggressive optimization)
@@ -19,6 +18,7 @@ FFLAGS_DEBUG_MAX=0 # for thorough debugging
 #
 SINGLE_PRECISION=0 # perform the whole calculation in single precision
 GPU=0              # GPU build
+GPU_BACKEND=OACC   # options: OACC, OMP
 USE_HDF5=0         # HDF5 I/O support
 USE_ADIOS2=0       # ADIOS2 I/O support
 ```
