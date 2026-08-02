@@ -7,7 +7,8 @@ endif
 ifeq ($(strip $(FCOMP)),NVIDIA)
 FFLAGS_MOD_DIR := -module # extra space
 ifeq ($(strip $(GPU)),1)
-override FFLAGS += -cuda -gpu=cc70,cc80,cc90
+NVHPC_GPU_TARGET ?= ccall-major
+override FFLAGS += -cuda -gpu=$(NVHPC_GPU_TARGET)
 ifeq ($(strip $(GPU_BACKEND)),OMP)
 override FFLAGS += -mp=gpu -Minfo=mp
 else
