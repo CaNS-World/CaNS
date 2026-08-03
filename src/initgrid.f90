@@ -55,7 +55,7 @@ module mod_initgrid
     end if
     zf(1:n) = zf(1:n)*lz
     !
-    if(abs(gr) < epsilon(1._rp)) then
+    if(abs(gr) < epsilon(1._rp) .and. .not.is_gridpoint_natural_channel) then
       !
       ! for uniform grids, set constant spacing to avoid round-off errors
       !
