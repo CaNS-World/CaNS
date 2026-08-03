@@ -955,9 +955,9 @@ contains
       if(.not. allocated(buf)) call subset_stage_field(lo,hi,nh,lo_sel,hi_sel,lo_pack,hi_pack,nskip,var,buf)
       call adios2_define_compress(adios,compress,compress_params)
       !
-      ! Feed ADIOS2 compression with a canonical packed array starting at 1
-      ! instead of relying on memory selections over an offset buffer due to
-      ! a previously-described ADIOS2 2.11.0 limitation that will be fixed soon
+      ! feed ADIOS2 compression with a canonical packed array starting at 1
+      ! instead of relying on memory selections over an offset buffer.
+      ! support for this was added in ADIOS2 2.12.0.
       !
       call io_field_adios2('w',engine,io_handle,trim(varname),ng_out,[0,0,0],lo_pack,hi_pack,buf,.true.,compress,compress_params)
     else
@@ -1491,9 +1491,10 @@ contains
     call adios2_open_engine(io,adios,io_handle,engine,filename,comm)
     is_compress = (io == 'w' .and. is_use_compression)
     !
-    ! BP5 in ADIOS2 2.11.0 is unable to combine compression with SetMemorySelection to exclude halo regions when writing.
-    ! this has been fixed and should be available in an upcoming release (seettps://github.com/ornladios/ADIOS2/issues/4965)
-    ! as a temporary workaround, we pack the data into a contiguous buffer array for writing.
+    ! BP5 in ADIOS2 2.11.0 cannot combine compression with SetMemorySelection to exclude halo regions when writing.
+    ! support for this was added in ADIOS2 2.12.0.
+    ! see https://github.com/ornladios/ADIOS2/issues/4965.
+    ! use a contiguous packed buffer for compatibility with older versions.
     !
     !is_pack = is_use_compression
     !
