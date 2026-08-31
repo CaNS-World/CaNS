@@ -94,9 +94,9 @@ module mod_rk
         !$acc enter data create(dudtrkd,dvdtrkd,dwdtrkd) async(1)
       end if
 #if defined(_OPENACC)
-      dudtrk(1:n(1),1:n(2),1:n(3)) => dudtrk_t(1:product(n(:)))
-      dvdtrk(1:n(1),1:n(2),1:n(3)) => dvdtrk_t(1:product(n(:)))
-      dwdtrk(1:n(1),1:n(2),1:n(3)) => dwdtrk_t(1:product(n(:)))
+      dudtrk(1:n(1),1:n(2),1:n(3)) => dudtrk_t(1:product(int(n(:),i8)))
+      dvdtrk(1:n(1),1:n(2),1:n(3)) => dvdtrk_t(1:product(int(n(:),i8)))
+      dwdtrk(1:n(1),1:n(2),1:n(3)) => dwdtrk_t(1:product(int(n(:),i8)))
 #else
       dudtrk  => dudtrk_t
       dvdtrk  => dvdtrk_t
@@ -402,7 +402,7 @@ module mod_rk
       end if
     end if
 #if defined(_OPENACC)
-    dsdtrk(1:n(1),1:n(2),1:n(3)) => dsdtrk_t(1:product(n(:)))
+    dsdtrk(1:n(1),1:n(2),1:n(3)) => dsdtrk_t(1:product(int(n(:),i8)))
 #else
     dsdtrk => dsdtrk_t
 #endif

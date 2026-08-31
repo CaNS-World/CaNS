@@ -70,15 +70,15 @@ module mod_solver_gpu
     if(is_poisson_dtdma) then
       n_z(:) = n_z_0(:) ! equal to the (unpadded) ap_y%shape(:) under initmpi.f90
     end if
-    px(1:n_x(1),1:n_x(2),1:n_x(3)) => solver_buf_0(1:product(n_x(:)))
+    px(1:n_x(1),1:n_x(2),1:n_x(3)) => solver_buf_0(1:product(int(n_x(:),i8)))
     if(cudecomp_is_t_in_place) then
-      py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_0(1:product(n_y(:)))
+      py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_0(1:product(int(n_y(:),i8)))
     else
-      py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_1(1:product(n_y(:)))
+      py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_1(1:product(int(n_y(:),i8)))
     end if
-    pz(1:n_z(1),1:n_z(2),1:n_z(3)) => solver_buf_0(1:product(n_z(:)))
-    pfft_tmp_x(1:n_x(1),1:n_x(2),1:n_x(3)) => work(1:product(n_x(:)))
-    pfft_tmp_y(1:n_y(1),1:n_y(2),1:n_y(3)) => work(1:product(n_y(:)))
+    pz(1:n_z(1),1:n_z(2),1:n_z(3)) => solver_buf_0(1:product(int(n_z(:),i8)))
+    pfft_tmp_x(1:n_x(1),1:n_x(2),1:n_x(3)) => work(1:product(int(n_x(:),i8)))
+    pfft_tmp_y(1:n_y(1),1:n_y(2),1:n_y(3)) => work(1:product(int(n_y(:),i8)))
     !
     select case(ipencil_axis)
     case(1)
@@ -740,7 +740,7 @@ module mod_solver_gpu
     ! p_x <-> p_y transposes performed in-place, so that it is a no-op for (z-parallel) slab decomposition
     !
     pp_x(1:nx     ,1:ny     ,1:2      ) => buf(1:nx*ny*2         ) ! p_x <-> p_y transposes performed in place, so t
-    pp_y(1:nr_y(1),1:nr_y(2),1:nr_y(3)) => buf(1:product(nr_y(:)))
+    pp_y(1:nr_y(1),1:nr_y(2),1:nr_y(3)) => buf(1:product(int(nr_y(:),i8)))
     nng      = size(b_g)
     nranks_z = dims(2)
     myslab   = mod(myid,nranks_z)
@@ -978,13 +978,13 @@ module mod_solver_gpu
       n_z(:) = ap_z%shape(:)
       is_no_decomp_z = n_x(3) == n_z(3).or.ipencil_axis == 3 ! not decomposed along z: xsize(3) == ysize(3) == ng(3) when dims(2) = 1
       if(.not.is_no_decomp_z) then
-        px(1:n_x(1),1:n_x(2),1:n_x(3)) => solver_buf_0(1:product(n_x(:)))
+        px(1:n_x(1),1:n_x(2),1:n_x(3)) => solver_buf_0(1:product(int(n_x(:),i8)))
         if(cudecomp_is_t_in_place) then
-          py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_0(1:product(n_y(:)))
+          py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_0(1:product(int(n_y(:),i8)))
         else
-          py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_1(1:product(n_y(:)))
+          py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_1(1:product(int(n_y(:),i8)))
         end if
-        pz(1:n_z(1),1:n_z(2),1:n_z(3)) => solver_buf_0(1:product(n_z(:)))
+        pz(1:n_z(1),1:n_z(2),1:n_z(3)) => solver_buf_0(1:product(int(n_z(:),i8)))
       end if
       !
       if(.not.is_no_decomp_z) then
