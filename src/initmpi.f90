@@ -283,16 +283,10 @@ module mod_initmpi
     integer, intent(in ) :: idir,nh
     integer, intent(in ), dimension(3) :: n
     integer, intent(out) :: halo
-    integer, dimension(3) :: nn
+    integer, dimension(3) :: nn,nn_halo
     nn(:) = n(:) + 2*nh
-    select case(idir)
-    case(1)
-      call MPI_TYPE_VECTOR(nn(2)*nn(3),nh            ,nn(1)            ,MPI_REAL_RP,halo,ierr)
-    case(2)
-      call MPI_TYPE_VECTOR(      nn(3),nh*nn(1)      ,nn(1)*nn(2)      ,MPI_REAL_RP,halo,ierr)
-    case(3)
-      call MPI_TYPE_VECTOR(          1,nh*nn(1)*nn(2),nn(1)*nn(2)*nn(3),MPI_REAL_RP,halo,ierr)
-    end select
+    nn_halo(:) = nn(:); nn_halo(idir) = nh
+    call MPI_TYPE_CREATE_SUBARRAY(3,nn,nn_halo,[0,0,0],MPI_ORDER_FORTRAN,MPI_REAL_RP,halo,ierr)
     call MPI_TYPE_COMMIT(halo,ierr)
   end subroutine makehalo
 end module mod_initmpi

@@ -347,9 +347,9 @@ contains
     n_z(:) = ap_z%shape(:)
     n_x_0(:) = ap_x_0%shape(:)
     !
-    var_x(1:n_x(1),1:n_x(2),1:n_x(3)) => buf(1:product(n_x(:)))
-    var_y(1:n_y(1),1:n_y(2),1:n_y(3)) => buf(1:product(n_y(:)))
-    var_z(1:n_z(1),1:n_z(2),1:n_z(3)) => buf(1:product(n_z(:)))
+    var_x(1:n_x(1),1:n_x(2),1:n_x(3)) => buf(1:product(int(n_x(:),i8)))
+    var_y(1:n_y(1),1:n_y(2),1:n_y(3)) => buf(1:product(int(n_y(:),i8)))
+    var_z(1:n_z(1),1:n_z(2),1:n_z(3)) => buf(1:product(int(n_z(:),i8)))
     !
     select case(ipencil_axis)
     case(1)
