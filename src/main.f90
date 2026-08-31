@@ -519,24 +519,24 @@ program cans
       var(3) = time
       call out0d(trim(datadir)//'time.out',3,var)
       !
-      if(any(is_forced(:)).or.any(abs(bforce(:)) > 0.)) then
+      if(any(abs(bforce(:)) > 0.).or.any(abs(dpdl(:)) > 0.)) then
         meanvelu = 0.
         meanvelv = 0.
         meanvelw = 0.
-        if(is_forced(1).or.abs(bforce(1)) > 0.) then
+        if(abs(bforce(1)) > 0..or.abs(dpdl(1)) > 0.) then
           call bulk_mean(n,grid_vol_ratio_f,u,meanvelu)
         end if
-        if(is_forced(2).or.abs(bforce(2)) > 0.) then
+        if(abs(bforce(2)) > 0..or.abs(dpdl(2)) > 0.) then
           call bulk_mean(n,grid_vol_ratio_f,v,meanvelv)
         end if
-        if(is_forced(3).or.abs(bforce(3)) > 0.) then
+        if(abs(bforce(3)) > 0..or.abs(dpdl(3)) > 0.) then
           call bulk_mean(n,grid_vol_ratio_c,w,meanvelw)
         end if
-        if(.not.any(is_forced(:))) dpdl(:) = -bforce(:) ! constant pressure gradient
         var(1)   = time
-        var(2:4) = dpdl(1:3)
-        var(5:7) = [meanvelu,meanvelv,meanvelw]
-        call out0d(trim(datadir)//'forcing.out',7,var)
+        var(2:4) = bforce(1:3)
+        var(5:7) = dpdl(1:3)
+        var(8:10) = [meanvelu,meanvelv,meanvelw]
+        call out0d(trim(datadir)//'forcing.out',10,var)
       end if
       !
       do iscal=1,nscal
