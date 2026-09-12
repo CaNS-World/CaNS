@@ -7,7 +7,7 @@
 module mod_solver
   use, intrinsic :: iso_c_binding, only: C_PTR
   use decomp_2d
-  use mod_fft       , only: fft
+  use mod_fft       , only: fft,prep_dctviii,posp_dctviii
   use mod_param     , only: ipencil_axis,is_poisson_dtdma
   use mod_types
   implicit none
@@ -30,14 +30,18 @@ module mod_solver
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
     logical , intent(inout), optional :: is_dtdma_update
     real(rp), intent(inout), dimension(:,:,:), optional :: aa_z,cc_z
-    real(rp), allocatable, dimension(:,:,:) :: px,py,pz
-    integer :: q
-    logical :: is_periodic_z
+    real(rp), allocatable, target, dimension(:,:,:) :: px,py,pz
+    real(rp), pointer, contiguous :: pfft(:,:,:)
+    integer :: q,idir
+    logical :: is_periodic_z,is_mixed(2)
     integer, dimension(3) :: n_z,hi_z
     logical :: is_dtdma_update_
     real(rp) :: norm
     !
     norm = normfft
+    do idir=1,2
+      is_mixed(idir) = (c_or_f(idir) == 'f').and.(any(bc(0,idir)//bc(1,idir) == ['ND','DN']))
+    end do
     !
     is_dtdma_update_ = .true.
     if(present(is_dtdma_update)) is_dtdma_update_ = is_dtdma_update
@@ -69,10 +73,16 @@ module mod_solver
       call transpose_y_to_x(py,px)
     end select
     !
-    call fft(arrplan(1,1),px) ! fwd transform in x
+    pfft => px
+    if(is_mixed(1)) call prep_dctviii('F',bc(0,1)//bc(1,1),1,px,pfft)
+    call fft(arrplan(1,1),pfft) ! fwd transform in x
+    if(is_mixed(1)) call posp_dctviii('F',bc(0,1)//bc(1,1),1,pfft,px)
     !
     call transpose_x_to_y(px,py)
-    call fft(arrplan(1,2),py) ! fwd transform in y
+    pfft => py
+    if(is_mixed(2)) call prep_dctviii('F',bc(0,2)//bc(1,2),2,py,pfft)
+    call fft(arrplan(1,2),pfft) ! fwd transform in y
+    if(is_mixed(2)) call posp_dctviii('F',bc(0,2)//bc(1,2),2,pfft,py)
     !
     q = merge(1,0,(c_or_f(3) == 'f').and.(bc(1,3) /= 'P').and.(hi_z(3) == ng(3)))
     is_periodic_z = bc(0,3)//bc(1,3) == 'PP'
@@ -86,7 +96,10 @@ module mod_solver
       call gaussel_dtdma(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,norm,py,lambdaxy,is_dtdma_update_,aa_z,cc_z)
       if(present(is_dtdma_update)) is_dtdma_update = is_dtdma_update_
     end if
-    call fft(arrplan(2,2),py) ! bwd transform in y
+    pfft => py
+    if(is_mixed(2)) call prep_dctviii('B',bc(0,2)//bc(1,2),2,py,pfft)
+    call fft(arrplan(2,2),pfft) ! bwd transform in y
+    if(is_mixed(2)) call posp_dctviii('B',bc(0,2)//bc(1,2),2,pfft,py)
     if((c_or_f(2) == 'f').and.(bc(0,2)//bc(1,2) == 'NN')) then
       !$OMP PARALLEL WORKSHARE
       py(:,ng(2),:) = py(:,ng(2)-1,:)
@@ -94,7 +107,10 @@ module mod_solver
     end if
     !
     call transpose_y_to_x(py,px)
-    call fft(arrplan(2,1),px) ! bwd transform in x
+    pfft => px
+    if(is_mixed(1)) call prep_dctviii('B',bc(0,1)//bc(1,1),1,px,pfft)
+    call fft(arrplan(2,1),pfft) ! bwd transform in x
+    if(is_mixed(1)) call posp_dctviii('B',bc(0,1)//bc(1,1),1,pfft,px)
     if((c_or_f(1) == 'f').and.(bc(0,1)//bc(1,1) == 'NN')) then
       !$OMP PARALLEL WORKSHARE
       px(ng(1),:,:) = px(ng(1)-1,:,:)

@@ -102,7 +102,6 @@ module mod_sanity
   !
   subroutine chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed)
 #if defined(_OPENACC)
-    use mod_fft  , only: fft_supported_gpu
     use mod_param, only: nscal,cbcscal
 #endif
     implicit none
@@ -115,6 +114,7 @@ module mod_sanity
     integer :: ivel,idir
 #if defined(_OPENACC)
     integer :: iscal
+    character(len=2) :: bc01s
 #endif
     logical :: passed_loc
     passed = .true.
@@ -180,36 +180,20 @@ module mod_sanity
       passed = passed.and.passed_loc
     end if
 #if defined(_OPENACC)
-    passed_loc = .true.
-    do idir=1,2
-      bc01p = cbcpre(0,idir)//cbcpre(1,idir)
-      passed_loc = passed_loc.and..not.( (bc01p == 'DN').or. &
-                                         (bc01p == 'ND') )
-    end do
-    if(myid == 0.and.(.not.passed_loc)) &
-      print*, 'ERROR: pressure BCs "ND" or "DN" along x or y not implemented on GPUs yet.'
-    passed = passed.and.passed_loc
-    !
     if(is_impdiff .and. .not.is_impdiff_1d) then
-      passed_loc = .true.
-      do ivel=1,3
-        do idir=1,2
-          bc01v = cbcvel(0,idir,ivel)//cbcvel(1,idir,ivel)
-          passed_loc = passed_loc.and.fft_supported_gpu(bc01v,merge('f','c',ivel == idir))
-        end do
-      end do
-      if(myid == 0.and.(.not.passed_loc)) &
-        print*, 'ERROR: unsupported GPU transform for velocity BCs along x or y.'
-      passed = passed.and.passed_loc
-      !
       passed_loc = .true.
       do iscal=1,nscal
         do idir=1,2
-          passed_loc = passed_loc.and.fft_supported_gpu(cbcscal(0,idir,iscal)//cbcscal(1,idir,iscal),'c')
+          bc01s = cbcscal(0,idir,iscal)//cbcscal(1,idir,iscal)
+          passed_loc = passed_loc.and.( (bc01s == 'PP').or. &
+                                        (bc01s == 'ND').or. &
+                                        (bc01s == 'DN').or. &
+                                        (bc01s == 'NN').or. &
+                                        (bc01s == 'DD') )
         end do
       end do
       if(myid == 0.and.(.not.passed_loc)) &
-        print*, 'ERROR: unsupported GPU transform for scalar BCs along x or y.'
+        print*, 'ERROR: scalar BCs along x or y not valid.'
       passed = passed.and.passed_loc
     end if
 #endif

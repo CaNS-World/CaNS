@@ -138,9 +138,16 @@ module mod_initsolver
         lambda(n) = 0.
       end if
     case('ND','DN')
-      do l=1,n
-        lambda(l)     = -2.*(1.-cos((2*l-1)*pi/(2.*n)))
-      end do
+      if(     c_or_f == 'c') then
+        do l=1,n
+          lambda(l)   = -2.*(1.-cos((2*l-1)*pi/(2.*n)))
+        end do
+      else if(c_or_f == 'f') then
+        do l=1,n-1 ! point at n is prescribed by the boundary condition
+          lambda(l)   = -2.*(1.-cos((2*l-1)*pi/(2.*n-1.)))
+        end do
+        lambda(n) = 0.
+      end if
     end select
   end subroutine eigenvalues
   !
