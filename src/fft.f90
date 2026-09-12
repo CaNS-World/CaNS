@@ -27,7 +27,6 @@ module mod_fft
 #endif
   contains
   subroutine fftini(ng,n_x,n_y,bcxy,c_or_f,arrplan,normfft)
-    use mod_param, only: pi
     implicit none
     integer , target, intent(in), dimension(3) :: ng,n_x,n_y
     character(len=1), intent(in), dimension(0:1,2) :: bcxy
@@ -38,33 +37,10 @@ module mod_fft
     integer    , intent(out), dimension(2,2) :: arrplan
 #endif
     real(rp), intent(out) :: normfft
-    real(rp), dimension(n_x(1),n_x(2),n_x(3))  :: arrx
-    real(rp), dimension(n_y(1),n_y(2),n_y(3))  :: arry
 #if !defined(_OPENACC)
-    type(fftw_iodim), dimension(1) :: iodim
-    type(fftw_iodim), dimension(2) :: iodim_howmany
-    real(rp), pointer, contiguous :: arrwork(:,:,:)
-    integer :: nwork(3)
+    integer(i8) :: nw_x(3),nw_y(3)
 #endif
-#if !defined(_OPENACC) || defined(_USE_HIP)
-    type(C_PTR) :: plan_fwd_x,plan_bwd_x, &
-                   plan_fwd_y,plan_bwd_y
-#else
-    integer     :: plan_fwd_x,plan_bwd_x, &
-                   plan_fwd_y,plan_bwd_y
-#endif
-    integer :: kind_fwd,kind_bwd
-    real(rp), dimension(2) :: norm
-    real(rp) :: theta
-    integer(C_INT) :: nx_x,ny_x,nz_x, &
-                      nx_y,ny_y,nz_y
-    integer :: ix,iy
-#if defined(_OPENACC)
-    integer :: istat,batch,ii,ip,n_theta
-    integer , dimension(3) :: nwork
-    integer(C_INT), target :: nfft
-    integer(c_intptr_t) :: wsize,max_wsize
-#endif
+    !
 #if defined(_SINGLE_PRECISION)
     !$ call sfftw_init_threads(ierr)
     !$ call sfftw_plan_with_nthreads(omp_get_max_threads())
@@ -73,191 +49,154 @@ module mod_fft
     !$ call dfftw_plan_with_nthreads(omp_get_max_threads())
 #endif
 #if !defined(_OPENACC)
-    nx_x = n_x(1)
-    ny_x = n_x(2)
-    nz_x = n_x(3)
-    nx_y = n_y(1)
-    ny_y = n_y(2)
-    nz_y = n_y(3)
+    !
+    ! one buffer serves both pencils on the fixed grid;
+    ! planning and execution use the same allocation to preserve
+    ! FFTW alignment across all plans
+    !
+    if((any((c_or_f(:) == 'f').and.(bcxy(0,:) /= bcxy(1,:)))).and.(.not.allocated(fft_work))) then
+      nw_x = int(n_x,i8); nw_x(1) = 2*nw_x(1)-1
+      nw_y = int(n_y,i8); nw_y(2) = 2*nw_y(2)-1
+      allocate(fft_work(max(product(nw_x),product(nw_y))))
+    end if
 #endif
     normfft = 1.
-    !
-    ! fft in x
-    !
-    call find_fft(bcxy(:,1),c_or_f(1),kind_fwd,kind_bwd,norm)
-    ix = 0
-    ! exclude the dependent endpoint for face DD/NN
-    if(bcxy(0,1)//bcxy(1,1) == 'DD'.and.c_or_f(1) == 'f') ix = 1
-    if(bcxy(0,1)//bcxy(1,1) == 'NN'.and.c_or_f(1) == 'f') ix = 1
-#if !defined(_OPENACC)
-    !
-    ! prepare plans with guru interface
-    !
-    iodim(1)%n  = nx_x-ix
-    iodim(1)%is = 1
-    iodim(1)%os = 1
-    iodim_howmany(1)%n  = ny_x
-    iodim_howmany(1)%is = nx_x
-    iodim_howmany(1)%os = nx_x
-    iodim_howmany(2)%n  = nz_x
-    iodim_howmany(2)%is = nx_x*ny_x
-    iodim_howmany(2)%os = nx_x*ny_x
-    if(c_or_f(1) == 'f'.and.bcxy(0,1) /= bcxy(1,1)) then
-      call init_fft_mixed(n_x,n_y)
-      nwork(:) = n_x(:); nwork(1) = 2*ng(1)-1
-      arrwork(1:nwork(1),1:nwork(2),1:nwork(3)) => fft_work(1:product(int(nwork,i8)))
-      iodim(1)%n = nwork(1)
-      iodim_howmany(1)%is = nwork(1)
-      iodim_howmany(1)%os = nwork(1)
-      iodim_howmany(2)%is = nwork(1)*nwork(2)
-      iodim_howmany(2)%os = nwork(1)*nwork(2)
-      plan_fwd_x=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arrwork,arrwork,kind_fwd,FFTW_ESTIMATE)
-      plan_bwd_x=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arrwork,arrwork,kind_bwd,FFTW_ESTIMATE)
-    else
-      plan_fwd_x=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arrx,arrx,kind_fwd,FFTW_ESTIMATE)
-      plan_bwd_x=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arrx,arrx,kind_bwd,FFTW_ESTIMATE)
-    end if
-#else
-    max_wsize = -1
-    !
-    ! store sine/cosine values for real-to-real transforms on GPUs
-    !
-    ! keep phase factors for N-point cell, (N-1)-point face NN and
-    ! 2N/2N-1-point cell/face mixed extensions; face DD needs no phases
-    !
-    if(bcxy(0,1)//bcxy(1,1) /= 'PP') then
-      if(.not.allocated(sincos_theta_x)) then
-        allocate(sincos_theta_x(0:ng(1),1:2,0:3))
-        n_sincos_theta_x(:) = [ng(1),max(1,ng(1)-1),2*ng(1),2*ng(1)-1]
-        sincos_theta_x(:,:,:) = 0.
-        do ip=0,3
-          n_theta = n_sincos_theta_x(ip)
-          do ii=0,n_theta/2
-            theta = pi*ii/(2._rp*n_theta)
-            sincos_theta_x(ii,1,ip) = sin(theta)
-            sincos_theta_x(ii,2,ip) = cos(theta)
-          end do
-        end do
-        !$acc enter data copyin(sincos_theta_x)
-      end if
-    end if
-    batch = product(n_x(2:3)) ! padded & axis-contiguous layout
-    call fft_gpu_layout(ng(1),n_x,bcxy(0,1)//bcxy(1,1),c_or_f(1),nfft,nwork)
-    nx_x = nwork(1)
-    wsize_tmp = max(wsize_tmp,product(int(nwork(:),i8)))
-    istat = cufftCreate(plan_fwd_x)
-    istat = cufftSetAutoAllocation(plan_fwd_x,0)
-#if !defined(_USE_HIP)
-    istat = cufftMakePlanMany(plan_fwd_x,1,nfft,null(),1,nx_x,null(),1,nfft/2+1,CUFFT_FWD_TYPE,batch,wsize)
-#else
-    istat = cufftMakePlanMany(plan_fwd_x,1,c_loc(nfft),c_null_ptr,1,nx_x,c_null_ptr,1,nfft/2+1,CUFFT_FWD_TYPE,batch,c_loc(wsize))
-#endif
-    max_wsize = max(wsize,max_wsize)
-    !
-    istat = cufftCreate(plan_bwd_x)
-    istat = cufftSetAutoAllocation(plan_bwd_x,0)
-#if !defined(_USE_HIP)
-    istat = cufftMakePlanMany(plan_bwd_x,1,nfft,null(),1,nfft/2+1,null(),1,nx_x,CUFFT_BWD_TYPE,batch,wsize)
-#else
-    istat = cufftMakePlanMany(plan_bwd_x,1,c_loc(nfft),c_null_ptr,1,nfft/2+1,c_null_ptr,1,nx_x,CUFFT_BWD_TYPE,batch,c_loc(wsize))
-#endif
-    max_wsize = max(wsize,max_wsize)
-#endif
-    normfft = normfft*norm(1)*(ng(1)+norm(2)-ix)
-    !
-    ! fft in y
-    !
-    call find_fft(bcxy(:,2),c_or_f(2),kind_fwd,kind_bwd,norm)
-    iy = 0
-    ! exclude the dependent endpoint for face DD/NN, as in x
-    if(bcxy(0,2)//bcxy(1,2) == 'DD'.and.c_or_f(2) == 'f') iy = 1
-    if(bcxy(0,2)//bcxy(1,2) == 'NN'.and.c_or_f(2) == 'f') iy = 1
-#if !defined(_OPENACC)
-    !
-    ! prepare plans with guru interface
-    !
-    iodim(1)%n  = ny_y-iy
-    iodim(1)%is = nx_y
-    iodim(1)%os = nx_y
-    iodim_howmany(1)%n  = nx_y
-    iodim_howmany(1)%is = 1
-    iodim_howmany(1)%os = 1
-    iodim_howmany(2)%n  = nz_y
-    iodim_howmany(2)%is = nx_y*ny_y
-    iodim_howmany(2)%os = nx_y*ny_y
-    if(c_or_f(2) == 'f'.and.bcxy(0,2) /= bcxy(1,2)) then
-      call init_fft_mixed(n_x,n_y)
-      nwork(:) = n_y(:); nwork(2) = 2*ng(2)-1
-      arrwork(1:nwork(1),1:nwork(2),1:nwork(3)) => fft_work(1:product(int(nwork,i8)))
-      iodim(1)%n = nwork(2)
-      iodim_howmany(2)%is = nwork(1)*nwork(2)
-      iodim_howmany(2)%os = nwork(1)*nwork(2)
-      plan_fwd_y=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arrwork,arrwork,kind_fwd,FFTW_ESTIMATE)
-      plan_bwd_y=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arrwork,arrwork,kind_bwd,FFTW_ESTIMATE)
-    else
-      plan_fwd_y=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arry,arry,kind_fwd,FFTW_ESTIMATE)
-      plan_bwd_y=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arry,arry,kind_bwd,FFTW_ESTIMATE)
-    end if
-#else
-    !
-    ! store sine/cosine values for real-to-real transforms on GPUs
-    !
-    ! the face-DD extension does not use these tables
-    !
-    if(bcxy(0,2)//bcxy(1,2) /= 'PP') then
-      if(.not.allocated(sincos_theta_y)) then
-        allocate(sincos_theta_y(0:ng(2),1:2,0:3))
-        n_sincos_theta_y(:) = [ng(2),max(1,ng(2)-1),2*ng(2),2*ng(2)-1]
-        sincos_theta_y(:,:,:) = 0.
-        do ip=0,3
-          n_theta = n_sincos_theta_y(ip)
-          do ii=0,n_theta/2
-            theta = pi*ii/(2._rp*n_theta)
-            sincos_theta_y(ii,1,ip) = sin(theta)
-            sincos_theta_y(ii,2,ip) = cos(theta)
-          end do
-        end do
-        !$acc enter data copyin(sincos_theta_y)
-      end if
-    end if
-    batch = product(n_y(2:3)) ! padded & axis-contiguous layout
-    call fft_gpu_layout(ng(2),n_y,bcxy(0,2)//bcxy(1,2),c_or_f(2),nfft,nwork)
-    ny_y = nwork(1)
-    wsize_tmp = max(wsize_tmp,product(int(nwork(:),i8)))
-    istat = cufftCreate(plan_fwd_y)
-    istat = cufftSetAutoAllocation(plan_fwd_y,0)
-#if !defined(_USE_HIP)
-    istat = cufftMakePlanMany(plan_fwd_y,1,nfft,null(),1,ny_y,null(),1,nfft/2+1,CUFFT_FWD_TYPE,batch,wsize)
-#else
-    istat = cufftMakePlanMany(plan_fwd_y,1,c_loc(nfft),c_null_ptr,1,ny_y,c_null_ptr,1,nfft/2+1,CUFFT_FWD_TYPE,batch,c_loc(wsize))
-#endif
-    max_wsize = max(wsize,max_wsize)
-    !
-    istat = cufftCreate(plan_bwd_y)
-    istat = cufftSetAutoAllocation(plan_bwd_y,0)
-#if !defined(_USE_HIP)
-    istat = cufftMakePlanMany(plan_bwd_y,1,nfft,null(),1,nfft/2+1,null(),1,ny_y,CUFFT_BWD_TYPE,batch,wsize)
-#else
-    istat = cufftMakePlanMany(plan_bwd_y,1,c_loc(nfft),c_null_ptr,1,nfft/2+1,c_null_ptr,1,ny_y,CUFFT_BWD_TYPE,batch,c_loc(wsize))
-#endif
-    max_wsize = max(wsize,max_wsize)
-    !
-    ! all pressure/velocity plans share the workspace allocated after initialization
-    !
-    wsize_fft = max(wsize_fft,(max_wsize+f_sizeof(1._rp)-1)/f_sizeof(1._rp))
-#endif
-    normfft = normfft*norm(1)*(ng(2)+norm(2)-iy)
-    !
-    arrplan(1,1) = plan_fwd_x
-    arrplan(2,1) = plan_bwd_x
-    arrplan(1,2) = plan_fwd_y
-    arrplan(2,2) = plan_bwd_y
+    call fftini_axis(1,ng(1),n_x,bcxy(:,1),c_or_f(1),arrplan(:,1),normfft)
+    call fftini_axis(2,ng(2),n_y,bcxy(:,2),c_or_f(2),arrplan(:,2),normfft)
 #if !defined(_OPENACC)
     nplans = nplans+size(arrplan)
 #endif
     normfft = normfft**(-1)
   end subroutine fftini
   !
+  subroutine fftini_axis(idir,nn,n,bc,c_or_f,arrplan,normfft)
+    !
+    ! initialize one X/Y plan pair and accumulate its round-trip factor
+    !
+    implicit none
+    integer , intent(in) :: idir,nn,n(3)
+    character(len=1), intent(in) :: bc(0:1),c_or_f
+#if !defined(_OPENACC) || defined(_USE_HIP)
+    type(C_PTR), intent(out), dimension(2) :: arrplan
+#else
+    integer    , intent(out), dimension(2) :: arrplan
+#endif
+    real(rp), intent(inout) :: normfft
+    integer :: kind_fwd,kind_bwd,iexcl
+    real(rp) :: norm(2)
+#if !defined(_OPENACC)
+    real(rp), target :: arr(n(1),n(2),n(3))
+    real(rp), pointer, contiguous :: arrwork(:,:,:)
+    type(fftw_iodim) :: iodim(1),iodim_howmany(2)
+    integer(C_INT) :: nx,ny,nz
+#else
+    integer :: istat,batch,nw(3)
+    integer(C_INT), target :: nfft
+    integer(c_intptr_t), target :: wsize
+    integer(c_intptr_t) :: max_wsize
+#endif
+    !
+    call find_fft(bc,c_or_f,kind_fwd,kind_bwd,norm)
+    iexcl = 0
+    !
+    ! exclude the dependent endpoint for face DD/NN
+    !
+    if((c_or_f == 'f').and.(any(bc(0)//bc(1) == ['DD','NN']))) iexcl = 1
+#if !defined(_OPENACC)
+    !
+    ! prepare plans with guru interface
+    !
+    nx = n(1); ny = n(2); nz = n(3)
+    arrwork(1:nx,1:ny,1:nz) => arr(:,:,:)
+    if((c_or_f == 'f').and.(bc(0) /= bc(1))) then
+      if(idir == 1) nx = 2*nn-1
+      if(idir == 2) ny = 2*nn-1
+      arrwork(1:nx,1:ny,1:nz) => fft_work(1:1_i8*nx*ny*nz)
+    end if
+    !
+    ! X is unit-stride; Y strides over nx; keep full extents for batches
+    !
+    iodim(1)%n  = merge(nx,ny,idir == 1)-iexcl
+    iodim(1)%is = merge(1 ,nx,idir == 1)
+    iodim(1)%os = iodim(1)%is
+    iodim_howmany(1)%n  = merge(ny,nx,idir == 1)
+    iodim_howmany(1)%is = merge(nx,1 ,idir == 1)
+    iodim_howmany(1)%os = iodim_howmany(1)%is
+    iodim_howmany(2)%n  = nz
+    iodim_howmany(2)%is = nx*ny
+    iodim_howmany(2)%os = iodim_howmany(2)%is
+    arrplan(1)=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arrwork,arrwork,kind_fwd,FFTW_ESTIMATE)
+    arrplan(2)=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arrwork,arrwork,kind_bwd,FFTW_ESTIMATE)
+#else
+    !
+    ! idir selects the physical axis; both GPU pencils are axis-contiguous
+    !
+    if(bc(0)//bc(1) /= 'PP') then
+      select case(idir)
+      case(1)
+        call init_sincos_theta(nn,sincos_theta_x,n_sincos_theta_x)
+      case(2)
+        call init_sincos_theta(nn,sincos_theta_y,n_sincos_theta_y)
+      end select
+    end if
+    batch = product(n(2:3))
+    call fft_gpu_layout(nn,n,bc(0)//bc(1),c_or_f,nfft,nw)
+    wsize_tmp = max(wsize_tmp,product(int(nw(:),i8)))
+    max_wsize = -1
+    istat = cufftCreate(arrplan(1))
+    istat = cufftSetAutoAllocation(arrplan(1),0)
+#if !defined(_USE_HIP)
+    istat = cufftMakePlanMany(arrplan(1),1,nfft       ,null()    ,1,nw(1),null()    ,1,nfft/2+1,CUFFT_FWD_TYPE,batch,wsize)
+#else
+    istat = cufftMakePlanMany(arrplan(1),1,c_loc(nfft),c_null_ptr,1,nw(1),c_null_ptr,1,nfft/2+1,CUFFT_FWD_TYPE,batch,c_loc(wsize))
+#endif
+    max_wsize = max(wsize,max_wsize)
+    !
+    istat = cufftCreate(arrplan(2))
+    istat = cufftSetAutoAllocation(arrplan(2),0)
+#if !defined(_USE_HIP)
+    istat = cufftMakePlanMany(arrplan(2),1,nfft       ,null()    ,1,nfft/2+1,null()    ,1,nw(1),CUFFT_BWD_TYPE,batch,wsize)
+#else
+    istat = cufftMakePlanMany(arrplan(2),1,c_loc(nfft),c_null_ptr,1,nfft/2+1,c_null_ptr,1,nw(1),CUFFT_BWD_TYPE,batch,c_loc(wsize))
+#endif
+    max_wsize = max(wsize,max_wsize)
+    !
+    ! all axes and fields share the workspace allocated after initialization
+    !
+    wsize_fft = max(wsize_fft,(max_wsize+f_sizeof(1._rp)-1)/f_sizeof(1._rp))
+#endif
+    normfft = normfft*norm(1)*(nn+norm(2)-iexcl)
+  end subroutine fftini_axis
+  !
+#if defined(_OPENACC)
+  subroutine init_sincos_theta(nn,sincos_theta,n_sincos_theta)
+    use mod_param, only: pi
+    implicit none
+    integer , intent(in) :: nn
+    real(rp), allocatable, target, intent(inout) :: sincos_theta(:,:,:)
+    integer , intent(inout) :: n_sincos_theta(0:3)
+    integer :: ii,ip,n_theta
+    real(rp) :: theta
+    !
+    if(allocated(sincos_theta)) return
+    !
+    ! keep phases for cell (N), face NN (N-1), and mixed (2N,2N-1) transforms
+    !
+    allocate(sincos_theta(0:nn,1:2,0:3))
+    n_sincos_theta(:) = [nn,max(1,nn-1),2*nn,2*nn-1]
+    sincos_theta(:,:,:) = 0.
+    do ip=0,3
+      n_theta = n_sincos_theta(ip)
+      do ii=0,n_theta/2
+        theta = pi*ii/(2._rp*n_theta)
+        sincos_theta(ii,1,ip) = sin(theta)
+        sincos_theta(ii,2,ip) = cos(theta)
+      end do
+    end do
+    !$acc enter data copyin(sincos_theta)
+  end subroutine init_sincos_theta
+  !
+#endif
   subroutine fftend(arrplan)
     implicit none
 #if !defined(_OPENACC) || defined(_USE_HIP)
@@ -317,22 +256,6 @@ module mod_fft
 #endif
   end subroutine fft
   !
-#if !defined(_OPENACC)
-  subroutine init_fft_mixed(n_x,n_y)
-    implicit none
-    integer, intent(in) :: n_x(3),n_y(3)
-    integer(i8) :: nw_x(3),nw_y(3)
-    !
-    ! one buffer serves both pencils on the fixed grid; planning and execution
-    ! use the same allocation to preserve FFTW alignment across all plans
-    !
-    nw_x = int(n_x,i8); nw_x(1) = 2*nw_x(1)-1
-    nw_y = int(n_y,i8); nw_y(2) = 2*nw_y(2)-1
-    if(.not.allocated(fft_work)) allocate(fft_work(max(product(nw_x),product(nw_y))))
-  end subroutine init_fft_mixed
-  !
-  !
-#endif
   subroutine prep_dctviii(f_or_b,cbc,idir,arr,arr_out)
     !
     ! M=N-1 independent values; DCT-II of [x,0,-reverse(x)] has only
@@ -460,55 +383,56 @@ module mod_fft
   end subroutine posp_dctviii
   !
   subroutine find_fft(bc,c_or_f,kind_fwd,kind_bwd,norm)
-  implicit none
-  character(len=1), intent(in), dimension(0:1) :: bc
-  character(len=1), intent(in) :: c_or_f
-  integer , intent(out) :: kind_fwd,kind_bwd
-  real(rp), intent(out), dimension(2) :: norm
-  if(c_or_f == 'c') then
-    select case(bc(0)//bc(1))
-    case('PP')
-      kind_fwd = FFTW_R2HC
-      kind_bwd = FFTW_HC2R
-      norm = [1.,0.]
-    case('NN')
-      kind_fwd = FFTW_REDFT10
-      kind_bwd = FFTW_REDFT01
-      norm = [2.,0.]
-    case('DD')
-      kind_fwd = FFTW_RODFT10
-      kind_bwd = FFTW_RODFT01
-      norm = [2.,0.]
-    case('ND')
-      kind_fwd = FFTW_REDFT11
-      kind_bwd = FFTW_REDFT11
-      norm = [2.,0.]
-    case('DN')
-      kind_fwd = FFTW_RODFT11
-      kind_bwd = FFTW_RODFT11
-      norm = [2.,0.]
-    end select
-  else if(c_or_f == 'f') then
-    select case(bc(0)//bc(1))
-    case('PP')
-      kind_fwd = FFTW_R2HC
-      kind_bwd = FFTW_HC2R
-      norm = [1.,0.]
-    case('NN')
-      kind_fwd = FFTW_REDFT10
-      kind_bwd = FFTW_REDFT01
-      norm = [2.,0.]
-    case('DD')
-      kind_fwd = FFTW_RODFT00
-      kind_bwd = FFTW_RODFT00
-      norm = [2.,1.]
-    case('ND','DN')
-      kind_fwd = FFTW_REDFT10
-      kind_bwd = FFTW_REDFT01
-      norm = [2.,-0.5]
-    end select
-  end if
+    implicit none
+    character(len=1), intent(in), dimension(0:1) :: bc
+    character(len=1), intent(in) :: c_or_f
+    integer , intent(out) :: kind_fwd,kind_bwd
+    real(rp), intent(out), dimension(2) :: norm
+    if(c_or_f == 'c') then
+      select case(bc(0)//bc(1))
+      case('PP')
+        kind_fwd = FFTW_R2HC
+        kind_bwd = FFTW_HC2R
+        norm = [1.,0.]
+      case('NN')
+        kind_fwd = FFTW_REDFT10
+        kind_bwd = FFTW_REDFT01
+        norm = [2.,0.]
+      case('DD')
+        kind_fwd = FFTW_RODFT10
+        kind_bwd = FFTW_RODFT01
+        norm = [2.,0.]
+      case('ND')
+        kind_fwd = FFTW_REDFT11
+        kind_bwd = FFTW_REDFT11
+        norm = [2.,0.]
+      case('DN')
+        kind_fwd = FFTW_RODFT11
+        kind_bwd = FFTW_RODFT11
+        norm = [2.,0.]
+      end select
+    else if(c_or_f == 'f') then
+      select case(bc(0)//bc(1))
+      case('PP')
+        kind_fwd = FFTW_R2HC
+        kind_bwd = FFTW_HC2R
+        norm = [1.,0.]
+      case('NN')
+        kind_fwd = FFTW_REDFT10
+        kind_bwd = FFTW_REDFT01
+        norm = [2.,0.]
+      case('DD')
+        kind_fwd = FFTW_RODFT00
+        kind_bwd = FFTW_RODFT00
+        norm = [2.,1.]
+      case('ND','DN')
+        kind_fwd = FFTW_REDFT10
+        kind_bwd = FFTW_REDFT01
+        norm = [2.,-0.5]
+      end select
+    end if
   end subroutine find_fft
+  !
 #if defined(_OPENACC)
   subroutine fft_gpu_layout(nn,n,cbc,c_or_f,nfft,nwork)
     !
@@ -524,17 +448,15 @@ module mod_fft
     !
     nfft = nn
     nwork(:) = n(:)
-    if((cbc == 'DD'.and.c_or_f == 'f').or. &
-       ((cbc == 'ND'.or.cbc == 'DN').and.c_or_f == 'c')) then
+    if(    ((cbc == 'DD'                 ).and.(c_or_f == 'f')) .or. &
+           ((cbc == 'ND' .or. cbc == 'DN').and.(c_or_f == 'c'))) then
       nfft = 2*nn
-      nwork(1) = nfft+2
-    else if((cbc == 'ND'.or.cbc == 'DN').and.c_or_f == 'f') then
+    else if((cbc == 'ND' .or. cbc == 'DN').and.(c_or_f == 'f')) then
       nfft = 2*nn-1
-      nwork(1) = nfft+1
-    else if(cbc == 'NN'.and.c_or_f == 'f') then
+    else if((cbc == 'NN'                 ).and.(c_or_f == 'f')) then
       nfft = nn-1
-      nwork(1) = 2*(nfft/2+1)
     end if
+    nwork(1) = 2*(nfft/2+1)
   end subroutine fft_gpu_layout
   !
   subroutine get_sincos_theta(nn,sin_theta,cos_theta)
