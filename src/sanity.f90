@@ -300,7 +300,7 @@ module mod_sanity
     call fftend(arrplan)
     if(is_impdiff .and. .not.is_impdiff_1d) then
       allocate(bb(n_z(3)))
-      alpha = acos(-1.) ! irrelevant
+      alpha = -acos(-1.) ! negative shift, as in implicit diffusion
       !$acc parallel loop collapse(3) default(present)
       !$OMP parallel do   collapse(3) DEFAULT(shared)
       do k=0,n(3)+1

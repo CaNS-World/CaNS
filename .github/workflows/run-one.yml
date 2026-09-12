@@ -51,7 +51,7 @@ jobs:
     strategy:
       matrix:
         mode: ${{ fromJSON(inputs.test_modes) }}
-        test-name: [lid_driven_cavity,differentially_heated_cavity]
+        test-name: [lid_driven_cavity,differentially_heated_cavity,poisson]
       fail-fast: false # ensures that jobs run in parallel
     name: test-${{ matrix.mode }}-${{ matrix.test-name }}
     steps:
