@@ -20,7 +20,7 @@ contains
                                    ap_z,pz_aux_1, &
                                    istream_acc_queue_1,istream_acc_queue_1_comm_lib
     use mod_fft            , only: wsize_fft,wsize_tmp
-    use mod_param          , only: ng,cudecomp_is_t_in_place,cbcpre,ipencil => ipencil_axis,is_poisson_dtdma, &
+    use mod_param          , only: ng,dims,cudecomp_is_t_in_place,cbcpre,ipencil => ipencil_axis,is_poisson_dtdma, &
                                    is_use_diezdecomp
 #if !defined(_USE_DIEZDECOMP)
     use cudecomp
@@ -89,7 +89,7 @@ contains
       ! allocate DTDMA transpose workspaces: a separate buffer is needed because `work` is used along with `work_dtdma`
       !
       istat = cudecompGetTransposeWorkspaceSize(handle,gd_dtdma,wsize)
-      wsize = max(wsize,(3*(ng(3)+1))) ! `work_dtdma` is also used as a buffer with this size in `gaussel_dtdma_gpu_fast_1d`
+      wsize = max(wsize,3*((ng(3)+dims(2)-1)/dims(2))*dims(2)) ! considers largest Z slab on every rank
       allocate(work_dtdma(wsize))
       !$acc enter data create(work_dtdma) if(is_use_diezdecomp)
 #if !defined(_USE_DIEZDECOMP)

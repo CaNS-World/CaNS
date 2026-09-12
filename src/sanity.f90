@@ -42,13 +42,25 @@ module mod_sanity
     real(rp)        , intent(in), dimension(0:1,3,3) :: bcvel
     real(rp)        , intent(in), dimension(0:1,3)   :: bcpre
     logical         , intent(in), dimension(3)       :: is_forced
-    logical :: passed
+    logical :: passed,passed_loc
     !
     call chk_dims(ng,dims,passed);                 if(.not.passed) call abortit
     call chk_stop_type(stop_type,passed);          if(.not.passed) call abortit
     call chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed); if(.not.passed) call abortit
     call chk_forcing(cbcpre,is_forced,passed);     if(.not.passed) call abortit
-    if(is_impdiff_1d .and. .not.is_impdiff) then
+    !
+    if(is_poisson_dtdma) then
+      passed_loc = ng(3)/dims(2) >= 2
+      if(is_impdiff.and.(.not.is_impdiff_1d .or. dims(2) > 1)) then
+        if(cbcvel(1,3,3) /= 'P') passed_loc = passed_loc.and.(ng(3)/dims(2)-1 >= 2)
+      end if
+      if(myid == 0.and.(.not.passed_loc)) &
+        print*, 'ERROR: DTDMA requires at least two active points per Z slab.'
+      passed = passed.and.passed_loc
+      if(.not.passed) call abortit
+    end if
+    !
+    if(is_impdiff_1d.and.(.not.is_impdiff)) then
       if(myid == 0)  print*, 'ERROR: `is_impdiff_1d = T` requires `is_impdiff = T` (forced in `param.f90`).'; call abortit
     end if
     if(is_impdiff_1d .and. .not.(ipencil_axis == 3) .and. .not.is_poisson_dtdma) then
@@ -57,7 +69,7 @@ module mod_sanity
                                        & when the flow is not decomposed along the Z direction.'
       end if
     end if
-    if(is_poisson_dtdma .and. (ipencil_axis == 3)) then
+    if(is_poisson_dtdma.and.(ipencil_axis == 3)) then
       if(myid == 0)  print*, 'ERROR: `is_poisson_dtdma = T` requires X/Y-aligned pencils.'; call abortit
     end if
   end subroutine test_sanity_input

@@ -181,8 +181,8 @@ module mod_initsolver
       b(1) = b(1) + factor(0)*a(1)
       b(n) = b(n) + factor(1)*c(n)
     case('f')
-      if(bc(0) == 'N') b(1) = b(1) + factor(0)*a(1)
-      if(bc(1) == 'N') b(n) = b(n) + factor(1)*c(n)
+      if(bc(0) == 'N') b(1  ) = b(1  ) + factor(0)*a(1  )
+      if(bc(1) == 'N') b(n-1) = b(n-1) + factor(1)*c(n-1)
     end select
   end subroutine tridmatrix
   !
