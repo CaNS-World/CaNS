@@ -87,9 +87,19 @@ module mod_solver
       if(present(is_dtdma_update)) is_dtdma_update = is_dtdma_update_
     end if
     call fft(arrplan(2,2),py) ! bwd transform in y
+    if((c_or_f(2) == 'f').and.(bc(0,2)//bc(1,2) == 'NN')) then
+      !$OMP PARALLEL WORKSHARE
+      py(:,ng(2),:) = py(:,ng(2)-1,:)
+      !$OMP END PARALLEL WORKSHARE
+    end if
     !
     call transpose_y_to_x(py,px)
     call fft(arrplan(2,1),px) ! bwd transform in x
+    if((c_or_f(1) == 'f').and.(bc(0,1)//bc(1,1) == 'NN')) then
+      !$OMP PARALLEL WORKSHARE
+      px(ng(1),:,:) = px(ng(1)-1,:,:)
+      !$OMP END PARALLEL WORKSHARE
+    end if
     !
     select case(ipencil_axis)
     case(1)

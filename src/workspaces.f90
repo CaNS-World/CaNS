@@ -30,7 +30,7 @@ contains
     use openacc
     implicit none
     integer :: istat
-    integer(i8) :: wsize,max_wsize,elem_round
+    integer(i8) :: i,wsize,max_wsize,elem_round
     integer :: nh(3)
     !
     ! allocate cuDecomp workspace buffer for transposes (reused for FFTs and other temporaries)
@@ -40,8 +40,8 @@ contains
     ! work space for temporaries, rounded up to 256 byte boundary
     !
     elem_round = 256/f_sizeof(1._rp)
-    wsize_tmp = (max(ap_x_poi%size,ap_y_poi%size) + elem_round - 1)/elem_round*elem_round
-    wsize     = wsize_fft + wsize_tmp
+    wsize_tmp = (max(wsize_tmp,ap_x_poi%size,ap_y_poi%size) + elem_round - 1)/elem_round*elem_round
+    wsize     = max(1_i8,wsize_fft) + wsize_tmp ! keep work(wsize_tmp+1) valid when a plan needs no cuFFT workspace
     max_wsize = max(max_wsize,wsize)
     istat = cudecompGetTransposeWorkspaceSize(handle,gd_poi,wsize)
     max_wsize = max(max_wsize,wsize)
@@ -76,6 +76,11 @@ contains
     wsize = max(ap_x_poi%size,ap_y_poi%size,ap_z_poi%size)
     allocate(solver_buf_0(wsize),solver_buf_1(wsize))
     !$acc enter data create(solver_buf_0,solver_buf_1)
+    !$acc parallel loop default(present)
+    do i=1,wsize
+      solver_buf_0(i) = 0.
+      solver_buf_1(i) = 0.
+    end do
     if(cbcpre(0,3)//cbcpre(1,3) == 'PP') then
       allocate(pz_aux_1(ap_z%shape(1),ap_z%shape(2),ap_z%shape(3)))
       !$acc enter data create(pz_aux_1)

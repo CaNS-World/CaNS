@@ -121,9 +121,10 @@ module mod_initsolver
           lambda(l)   = -2.*(1.-cos((l-1  )*pi/(1.*n)))
         end do
       else if(c_or_f == 'f') then
-        do l=1,n
-          lambda(l)   = -2.*(1.-cos((l-1  )*pi/(1.*(n-1+1))))
+        do l=1,n-1 ! point at n is a dependent boundary value
+          lambda(l)   = -2.*(1.-cos((l-1  )*pi/(1.*(n-1))))
         end do
+        lambda(n) = 0.
       end if
     case('DD')
       if(     c_or_f == 'c') then

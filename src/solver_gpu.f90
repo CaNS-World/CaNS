@@ -23,7 +23,7 @@ module mod_solver_gpu
                                  ap_z_0 => ap_z    , &
                                  ch => handle,gd => gd_poi, gd_io => gd_poi_io, &
                                  istream => istream_acc_queue_1_comm_lib
-  use mod_fft            , only: fft_gpu
+  use mod_fft            , only: fft_gpu,fft_gpu_layout
   use mod_param          , only: ipencil_axis,is_poisson_dtdma, &
                                  is_use_diezdecomp,is_diezdecomp_x2z_z2x_transposes
   use mod_types
@@ -49,6 +49,7 @@ module mod_solver_gpu
     real(rp), intent(inout), dimension(:,:,:), optional :: aa_z,cc_z
     real(rp), pointer, contiguous, dimension(:,:,:) :: px,py,pz,pfft_tmp_x,pfft_tmp_y
     integer :: i,j,k,q
+    integer :: nfft,nwork(3)
     logical :: is_periodic_z
     integer, dimension(3) :: n_x,n_y,n_z,n_z_0,lo_z_0,hi_z_0,pad_io
     type(cudecompPencilInfo) :: ap_io
@@ -77,8 +78,10 @@ module mod_solver_gpu
       py(1:n_y(1),1:n_y(2),1:n_y(3)) => solver_buf_1(1:product(int(n_y(:),i8)))
     end if
     pz(1:n_z(1),1:n_z(2),1:n_z(3)) => solver_buf_0(1:product(int(n_z(:),i8)))
-    pfft_tmp_x(1:n_x(1),1:n_x(2),1:n_x(3)) => work(1:product(int(n_x(:),i8)))
-    pfft_tmp_y(1:n_y(1),1:n_y(2),1:n_y(3)) => work(1:product(int(n_y(:),i8)))
+    call fft_gpu_layout(ng(1),n_x,bc(0,1)//bc(1,1),c_or_f(1),nfft,nwork)
+    pfft_tmp_x(1:nwork(1),1:nwork(2),1:nwork(3)) => work(1:product(int(nwork(:),i8)))
+    call fft_gpu_layout(ng(2),n_y,bc(0,2)//bc(1,2),c_or_f(2),nfft,nwork)
+    pfft_tmp_y(1:nwork(1),1:nwork(2),1:nwork(3)) => work(1:product(int(nwork(:),i8)))
     !
     select case(ipencil_axis)
     case(1)

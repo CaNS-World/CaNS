@@ -101,6 +101,10 @@ module mod_sanity
   end subroutine chk_dims
   !
   subroutine chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed)
+#if defined(_OPENACC)
+    use mod_fft  , only: fft_supported_gpu
+    use mod_param, only: nscal,cbcscal
+#endif
     implicit none
     character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
     character(len=1), intent(in), dimension(0:1,3  ) :: cbcpre
@@ -109,6 +113,9 @@ module mod_sanity
     logical         , intent(out) :: passed
     character(len=2) :: bc01v,bc01p
     integer :: ivel,idir
+#if defined(_OPENACC)
+    integer :: iscal
+#endif
     logical :: passed_loc
     passed = .true.
     !
@@ -165,17 +172,6 @@ module mod_sanity
       passed_loc = .true.
       do ivel = 1,3
         do idir=1,2
-          bc01v = cbcvel(0,idir,ivel)//cbcvel(1,idir,ivel)
-          passed_loc = passed_loc.and.(bc01v /= 'NN')
-        end do
-      end do
-      if(myid == 0.and.(.not.passed_loc)) &
-        print*, 'ERROR: Neumann-Neumann velocity BCs with implicit diffusion currently not supported in x and y; only in z.'
-      passed = passed.and.passed_loc
-      !
-      passed_loc = .true.
-      do ivel = 1,3
-        do idir=1,2
           passed_loc = passed_loc.and.((bcvel(0,idir,ivel) == 0.).and.(bcvel(1,idir,ivel) == 0.))
         end do
       end do
@@ -193,6 +189,29 @@ module mod_sanity
     if(myid == 0.and.(.not.passed_loc)) &
       print*, 'ERROR: pressure BCs "ND" or "DN" along x or y not implemented on GPUs yet.'
     passed = passed.and.passed_loc
+    !
+    if(is_impdiff .and. .not.is_impdiff_1d) then
+      passed_loc = .true.
+      do ivel=1,3
+        do idir=1,2
+          bc01v = cbcvel(0,idir,ivel)//cbcvel(1,idir,ivel)
+          passed_loc = passed_loc.and.fft_supported_gpu(bc01v,merge('f','c',ivel == idir))
+        end do
+      end do
+      if(myid == 0.and.(.not.passed_loc)) &
+        print*, 'ERROR: unsupported GPU transform for velocity BCs along x or y.'
+      passed = passed.and.passed_loc
+      !
+      passed_loc = .true.
+      do iscal=1,nscal
+        do idir=1,2
+          passed_loc = passed_loc.and.fft_supported_gpu(cbcscal(0,idir,iscal)//cbcscal(1,idir,iscal),'c')
+        end do
+      end do
+      if(myid == 0.and.(.not.passed_loc)) &
+        print*, 'ERROR: unsupported GPU transform for scalar BCs along x or y.'
+      passed = passed.and.passed_loc
+    end if
 #endif
   end subroutine chk_bc
   !
