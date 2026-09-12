@@ -2,14 +2,14 @@
 ng(1:3) = 32, 32, 1
 l(1:3) = 6.283185307179586, 6.283185307179586, 0.19634954084936207
 gtype = 1, gr = 0.
-cfl = 0.95, dtmax = 0.1, dt_f = -1.
-visci = 100.
+cfl = 0.5, dtmax = 1., dt_f = 0.01
+visci = 10.
 inivel = 'tgv-2d-z'
 is_wallturb = F
-nstep = 100000, time_max = 100., tw_max = 0.1
-stop_type(1:3) = F, T, F
+nstep = 100, time_max = 1., tw_max = 1.
+stop_type(1:3) = T, F, F
 restart = F, is_overwrite_save = T, nsaves_max = 0
-icheck = 10, iout0d = 10, iout1d = 20, iout2d = 500, iout3d = 100, isave = 2000
+icheck = 0, iout0d = 0, iout1d = 0, iout2d = 0, iout3d = 0, isave = 100
 cbcvel(0:1,1:3,1) = 'P','P',  'P','P',  'P','P'
 cbcvel(0:1,1:3,2) = 'P','P',  'P','P',  'P','P'
 cbcvel(0:1,1:3,3) = 'P','P',  'P','P',  'P','P'
@@ -25,8 +25,8 @@ dims(1:2) = 1, 1, ipencil_axis = 1
 /
 
 &cudecomp
-cudecomp_t_comm_backend = 0, cudecomp_is_t_enable_nccl = T, cudecomp_is_t_enable_nvshmem = T
-cudecomp_h_comm_backend = 0, cudecomp_is_h_enable_nccl = T, cudecomp_is_h_enable_nvshmem = T
+cudecomp_t_comm_backend = 1, cudecomp_is_t_enable_nccl = F, cudecomp_is_t_enable_nvshmem = F
+cudecomp_h_comm_backend = 1, cudecomp_is_h_enable_nccl = F, cudecomp_is_h_enable_nvshmem = F
 /
 
 &numerics
@@ -35,7 +35,7 @@ is_poisson_dtdma = F
 /
 
 &other_options
-is_debug = T, is_timing = T
+is_debug = F, is_debug_poisson = F, is_timing = F
 /
 
 &io

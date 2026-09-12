@@ -149,6 +149,34 @@ module mod_solver
     real(rp) :: den,pivot_tol,z
     integer :: i,j,k,nn
     !
+    ! a single periodic point has no Z Laplacian
+    !
+    if(is_periodic.and.(n == 1)) then
+      if(present(lambdaxy)) then
+        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(den,pivot_tol)
+        do j=1,ny
+          do i=1,nx
+            den = b(1) + lambdaxy(i,j)
+            pivot_tol = epsilon(den)*max(abs(b(1)),abs(lambdaxy(i,j)))
+            if(abs(den) <= pivot_tol) then
+              p(i,j,1) = 0.
+            else
+              p(i,j,1) = p(i,j,1)*norm/den
+            end if
+          end do
+        end do
+      else
+        z = norm/b(1)
+        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
+        do j=1,ny
+          do i=1,nx
+            p(i,j,1) = p(i,j,1)*z
+          end do
+        end do
+      end if
+      return
+    end if
+    !
     ! solve tridiagonal system
     !
     nn = n

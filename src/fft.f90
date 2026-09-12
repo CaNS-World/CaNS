@@ -553,11 +553,6 @@ module mod_fft
     real(rp), intent(inout), target, dimension(:,:,:) :: arr
     real(rp), intent(inout), target, dimension(:,:,:) :: arr_tmp
     !
-    if(c_or_f /= 'c'.and.c_or_f /= 'f') error stop 'ERROR: invalid FFT centering.'
-    if(cbc == 'NN'.and.c_or_f == 'f'.and.nn < 2) &
-      error stop 'ERROR: face NN transforms require at least two grid intervals.'
-    if((cbc == 'ND'.or.cbc == 'DN').and.c_or_f == 'f'.and.nn < 2) &
-      error stop 'ERROR: face mixed transforms require at least two grid intervals.'
     if(cbc /= 'PP') then
       call signal_processing(0,f_or_b,cbc,c_or_f,nn,n,1,arr,arr_tmp)
       select case(f_or_b)

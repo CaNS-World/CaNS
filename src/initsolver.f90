@@ -104,7 +104,7 @@ module mod_initsolver
         integer :: nh,iswap(n)
         nh = (n+1)/2
         iswap(1) = 1
-        iswap(2) = nh+(1-mod(n,2))
+        if(n > 1) iswap(2) = nh+(1-mod(n,2))
         do l=2,n-1
           if(l <= nh) then ! real eigenvalue
             iswap(2*l-1                  ) = l
@@ -161,6 +161,14 @@ module mod_initsolver
     integer :: k
     integer :: ibound
     real(rp), dimension(0:1) :: factor
+    !
+    if((n == 1).and.(bc(0)//bc(1) == 'PP')) then
+      a(:) = 0.
+      b(:) = 0.
+      c(:) = 0.
+      return
+    end if
+    !
     select case(c_or_f)
     case('c')
       do k=1,n

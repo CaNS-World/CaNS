@@ -35,7 +35,10 @@ def main():
     os.environ.setdefault('OMPI_MCA_rmaps_base_oversubscribe', '1')
     os.environ.setdefault('PRTE_MCA_rmaps_default_mapping_policy', ':oversubscribe')
     os.environ.setdefault('OMP_NUM_THREADS', '2')
-    for index, (layout, bc) in enumerate(itertools.product(LAYOUTS, BCS), 1):
+    cases = list(itertools.product(LAYOUTS, BCS))
+    cases += [(('thin', (9, 11, 1), (2, 1), 1, False), bc)
+              for bc in (('PP', 'PP', 'PP'), ('ND', 'DN', 'PP'))]
+    for index, (layout, bc) in enumerate(cases, 1):
         fixture, grid, dims, axis, dtdma = layout
         name = f'{index:02d}-{fixture}-{"-".join(bc)}-{dims[0]}x{dims[1]}-p{axis}-d{int(dtdma)}'
         case = output/name
@@ -65,7 +68,7 @@ def main():
         if status != 0 or '*** Fim ***' not in log or 'ERROR:' in log:
             raise RuntimeError(f'Failed {case}\n{log[-3000:]}')
         print(f'PASS {name}', flush=True)
-    print(f'PASS: {len(LAYOUTS)*len(BCS)} Poisson cases; logs in {output}')
+    print(f'PASS: {len(cases)} Poisson cases; logs in {output}')
 
 
 if __name__ == '__main__':
