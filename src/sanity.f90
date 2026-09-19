@@ -42,13 +42,25 @@ module mod_sanity
     real(rp)        , intent(in), dimension(0:1,3,3) :: bcvel
     real(rp)        , intent(in), dimension(0:1,3)   :: bcpre
     logical         , intent(in), dimension(3)       :: is_forced
-    logical :: passed
+    logical :: passed,passed_loc
     !
     call chk_dims(ng,dims,passed);                 if(.not.passed) call abortit
     call chk_stop_type(stop_type,passed);          if(.not.passed) call abortit
     call chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed); if(.not.passed) call abortit
     call chk_forcing(cbcpre,is_forced,passed);     if(.not.passed) call abortit
-    if(is_impdiff_1d .and. .not.is_impdiff) then
+    !
+    if(is_poisson_dtdma) then
+      passed_loc = ng(3)/dims(2) >= 2
+      if(is_impdiff.and.(.not.is_impdiff_1d .or. dims(2) > 1)) then
+        if(cbcvel(1,3,3) /= 'P') passed_loc = passed_loc.and.(ng(3)/dims(2)-1 >= 2)
+      end if
+      if(myid == 0.and.(.not.passed_loc)) &
+        print*, 'ERROR: DTDMA requires at least two active points per Z slab.'
+      passed = passed.and.passed_loc
+      if(.not.passed) call abortit
+    end if
+    !
+    if(is_impdiff_1d.and.(.not.is_impdiff)) then
       if(myid == 0)  print*, 'ERROR: `is_impdiff_1d = T` requires `is_impdiff = T` (forced in `param.f90`).'; call abortit
     end if
     if(is_impdiff_1d .and. .not.(ipencil_axis == 3) .and. .not.is_poisson_dtdma) then
@@ -57,7 +69,7 @@ module mod_sanity
                                        & when the flow is not decomposed along the Z direction.'
       end if
     end if
-    if(is_poisson_dtdma .and. (ipencil_axis == 3)) then
+    if(is_poisson_dtdma.and.(ipencil_axis == 3)) then
       if(myid == 0)  print*, 'ERROR: `is_poisson_dtdma = T` requires X/Y-aligned pencils.'; call abortit
     end if
   end subroutine test_sanity_input
@@ -89,6 +101,9 @@ module mod_sanity
   end subroutine chk_dims
   !
   subroutine chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed)
+#if defined(_OPENACC)
+    use mod_param, only: nscal,cbcscal
+#endif
     implicit none
     character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
     character(len=1), intent(in), dimension(0:1,3  ) :: cbcpre
@@ -97,6 +112,10 @@ module mod_sanity
     logical         , intent(out) :: passed
     character(len=2) :: bc01v,bc01p
     integer :: ivel,idir
+#if defined(_OPENACC)
+    integer :: iscal
+    character(len=2) :: bc01s
+#endif
     logical :: passed_loc
     passed = .true.
     !
@@ -153,17 +172,6 @@ module mod_sanity
       passed_loc = .true.
       do ivel = 1,3
         do idir=1,2
-          bc01v = cbcvel(0,idir,ivel)//cbcvel(1,idir,ivel)
-          passed_loc = passed_loc.and.(bc01v /= 'NN')
-        end do
-      end do
-      if(myid == 0.and.(.not.passed_loc)) &
-        print*, 'ERROR: Neumann-Neumann velocity BCs with implicit diffusion currently not supported in x and y; only in z.'
-      passed = passed.and.passed_loc
-      !
-      passed_loc = .true.
-      do ivel = 1,3
-        do idir=1,2
           passed_loc = passed_loc.and.((bcvel(0,idir,ivel) == 0.).and.(bcvel(1,idir,ivel) == 0.))
         end do
       end do
@@ -172,15 +180,22 @@ module mod_sanity
       passed = passed.and.passed_loc
     end if
 #if defined(_OPENACC)
-    passed_loc = .true.
-    do idir=1,2
-      bc01p = cbcpre(0,idir)//cbcpre(1,idir)
-      passed_loc = passed_loc.and..not.( (bc01p == 'DN').or. &
-                                         (bc01p == 'ND') )
-    end do
-    if(myid == 0.and.(.not.passed_loc)) &
-      print*, 'ERROR: pressure BCs "ND" or "DN" along x or y not implemented on GPUs yet.'
-    passed = passed.and.passed_loc
+    if(is_impdiff .and. .not.is_impdiff_1d) then
+      passed_loc = .true.
+      do iscal=1,nscal
+        do idir=1,2
+          bc01s = cbcscal(0,idir,iscal)//cbcscal(1,idir,iscal)
+          passed_loc = passed_loc.and.( (bc01s == 'PP').or. &
+                                        (bc01s == 'ND').or. &
+                                        (bc01s == 'DN').or. &
+                                        (bc01s == 'NN').or. &
+                                        (bc01s == 'DD') )
+        end do
+      end do
+      if(myid == 0.and.(.not.passed_loc)) &
+        print*, 'ERROR: scalar BCs along x or y not valid.'
+      passed = passed.and.passed_loc
+    end if
 #endif
   end subroutine chk_bc
   !
@@ -285,7 +300,7 @@ module mod_sanity
     call fftend(arrplan)
     if(is_impdiff .and. .not.is_impdiff_1d) then
       allocate(bb(n_z(3)))
-      alpha = acos(-1.) ! irrelevant
+      alpha = -acos(-1.) ! negative shift, as in implicit diffusion
       !$acc parallel loop collapse(3) default(present)
       !$OMP parallel do   collapse(3) DEFAULT(shared)
       do k=0,n(3)+1

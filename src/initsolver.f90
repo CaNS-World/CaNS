@@ -121,9 +121,10 @@ module mod_initsolver
           lambda(l)   = -2.*(1.-cos((l-1  )*pi/(1.*n)))
         end do
       else if(c_or_f == 'f') then
-        do l=1,n
-          lambda(l)   = -2.*(1.-cos((l-1  )*pi/(1.*(n-1+1))))
+        do l=1,n-1 ! point at n is a dependent boundary value
+          lambda(l)   = -2.*(1.-cos((l-1  )*pi/(1.*(n-1))))
         end do
+        lambda(n) = 0.
       end if
     case('DD')
       if(     c_or_f == 'c') then
@@ -137,9 +138,16 @@ module mod_initsolver
         lambda(n) = 0.
       end if
     case('ND','DN')
-      do l=1,n
-        lambda(l)     = -2.*(1.-cos((2*l-1)*pi/(2.*n)))
-      end do
+      if(     c_or_f == 'c') then
+        do l=1,n
+          lambda(l)   = -2.*(1.-cos((2*l-1)*pi/(2.*n)))
+        end do
+      else if(c_or_f == 'f') then
+        do l=1,n-1 ! point at n is prescribed by the boundary condition
+          lambda(l)   = -2.*(1.-cos((2*l-1)*pi/(2.*n-1.)))
+        end do
+        lambda(n) = 0.
+      end if
     end select
   end subroutine eigenvalues
   !
@@ -181,8 +189,8 @@ module mod_initsolver
       b(1) = b(1) + factor(0)*a(1)
       b(n) = b(n) + factor(1)*c(n)
     case('f')
-      if(bc(0) == 'N') b(1) = b(1) + factor(0)*a(1)
-      if(bc(1) == 'N') b(n) = b(n) + factor(1)*c(n)
+      if(bc(0) == 'N') b(1  ) = b(1  ) + factor(0)*a(1  )
+      if(bc(1) == 'N') b(n-1) = b(n-1) + factor(1)*c(n-1)
     end select
   end subroutine tridmatrix
   !

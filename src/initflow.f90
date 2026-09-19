@@ -29,7 +29,7 @@ module mod_initflow
     logical , intent(in), dimension(3) :: is_forced
     real(rp), intent(in), dimension(3) :: velf,bforce
     logical , intent(in)               :: is_wallturb
-    real(rp), dimension(0:,0:,0:), intent(out) :: u,v,w,p
+    real(rp), dimension(0:,0:,0:), intent(inout) :: u,v,w,p
     real(rp), allocatable, dimension(:) :: u1d_z,u1d_y
     integer :: i,j,k
     logical :: is_noise,is_mean,is_pair,is_duct

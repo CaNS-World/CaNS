@@ -302,11 +302,11 @@ contains
           close(iunit)
           error stop
         end if
+        alpha_max = minval(alphai(1:nscal))
       else
         nscal = 0 ! negative values equivalent to nscal = 0
+        alpha_max = huge(1._rp)
       end if
-      alpha_max = huge(1._rp)
-      alpha_max = minval(alphai(1:nscal))
       alpha_max = alpha_max**(-1)
       if(is_boussinesq_buoyancy) then
         if(nscal == 0) then

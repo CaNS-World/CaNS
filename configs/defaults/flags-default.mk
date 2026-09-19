@@ -49,7 +49,7 @@ ifeq ($(strip $(FCOMP)),GNU)
 override FFLAGS += -O0 -g -fbacktrace -Wall -Wextra -Wimplicit-interface -Wno-unused-function -fPIC -fcheck=all -ffpe-trap=invalid,zero,overflow -finit-real=snan -finit-integer=-99999999 -std=f2018
 endif
 ifeq ($(findstring INTEL,$(strip $(FCOMP))),INTEL)
-override FFLAGS += -O0 -warn all -g -traceback -fpe0 -stand f18
+override FFLAGS += -O0 -warn all -g -traceback -fpe0 -stand f18 -check bounds,pointers,shape,stack -init=snan,arrays
 endif
 ifeq ($(strip $(FCOMP)),NVIDIA)
 override FFLAGS += -O0 -g -traceback -Ktrap=fp -Mstandard -Minform=inform -Mbackslash -Mbounds -Mchkptr -Mchkstk
