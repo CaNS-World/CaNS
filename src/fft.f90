@@ -13,17 +13,20 @@ module mod_fft
   use mod_utils     , only: f_sizeof
 #endif
   private
-  public fftini,fftend,fft
+  public fftini,fftend,fft,prep_dctviii,posp_dctviii
+#if !(defined(_OPENACC) || defined(_OPENMP))
+  real(rp), allocatable, target :: fft_work(:)
+  integer :: nplans = 0
+#endif
 #if defined(_OPENACC) || defined(_OPENMP)
-  public fft_gpu
+  public fft_gpu,fft_gpu_layout
   public signal_processing,fftf_gpu,fftb_gpu
-  integer(i8), public :: wsize_fft,wsize_tmp
-  real(rp), allocatable, target :: sincos_theta_x(:,:),sincos_theta_y(:,:)
-  integer :: n_sincos_theta_x,n_sincos_theta_y
+  integer(i8), public :: wsize_fft = 0,wsize_tmp = 0
+  real(rp), allocatable, target :: sincos_theta_x(:,:,:),sincos_theta_y(:,:,:)
+  integer :: n_sincos_theta_x(0:3),n_sincos_theta_y(0:3)
 #endif
   contains
   subroutine fftini(ng,n_x,n_y,bcxy,c_or_f,arrplan,normfft)
-    use mod_param, only: pi
     implicit none
     integer , target, intent(in), dimension(3) :: ng,n_x,n_y
     character(len=1), intent(in), dimension(0:1,2) :: bcxy
@@ -34,176 +37,160 @@ module mod_fft
     integer    , intent(out), dimension(2,2) :: arrplan
 #endif
     real(rp), intent(out) :: normfft
-    real(rp), dimension(n_x(1),n_x(2),n_x(3))  :: arrx
-    real(rp), dimension(n_y(1),n_y(2),n_y(3))  :: arry
 #if !(defined(_OPENACC) || defined(_OPENMP))
-    type(fftw_iodim), dimension(1) :: iodim
-    type(fftw_iodim), dimension(2) :: iodim_howmany
+    integer(i8) :: nw_x(3),nw_y(3)
 #endif
-#if !(defined(_OPENACC) || defined(_OPENMP)) || defined(_USE_HIP)
-    type(C_PTR) :: plan_fwd_x,plan_bwd_x, &
-                   plan_fwd_y,plan_bwd_y
-#else
-    integer     :: plan_fwd_x,plan_bwd_x, &
-                   plan_fwd_y,plan_bwd_y
-#endif
-    integer :: kind_fwd,kind_bwd
-    real(rp), dimension(2) :: norm
-    real(rp) :: theta
-    integer(C_INT) :: nx_x,ny_x,nz_x, &
-                      nx_y,ny_y,nz_y
-    integer :: ix,iy
-#if defined(_OPENACC) || defined(_OPENMP)
-    integer :: istat,batch
-    integer :: ii
-    integer(c_intptr_t) :: wsize,max_wsize
-#endif
+    !
 #if !(defined(_OPENACC) || defined(_OPENMP))
-    nx_x = n_x(1)
-    ny_x = n_x(2)
-    nz_x = n_x(3)
-    nx_y = n_y(1)
-    ny_y = n_y(2)
-    nz_y = n_y(3)
+    !
+    ! one buffer serves both pencils on the fixed grid;
+    ! planning and execution use the same allocation to preserve
+    ! FFTW alignment across all plans
+    !
+    if((any((c_or_f(:) == 'f').and.(bcxy(0,:) /= bcxy(1,:)))).and.(.not.allocated(fft_work))) then
+      nw_x = int(n_x,i8); nw_x(1) = 2*nw_x(1)-1
+      nw_y = int(n_y,i8); nw_y(2) = 2*nw_y(2)-1
+      allocate(fft_work(max(product(nw_x),product(nw_y))))
+    end if
 #endif
     normfft = 1.
-    !
-    ! fft in x
-    !
-    call find_fft(bcxy(:,1),c_or_f(1),kind_fwd,kind_bwd,norm)
-    ix = 0
-    ! size of transform reduced by 1 point with Dirichlet BC in face
-    if(bcxy(0,1)//bcxy(1,1) == 'DD'.and.c_or_f(1) == 'f') ix = 1
+    call fftini_axis(1,ng(1),n_x,bcxy(:,1),c_or_f(1),arrplan(:,1),normfft)
+    call fftini_axis(2,ng(2),n_y,bcxy(:,2),c_or_f(2),arrplan(:,2),normfft)
 #if !(defined(_OPENACC) || defined(_OPENMP))
-    !
-    ! prepare plans with guru interface
-    !
-    iodim(1)%n  = nx_x-ix
-    iodim(1)%is = 1
-    iodim(1)%os = 1
-    iodim_howmany(1)%n  = ny_x
-    iodim_howmany(1)%is = nx_x
-    iodim_howmany(1)%os = nx_x
-    iodim_howmany(2)%n  = nz_x
-    iodim_howmany(2)%is = nx_x*ny_x
-    iodim_howmany(2)%os = nx_x*ny_x
-    plan_fwd_x=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arrx,arrx,kind_fwd,FFTW_ESTIMATE)
-    plan_bwd_x=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arrx,arrx,kind_bwd,FFTW_ESTIMATE)
-#else
-    max_wsize = -1
-    !
-    ! store sine/cosine values for real-to-real transforms on GPUs
-    !
-    ! this assumes that all variables have the same number of points along each direction;
-    ! in the future, if real-to-real with (semi-) collocated boundary conditions are implemented
-    ! (e.g., for implicit diffusion on GPUs), we need to initialize arrays for each solved variable
-    ! and store it.
-    !
-    if(bcxy(0,1)//bcxy(1,1) /= 'PP') then
-      if(.not.allocated(sincos_theta_x)) then
-        allocate(sincos_theta_x(0:ng(1)/2,1:2))
-        n_sincos_theta_x = ng(1)
-        do ii=0,ng(1)/2
-          theta = pi*ii/(2._rp*ng(1))
-          sincos_theta_x(ii,1) = sin(theta)
-          sincos_theta_x(ii,2) = cos(theta)
-        end do
-        !$acc        enter data copyin(sincos_theta_x)
-        !$omp target enter data map(to:sincos_theta_x)
-      end if
-    end if
-    batch = product(n_x(2:3)) ! padded & axis-contiguous layout
-    nx_x = n_x(1)             ! padded & axis-contiguous layout
-    istat = cufftCreate(plan_fwd_x)
-    istat = cufftSetAutoAllocation(plan_fwd_x,0)
-#if !defined(_USE_HIP)
-    istat = cufftMakePlanMany(plan_fwd_x,1,ng(1),null(),1,nx_x,null(),1,ng(1)/2+1,CUFFT_FWD_TYPE,batch,wsize)
-#else
-    istat = cufftMakePlanMany(plan_fwd_x,1,c_loc(ng(1)),c_null_ptr,1,nx_x,c_null_ptr,1,ng(1)/2+1,CUFFT_FWD_TYPE,batch,c_loc(wsize))
+    nplans = nplans+size(arrplan)
 #endif
-    max_wsize = max(wsize,max_wsize)
-    !
-    istat = cufftCreate(plan_bwd_x)
-    istat = cufftSetAutoAllocation(plan_bwd_x,0)
-#if !defined(_USE_HIP)
-    istat = cufftMakePlanMany(plan_bwd_x,1,ng(1),null(),1,ng(1)/2+1,null(),1,nx_x,CUFFT_BWD_TYPE,batch,wsize)
-#else
-    istat = cufftMakePlanMany(plan_bwd_x,1,c_loc(ng(1)),c_null_ptr,1,ng(1)/2+1,c_null_ptr,1,nx_x,CUFFT_BWD_TYPE,batch,c_loc(wsize))
-#endif
-    max_wsize = max(wsize,max_wsize)
-#endif
-    normfft = normfft*norm(1)*(ng(1)+norm(2)-ix)
-    !
-    ! fft in y
-    !
-    call find_fft(bcxy(:,2),c_or_f(2),kind_fwd,kind_bwd,norm)
-    iy = 0
-    ! size of transform reduced by 1 point with Dirichlet BC in face
-    if(bcxy(0,2)//bcxy(1,2) == 'DD'.and.c_or_f(2) == 'f') iy = 1
-#if !(defined(_OPENACC) || defined(_OPENMP))
-    !
-    ! prepare plans with guru interface
-    !
-    iodim(1)%n  = ny_y-iy
-    iodim(1)%is = nx_y
-    iodim(1)%os = nx_y
-    iodim_howmany(1)%n  = nx_y
-    iodim_howmany(1)%is = 1
-    iodim_howmany(1)%os = 1
-    iodim_howmany(2)%n  = nz_y
-    iodim_howmany(2)%is = nx_y*ny_y
-    iodim_howmany(2)%os = nx_y*ny_y
-    plan_fwd_y=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arry,arry,kind_fwd,FFTW_ESTIMATE)
-    plan_bwd_y=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arry,arry,kind_bwd,FFTW_ESTIMATE)
-#else
-    !
-    ! store sine/cosine values for real-to-real transforms on GPUs
-    !
-    ! see the comment above on prospective extensions of real-to-real transforms for implicit diffusion
-    !
-    if(bcxy(0,2)//bcxy(1,2) /= 'PP') then
-      if(.not.allocated(sincos_theta_y)) then
-        allocate(sincos_theta_y(0:ng(2)/2,1:2))
-        n_sincos_theta_y = ng(2)
-        do ii=0,ng(2)/2
-          theta = pi*ii/(2._rp*ng(2))
-          sincos_theta_y(ii,1) = sin(theta)
-          sincos_theta_y(ii,2) = cos(theta)
-        end do
-        !$acc        enter data copyin(sincos_theta_y)
-        !$omp target enter data map(to:sincos_theta_y)
-      end if
-    end if
-    batch = product(n_y(2:3)) ! padded & axis-contiguous layout
-    ny_y = n_y(1)             ! padded & axis-contiguous layout
-    istat = cufftCreate(plan_fwd_y)
-    istat = cufftSetAutoAllocation(plan_fwd_y,0)
-#if !defined(_USE_HIP)
-    istat = cufftMakePlanMany(plan_fwd_y,1,ng(2),null(),1,ny_y,null(),1,ng(2)/2+1,CUFFT_FWD_TYPE,batch,wsize)
-#else
-    istat = cufftMakePlanMany(plan_fwd_y,1,c_loc(ng(2)),c_null_ptr,1,ny_y,c_null_ptr,1,ng(2)/2+1,CUFFT_FWD_TYPE,batch,c_loc(wsize))
-#endif
-    max_wsize = max(wsize,max_wsize)
-    !
-    istat = cufftCreate(plan_bwd_y)
-    istat = cufftSetAutoAllocation(plan_bwd_y,0)
-#if !defined(_USE_HIP)
-    istat = cufftMakePlanMany(plan_bwd_y,1,ng(2),null(),1,ng(2)/2+1,null(),1,ny_y,CUFFT_BWD_TYPE,batch,wsize)
-#else
-    istat = cufftMakePlanMany(plan_bwd_y,1,c_loc(ng(2)),c_null_ptr,1,ng(2)/2+1,c_null_ptr,1,ny_y,CUFFT_BWD_TYPE,batch,c_loc(wsize))
-#endif
-    max_wsize = max(wsize,max_wsize)
-    wsize_fft = max_wsize/f_sizeof(1._rp)
-#endif
-    normfft = normfft*norm(1)*(ng(2)+norm(2)-iy)
-    !
-    arrplan(1,1) = plan_fwd_x
-    arrplan(2,1) = plan_bwd_x
-    arrplan(1,2) = plan_fwd_y
-    arrplan(2,2) = plan_bwd_y
     normfft = normfft**(-1)
   end subroutine fftini
   !
+  subroutine fftini_axis(idir,nn,n,bc,c_or_f,arrplan,normfft)
+    !
+    ! initialize one X/Y plan pair and accumulate its round-trip factor
+    !
+    implicit none
+    integer , intent(in) :: idir,nn,n(3)
+    character(len=1), intent(in) :: bc(0:1),c_or_f
+#if !(defined(_OPENACC) || defined(_OPENMP)) || defined(_USE_HIP)
+    type(C_PTR), intent(out), dimension(2) :: arrplan
+#else
+    integer    , intent(out), dimension(2) :: arrplan
+#endif
+    real(rp), intent(inout) :: normfft
+    integer :: kind_fwd,kind_bwd,iexcl
+    real(rp) :: norm(2)
+#if !(defined(_OPENACC) || defined(_OPENMP))
+    real(rp), target :: arr(n(1),n(2),n(3))
+    real(rp), pointer, contiguous :: arrwork(:,:,:)
+    type(fftw_iodim) :: iodim(1),iodim_howmany(2)
+    integer(C_INT) :: nx,ny,nz
+#else
+    integer :: istat,batch,nw(3)
+    integer(C_INT), target :: nfft
+    integer(c_intptr_t), target :: wsize
+    integer(c_intptr_t) :: max_wsize
+#endif
+    !
+    call find_fft(bc,c_or_f,kind_fwd,kind_bwd,norm)
+    iexcl = 0
+    !
+    ! exclude the dependent endpoint for face DD/NN
+    !
+    if((c_or_f == 'f').and.(any(bc(0)//bc(1) == ['DD','NN']))) iexcl = 1
+#if !(defined(_OPENACC) || defined(_OPENMP))
+    !
+    ! prepare plans with guru interface
+    !
+    nx = n(1); ny = n(2); nz = n(3)
+    arrwork(1:nx,1:ny,1:nz) => arr(:,:,:)
+    if((c_or_f == 'f').and.(bc(0) /= bc(1))) then
+      if(idir == 1) nx = 2*nn-1
+      if(idir == 2) ny = 2*nn-1
+      arrwork(1:nx,1:ny,1:nz) => fft_work(1:1_i8*nx*ny*nz)
+    end if
+    !
+    ! X is unit-stride; Y strides over nx; keep full extents for batches
+    !
+    iodim(1)%n  = merge(nx,ny,idir == 1)-iexcl
+    iodim(1)%is = merge(1 ,nx,idir == 1)
+    iodim(1)%os = iodim(1)%is
+    iodim_howmany(1)%n  = merge(ny,nx,idir == 1)
+    iodim_howmany(1)%is = merge(nx,1 ,idir == 1)
+    iodim_howmany(1)%os = iodim_howmany(1)%is
+    iodim_howmany(2)%n  = nz
+    iodim_howmany(2)%is = nx*ny
+    iodim_howmany(2)%os = iodim_howmany(2)%is
+    arrplan(1)=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arrwork,arrwork,kind_fwd,FFTW_ESTIMATE)
+    arrplan(2)=fftw_plan_guru_r2r(1,iodim,2,iodim_howmany,arrwork,arrwork,kind_bwd,FFTW_ESTIMATE)
+#else
+    !
+    ! idir selects the physical axis; both GPU pencils are axis-contiguous
+    !
+    if(bc(0)//bc(1) /= 'PP') then
+      select case(idir)
+      case(1)
+        call init_sincos_theta(nn,sincos_theta_x,n_sincos_theta_x)
+      case(2)
+        call init_sincos_theta(nn,sincos_theta_y,n_sincos_theta_y)
+      end select
+    end if
+    batch = product(n(2:3))
+    call fft_gpu_layout(nn,n,bc(0)//bc(1),c_or_f,nfft,nw)
+    wsize_tmp = max(wsize_tmp,product(int(nw(:),i8)))
+    max_wsize = -1
+    istat = cufftCreate(arrplan(1))
+    istat = cufftSetAutoAllocation(arrplan(1),0)
+#if !defined(_USE_HIP)
+    istat = cufftMakePlanMany(arrplan(1),1,nfft       ,null()    ,1,nw(1),null()    ,1,nfft/2+1,CUFFT_FWD_TYPE,batch,wsize)
+#else
+    istat = cufftMakePlanMany(arrplan(1),1,c_loc(nfft),c_null_ptr,1,nw(1),c_null_ptr,1,nfft/2+1,CUFFT_FWD_TYPE,batch,c_loc(wsize))
+#endif
+    max_wsize = max(wsize,max_wsize)
+    !
+    istat = cufftCreate(arrplan(2))
+    istat = cufftSetAutoAllocation(arrplan(2),0)
+#if !defined(_USE_HIP)
+    istat = cufftMakePlanMany(arrplan(2),1,nfft       ,null()    ,1,nfft/2+1,null()    ,1,nw(1),CUFFT_BWD_TYPE,batch,wsize)
+#else
+    istat = cufftMakePlanMany(arrplan(2),1,c_loc(nfft),c_null_ptr,1,nfft/2+1,c_null_ptr,1,nw(1),CUFFT_BWD_TYPE,batch,c_loc(wsize))
+#endif
+    max_wsize = max(wsize,max_wsize)
+    !
+    ! all axes and fields share the workspace allocated after initialization
+    !
+    wsize_fft = max(wsize_fft,(max_wsize+f_sizeof(1._rp)-1)/f_sizeof(1._rp))
+#endif
+    normfft = normfft*norm(1)*(nn+norm(2)-iexcl)
+  end subroutine fftini_axis
+  !
+#if defined(_OPENACC) || defined(_OPENMP)
+  subroutine init_sincos_theta(nn,sincos_theta,n_sincos_theta)
+    use mod_param, only: pi
+    implicit none
+    integer , intent(in) :: nn
+    real(rp), allocatable, target, intent(inout) :: sincos_theta(:,:,:)
+    integer , intent(inout) :: n_sincos_theta(0:3)
+    integer :: ii,ip,n_theta
+    real(rp) :: theta
+    !
+    if(allocated(sincos_theta)) return
+    !
+    ! keep phases for cell (N), face NN (N-1), and mixed (2N,2N-1) transforms
+    !
+    allocate(sincos_theta(0:nn,1:2,0:3))
+    n_sincos_theta(:) = [nn,max(1,nn-1),2*nn,2*nn-1]
+    sincos_theta(:,:,:) = 0.
+    do ip=0,3
+      n_theta = n_sincos_theta(ip)
+      do ii=0,n_theta/2
+        theta = pi*ii/(2._rp*n_theta)
+        sincos_theta(ii,1,ip) = sin(theta)
+        sincos_theta(ii,2,ip) = cos(theta)
+      end do
+    end do
+    !$acc        enter data copyin(sincos_theta)
+    !$omp target enter data map(to:sincos_theta)
+  end subroutine init_sincos_theta
+  !
+#endif
   subroutine fftend(arrplan)
     implicit none
 #if !(defined(_OPENACC) || defined(_OPENMP)) || defined(_USE_HIP)
@@ -229,6 +216,13 @@ module mod_fft
       end do
     end do
 #endif
+    !
+    ! temporary self-test plans share FFTW state with the main solver plans
+    !
+    nplans = nplans-size(arrplan)
+    if(nplans == 0) then
+      if(allocated(fft_work)) deallocate(fft_work)
+    end if
 #else
     do j=1,size(arrplan,2)
       do i=1,size(arrplan,1)
@@ -251,61 +245,227 @@ module mod_fft
 #endif
   end subroutine fft
   !
+  subroutine prep_dctviii(f_or_b,cbc,idir,arr,arr_out)
+    !
+    ! M=N-1 independent values; DCT-II of [x,0,-reverse(x)] has only
+    ! odd modes; half those coefficients give the ND DCT-VIII; embed them
+    ! at odd modes for DCT-III; the round-trip factor is 2M+1
+    ! DN reverses physical values before/after the same construction
+    !
+    implicit none
+    character(len=1), intent(in) :: f_or_b
+    character(len=2), intent(in) :: cbc
+    integer, intent(in) :: idir
+    real(rp), intent(in) :: arr(:,:,:)
+    real(rp), pointer, contiguous, intent(out) :: arr_out(:,:,:)
+#if !(defined(_OPENACC) || defined(_OPENMP))
+    integer :: n(3),nw(3),m,nfft,i,j,k,ii,jj
+    logical :: is_reverse
+    !
+    n = shape(arr); m = n(idir)-1; nfft = 2*m+1
+    nw = n; nw(idir) = nfft
+    arr_out(1:nw(1),1:nw(2),1:nw(3)) => fft_work(1:product(int(nw,i8)))
+    is_reverse = cbc == 'DN'
+    arr_out(:,:,:) = 0.
+    select case(idir)
+    case(1)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,m
+            if(f_or_b == 'F') then
+              ii = i
+              if(is_reverse) ii = m-i+1
+              arr_out(i,j,k) = arr(ii,j,k)
+              arr_out(nfft-i+1,j,k) = -arr(ii,j,k)
+            else
+              arr_out(2*i,j,k) = arr(i,j,k)
+            end if
+          end do
+        end do
+      end do
+    case(2)
+      do k=1,n(3)
+        do j=1,m
+          do i=1,n(1)
+            if(f_or_b == 'F') then
+              jj = j
+              if(is_reverse) jj = m-j+1
+              arr_out(i,j,k) = arr(i,jj,k)
+              arr_out(i,nfft-j+1,k) = -arr(i,jj,k)
+            else
+              arr_out(i,2*j,k) = arr(i,j,k)
+            end if
+          end do
+        end do
+      end do
+    end select
+#endif
+  end subroutine prep_dctviii
+  !
+  subroutine posp_dctviii(f_or_b,cbc,idir,arr,arr_out)
+    !
+    ! extract odd coefficients or restore physical values and the endpoint
+    !
+    implicit none
+    character(len=1), intent(in) :: f_or_b
+    character(len=2), intent(in) :: cbc
+    integer, intent(in) :: idir
+    real(rp), intent(in) :: arr(:,:,:)
+    real(rp), intent(out) :: arr_out(:,:,:)
+#if !(defined(_OPENACC) || defined(_OPENMP))
+    integer :: n(3),m,i,j,k,ii,jj
+    logical :: is_reverse
+    !
+    n = shape(arr_out); m = n(idir)-1
+    is_reverse = cbc == 'DN'
+    select case(idir)
+    case(1)
+      do k=1,n(3)
+        do j=1,n(2)
+          do i=1,m
+            if(f_or_b == 'F') then
+              arr_out(i,j,k) = 0.5_rp*arr(2*i,j,k)
+            else
+              ii = i
+              if(is_reverse) ii = m-i+1
+              arr_out(ii,j,k) = arr(i,j,k)
+            end if
+          end do
+        end do
+      end do
+      do k=1,n(3)
+        do j=1,n(2)
+          arr_out(m+1,j,k) = 0.
+          if((f_or_b == 'B').and.(is_reverse)) arr_out(m+1,j,k) = arr_out(m,j,k)
+        end do
+      end do
+    case(2)
+      do k=1,n(3)
+        do j=1,m
+          do i=1,n(1)
+            if(f_or_b == 'F') then
+              arr_out(i,j,k) = 0.5_rp*arr(i,2*j,k)
+            else
+              jj = j
+              if(is_reverse) jj = m-j+1
+              arr_out(i,jj,k) = arr(i,j,k)
+            end if
+          end do
+        end do
+      end do
+      do k=1,n(3)
+        do i=1,n(1)
+          arr_out(i,m+1,k) = 0.
+          if((f_or_b == 'B').and.(is_reverse)) arr_out(i,m+1,k) = arr_out(i,m,k)
+        end do
+      end do
+    end select
+#endif
+  end subroutine posp_dctviii
+  !
   subroutine find_fft(bc,c_or_f,kind_fwd,kind_bwd,norm)
-  implicit none
-  character(len=1), intent(in), dimension(0:1) :: bc
-  character(len=1), intent(in) :: c_or_f
-  integer , intent(out) :: kind_fwd,kind_bwd
-  real(rp), intent(out), dimension(2) :: norm
-  if(c_or_f == 'c') then
-    select case(bc(0)//bc(1))
-    case('PP')
-      kind_fwd = FFTW_R2HC
-      kind_bwd = FFTW_HC2R
-      norm = [1.,0.]
-    case('NN')
-      kind_fwd = FFTW_REDFT10
-      kind_bwd = FFTW_REDFT01
-      norm = [2.,0.]
-    case('DD')
-      kind_fwd = FFTW_RODFT10
-      kind_bwd = FFTW_RODFT01
-      norm = [2.,0.]
-    case('ND')
-      kind_fwd = FFTW_REDFT11
-      kind_bwd = FFTW_REDFT11
-      norm = [2.,0.]
-    case('DN')
-      kind_fwd = FFTW_RODFT11
-      kind_bwd = FFTW_RODFT11
-      norm = [2.,0.]
-    end select
-  else if(c_or_f == 'f') then
-    select case(bc(0)//bc(1))
-    case('PP')
-      kind_fwd = FFTW_R2HC
-      kind_bwd = FFTW_HC2R
-      norm = [1.,0.]
-    case('NN')
-      kind_fwd = FFTW_REDFT00
-      kind_bwd = FFTW_REDFT00
-      norm = [2.,-1.]
-    case('DD')
-      kind_fwd = FFTW_RODFT00
-      kind_bwd = FFTW_RODFT00
-      norm = [2.,1.]
-    case('ND')
-      kind_fwd = FFTW_REDFT10
-      kind_bwd = FFTW_REDFT01
-      norm = [2.,0.]
-    case('DN')
-      kind_fwd = FFTW_RODFT01
-      kind_bwd = FFTW_RODFT10
-      norm = [2.,0.]
-    end select
-  end if
+    implicit none
+    character(len=1), intent(in), dimension(0:1) :: bc
+    character(len=1), intent(in) :: c_or_f
+    integer , intent(out) :: kind_fwd,kind_bwd
+    real(rp), intent(out), dimension(2) :: norm
+    if(c_or_f == 'c') then
+      select case(bc(0)//bc(1))
+      case('PP')
+        kind_fwd = FFTW_R2HC
+        kind_bwd = FFTW_HC2R
+        norm = [1.,0.]
+      case('NN')
+        kind_fwd = FFTW_REDFT10
+        kind_bwd = FFTW_REDFT01
+        norm = [2.,0.]
+      case('DD')
+        kind_fwd = FFTW_RODFT10
+        kind_bwd = FFTW_RODFT01
+        norm = [2.,0.]
+      case('ND')
+        kind_fwd = FFTW_REDFT11
+        kind_bwd = FFTW_REDFT11
+        norm = [2.,0.]
+      case('DN')
+        kind_fwd = FFTW_RODFT11
+        kind_bwd = FFTW_RODFT11
+        norm = [2.,0.]
+      end select
+    else if(c_or_f == 'f') then
+      select case(bc(0)//bc(1))
+      case('PP')
+        kind_fwd = FFTW_R2HC
+        kind_bwd = FFTW_HC2R
+        norm = [1.,0.]
+      case('NN')
+        kind_fwd = FFTW_REDFT10
+        kind_bwd = FFTW_REDFT01
+        norm = [2.,0.]
+      case('DD')
+        kind_fwd = FFTW_RODFT00
+        kind_bwd = FFTW_RODFT00
+        norm = [2.,1.]
+      case('ND','DN')
+        kind_fwd = FFTW_REDFT10
+        kind_bwd = FFTW_REDFT01
+        norm = [2.,-0.5]
+      end select
+    end if
   end subroutine find_fft
+  !
 #if defined(_OPENACC) || defined(_OPENMP)
+  subroutine fft_gpu_layout(nn,n,cbc,c_or_f,nfft,nwork)
+    !
+    ! FFT length and local scratch shape; the distributed pencil shape stays unchanged
+    !
+    implicit none
+    integer , intent(in) :: nn
+    integer , intent(in), dimension(3) :: n
+    character(len=2), intent(in) :: cbc
+    character(len=1), intent(in) :: c_or_f
+    integer , intent(out) :: nfft
+    integer , intent(out), dimension(3) :: nwork
+    !
+    nfft = nn
+    nwork(:) = n(:)
+    if(    ((cbc == 'DD'                 ).and.(c_or_f == 'f')) .or. &
+           ((cbc == 'ND' .or. cbc == 'DN').and.(c_or_f == 'c'))) then
+      nfft = 2*nn
+    else if((cbc == 'ND' .or. cbc == 'DN').and.(c_or_f == 'f')) then
+      nfft = 2*nn-1
+    else if((cbc == 'NN'                 ).and.(c_or_f == 'f')) then
+      nfft = nn-1
+    end if
+    nwork(1) = 2*(nfft/2+1)
+  end subroutine fft_gpu_layout
+  !
+  subroutine get_sincos_theta(nn,sin_theta,cos_theta)
+    implicit none
+    integer, intent(in) :: nn
+    real(rp), pointer, contiguous, intent(out) :: sin_theta(:),cos_theta(:)
+    integer :: ip
+    !
+    nullify(sin_theta,cos_theta)
+    do ip=0,3
+      if(allocated(sincos_theta_x)) then
+        if(n_sincos_theta_x(ip) == nn) then
+          sin_theta(0:nn/2) => sincos_theta_x(0:nn/2,1,ip)
+          cos_theta(0:nn/2) => sincos_theta_x(0:nn/2,2,ip)
+          return
+        end if
+      end if
+      if(allocated(sincos_theta_y)) then
+        if(n_sincos_theta_y(ip) == nn) then
+          sin_theta(0:nn/2) => sincos_theta_y(0:nn/2,1,ip)
+          cos_theta(0:nn/2) => sincos_theta_y(0:nn/2,2,ip)
+          return
+        end if
+      end if
+    end do
+    error stop 'ERROR: sincos arrays were not computed for this transform length.'
+  end subroutine get_sincos_theta
+  !
   subroutine fftf_gpu(plan,arr)
     implicit none
 #if !defined(_USE_HIP)
@@ -377,7 +537,8 @@ module mod_fft
 #endif
     real(rp), intent(inout), target, dimension(:,:,:) :: arr
     real(rp), intent(inout), target, dimension(:,:,:) :: arr_tmp
-    if(c_or_f == 'c'.and.cbc /= 'PP') then
+    !
+    if(cbc /= 'PP') then
       call signal_processing(0,f_or_b,cbc,c_or_f,nn,n,1,arr,arr_tmp)
       select case(f_or_b)
       case('F')
@@ -397,6 +558,96 @@ module mod_fft
       call signal_processing(1,f_or_b,cbc,c_or_f,nn,n,1,arr)
     end if
   end subroutine fft_gpu
+  !
+  subroutine prep_dsti(f_or_b,nn,n,arr,arr_out)
+    !
+    ! face DD has N-1 independent values; for a forward DST-I, form the
+    ! length-2N odd extension [0,x(1),...,x(N-1),0,-x(N-1),...,-x(1)]
+    ! for the inverse, form a purely imaginary Hermitian half-spectrum
+    !
+    implicit none
+    character(len=1), intent(in) :: f_or_b
+    integer , intent(in) :: nn
+    integer , intent(in), dimension(3) :: n
+    real(rp), intent(in ), dimension(:,:,:) :: arr
+    real(rp), intent(out), dimension(:,:,:) :: arr_out
+    integer :: i,j,k,n_2,n_3
+    !
+    n_2 = n(2); n_3 = n(3)
+    select case(f_or_b)
+    case('F')
+      !$acc parallel     loop collapse(3) default(present) async(1)
+      !$omp target teams loop collapse(3)
+      do k=1,n_3
+        do j=1,n_2
+          do i=1,2*nn+2
+            arr_out(i,j,k) = 0.
+            if((i >= 2   ).and.(i <= nn  )) arr_out(i,j,k) =  arr(     i-1,j,k)
+            if((i >= nn+2).and.(i <= 2*nn)) arr_out(i,j,k) = -arr(2*nn-i+1,j,k)
+          end do
+        end do
+      end do
+    case('B')
+      !$acc parallel     loop collapse(3) default(present) async(1)
+      !$omp target teams loop collapse(3)
+      do k=1,n_3
+        do j=1,n_2
+          do i=1,nn+1
+            arr_out(2*i-1,j,k) = 0.
+            arr_out(2*i  ,j,k) = 0.
+            if((i >= 2).and.(i <= nn)) arr_out(2*i,j,k) = -arr(i-1,j,k)
+          end do
+        end do
+      end do
+    end select
+  end subroutine prep_dsti
+  !
+  subroutine posp_dsti(f_or_b,nn,n,arr,arr_out)
+    !
+    ! extract DST-I coefficients or interior values, with round-trip factor 2N;
+    ! the excluded Dirichlet boundary slot and FFT padding are set to zero
+    !
+    implicit none
+    character(len=1), intent(in) :: f_or_b
+    integer , intent(in) :: nn
+    integer , intent(in), dimension(3) :: n
+    real(rp), intent(in ), dimension(:,:,:) :: arr
+    real(rp), intent(out), dimension(:,:,:) :: arr_out
+    integer :: i,j,k,n_1,n_2,n_3
+    !
+    n_1 = n(1); n_2 = n(2); n_3 = n(3)
+    select case(f_or_b)
+    case('F')
+      !$acc parallel     loop collapse(3) default(present) async(1)
+      !$omp target teams loop collapse(3)
+      do k=1,n_3
+        do j=1,n_2
+          do i=1,n_1
+            if(i >= nn) then
+              arr_out(i,j,k) = 0.
+            else
+              arr_out(i,j,k) = -arr(2*i+2,j,k)
+            end if
+          end do
+        end do
+      end do
+    case('B')
+      !$acc parallel     loop collapse(3) default(present) async(1)
+      !$omp target teams loop collapse(3)
+      do k=1,n_3
+        do j=1,n_2
+          do i=1,n_1
+            if(i >= nn) then
+              arr_out(i,j,k) = 0.
+            else
+              arr_out(i,j,k) =  arr(i+1  ,j,k)
+            end if
+          end do
+        end do
+      end do
+    end select
+  end subroutine posp_dsti
+  !
   subroutine posp_fftf(nn,n,idir,arr)
     !
     ! post-processing of a signal following a forward FFT
@@ -504,26 +755,9 @@ module mod_fft
     real(rp), pointer, contiguous :: sin_theta(:),cos_theta(:)
     integer :: n_2,n_3
     !
-    nullify(sin_theta,cos_theta)
-    !
     select case(idir)
     case(1)
-      if(allocated(sincos_theta_x) .or. allocated(sincos_theta_y)) then
-        if(allocated(sincos_theta_x)) then
-          if(n_sincos_theta_x == nn) then
-            sin_theta(0:nn/2) => sincos_theta_x(:,1)
-            cos_theta(0:nn/2) => sincos_theta_x(:,2)
-          end if
-        end if
-        if(.not.associated(sin_theta) .and. allocated(sincos_theta_y)) then
-          if(n_sincos_theta_y == nn) then
-            sin_theta(0:nn/2) => sincos_theta_y(:,1)
-            cos_theta(0:nn/2) => sincos_theta_y(:,2)
-          end if
-        end if
-      else
-        error stop 'ERROR: sincos arrays were not computed.'
-      end if
+      call get_sincos_theta(nn,sin_theta,cos_theta)
       n_2 = n(2); n_3 = n(3)
       !$acc parallel     loop collapse(3) default(present) private(i) async(1)
       !$omp target teams loop collapse(3)                  private(i)
@@ -567,26 +801,9 @@ module mod_fft
     real(rp), pointer, contiguous :: sin_theta(:),cos_theta(:)
     integer :: n_2,n_3
     !
-    nullify(sin_theta,cos_theta)
-    !
     select case(idir)
     case(1)
-      if(allocated(sincos_theta_x) .or. allocated(sincos_theta_y)) then
-        if(allocated(sincos_theta_x)) then
-          if(n_sincos_theta_x == nn) then
-            sin_theta(0:nn/2) => sincos_theta_x(:,1)
-            cos_theta(0:nn/2) => sincos_theta_x(:,2)
-          end if
-        end if
-        if(.not.associated(sin_theta) .and. allocated(sincos_theta_y)) then
-          if(n_sincos_theta_y == nn) then
-            sin_theta(0:nn/2) => sincos_theta_y(:,1)
-            cos_theta(0:nn/2) => sincos_theta_y(:,2)
-          end if
-        end if
-      else
-        error stop 'ERROR: sincos arrays were not computed.'
-      end if
+      call get_sincos_theta(nn,sin_theta,cos_theta)
       if(is_swap_order ) call swap_order( nn,n(2),n(3),arr)
       if(is_negate_even) call negate_even(nn,n(2),n(3),arr)
       n_2 = n(2); n_3 = n(3)
@@ -651,6 +868,158 @@ module mod_fft
       if(is_negate_even) call negate_even(nn,n(2),n(3),arr_out)
     end select
   end subroutine posp_dctiib
+  !
+  subroutine prep_dctiv_viii(f_or_b,cbc,c_or_f,nn,n,arr,arr_out)
+    !
+    ! take half the odd DCT-II coefficients of [x,-reverse(x)] for cell
+    ! DCT-IV transforms, or [x,0,-reverse(x)] for DCT-VIII on M=N-1 face interiors
+    ! fuse the extension with the FFT reorder; the inverse embeds input
+    ! in odd DCT-II modes; cell DN negates even points and reverses modes;
+    ! face DN reverses physical points before/after the ND transform
+    !
+    implicit none
+    character(len=1), intent(in) :: f_or_b,c_or_f
+    character(len=2), intent(in) :: cbc
+    integer , intent(in) :: nn,n(3)
+    real(rp), intent(in ) :: arr(:,:,:)
+    real(rp), intent(out) :: arr_out(:,:,:)
+    logical :: is_sine,is_reverse,is_face
+    integer :: i,j,k,ii,ip,im,n_2,n_3,m,nfft
+    real(rp) :: s,a,b
+    real(rp), pointer, contiguous :: sin_theta(:),cos_theta(:)
+    !
+    is_face = c_or_f == 'f'
+    is_sine    = (cbc == 'DN').and.(.not.is_face)
+    is_reverse = (cbc == 'DN').and.(     is_face)
+    m = nn; nfft = 2*nn
+    if(is_face) then
+      m = nn-1; nfft = 2*nn-1
+    end if
+    n_2 = n(2); n_3 = n(3)
+    select case(f_or_b)
+    case('F')
+      !$acc parallel     loop collapse(3) default(present) private(ip,ii,s) async(1)
+      !$omp target teams loop collapse(3)                  private(ip,ii,s)
+      do k=1,n_3
+        do j=1,n_2
+          do i=1,2*(nfft/2+1)
+            arr_out(i,j,k) = 0.
+            if(i <= nfft) then
+              ip = 2*i-1
+              if(i > (nfft+1)/2) ip = 2*(nfft-i+1)
+              ii = ip; s = 1.
+              if(ip > m) then
+                ii = nfft-ip+1; s = -1.
+              end if
+              if(ii <= m) then
+                if(is_sine.and.(mod(ii,2) == 0)) s = -s
+                if(is_reverse) ii = m-ii+1
+                arr_out(i,j,k) = s*arr(ii,j,k)
+              end if
+            end if
+          end do
+        end do
+      end do
+    case('B')
+      call get_sincos_theta(nfft,sin_theta,cos_theta)
+      !$acc parallel     loop collapse(3) default(present) private(ip,im,a,b) async(1)
+      !$omp target teams loop collapse(3)                  private(ip,im,a,b)
+      do k=1,n_3
+        do j=1,n_2
+          do i=0,nfft/2
+            a = 0.; b = 0.
+            if(mod(i,2) == 1) then
+              ip = (i+1)/2
+              if(is_sine) ip = m-ip+1
+              a = arr(ip,j,k)
+            end if
+            if((i > 0).and.(mod(nfft-i,2) == 1)) then
+              im = (nfft-i+1)/2
+              if(is_sine) im = m-im+1
+              b = arr(im,j,k)
+            end if
+            arr_out(2*i+1,j,k) = cos_theta(i)*a + sin_theta(i)*b
+            arr_out(2*i+2,j,k) = sin_theta(i)*a - cos_theta(i)*b
+            if((mod(nfft,2) == 0).and.(i == nfft/2)) arr_out(2*i+2,j,k) = 0.
+          end do
+        end do
+      end do
+    end select
+  end subroutine prep_dctiv_viii
+  !
+  subroutine posp_dctiv_viii(f_or_b,cbc,c_or_f,nn,n,arr,arr_out)
+    implicit none
+    character(len=1), intent(in) :: f_or_b,c_or_f
+    character(len=2), intent(in) :: cbc
+    integer , intent(in) :: nn,n(3)
+    real(rp), intent(in ) :: arr(:,:,:)
+    real(rp), intent(out) :: arr_out(:,:,:)
+    logical :: is_sine,is_reverse,is_face
+    integer :: i,j,k,ii,ip,n_1,n_2,n_3,m,nfft
+    real(rp), pointer, contiguous :: sin_theta(:),cos_theta(:)
+    !
+    is_face = c_or_f == 'f'
+    is_sine    = (cbc == 'DN').and.(.not.is_face)
+    is_reverse = (cbc == 'DN').and.(     is_face)
+    m = nn; nfft = 2*nn
+    if(is_face) then
+      m = nn-1; nfft = 2*nn-1
+    end if
+    n_1 = n(1); n_2 = n(2); n_3 = n(3)
+    !
+    ! clear padding before it enters a transform along the other axis
+    !
+    select case(f_or_b)
+    case('F')
+      !
+      ! extract half the odd DCT-II coefficients from the half-spectrum
+      ! the round-trip factor is the extension length (2N or 2N-1)
+      !
+      call get_sincos_theta(nfft,sin_theta,cos_theta)
+      !$acc parallel     loop collapse(3) default(present) private(ii,ip) async(1)
+      !$omp target teams loop collapse(3)                  private(ii,ip)
+      do k=1,n_3
+        do j=1,n_2
+          do i=1,n_1
+            if(i > m) then
+              arr_out(i,j,k) = 0.
+            else
+              ii = 2*i-1
+              if(is_sine) ii = 2*(m-i+1)-1
+              if(ii <= nfft/2) then
+                ip = 2*ii+1
+                arr_out(i,j,k) = cos_theta(ii)*arr(ip,j,k) + sin_theta(ii)*arr(ip+1,j,k)
+              else
+                ii = nfft-ii; ip = 2*ii+1
+                arr_out(i,j,k) = sin_theta(ii)*arr(ip,j,k) - cos_theta(ii)*arr(ip+1,j,k)
+              end if
+            end if
+          end do
+        end do
+      end do
+    case('B')
+      !$acc parallel     loop collapse(3) default(present) private(ip,ii) async(1)
+      !$omp target teams loop collapse(3)                  private(ip,ii)
+      do k=1,n_3
+        do j=1,n_2
+          do i=1,n_1
+            if(i > m) then
+              arr_out(i,j,k) = 0.
+              if(is_reverse.and.(i == nn)) arr_out(i,j,k) = arr(1,j,k)
+            else
+              ip = (i+1)/2
+              if(mod(i,2) == 0) ip = nfft-i/2+1
+              ii = i
+              if(is_reverse) ii = m-i+1
+              arr_out(ii,j,k) = arr(ip,j,k)
+              if(is_sine.and.(mod(i,2) == 0)) arr_out(ii,j,k) = -arr_out(ii,j,k)
+            end if
+          end do
+        end do
+      end do
+    end select
+  end subroutine posp_dctiv_viii
+  !
   subroutine signal_processing(pre_or_pos,f_or_b,cbc,c_or_f,nn,n,idir,arr,arr_out)
     implicit none
     !
@@ -665,6 +1034,8 @@ module mod_fft
     integer, intent(in)                       :: idir
     real(rp), intent(inout), dimension(:,:,:) :: arr
     real(rp), intent(out  ), dimension(:,:,:), optional :: arr_out
+    integer :: m,j,k,n_2,n_3
+    !
     select case(cbc)
     case('PP')
       select case(f_or_b)
@@ -674,15 +1045,28 @@ module mod_fft
         if(pre_or_pos == 0) call prep_fftb(nn,n,idir,arr)
       end select
     case('NN')
-      if(c_or_f == 'c') then
-        select case(f_or_b)
-        case('F')
-          if(pre_or_pos == 0) call prep_dctiif(nn,n,idir,arr,arr_out,.false.,.false.)
-          if(pre_or_pos == 1) call posp_dctiif(nn,n,idir,arr,arr_out,.false.,.false.)
-        case('B')
-          if(pre_or_pos == 0) call prep_dctiib(nn,n,idir,arr,arr_out,.false.,.false.)
-          if(pre_or_pos == 1) call posp_dctiib(nn,n,idir,arr,arr_out,.false.,.false.)
-        end select
+      m = nn
+      if(c_or_f == 'f') m = nn-1
+      select case(f_or_b)
+      case('F')
+        if(pre_or_pos == 0) call prep_dctiif(m,n,idir,arr,arr_out,.false.,.false.)
+        if(pre_or_pos == 1) call posp_dctiif(m,n,idir,arr,arr_out,.false.,.false.)
+      case('B')
+        if(pre_or_pos == 0) call prep_dctiib(m,n,idir,arr,arr_out,.false.,.false.)
+        if(pre_or_pos == 1) call posp_dctiib(m,n,idir,arr,arr_out,.false.,.false.)
+      end select
+      if((c_or_f == 'f').and.(pre_or_pos == 1).and.(f_or_b == 'B')) then
+        !
+        ! restore the dependent boundary value after the inverse transform
+        !
+        n_2 = n(2); n_3 = n(3)
+        !$acc parallel     loop collapse(2) default(present) async(1)
+        !$omp target teams loop collapse(2)
+        do k=1,n_3
+          do j=1,n_2
+            arr_out(nn,j,k) = arr_out(m,j,k)
+          end do
+        end do
       end if
     case('DD')
       if(c_or_f == 'c') then
@@ -694,7 +1078,13 @@ module mod_fft
           if(pre_or_pos == 0) call prep_dctiib(nn,n,idir,arr,arr_out,.true. ,.false.)
           if(pre_or_pos == 1) call posp_dctiib(nn,n,idir,arr,arr_out,.false.,.true. )
         end select
+      else if(c_or_f == 'f') then
+        if(pre_or_pos == 0) call prep_dsti(f_or_b,nn,n,arr,arr_out)
+        if(pre_or_pos == 1) call posp_dsti(f_or_b,nn,n,arr,arr_out)
       end if
+    case('ND','DN')
+      if(pre_or_pos == 0) call prep_dctiv_viii(f_or_b,cbc,c_or_f,nn,n,arr,arr_out)
+      if(pre_or_pos == 1) call posp_dctiv_viii(f_or_b,cbc,c_or_f,nn,n,arr,arr_out)
     case default
       error stop 'ERROR: unsupported boundary condition' ! should be trapped before under `sanity.f90`
     end select
@@ -756,6 +1146,13 @@ module mod_fft
           do i=1,nh
             arr_out(i,j,k) = arr(2*i-1,j,k)
             if(i+nh <= n) arr_out(i+nh,j,k) = arr(2*(n-(i+nh)+1),j,k)
+            !
+            ! initialize real padding read by cuFFT
+            !
+            if(i == 1) then
+              arr_out(n+1,j,k) = 0.
+              if(mod(n,2) == 0) arr_out(n+2,j,k) = 0.
+            end if
           end do
         end do
       end do

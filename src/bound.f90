@@ -119,6 +119,31 @@ module mod_bound
                              call set_bc(cbc(1,3,2),1,3,nh,.true. ,bc(1,3,2),dzc(n(3)),v)
       if(apply_norm_bc(1,3)) call set_bc(cbc(1,3,3),1,3,nh,.false.,bc(1,3,3),dzf(n(3)),w)
     end if
+    !
+    ! refresh normal halos after imposing upper physical boundary values
+    !
+    if(.not.keep_norm .and. updt_norm(1)) then
+      do idir=1,3
+        if(cbc(1,idir,idir) == 'P') cycle
+        select case(idir)
+#if !(defined(_OPENACC) || defined(_OPENMP))
+        case(1)
+          call updthalo(nh,halo(1),nb(:,1),1,u,HALO_UPPER)
+        case(2)
+          call updthalo(nh,halo(2),nb(:,2),2,v,HALO_UPPER)
+        case(3)
+          call updthalo(nh,halo(3),nb(:,3),3,w,HALO_UPPER)
+#else
+        case(1)
+          call updthalo_gpu(nh,cbc(0,:,1)//cbc(1,:,1)==['PP','PP','PP'],u,1)
+        case(2)
+          call updthalo_gpu(nh,cbc(0,:,2)//cbc(1,:,2)==['PP','PP','PP'],v,2)
+        case(3)
+          call updthalo_gpu(nh,cbc(0,:,3)//cbc(1,:,3)==['PP','PP','PP'],w,3)
+#endif
+        end select
+      end do
+    end if
   end subroutine bounduvw
   !
   subroutine boundp(cbc,n,bc,nb,is_bound,dl,dzc,p,halo_side)
@@ -527,7 +552,7 @@ module mod_bound
     real(rp) :: norm
     q(:) = 0
     do idir = 1,3
-      if(c_or_f(idir) == 'f'.and.cbc(1,idir) == 'D') q(idir) = 1
+      if(c_or_f(idir) == 'f'.and.cbc(1,idir) /= 'P') q(idir) = 1
     end do
     norm = 1.
     if(present(alpha)) norm = alpha

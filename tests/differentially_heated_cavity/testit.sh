@@ -10,7 +10,7 @@ UTILSDIR=$CANSDIR/utils
 
 MPIRUN_OPTIONS='--oversubscribe'
 if mpirun --version 2>&1 | grep -qi intel; then MPIRUN_OPTIONS=""; fi
-MPIRUN="mpirun -n 4 $MPIRUN_OPTIONS"
+MPIRUN="mpirun -n 1 $MPIRUN_OPTIONS"
 
 cd $RUNDIR
 mkdir -p data

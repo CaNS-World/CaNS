@@ -1,0 +1,43 @@
+&dns
+ng(1:3) = 9, 11, 9
+l(1:3) = 1., 1.3, 1.7
+gtype = 1, gr = 1.5
+cfl = 0.5, dtmax = 1., dt_f = 0.0001
+visci = 1000.
+inivel = 'tbl'
+is_wallturb = F
+nstep = 1, time_max = 1., tw_max = 1.
+stop_type(1:3) = T, F, F
+restart = F, is_overwrite_save = T, nsaves_max = 0
+icheck = 0, iout0d = 0, iout1d = 0, iout2d = 0, iout3d = 0, isave = 0
+cbcvel(0:1,1:3,1) = 'P','P', 'P','P', 'P','P'
+cbcvel(0:1,1:3,2) = 'P','P', 'P','P', 'P','P'
+cbcvel(0:1,1:3,3) = 'P','P', 'P','P', 'P','P'
+cbcpre(0:1,1:3) = 'P','P', 'P','P', 'P','P'
+bcvel(0:1,1:3,1) = 0.,0., 0.,0., 0.,0.
+bcvel(0:1,1:3,2) = 0.,0., 0.,0., 0.,0.
+bcvel(0:1,1:3,3) = 0.,0., 0.,0., 0.,0.
+bcpre(0:1,1:3)   = 0.,0., 0.,0., 0.,0.
+bforce(1:3) = 0., 0., 0.
+is_forced(1:3) = F, F, F
+velf(1:3) = 0., 0., 0.
+dims(1:2) = 1, 1, ipencil_axis = 1
+/
+!
+&cudecomp
+cudecomp_t_comm_backend = 1, cudecomp_is_t_enable_nccl = F, cudecomp_is_t_enable_nvshmem = F
+cudecomp_h_comm_backend = 1, cudecomp_is_h_enable_nccl = F, cudecomp_is_h_enable_nvshmem = F
+/
+!
+&numerics
+is_impdiff = F, is_impdiff_1d = F
+is_poisson_dtdma = F
+/
+!
+&other_options
+is_debug = F, is_debug_poisson = T, is_timing = F
+/
+!
+&io
+io_backend = 'mpiio'
+/

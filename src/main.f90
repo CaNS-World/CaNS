@@ -369,6 +369,9 @@ program cans
     call set_cufft_wspace(pack(arrplanu,.true.),istream_acc_queue_1)
     call set_cufft_wspace(pack(arrplanv,.true.),istream_acc_queue_1)
     call set_cufft_wspace(pack(arrplanw,.true.),istream_acc_queue_1)
+    do iscal=1,nscal
+      call set_cufft_wspace(pack(scalars(iscal)%arrplan,.true.),istream_acc_queue_1)
+    end do
   end if
   if(myid == 0) print*,'*** Device memory footprint (Gb): ', &
                   device_memory_footprint(n,n_z,nscal)/(1._sp*1024**3), ' ***'
@@ -390,6 +393,14 @@ program cans
   !
   is_dtdma_update_p = .true.
   !
+  u(:,:,:)  = 0.
+  v(:,:,:)  = 0.
+  w(:,:,:)  = 0.
+  p(:,:,:)  = 0.
+  pp(:,:,:) = 0.
+  do iscal=1,nscal
+    scalars(iscal)%val(:,:,:) = 0.
+  end do
   if(.not.restart) then
     istep = 0
     time = 0.
@@ -406,8 +417,8 @@ program cans
     end do
     if(myid == 0) print*, '*** Checkpoint loaded at time = ', time, 'time step = ', istep, '. ***'
   end if
-  !$acc        enter data copyin(u,v,w,p,dudtrko,dvdtrko,dwdtrko) create(   pp)
-  !$omp target enter data map(to:u,v,w,p,dudtrko,dvdtrko,dwdtrko) map(alloc:pp)
+  !$acc        enter data copyin(u,v,w,p,pp,dudtrko,dvdtrko,dwdtrko)
+  !$omp target enter data map(to:u,v,w,p,pp,dudtrko,dvdtrko,dwdtrko)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,restart)
   call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p,1)
   do iscal=1,nscal

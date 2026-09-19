@@ -20,7 +20,7 @@ contains
                                    ap_z,pz_aux_1, &
                                    istream_acc_queue_1,istream_acc_queue_1_comm_lib
     use mod_fft            , only: wsize_fft,wsize_tmp
-    use mod_param          , only: ng,cudecomp_is_t_in_place,cbcpre,ipencil => ipencil_axis,is_poisson_dtdma, &
+    use mod_param          , only: ng,dims,cudecomp_is_t_in_place,cbcpre,ipencil => ipencil_axis,is_poisson_dtdma, &
                                    is_use_diezdecomp
 #if !defined(_USE_DIEZDECOMP)
     use cudecomp
@@ -34,7 +34,7 @@ contains
 #endif
     implicit none
     integer :: istat
-    integer(i8) :: wsize,max_wsize,elem_round
+    integer(i8) :: i,wsize,max_wsize,elem_round
     integer :: nh(3)
     !
     ! allocate cuDecomp workspace buffer for transposes (reused for FFTs and other temporaries)
@@ -44,8 +44,8 @@ contains
     ! work space for temporaries, rounded up to 256 byte boundary
     !
     elem_round = 256/f_sizeof(1._rp)
-    wsize_tmp = (max(ap_x_poi%size,ap_y_poi%size) + elem_round - 1)/elem_round*elem_round
-    wsize     = wsize_fft + wsize_tmp
+    wsize_tmp = (max(wsize_tmp,ap_x_poi%size,ap_y_poi%size) + elem_round - 1)/elem_round*elem_round
+    wsize     = max(1_i8,wsize_fft) + wsize_tmp ! keep work(wsize_tmp+1) valid when a plan needs no cuFFT workspace
     max_wsize = max(max_wsize,wsize)
     istat = cudecompGetTransposeWorkspaceSize(handle,gd_poi,wsize)
     max_wsize = max(max_wsize,wsize)
@@ -93,6 +93,12 @@ contains
     allocate(solver_buf_0(wsize),solver_buf_1(wsize))
     !$acc        enter data create(   solver_buf_0,solver_buf_1)
     !$omp target enter data map(alloc:solver_buf_0,solver_buf_1)
+    !$acc parallel     loop default(present)
+    !$omp target teams loop
+    do i=1,wsize
+      solver_buf_0(i) = 0.
+      solver_buf_1(i) = 0.
+    end do
     if(cbcpre(0,3)//cbcpre(1,3) == 'PP') then
       allocate(pz_aux_1(ap_z%shape(1),ap_z%shape(2),ap_z%shape(3)))
       !$acc        enter data create(   pz_aux_1)
@@ -108,7 +114,7 @@ contains
       ! allocate DTDMA transpose workspaces: a separate buffer is needed because `work` is used along with `work_dtdma`
       !
       istat = cudecompGetTransposeWorkspaceSize(handle,gd_dtdma,wsize)
-      wsize = max(wsize,(3*(ng(3)+1))) ! `work_dtdma` is also used as a buffer with this size in `gaussel_dtdma_gpu_fast_1d`
+      wsize = max(wsize,3*((ng(3)+dims(2)-1)/dims(2))*dims(2)) ! considers largest Z slab on every rank
       allocate(work_dtdma(wsize))
       !$acc        enter data create(   work_dtdma) if(is_use_diezdecomp)
       !$omp target enter data map(alloc:work_dtdma) if(is_use_diezdecomp)
