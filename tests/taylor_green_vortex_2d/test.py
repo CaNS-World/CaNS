@@ -75,7 +75,9 @@ def check_orders(label, errors, lower, upper):
 
 def main():
     os.environ.setdefault('OMP_NUM_THREADS', '2')
+    # Allow oversubscription with both Open MPI 4 (ORTE) and 5 (PRRTE).
     os.environ.setdefault('OMPI_MCA_rmaps_base_oversubscribe', '1')
+    os.environ.setdefault('PRTE_MCA_rmaps_default_mapping_policy', ':oversubscribe')
     for axis in range(3):
         a, b = 'uvw'[(axis+1) % 3], 'uvw'[(axis+2) % 3]
         print(f'{"XYZ"[axis]} homogeneous:       {a} L2       {a} Linf         {b} L2       {b} Linf', flush=True)
