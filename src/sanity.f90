@@ -44,7 +44,7 @@ module mod_sanity
     logical         , intent(in), dimension(3)       :: is_forced
     logical :: passed,passed_loc
     !
-    call chk_dims(ng,dims,passed);                 if(.not.passed) call abortit
+    call chk_dims(ng,dims,cbcvel,cbcpre,passed);   if(.not.passed) call abortit
     call chk_stop_type(stop_type,passed);          if(.not.passed) call abortit
     call chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed); if(.not.passed) call abortit
     call chk_forcing(cbcpre,is_forced,passed);     if(.not.passed) call abortit
@@ -85,19 +85,63 @@ module mod_sanity
     end if
   end subroutine chk_stop_type
   !
-  subroutine chk_dims(ng,dims,passed)
+  subroutine chk_dims(ng,dims,cbcvel,cbcpre,passed)
+    use mod_param, only: nscal,cbcscal
     implicit none
     integer, intent(in), dimension(3) :: ng
     integer, intent(in), dimension(2) :: dims
+    character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
+    character(len=1), intent(in), dimension(0:1,3)   :: cbcpre
     logical, intent(out) :: passed
     integer, dimension(2) :: ii
     logical :: passed_loc
+    integer :: idir,iscal
+    character(len=2) :: bc01v
     passed = .true.
+    passed_loc = all(ng(:) >= 1)
+    if(myid == 0.and.(.not.passed_loc)) &
+      print*, 'ERROR: ng(:) must be positive in every direction.'
+    passed = passed.and.passed_loc
+    !
     ii = pack([1,2,3],[1,2,3] /= ipencil_axis)
     passed_loc = all(dims(:)<=ng(ii)).and.all(dims(:)>=1)
     if(myid == 0.and.(.not.passed_loc)) &
       print*, 'ERROR: 1 <= dims(:) <= [ng(1),ng(2)], or [ng(1),ng(3)], or [ng(2),ng(3)] depending on the decomposition.'
     passed = passed.and.passed_loc
+    !
+    if(is_impdiff) then
+      passed_loc = .true.
+      do idir=1,2
+        if(ng(idir) /= 1) cycle
+        bc01v = cbcvel(0,idir,idir)//cbcvel(1,idir,idir)
+        passed_loc = passed_loc.and.bc01v /= 'NN'
+#if !defined(_OPENACC)
+        if(.not.is_impdiff_1d) passed_loc = passed_loc.and.(bc01v == 'PP'.or.bc01v == 'ND')
+#endif
+      end do
+      if(myid == 0.and.(.not.passed_loc)) &
+        print*, 'ERROR: unsupported one-point X/Y direction for the selected implicit velocity BCs.'
+      passed = passed.and.passed_loc
+    end if
+    !
+    if(ng(3) == 1) then
+      if(cbcpre(0,3)//cbcpre(1,3) == 'PP') then
+        passed_loc = all(cbcvel(:,3,:) == 'P')
+        do iscal=1,nscal
+          passed_loc = passed_loc.and.all(cbcscal(:,3,iscal) == 'P')
+        end do
+      else
+#if defined(_OPENACC)
+        passed_loc = .false.
+#else
+        passed_loc = .not.is_impdiff
+        if(cbcpre(0,3)//cbcpre(1,3) == 'NN') passed_loc = passed_loc.and.any(cbcpre(:,1:2) == 'D')
+#endif
+      end if
+      if(myid == 0.and.(.not.passed_loc)) &
+        print*, 'ERROR: unsupported one-point Z configuration; use periodic BCs for all fields.'
+      passed = passed.and.passed_loc
+    end if
   end subroutine chk_dims
   !
   subroutine chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed)

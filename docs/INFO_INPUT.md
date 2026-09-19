@@ -57,6 +57,20 @@ These lines set the computational grid.
 
 `ng(1:3)` and `l(1:3)` are the **number of points**  and **domain length** in each direction.
 
+For 2D simulations, use one grid cell with periodic boundary conditions for all variables along the homogeneous direction. Initialize the velocity normal to that direction to zero and leave its forcing disabled. Two periodic cells are supported as well.
+
+The admissible MPI process grids depend on the homogeneous direction:
+
+| Homogeneous direction | Grid | `dims(1:2)` | Process-count limit |
+|---|---|---|---|
+| X | `1, Ny, Nz` | `1, P` | `P <= min(Ny,Nz)` |
+| Y | `Nx, 1, Nz` | `1, 1` | one MPI rank |
+| Z | `Nx, Ny, 1` | `P, 1` | `P <= min(Nx,Ny)` |
+
+With `ng(3)=1`, use `is_poisson_dtdma = F`, and use a uniform Z grid.
+
+Grid and timestep formulas remain three-dimensional. Since the spacing in a one-cell direction equals its domain length, choose that length at least as large as the largest spacing in the two retained directions. Together with zero normal velocity, this avoids an artificial timestep restriction from the homogeneous direction. See the supplied 2D tests and examples.
+
 `gtype` and `gr` are the **grid stretching type** and **grid stretching parameter** that tweak the non-uniform grid in the third direction; zero `gr` implies no stretching. See `initgrid.f90` for more details. The following options are available for `gtype`:
 
 * `1`: grid clustered towards both ends (default)
@@ -91,25 +105,37 @@ is_wallturb = T
 
 These lines set the initial velocity field.
 
-`initvel` **chooses the initial velocity field**. The following options are available:
+`inivel` **chooses the initial velocity field**. The following options are available:
 
 * `zer`: zero velocity field
-* `uni`: uniform velocity field equal to `uref`                                     ; streamwise direction in `x`
-* `cou`: plane Couette flow profile with symmetric wall velocities equal to `uref/2`; streamwise direction in `x`
-* `poi`: plane/duct Poiseuille flow profile with mean velocity `uref`               ; streamwise direction in `x`
-* `tbl`: temporal boundary layer profile with wall velocity `uref`                  ; streamwise direction in `x`
-* `pdc`: plane Poiseuille flow profile with constant pressure gradient              ; streamwise direction in `x`
-* `log`: logarithmic channel/duct profile with mean velocity `uref`                 ; streamwise direction in `x`
-* `hcp`: half channel with plane Poiseuille profile and mean velocity `uref`        ; streamwise direction in `x`
-* `hcl`: half channel with logarithmic profile and mean velocity `uref`             ; streamwise direction in `x`
-* `hdc`: half plane Poiseuille flow profile with constant pressure gradient         ; streamwise direction in `x`
+* `uni`: uniform velocity field equal to `uref`
+* `cou`: plane Couette flow profile using the prescribed velocities at the normal walls
+* `poi`: plane/duct Poiseuille flow profile with prescribed bulk velocity
+* `tbl`: temporal boundary layer profile with wall velocity `uref`
+* `pdc`: plane Poiseuille flow profile with constant pressure gradient
+* `log`: logarithmic channel/duct profile with mean velocity `uref`
+* `hcp`: half channel with plane Poiseuille profile and mean velocity `uref`
+* `hcl`: half channel with logarithmic profile and mean velocity `uref`
+* `hdc`: half plane Poiseuille flow profile with constant pressure gradient
 * `tgv`: three-dimensional Taylor-Green vortex
-* `tgw`: two-dimensional   Taylor-Green vortex
+* `tgv-2d-x`: two-dimensional Taylor-Green vortex in the Y–Z plane, with zero X velocity
+* `tgv-2d-y`: two-dimensional Taylor-Green vortex in the Z–X plane, with zero Y velocity
+* `tgv-2d-z`: two-dimensional Taylor-Green vortex in the X–Y plane, with zero Z velocity
 * `ant`: three-dimensional Antuono vortex
+
+The profile initializers (`zer`, `uni`, `cou`, `poi`, `tbl`, `iop`, `log`, `hcl`, `hcp`, `pdc`, `hdc`) accept `-x`, `-y`, or `-z` suffixes, for example `poi-y`. A bare name always means `-x`.
+
+| Suffix | Flow direction | Main profile variation | Other transverse direction |
+|---|---|---|---|
+| `-x` | X | Z | Y |
+| `-y` | Y | Z | X |
+| `-z` | Z | X | Y |
+
+Wall velocities, forcing and bulk targets are read from the corresponding physical entries of `bcvel`, `bforce`, `is_forced` and `velf`; these inputs and the grid are not reordered. Existing boundary-condition restrictions still apply, including homogeneous X/Y velocity boundaries with fully implicit diffusion.
 
 `is_wallturb`, if true, **superimposes a high amplitude disturbance on the initial velocity field** that effectively triggers transition to turbulence in a wall-bounded shear flow.
 
-See `initflow.f90` for more details.
+See `initflow.f90` for more details. The subroutines in this file may be easily extended to accommodate other initial conditions.
 
 ---
 

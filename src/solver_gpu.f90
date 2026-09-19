@@ -291,6 +291,34 @@ module mod_solver_gpu
     real(rp) :: den,lxy,pivot_tol,z
     integer :: i,j,k,nn
     !
+    ! a single periodic point has no Z Laplacian
+    !
+    if(is_periodic.and.(n == 1)) then
+      if(present(lambdaxy)) then
+        !$acc parallel loop gang vector collapse(2) default(present) private(den,pivot_tol) async(1)
+        do j=1,ny
+          do i=1,nx
+            den = b(1) + lambdaxy(i,j)
+            pivot_tol = epsilon(den)*max(abs(b(1)),abs(lambdaxy(i,j)))
+            if(abs(den) <= pivot_tol) then
+              p(i,j,1) = 0.
+            else
+              p(i,j,1) = p(i,j,1)*norm/den
+            end if
+          end do
+        end do
+      else
+        !$acc parallel loop gang vector collapse(2) default(present) private(z) async(1)
+        do j=1,ny
+          do i=1,nx
+            z = norm/b(1)
+            p(i,j,1) = p(i,j,1)*z
+          end do
+        end do
+      end if
+      return
+    end if
+    !
     !solve tridiagonal system
     !
     nn = n

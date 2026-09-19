@@ -29,6 +29,8 @@ By pressing <kbd>Enter</kbd> three times, the default values in the square brack
 
 ### 2D fields
 
+With one grid cell in the homogeneous direction, the full-field output is already a 2D plane: use `log_visu_3d.out` or visualize the checkpoints. The default slice in `out2d.h90` is normal to Y, so it gives a line when X or Z is homogeneous; edit `inorm` and `islice` to change its orientation.
+
 The procedure for visualizing 2D field data that is saved by *CaNS* in `out2d.h90` is exactly the same; it is just that the correct log file should be selected. *CaNS* saves by default field data in a plane of constant `y=ly/2`, and logs the saves to a file named `log_visu_2d_slice_1.out`. If more planes are saved, the user should make sure that one log file per plane is saved by *CaNS* (e.g. if another plane is saved, the log file written in `out2d.h90` could be named `log_visu_2d_slice_2.out`); see `out2d.h90` for more details. The corresponding steps to generate the Xdmf file would be, for instance:
 
 ~~~
