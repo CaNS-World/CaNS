@@ -31,7 +31,9 @@ def main():
     rundir = testdir.parent.parent/'run'
     exe = rundir/'cans'
     output = rundir/'poisson'
+    # Allow oversubscription with both Open MPI 4 (ORTE) and 5 (PRRTE).
     os.environ.setdefault('OMPI_MCA_rmaps_base_oversubscribe', '1')
+    os.environ.setdefault('PRTE_MCA_rmaps_default_mapping_policy', ':oversubscribe')
     os.environ.setdefault('OMP_NUM_THREADS', '2')
     for index, (layout, bc) in enumerate(itertools.product(LAYOUTS, BCS), 1):
         fixture, grid, dims, axis, dtdma = layout
