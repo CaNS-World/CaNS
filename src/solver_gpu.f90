@@ -969,7 +969,9 @@ module mod_solver_gpu
     !
     ! solve distributed TDMA problem
     !
-    !$acc parallel     loop gang vector collapse(2) default(present) async(1)
+    ! avoid empty inferred coefficient sections in NVHPC for two-point slabs
+    !
+    !$acc parallel     loop gang vector collapse(2) default(present) present(a_g,c_g) async(1)
     !$omp target teams loop             collapse(2)
     do j=1,ny
       do i=1,nx
