@@ -20,8 +20,7 @@ contains
                                    ap_z,pz_aux_1, &
                                    istream_acc_queue_1,istream_acc_queue_1_comm_lib
     use mod_fft            , only: wsize_fft,wsize_tmp
-    use mod_param          , only: ng,dims,cudecomp_is_t_in_place,cbcpre,cbcvel,cbcscal,nscal, &
-                                   ipencil => ipencil_axis,is_poisson_dtdma, &
+    use mod_param          , only: ng,dims,cudecomp_is_t_in_place,cbcpre,ipencil => ipencil_axis,is_poisson_dtdma, &
                                    is_use_diezdecomp
 #if !defined(_USE_DIEZDECOMP)
     use cudecomp
@@ -36,8 +35,7 @@ contains
     implicit none
     integer :: istat
     integer(i8) :: i,wsize,max_wsize,elem_round
-    integer :: nh(3),iscal
-    logical :: needs_cyclic_work
+    integer :: nh(3)
     !
     ! allocate cuDecomp workspace buffer for transposes (reused for FFTs and other temporaries)
     !
@@ -101,12 +99,7 @@ contains
       solver_buf_0(i) = 0.
       solver_buf_1(i) = 0.
     end do
-    needs_cyclic_work = cbcpre(0,3)//cbcpre(1,3) == 'PP'
-    needs_cyclic_work = needs_cyclic_work.or.any(cbcvel(0,3,:)//cbcvel(1,3,:) == 'PP')
-    do iscal=1,nscal
-      needs_cyclic_work = needs_cyclic_work.or.(cbcscal(0,3,iscal)//cbcscal(1,3,iscal) == 'PP')
-    end do
-    if(needs_cyclic_work) then
+    if(cbcpre(0,3)//cbcpre(1,3) == 'PP') then
       allocate(pz_aux_1(ap_z%shape(1),ap_z%shape(2),ap_z%shape(3)))
       !$acc        enter data create(   pz_aux_1)
       !$omp target enter data map(alloc:pz_aux_1)
