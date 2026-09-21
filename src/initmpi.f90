@@ -77,6 +77,9 @@ module mod_initmpi
 #if !defined(_USE_HIP)
     istat = cudaGetDeviceCount(ndev)      ! may be tweaked with environment variable CUDA_VISIBLE_DEVICES
     mydev = mod(mydev,ndev)
+#if defined(_OPENMP)
+    call omp_set_default_device(mydev)
+#endif
     istat = cudaSetDevice(mydev)
     if(istat /= 0) print*,'MPI rank: ',myid,' error assigning GPU: ',mydev
 #else
