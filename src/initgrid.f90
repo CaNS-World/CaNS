@@ -90,7 +90,7 @@ module mod_initgrid
     !
     ! step 4) compute coordinates of cell centers zc and faces zf
     !
-    zc(0)    = -dzc(0)/2.
+    zc(0)    = -dzf(0)/2.
     zf(0)    = 0.
     do k=1,n+1
       zc(k) = zc(k-1) + dzc(k-1)
