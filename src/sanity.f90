@@ -145,9 +145,7 @@ module mod_sanity
   end subroutine chk_dims
   !
   subroutine chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed)
-#if defined(_OPENACC)
     use mod_param, only: nscal,cbcscal
-#endif
     implicit none
     character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
     character(len=1), intent(in), dimension(0:1,3  ) :: cbcpre
@@ -155,9 +153,8 @@ module mod_sanity
     real(rp)        , intent(in), dimension(0:1,3  ) :: bcpre
     logical         , intent(out) :: passed
     character(len=2) :: bc01v,bc01p
-    integer :: ivel,idir
+    integer :: ivel,idir,iscal
 #if defined(_OPENACC)
-    integer :: iscal
     character(len=2) :: bc01s
 #endif
     logical :: passed_loc
@@ -189,6 +186,21 @@ module mod_sanity
                                     (bc01p == 'DD') )
     end do
     if(myid == 0.and.(.not.passed_loc)) print*, 'ERROR: pressure BCs not valid.'
+    passed = passed.and.passed_loc
+    !
+    ! check that all variables have the same periodic directions
+    !
+    passed_loc = .true.
+    do idir=1,3
+      do ivel=1,3
+        passed_loc = passed_loc.and.all((cbcvel(:,idir,ivel) == 'P').eqv.(cbcpre(:,idir) == 'P'))
+      end do
+      do iscal=1,nscal
+        passed_loc = passed_loc.and.all((cbcscal(:,idir,iscal) == 'P').eqv.(cbcpre(:,idir) == 'P'))
+      end do
+    end do
+    if(myid == 0.and.(.not.passed_loc)) &
+      print*, 'ERROR: velocity and scalar periodic BCs must match pressure BCs in every direction.'
     passed = passed.and.passed_loc
     !
     passed_loc = .true.
