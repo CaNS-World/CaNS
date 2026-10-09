@@ -8,10 +8,12 @@ module mod_common_cudecomp
 #if defined(_OPENACC)
   use mod_types
   !@cuf use cudafor
-#if !defined(_USE_DIEZDECOMP)
-  use cudecomp
-#else
+#if defined(_USE_DIEZDECOMP)
   use diezdecomp
+#elif defined(_USE_HIP)
+  use hipdecomp
+#else
+  use cudecomp
 #endif
   use openacc
   use mod_param, only: cudecomp_is_t_in_place
@@ -34,6 +36,10 @@ module mod_common_cudecomp
   !@cuf attributes(device) :: work_halo_cuda,work_dtdma_cuda
   real(rp), target, allocatable, dimension(:) :: solver_buf_0,solver_buf_1
   real(rp), allocatable, dimension(:,:,:) :: pz_aux_1,pz_aux_2
+#if defined(_USE_HIP) && !defined(_USE_DIEZDECOMP)
+  type(c_ptr) :: istream_acc_queue_1,istream_acc_queue_1_comm_lib
+#else
   integer(acc_handle_kind) :: istream_acc_queue_1,istream_acc_queue_1_comm_lib
+#endif
 #endif
 end module mod_common_cudecomp

@@ -13,10 +13,12 @@ module mod_initmpi
   use mod_types
 #if defined(_OPENACC)
   use openacc
-#if !defined(_USE_DIEZDECOMP)
-  use cudecomp
-#else
+#if defined(_USE_DIEZDECOMP)
   use diezdecomp
+#elif defined(_USE_HIP)
+  use hipdecomp
+#else
+  use cudecomp
 #endif
 #endif
   !@cuf use cudafor, only: cudaGetDeviceCount,cudaSetDevice
@@ -160,8 +162,11 @@ module mod_initmpi
     atune_conf%disable_nccl_backends    = .not.cudecomp_is_t_enable_nccl
     atune_conf%disable_nvshmem_backends = .not.cudecomp_is_t_enable_nvshmem
     if(all(conf_poi%transpose_comm_backend /= [CUDECOMP_TRANSPOSE_COMM_NVSHMEM, &
-                                               CUDECOMP_TRANSPOSE_COMM_NVSHMEM_PL, &
-                                               CUDECOMP_TRANSPOSE_COMM_NVSHMEM_SM])) then
+                                               CUDECOMP_TRANSPOSE_COMM_NVSHMEM_PL &
+#if !defined(_USE_HIP)
+                                               , CUDECOMP_TRANSPOSE_COMM_NVSHMEM_SM &
+#endif
+                                               ])) then
       !
       ! disable NVSHMEM halo backend autotuning when NVSHMEM is NOT used for transposes
       !

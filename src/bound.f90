@@ -739,10 +739,12 @@ module mod_bound
 #if defined(_OPENACC)
   subroutine updthalo_gpu(nh,periods,p,idir_only)
     use mod_types
-#if !defined(_USE_DIEZDECOMP)
-    use cudecomp
-#else
+#if defined(_USE_DIEZDECOMP)
     use diezdecomp
+#elif defined(_USE_HIP)
+    use hipdecomp
+#else
+    use cudecomp
 #endif
     use mod_common_cudecomp, only: work => work_halo, &
                                    ch => handle,gd => gd_halo, &

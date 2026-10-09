@@ -7,10 +7,12 @@
 module mod_solver_gpu
 #if defined(_OPENACC)
   use, intrinsic :: iso_c_binding, only: C_PTR
-#if !defined(_USE_DIEZDECOMP)
-  use cudecomp
-#else
+#if defined(_USE_DIEZDECOMP)
   use diezdecomp
+#elif defined(_USE_HIP)
+  use hipdecomp
+#else
+  use cudecomp
 #endif
   use mod_common_cudecomp, only: dtype_rp => cudecomp_real_rp, &
                                  cudecomp_is_t_in_place, &
