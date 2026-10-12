@@ -27,7 +27,7 @@ module mod_solver_gpu
                                  istream => istream_acc_queue_1_comm_lib
   use mod_fft            , only: fft_gpu,fft_gpu_layout
   use mod_param          , only: ipencil_axis,is_poisson_dtdma, &
-                                 is_use_diezdecomp,is_diezdecomp_x2z_z2x_transposes
+                                 is_diezdecomp_x2z_z2x_transposes
   use mod_types
   implicit none
   private
