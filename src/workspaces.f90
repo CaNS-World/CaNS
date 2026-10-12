@@ -156,14 +156,13 @@ contains
       !$acc host_data use_device(work)
 #if !defined(_USE_HIP)
       istat = cufftSetWorkArea(arrplan(i),work(wsize_tmp + 1))
+#else
+      istat = cufftSetWorkArea(arrplan(i),c_loc(work(wsize_tmp + 1)))
+#endif
+#if !defined(_USE_DIEZDECOMP)
       if(present(istream)) then
         istat = cufftSetStream(arrplan(i),istream)
       end if
-#else
-      istat = cufftSetWorkArea(arrplan(i),c_loc(work(wsize_tmp + 1)))
-      !if(present(istream)) then
-      !  istat = cufftSetStream(arrplan(i),c_loc(istream))
-      !end if
 #endif
       !$acc end host_data
     end do
