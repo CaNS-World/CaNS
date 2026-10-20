@@ -14,7 +14,7 @@ module mod_solver
   private
   public solver,solver_gaussel_z
   contains
-  subroutine solver(n,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p,is_dtdma_update,aa_z,cc_z)
+  subroutine solver(n,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p,is_dtdma_update,aa_z,cc_z,is_cache_aux)
     !
     ! note: some of the transposes below are suboptimal in slab decompositions,
     ! as they would be a no-op if done in-place (e.g., `px = py` for xy slabs)
@@ -30,6 +30,7 @@ module mod_solver
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
     logical , intent(inout), optional :: is_dtdma_update
     real(rp), intent(inout), dimension(:,:,:), optional :: aa_z,cc_z
+    logical , intent(in   ), optional :: is_cache_aux
     real(rp), allocatable, target, dimension(:,:,:) :: px,py,pz
     real(rp), pointer, contiguous :: pfft(:,:,:)
     integer :: q,idir
@@ -89,7 +90,7 @@ module mod_solver
     if(.not.is_poisson_dtdma) then
       call transpose_y_to_z(py,pz)
       !
-      call gaussel(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,norm,pz,lambdaxy)
+      call gaussel(n_z(1),n_z(2),n_z(3)-q,0,a,b,c,is_periodic_z,norm,pz,lambdaxy,is_cache_aux)
       !
       call transpose_z_to_y(pz,py)
     else
@@ -137,7 +138,7 @@ module mod_solver
     end select
   end subroutine solver
   !
-  subroutine gaussel(nx,ny,n,nh,a,b,c,is_periodic,norm,p,lambdaxy)
+  subroutine gaussel(nx,ny,n,nh,a,b,c,is_periodic,norm,p,lambdaxy,is_cache_aux)
     implicit none
     integer , intent(in) :: nx,ny,n,nh
     real(rp), intent(in), dimension(:) :: a,b,c
@@ -145,7 +146,11 @@ module mod_solver
     real(rp), intent(in) :: norm
     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
     real(rp), intent(in), dimension(nx,ny), optional :: lambdaxy
-    real(rp), allocatable, dimension(:,:,:) :: d,p2
+    logical , intent(in), optional :: is_cache_aux
+    real(rp), allocatable, dimension(:,:,:) :: d
+    real(rp), allocatable, dimension(:,:,:), save :: p2
+    logical, save :: is_aux_cached = .false.
+    logical :: is_aux_reuse
     real(rp) :: den,pivot_tol,z
     integer :: i,j,k,nn
     !
@@ -255,71 +260,80 @@ module mod_solver
     ! handle periodic closure with an auxiliary tridiagonal solve
     !
     if(is_periodic) then
-      allocate(p2(nx,ny,nn))
-      !
-      ! initialize the auxiliary right-hand side for the periodic correction
-      !
-      !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
-      do j=1,ny
-        do i=1,nx
-          p2(i,j,1:nn) = 0.
-          p2(i,j,1)  = -a(1)
-          p2(i,j,nn) = p2(i,j,nn) - c(nn)
-        end do
-      end do
-      !
-      ! forward elimination for the auxiliary system
-      !
-      if(present(lambdaxy)) then
-        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(z)
-        do j=1,ny
-          do i=1,nx
-            z = 1._rp/(b(1) + lambdaxy(i,j))
-            d(i,j,1) = c(1)*z
-            p2(i,j,1) = p2(i,j,1)*z
-          end do
-        end do
-        do k=2,nn
-          !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(z)
-          do j=1,ny
-            do i=1,nx
-              z = 1._rp/(b(k) + lambdaxy(i,j) - a(k)*d(i,j,k-1))
-              d(i,j,k) = c(k)*z
-              p2(i,j,k) = (p2(i,j,k) - a(k)*p2(i,j,k-1))*z
-            end do
-          end do
-        end do
-      else
-        z = 1._rp/b(1)
+      is_aux_reuse = .false.
+      if(present(is_cache_aux)) is_aux_reuse = is_cache_aux.and.is_aux_cached
+      is_aux_cached = .false.
+      if(present(is_cache_aux)) is_aux_cached = is_cache_aux
+      if(allocated(p2)) then
+        if(any(shape(p2) /= [nx,ny,nn])) deallocate(p2)
+      end if
+      if(.not.allocated(p2)) allocate(p2(nx,ny,nn))
+      if(.not.is_aux_reuse) then
+        !
+        ! initialize the auxiliary right-hand side for the periodic correction
+        !
         !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
         do j=1,ny
           do i=1,nx
-            d(i,j,1) = c(1)*z
-            p2(i,j,1) = p2(i,j,1)*z
+            p2(i,j,1:nn) = 0.
+            p2(i,j,1)  = -a(1)
+            p2(i,j,nn) = p2(i,j,nn) - c(nn)
           end do
         end do
-        do k=2,nn
-          z = 1._rp/(b(k) - a(k)*d(1,1,k-1))
+        !
+        ! forward elimination for the auxiliary system
+        !
+        if(present(lambdaxy)) then
+          !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(z)
+          do j=1,ny
+            do i=1,nx
+              z = 1._rp/(b(1) + lambdaxy(i,j))
+              d(i,j,1) = c(1)*z
+              p2(i,j,1) = p2(i,j,1)*z
+            end do
+          end do
+          do k=2,nn
+            !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared) PRIVATE(z)
+            do j=1,ny
+              do i=1,nx
+                z = 1._rp/(b(k) + lambdaxy(i,j) - a(k)*d(i,j,k-1))
+                d(i,j,k) = c(k)*z
+                p2(i,j,k) = (p2(i,j,k) - a(k)*p2(i,j,k-1))*z
+              end do
+            end do
+          end do
+        else
+          z = 1._rp/b(1)
           !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
           do j=1,ny
             do i=1,nx
-              d(i,j,k) = c(k)*z
-              p2(i,j,k) = (p2(i,j,k) - a(k)*p2(i,j,k-1))*z
+              d(i,j,1) = c(1)*z
+              p2(i,j,1) = p2(i,j,1)*z
+            end do
+          end do
+          do k=2,nn
+            z = 1._rp/(b(k) - a(k)*d(1,1,k-1))
+            !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
+            do j=1,ny
+              do i=1,nx
+                d(i,j,k) = c(k)*z
+                p2(i,j,k) = (p2(i,j,k) - a(k)*p2(i,j,k-1))*z
+              end do
+            end do
+          end do
+        end if
+        !
+        ! backward substitution for the auxiliary system
+        !
+        do k=nn-1,1,-1
+          !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
+          do j=1,ny
+            do i=1,nx
+              p2(i,j,k) = p2(i,j,k) - d(i,j,k)*p2(i,j,k+1)
             end do
           end do
         end do
       end if
-      !
-      ! backward substitution for the auxiliary system
-      !
-      do k=nn-1,1,-1
-        !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(shared)
-        do j=1,ny
-          do i=1,nx
-            p2(i,j,k) = p2(i,j,k) - d(i,j,k)*p2(i,j,k+1)
-          end do
-        end do
-      end do
       !
       ! solve for the periodic closure value and correct the interior solution
       !
