@@ -13,7 +13,8 @@ module mod_output
   use mod_posix     , only: link_file,rename_file,remove_file
   implicit none
   private
-  public out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d,write_visu_subset
+  public is_output_due, &
+         out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d,write_visu_subset
   character(len=*), parameter :: fmt_dp = '(*(es24.16e3,1x))', &
                                  fmt_sp = '(*(es15.8e2,1x))'
 #if !defined(_SINGLE_PRECISION)
@@ -22,6 +23,34 @@ module mod_output
   character(len=*), parameter :: fmt_rp = fmt_sp
 #endif
   contains
+  pure logical function is_output_due(istep,interval,period,time_start,time_end,restart) result(is_due)
+    !
+    ! whether an output is due at the end of a time step: with `period > 0`, if a multiple of `period`
+    ! was crossed (at startup, with `restart` present: for a new run only); otherwise, if `istep` is a
+    ! multiple of `interval`
+    !
+    implicit none
+    integer , intent(in) :: istep,interval
+    real(rp), intent(in) :: period,time_start,time_end
+    logical , intent(in), optional :: restart
+    real(rp) :: tol,ratio_start,ratio_end
+    !
+    is_due = .false.
+    if(period > 0.) then
+      if(present(restart)) then
+        is_due = .not.restart
+      else
+        tol = 4*epsilon(1._rp)
+        ratio_start = time_start/period
+        ratio_end   = time_end/period
+        is_due = floor(ratio_end  +tol*max(1._rp,abs(ratio_end  )),kind=i8) > &
+                 floor(ratio_start+tol*max(1._rp,abs(ratio_start)),kind=i8)
+      end if
+    else if(interval > 0) then
+      is_due = mod(istep,interval) == 0
+    end if
+  end function is_output_due
+  !
   subroutine out0d(fname,n,var)
     !
     ! appends the first n entries of an array
