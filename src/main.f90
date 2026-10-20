@@ -130,7 +130,7 @@ program cans
   real(rp), dimension(42) :: var
   !
   real(rp) :: dt12,dt12av,dt12min,dt12max
-  real(rp) :: twi,tw
+  real(dp) :: twi,tw
   !
   integer  :: savecounter
   character(len=7  ) :: fldnum
@@ -495,6 +495,7 @@ program cans
     end if
     if(stop_type(3)) then ! maximum wall-clock time reached
       tw = (MPI_WTIME()-twi)/3600.
+      call MPI_ALLREDUCE(MPI_IN_PLACE,tw,1,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,ierr)
       if(tw    >= tw_max  ) is_done = is_done.or..true.
     end if
     if(icheck > 0.and.mod(istep,max(icheck,1)) == 0) then
