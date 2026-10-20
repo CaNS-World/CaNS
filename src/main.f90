@@ -663,4 +663,5 @@ program cans
   call cudecomp_finalize
 #endif
   call MPI_FINALIZE(ierr)
+  if(kill) error stop
 end program cans
