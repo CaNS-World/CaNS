@@ -8,6 +8,7 @@ updates:
       - dependency-name: "dependencies/2decomp-fft"
       - dependency-name: "dependencies/cuDecomp"
       - dependency-name: "dependencies/diezDecomp"
+      - dependency-name: "dependencies/hipDecomp"
   - package-ecosystem: github-actions
     directories:
       - "/"
