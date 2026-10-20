@@ -503,12 +503,6 @@ program cans
       call chkdt(n,dl,dzci,dzfi,visc,alpha_max,u,v,w,dt_cfl)
       dt = merge(dt_f,min(cfl*dt_cfl,dtmax),dt_f > 0.)
       if(myid == 0) print*, 'dt_cfl = ', dt_cfl, 'dt = ', dt
-      if(dt_cfl < small) then
-        if(myid == 0) print*, 'ERROR: time step is too small.'
-        if(myid == 0) print*, 'Aborting...'
-        is_done = .true.
-        kill = .true.
-      end if
       dti = 1./dt
       call chkdiv(lo,hi,l,dli,dzfi,u,v,w,divtot,divmax)
       if(myid == 0) print*, 'Velocity divergence norms: Mean = ', divtot, '| Maximum = ', divmax
