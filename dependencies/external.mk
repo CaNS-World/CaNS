@@ -17,7 +17,7 @@ ifeq ($(strip $(USE_HIP)),1)
 HIP_GPU_TARGET ?= native
 libs: $(wildcard $(LIBS_DIR)/2decomp-fft/src/*.f90)
 	$(MAKE) -C $(LIBS_DIR)/2decomp-fft -f $(D2D_MAKEFILE)
-	cd $(LIBS_DIR)/hipDecomp && mkdir -p build && cd build && cmake .. -DHIPDECOMP_USE_CUDECOMP_NAMES=1 -DCMAKE_HIP_ARCHITECTURES=$(HIP_GPU_TARGET) && make -j
+	cd $(LIBS_DIR)/hipDecomp && mkdir -p build && cd build && cmake .. -DHIPDECOMP_USE_CUDECOMP_NAMES=1 -DCMAKE_HIP_ARCHITECTURES="$(HIP_GPU_TARGET)" && make -j
 libsclean: $(wildcard $(LIBS_DIR)/2decomp-fft/src/*.f90)
 	$(MAKE) -C $(LIBS_DIR)/2decomp-fft -f $(D2D_MAKEFILE) clean
 	cd $(LIBS_DIR)/hipDecomp/build && make clean; cd .. && rm -rf build
