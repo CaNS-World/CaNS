@@ -511,13 +511,11 @@ program cans
       dti = 1./dt
       call chkdiv(lo,hi,l,dli,dzfi,u,v,w,divtot,divmax)
       if(myid == 0) print*, 'Velocity divergence norms: Mean = ', divtot, '| Maximum = ', divmax
-      if(.not.is_mask_divergence_check) then
-        if(divmax > small.or.is_nan(divtot)) then
-          if(myid == 0) print*, 'ERROR: maximum divergence is too large.'
-          if(myid == 0) print*, 'Aborting...'
-          is_done = .true.
-          kill = .true.
-        end if
+      if((divmax > small.and..not.is_mask_divergence_check).or.is_nan(divtot)) then
+        if(myid == 0) print*, 'ERROR: maximum divergence is too large.'
+        if(myid == 0) print*, 'Aborting...'
+        is_done = .true.
+        kill = .true.
       end if
     end if
     !
