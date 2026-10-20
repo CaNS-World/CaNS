@@ -175,7 +175,7 @@ icheck = 10, iout0d = 10, iout1d = 100, iout2d = 500, iout3d = 10000, isave = 50
 
 These lines set the frequency of time step checking and output:
 
-* every `icheck` time steps **the new time step size** is computed according to the stability criterion and `cfl` (above)
+* every `icheck` time steps **the new time step size** is computed according to the stability criterion and `cfl` (above), and the **velocity divergence is checked**: if it is too large or NaN, the simulation is aborted without saving a checkpoint (see also `is_mask_divergence_check` under `&other_options`)
 * every `iout0d` time steps **history files with global scalar variables** are appended; currently the forcing pressure gradient and time step history are reported
 * every `iout1d` time steps **1d profiles** are written (e.g. velocity and its moments) to a file
 * every `iout2d` time steps **2d slices of a 3d scalar field** are written to a file
