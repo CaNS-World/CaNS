@@ -580,7 +580,7 @@ program cans
       end do
       include 'out3d.h90'
     end if
-    if(isave > 0.and.((mod(istep,max(isave,1)) == 0).or.(is_done.and..not.kill))) then
+    if(isave > 0.and.(.not.kill).and.((mod(istep,max(isave,1)) == 0).or.is_done)) then
       if(is_overwrite_save.and.nsaves_max <= 0) then
         filename = 'fld'
       else
