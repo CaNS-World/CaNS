@@ -76,7 +76,7 @@ program cans
   use mod_common_cudecomp, only: istream_acc_queue_1,ap_z_dtdma
 #endif
   use mod_updatep        , only: updatep
-  use mod_posix          , only: rename_file
+  use mod_posix          , only: rename_file,read_link
   use mod_utils          , only: bulk_mean
 #if defined(_OPENACC)
   use mod_utils          , only: device_memory_footprint
@@ -399,6 +399,14 @@ program cans
                     MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,trim(c_io_vars(is)),time,istep)
     end do
     if(myid == 0) print*, '*** Checkpoint loaded at time = ', time, 'time step = ', istep, '. ***'
+    if(is_overwrite_save.and.nsaves_max > 0) then
+      if(myid == 0) then
+        istat = read_link(trim(datadir)//'fld_'//trim(c_io_vars(1))//trim(io_ext),fname_save)
+        if(istat == 0) read(fname_save(5:8),'(i4)',iostat=istat) savecounter
+        if(istat /= 0) savecounter = 0
+      end if
+      call MPI_BCAST(savecounter,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+    end if
   end if
   !$acc enter data copyin(u,v,w,p,pp,dudtrko,dvdtrko,dwdtrko)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,restart)
