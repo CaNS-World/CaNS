@@ -18,7 +18,8 @@ module mod_sanity
   use mod_initflow  , only: add_noise
   use mod_initmpi   , only: initmpi
   use mod_initsolver, only: initsolver
-  use mod_param     , only: ipencil_axis,is_impdiff,is_impdiff_1d,is_poisson_dtdma,small
+  use mod_param     , only: ipencil_axis,is_impdiff,is_impdiff_1d,is_poisson_dtdma,small, &
+                            is_bulk_forcing_wall_shear,is_boussinesq_buoyancy,gacc
 #if !defined(_OPENACC)
   use mod_solver    , only: solver
 #else
@@ -44,10 +45,10 @@ module mod_sanity
     logical         , intent(in), dimension(3)       :: is_forced
     logical :: passed,passed_loc
     !
-    call chk_dims(ng,dims,cbcvel,cbcpre,passed);   if(.not.passed) call abortit
-    call chk_stop_type(stop_type,passed);          if(.not.passed) call abortit
-    call chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed); if(.not.passed) call abortit
-    call chk_forcing(cbcpre,is_forced,passed);     if(.not.passed) call abortit
+    call chk_dims(ng,dims,cbcvel,cbcpre,passed);      if(.not.passed) call abortit
+    call chk_stop_type(stop_type,passed);             if(.not.passed) call abortit
+    call chk_bc(cbcvel,cbcpre,bcvel,bcpre,passed);    if(.not.passed) call abortit
+    call chk_forcing(cbcvel,cbcpre,is_forced,passed); if(.not.passed) call abortit
     !
     if(is_poisson_dtdma) then
       passed_loc = ng(3)/dims(2) >= 2
@@ -255,11 +256,13 @@ module mod_sanity
 #endif
   end subroutine chk_bc
   !
-  subroutine chk_forcing(cbcpre,is_forced,passed)
+  subroutine chk_forcing(cbcvel,cbcpre,is_forced,passed)
     implicit none
+    character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
     character(len=1), intent(in), dimension(0:1,3) :: cbcpre
     logical         , intent(in), dimension(3) :: is_forced
     logical         , intent(out) :: passed
+    logical :: passed_loc
     integer :: idir
     passed = .true.
     !
@@ -272,6 +275,22 @@ module mod_sanity
     end do
     if(myid == 0.and.(.not.passed)) &
     print*, 'ERROR: Flow cannot be forced in a non-periodic direction; check the BCs and is_forced in `input.nml`.'
+    !
+    ! 2) check the requirements of the bulk forcing that balances the wall shear
+    !
+    if(is_bulk_forcing_wall_shear) then
+      passed_loc = .true.
+      do idir=1,3
+        if(is_forced(idir)) passed_loc = passed_loc.and..not.any(cbcvel(:,:,idir) == 'N')
+      end do
+      passed_loc = passed_loc.and..not.(is_impdiff.and..not.is_impdiff_1d.and.any(cbcpre(:,1:2) /= 'P'))
+      passed_loc = passed_loc.and..not.(is_boussinesq_buoyancy.and.any(is_forced(:).and.abs(gacc(:)) > 0.))
+      if(myid == 0.and.(.not.passed_loc)) &
+      print*, 'ERROR: `is_bulk_forcing_wall_shear = T` requires no-slip walls for the forced velocity components, &
+              &no fully implicit diffusion with walls along x or y, and no gravity along a forced direction with &
+              &Boussinesq buoyancy.'
+      passed = passed.and.passed_loc
+    end if
   end subroutine chk_forcing
   !
   subroutine test_sanity_solver(ng,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,l,dli,dzc,dzf,dzci,dzfi,dzci_g,dzfi_g, &

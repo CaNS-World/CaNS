@@ -541,6 +541,10 @@ module mod_mom
   end subroutine momz_d_xy
   !
   subroutine cmpt_wallshear(n,is_cmpt,is_bound,l,dli,dzci,dzfi,visc,u,v,w,taux,tauy,tauz)
+    !
+    ! wall shear stresses of the velocity components where `is_cmpt` is true, averaged over each
+    ! wall; e.g., taux(0:1,idir) for u at the two walls normal to idir (zero along periodic directions)
+    !
     use mod_param, only: cbcpre
     implicit none
     integer , intent(in ), dimension(3) :: n
@@ -557,7 +561,7 @@ module mod_mom
     !
     ! replace scalars with a reduction of tau(1:3,1:3) once the
     ! nvfortran bug for array reductions on Pascal architectures
-    ! is solved; this subroutine is not used in production anyway
+    ! is solved
     !
     real(rp) :: tau21p,tau31p,tau12p,tau32p,tau13p,tau23p, &
                 tau21m,tau31m,tau12m,tau32m,tau13m,tau23m
@@ -672,7 +676,7 @@ module mod_mom
         do k=1,nz
           do j=1,ny
             dwdxp  = (w(1 ,j,k)-w(0   ,j,k))*dxi*visc
-            tau13p = tau13p + dwdxp/(dyi*dzfi(k)*ly*lz)
+            tau13p = tau13p + dwdxp/(dyi*dzci(k)*ly*lz)
           end do
         end do
       end if
@@ -682,7 +686,7 @@ module mod_mom
         do k=1,nz
           do j=1,ny
             dwdxm  = (w(nx,j,k)-w(nx+1,j,k))*dxi*visc
-            tau13m = tau13m + dwdxm/(dyi*dzfi(k)*ly*lz)
+            tau13m = tau13m + dwdxm/(dyi*dzci(k)*ly*lz)
           end do
         end do
       end if
@@ -692,7 +696,7 @@ module mod_mom
         do k=1,nz
           do i=1,nx
             dwdyp  = (w(i,1,k )-w(i,0   ,k))*dyi*visc
-            tau23p = tau23p + dwdyp/(dxi*dzfi(k)*lx*lz)
+            tau23p = tau23p + dwdyp/(dxi*dzci(k)*lx*lz)
           end do
         end do
       end if
@@ -702,7 +706,7 @@ module mod_mom
         do k=1,nz
           do i=1,nx
             dwdym  = (w(i,ny,k)-w(i,ny+1,k))*dyi*visc
-            tau23m = tau23m + dwdym/(dxi*dzfi(k)*lx*lz)
+            tau23m = tau23m + dwdym/(dxi*dzci(k)*lx*lz)
           end do
         end do
       end if
