@@ -165,7 +165,7 @@ These lines set the simulation termination criteria and whether the simulation s
 
 `nsaves_max` limits the number of saved checkpoint files, if `is_over_write_save` is false; a value of `0` or any negative integer corresponds to no limit, and the code uses the file format described above; otherwise, only `nsaves_max` checkpoint files are saved, with the oldest save being overwritten when the number of saved checkpoints exceeds this threshold; in this case, files with a format `fld_????.bin` are saved (with `????` denoting the saved file number), with `fld.bin` pointing to the last checkpoint file as described above; moreover, a file `log_checkpoints.out` records information about the time step number and physical time corresponding to each saved file number.
 
-Finally, note that a checkpoint file will be saved before the simulation ends.
+Finally, note that a checkpoint file will be saved before the simulation ends. Checkpoints are written to temporary files (e.g., `fld_u.tmp.bin`), renamed once complete, so that an interrupted save leaves the previous checkpoint intact (except with the ADIOS2 backend).
 
 ---
 
