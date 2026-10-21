@@ -159,11 +159,11 @@ These lines set the simulation termination criteria and whether the simulation s
 * `stop_type(2)`, if true (`T`), the simulation will terminate after `time_max` physical time units have been reached
 * `stop_type(3)`, if true (`T`), the simulation will terminate after `tw_max` simulation wall-clock time (in hours) has been reached
 
-`restart`, if true, **restarts the simulation** from a previously saved checkpoint file, named `fld.bin` (or `fld.h5` / `fld.bp` for the other supported backends).
+`restart`, if true, **restarts the simulation** from a previously saved checkpoint, made of one file per field, `fld_<var>.bin` (e.g., `fld_u.bin`; `.h5` / `.bp` for the other supported backends), all from the same save.
 
-`is_overwrite_save`, if true, overwrites the checkpoint file `fld.bin` at every save; if false, a symbolic link is created which makes `fld.bin` point to the last checkpoint file with name `fld_???????.bin` (with `???????` denoting the corresponding time step number). In the latter case, to restart a run from a different checkpoint one just has to point the file `fld.bin` to the right file, e.g.: ` ln -sf fld_0000100.bin fld.bin`.
+`is_overwrite_save`, if true, overwrites the checkpoint files `fld_<var>.bin` at every save; if false, each checkpoint is saved to files `fld_???????_<var>.bin` (with `???????` denoting the time step number), and symbolic links `fld_<var>.bin` point to the last ones; to restart from another checkpoint, point the links to its files (e.g., `ln -sf fld_0000100_u.bin fld_u.bin`).
 
-`nsaves_max` limits the number of saved checkpoint files, if `is_over_write_save` is false; a value of `0` or any negative integer corresponds to no limit, and the code uses the file format described above; otherwise, only `nsaves_max` checkpoint files are saved, with the oldest save being overwritten when the number of saved checkpoints exceeds this threshold; in this case, files with a format `fld_????.bin` are saved (with `????` denoting the saved file number), with `fld.bin` pointing to the last checkpoint file as described above; moreover, a file `log_checkpoints.out` records information about the time step number and physical time corresponding to each saved file number.
+`nsaves_max`, if positive and `is_overwrite_save` is true, keeps instead the last `nsaves_max` checkpoints in rotating slots, `fld_????_<var>.bin` (with `????` denoting the slot number), with links `fld_<var>.bin` to the last one, and a log of the saves in `log_checkpoints.out`; a restarted run continues the rotation.
 
 Finally, note that a checkpoint file will be saved before the simulation ends. Checkpoints are written to temporary files (e.g., `fld_u.tmp.bin`), renamed once complete, so that an interrupted save leaves the previous checkpoint intact (except with the ADIOS2 backend).
 
