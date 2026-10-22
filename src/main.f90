@@ -249,8 +249,8 @@ program cans
   end do
   if(myid == 0) then
     open(newunit=iunit,file=trim(datadir)//'geometry.out',status='replace')
-    write(iunit,*) ng(1),ng(2),ng(3)
-    write(iunit,*) l(1),l(2),l(3)
+    write(iunit,'(*(1x,i0))') ng(1),ng(2),ng(3)
+    write(iunit,'(*(1x,es24.16e3))') l(1),l(2),l(3)
     close(iunit)
     call save_grid(datadir,'grid',ng,zc_g,zf_g,dzc_g,dzf_g)
   end if

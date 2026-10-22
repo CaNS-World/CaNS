@@ -226,7 +226,7 @@ module mod_initgrid
     close(iunit)
     open(newunit=iunit,file=trim(datadir)//trim(fname)//'.out',status='replace')
     do k=0,ng(3)+1
-      write(iunit,*) 0.,zf(k),zc(k),dzf(k),dzc(k)
+      write(iunit,'(*(1x,es24.16e3))') 0.,zf(k),zc(k),dzf(k),dzc(k)
     end do
     close(iunit)
 #if defined(_USE_HDF5)
