@@ -10,6 +10,7 @@ module mod_output
   use mod_common_mpi, only:ierr,myid
   use mod_load      , only: io_write_subset
   use mod_types
+  use mod_posix     , only: link_file,rename_file,remove_file
   implicit none
   private
   public out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d,write_visu_subset
@@ -44,13 +45,21 @@ module mod_output
   !
   subroutine gen_alias(myid,datadir,fname,fname_alias)
     !
-    ! this subroutine generates a symlink with name `fname_alias`, pointing to
-    ! file `datadir//fname` using the `execute_command_line` intrinsic;
-    ! it is called by task `myid`
+    ! this subroutine generates a symlink with name `datadir//fname_alias`, pointing to
+    ! file `fname` (relative to `datadir`), created with a temporary name and then renamed,
+    ! which replaces an existing alias atomically; it is called by task `myid`
     !
     integer, intent(in) :: myid
     character(len=*), intent(in) :: datadir,fname,fname_alias
-    if(myid == 0) call execute_command_line('ln -sf '//trim(fname)//' '//trim(datadir)//fname_alias)
+    character(len=:), allocatable :: flink,ftmp
+    integer :: istat
+    if(myid /= 0) return
+    flink = trim(datadir)//trim(fname_alias)
+    ftmp  = flink//'.tmp'
+    istat = remove_file(ftmp) ! possible leftover of an interrupted call
+    istat = link_file(fname,ftmp)
+    if(istat == 0) istat = rename_file(ftmp,flink)
+    if(istat /= 0) print*, 'WARNING: could not generate the alias ', flink, ' to ', trim(fname), '.'
   end subroutine gen_alias
   !
   subroutine out1d(fname,ng,lo,hi,idir,l,dl,z_g,dz,p)
