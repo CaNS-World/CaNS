@@ -396,7 +396,8 @@ program cans
   else
     do is=1,4+nscal
       call load_one('r',trim(datadir)//'fld_'//trim(c_io_vars(is))//trim(io_ext), &
-                    MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,trim(c_io_vars(is)),time,istep)
+                    MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,trim(c_io_vars(is)),time,istep, &
+                    is_check_time=is > 1)
     end do
     if(myid == 0) print*, '*** Checkpoint loaded at time = ', time, 'time step = ', istep, '. ***'
     if(is_overwrite_save.and.nsaves_max > 0) then
