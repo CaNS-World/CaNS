@@ -7,3 +7,6 @@
 [submodule "dependencies/diezDecomp"]
 	path = dependencies/diezDecomp
 	url = https://github.com/Rafael10Diez/diezDecomp
+[submodule "dependencies/hipDecomp"]
+	path = dependencies/hipDecomp
+	url = https://github.com/nlesc-pppd/hipDecomp

@@ -12,7 +12,7 @@ module mod_bound
   implicit none
   private
   integer, parameter :: HALO_LOWER = -1, HALO_NONE = 0, HALO_UPPER = 1
-  public boundp,bounduvw,updt_rhs_b
+  public boundp,bounduvw,updt_rhs_b,set_bc
   contains
   subroutine bounduvw(cbc,n,bc,nb,is_bound,dl,dzc,dzf,u,v,w,keep_norm_values,halos_norm,halos_tang)
     !
@@ -739,10 +739,12 @@ module mod_bound
 #if defined(_OPENACC) || defined(_OPENMP)
   subroutine updthalo_gpu(nh,periods,p,idir_only)
     use mod_types
-#if !defined(_USE_DIEZDECOMP)
-    use cudecomp
-#else
+#if defined(_USE_DIEZDECOMP)
     use diezdecomp
+#elif defined(_USE_HIP)
+    use hipdecomp
+#else
+    use cudecomp
 #endif
     use mod_common_cudecomp, only: work => work_halo, &
                                    ch => handle,gd => gd_halo, &

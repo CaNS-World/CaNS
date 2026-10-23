@@ -159,13 +159,13 @@ These lines set the simulation termination criteria and whether the simulation s
 * `stop_type(2)`, if true (`T`), the simulation will terminate after `time_max` physical time units have been reached
 * `stop_type(3)`, if true (`T`), the simulation will terminate after `tw_max` simulation wall-clock time (in hours) has been reached
 
-`restart`, if true, **restarts the simulation** from a previously saved checkpoint file, named `fld.bin` (or `fld.h5` / `fld.bp` for the other supported backends).
+`restart`, if true, **restarts the simulation** from a previously saved checkpoint, made of one file per field, `fld_<var>.bin` (e.g., `fld_u.bin`; `.h5` / `.bp` for the other supported backends), all from the same save.
 
-`is_overwrite_save`, if true, overwrites the checkpoint file `fld.bin` at every save; if false, a symbolic link is created which makes `fld.bin` point to the last checkpoint file with name `fld_???????.bin` (with `???????` denoting the corresponding time step number). In the latter case, to restart a run from a different checkpoint one just has to point the file `fld.bin` to the right file, e.g.: ` ln -sf fld_0000100.bin fld.bin`.
+`is_overwrite_save`, if true, overwrites the checkpoint files `fld_<var>.bin` at every save; if false, each checkpoint is saved to files `fld_???????_<var>.bin` (with `???????` denoting the time step number), and symbolic links `fld_<var>.bin` point to the last ones; to restart from another checkpoint, point the links to its files (e.g., `ln -sf fld_0000100_u.bin fld_u.bin`).
 
-`nsaves_max` limits the number of saved checkpoint files, if `is_over_write_save` is false; a value of `0` or any negative integer corresponds to no limit, and the code uses the file format described above; otherwise, only `nsaves_max` checkpoint files are saved, with the oldest save being overwritten when the number of saved checkpoints exceeds this threshold; in this case, files with a format `fld_????.bin` are saved (with `????` denoting the saved file number), with `fld.bin` pointing to the last checkpoint file as described above; moreover, a file `log_checkpoints.out` records information about the time step number and physical time corresponding to each saved file number.
+`nsaves_max`, if positive and `is_overwrite_save` is true, keeps instead the last `nsaves_max` checkpoints in rotating slots, `fld_????_<var>.bin` (with `????` denoting the slot number), with links `fld_<var>.bin` to the last one, and a log of the saves in `log_checkpoints.out`; a restarted run continues the rotation.
 
-Finally, note that a checkpoint file will be saved before the simulation ends.
+Finally, note that a checkpoint file will be saved before the simulation ends. Checkpoints are written to temporary files (e.g., `fld_u.tmp.bin`), renamed once complete, so that an interrupted save leaves the previous checkpoint intact (except with the ADIOS2 backend).
 
 ---
 
@@ -175,7 +175,7 @@ icheck = 10, iout0d = 10, iout1d = 100, iout2d = 500, iout3d = 10000, isave = 50
 
 These lines set the frequency of time step checking and output:
 
-* every `icheck` time steps **the new time step size** is computed according to the stability criterion and `cfl` (above)
+* every `icheck` time steps **the new time step size** is computed according to the stability criterion and `cfl` (above), and the **velocity divergence is checked**: if it is too large or NaN, the simulation is aborted without saving a checkpoint (see also `is_mask_divergence_check` under `&other_options`)
 * every `iout0d` time steps **history files with global scalar variables** are appended; currently the forcing pressure gradient and time step history are reported
 * every `iout1d` time steps **1d profiles** are written (e.g. velocity and its moments) to a file
 * every `iout2d` time steps **2d slices of a 3d scalar field** are written to a file
@@ -183,6 +183,12 @@ These lines set the frequency of time step checking and output:
 * every `isave`  time steps a **checkpoint file** is written (`fld_???????.bin`), and a symbolic link for the restart file, `fld.bin`, will point to this last save so that, by default, the last saved checkpoint file is used to restart the simulation
 
 1d, 2d, and 3d outputs can be tweaked by modifying files `out?d.h90` and recompiling the source. See also `output.f90` for more details. _Set any of these variables to `0` to skip the corresponding operation._
+
+```fortran
+tout0d = 0., tout1d = 0., tout2d = 0., tout3d = 0., tsave = 0.
+```
+
+These optional entries of `&dns` set the same outputs in **physical time**: a positive period (default `0`) takes priority over the corresponding time-step interval above. An output is written at the end of the first time step that reaches a multiple of the period, at the actual time of that step (the time step is not adjusted).
 
 ---
 
@@ -230,6 +236,14 @@ These lines set the flow forcing.
 `is_forced`, if true in the direction in question, **forces the flow** with a pressure gradient that balances the total wall shear (e.g., for a pressure-driven channel with zero net acceleration/constant bulk velocity). The three boolean values correspond to the three domain directions.
 
 `velf` is the **target bulk velocity** in the direction in question (where `is_forced` is true). The three values correspond to the three domain directions.
+
+By default, the forcing restores the bulk velocity to `velf` at every Runge-Kutta substage, from a volume average of the velocity. For wall-bounded flows, the optional entry of `&dns`
+
+```fortran
+is_bulk_forcing_wall_shear = F
+```
+
+if true, forces the flow instead with a pressure gradient that balances **exactly the wall shear** over each substage, which avoids the round-off error of the volume average in the reported pressure gradient. The bulk velocity is then conserved from the initial condition.
 
 ---
 
@@ -399,10 +413,13 @@ This namelist defines other parameters related to the monitoring, debugging, or 
 ```fortran
 &other_options
 is_debug = T, is_timing = T
+is_mask_divergence_check = F
 /
 ```
 
 In these lines, `is_debug` performs some **sanity checks for debugging purposes** that do not introduce computational overhead, and `is_timing` reports the wall-clock time per step.
+
+Finally, `is_mask_divergence_check`, if true, skips the threshold test of the **velocity divergence check** performed every `icheck` time steps: by default, the simulation is aborted when the maximum divergence exceeds a small, precision-dependent threshold, which may be smaller than the round-off divergence of very large grids in single precision. A NaN in the velocity field always aborts the simulation, regardless of this option.
 
 Note: other parameters for `&numerics` and `&other_options` are not exposed here, as they are meant for very specific, advanced use or developers. They can be found in `param.f90`.
 

@@ -10,9 +10,11 @@ module mod_output
   use mod_common_mpi, only:ierr,myid
   use mod_load      , only: io_write_subset
   use mod_types
+  use mod_posix     , only: link_file,rename_file,remove_file
   implicit none
   private
-  public out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d,write_visu_subset
+  public is_output_due, &
+         out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d,write_visu_subset
   character(len=*), parameter :: fmt_dp = '(*(es24.16e3,1x))', &
                                  fmt_sp = '(*(es15.8e2,1x))'
 #if !defined(_SINGLE_PRECISION)
@@ -21,6 +23,34 @@ module mod_output
   character(len=*), parameter :: fmt_rp = fmt_sp
 #endif
   contains
+  pure logical function is_output_due(istep,interval,period,time_start,time_end,restart) result(is_due)
+    !
+    ! whether an output is due at the end of a time step: with `period > 0`, if a multiple of `period`
+    ! was crossed (at startup, with `restart` present: for a new run only); otherwise, if `istep` is a
+    ! multiple of `interval`
+    !
+    implicit none
+    integer , intent(in) :: istep,interval
+    real(rp), intent(in) :: period,time_start,time_end
+    logical , intent(in), optional :: restart
+    real(rp) :: tol,ratio_start,ratio_end
+    !
+    is_due = .false.
+    if(period > 0.) then
+      if(present(restart)) then
+        is_due = .not.restart
+      else
+        tol = 4*epsilon(1._rp)
+        ratio_start = time_start/period
+        ratio_end   = time_end/period
+        is_due = floor(ratio_end  +tol*max(1._rp,abs(ratio_end  )),kind=i8) > &
+                 floor(ratio_start+tol*max(1._rp,abs(ratio_start)),kind=i8)
+      end if
+    else if(interval > 0) then
+      is_due = mod(istep,interval) == 0
+    end if
+  end function is_output_due
+  !
   subroutine out0d(fname,n,var)
     !
     ! appends the first n entries of an array
@@ -44,13 +74,21 @@ module mod_output
   !
   subroutine gen_alias(myid,datadir,fname,fname_alias)
     !
-    ! this subroutine generates a symlink with name `fname_alias`, pointing to
-    ! file `datadir//fname` using the `execute_command_line` intrinsic;
-    ! it is called by task `myid`
+    ! this subroutine generates a symlink with name `datadir//fname_alias`, pointing to
+    ! file `fname` (relative to `datadir`), created with a temporary name and then renamed,
+    ! which replaces an existing alias atomically; it is called by task `myid`
     !
     integer, intent(in) :: myid
     character(len=*), intent(in) :: datadir,fname,fname_alias
-    if(myid == 0) call execute_command_line('ln -sf '//trim(fname)//' '//trim(datadir)//fname_alias)
+    character(len=:), allocatable :: flink,ftmp
+    integer :: istat
+    if(myid /= 0) return
+    flink = trim(datadir)//trim(fname_alias)
+    ftmp  = flink//'.tmp'
+    istat = remove_file(ftmp) ! possible leftover of an interrupted call
+    istat = link_file(fname,ftmp)
+    if(istat == 0) istat = rename_file(ftmp,flink)
+    if(istat /= 0) print*, 'WARNING: could not generate the alias ', flink, ' to ', trim(fname), '.'
   end subroutine gen_alias
   !
   subroutine out1d(fname,ng,lo,hi,idir,l,dl,z_g,dz,p)

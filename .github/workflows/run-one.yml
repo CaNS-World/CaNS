@@ -32,6 +32,7 @@ jobs:
     env:
       SKIP_BUILD: ${{ matrix.mode.name == 'opt-omp' }} # skipped combinations
       NVHPC_CPU_TARGET: ${{ inputs.cpu_target }}
+      GNU_CPU_TARGET: ${{ inputs.cpu_target }}
     name: build-${{ matrix.mode.name }}
     steps:
     - name: Checkout code
