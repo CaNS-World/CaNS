@@ -110,7 +110,6 @@ module mod_initflow
       !
       ubulk = 0.5*abs(bcvel(0,idir_n,idir_s)+bcvel(1,idir_n,idir_s))
       call poiseuille(n(idir_n),rn/lprof,ubulk,u1d_n)
-      u1d_n(:) = u1d_n(:) - ubulk
       is_mean = .true.
     case('zer')
       u1d_n(:) = 0.
@@ -226,13 +225,12 @@ module mod_initflow
       call add_noise(ng,lo,789,.05_rp,un(1:n(1),1:n(2),1:n(3)))
     end if
     if(is_mean) then
-      if(trim(ini) /= 'iop') then
-        if(idir_s == 3) then
-          call set_mean(n,dzc/l(3)*(dl(1)/l(1))*(dl(2)/l(2)),ubulk,us(1:n(1),1:n(2),1:n(3)))
-        else
-          call set_mean(n,dzf/l(3)*(dl(1)/l(1))*(dl(2)/l(2)),ubulk,us(1:n(1),1:n(2),1:n(3)))
-        end if
+      if(idir_s == 3) then
+        call set_mean(n,dzc/l(3)*(dl(1)/l(1))*(dl(2)/l(2)),ubulk,us(1:n(1),1:n(2),1:n(3)))
+      else
+        call set_mean(n,dzf/l(3)*(dl(1)/l(1))*(dl(2)/l(2)),ubulk,us(1:n(1),1:n(2),1:n(3)))
       end if
+      if(trim(ini) == 'iop') us(1:n(1),1:n(2),1:n(3)) = us(1:n(1),1:n(2),1:n(3)) - ubulk
     end if
     if(is_wallturb) is_pair = .true.
     if(is_pair) then

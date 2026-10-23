@@ -7,10 +7,12 @@
 module mod_solver_gpu
 #if defined(_OPENACC) || defined(_OPENMP)
   use, intrinsic :: iso_c_binding, only: C_PTR
-#if !defined(_USE_DIEZDECOMP)
-  use cudecomp
-#else
+#if defined(_USE_DIEZDECOMP)
   use diezdecomp
+#elif defined(_USE_HIP)
+  use hipdecomp
+#else
+  use cudecomp
 #endif
   use mod_common_cudecomp, only: dtype_rp => cudecomp_real_rp, &
                                  cudecomp_is_t_in_place, &
@@ -25,13 +27,13 @@ module mod_solver_gpu
                                  istream => istream_acc_queue_1_comm_lib
   use mod_fft            , only: fft_gpu,fft_gpu_layout
   use mod_param          , only: ipencil_axis,is_poisson_dtdma, &
-                                 is_use_diezdecomp,is_diezdecomp_x2z_z2x_transposes
+                                 is_diezdecomp_x2z_z2x_transposes
   use mod_types
   implicit none
   private
   public solver_gpu,solver_gaussel_z_gpu
   contains
-  subroutine solver_gpu(n,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p,is_dtdma_update,aa_z,cc_z)
+  subroutine solver_gpu(n,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p,is_dtdma_update,aa_z,cc_z,is_cache_aux)
     implicit none
     integer , intent(in), dimension(3) :: n,ng
 #if !defined(_USE_HIP)
@@ -47,6 +49,7 @@ module mod_solver_gpu
     real(rp), intent(inout), dimension(0:,0:,0:) :: p
     logical , intent(inout), target, optional :: is_dtdma_update
     real(rp), intent(inout), dimension(:,:,:), optional :: aa_z,cc_z
+    logical , intent(in   ), optional :: is_cache_aux
     real(rp), pointer, contiguous, dimension(:,:,:) :: px,py,pz,pfft_tmp_x,pfft_tmp_y
     integer :: i,j,k,q
     integer :: nfft,nwork(3)
@@ -172,7 +175,7 @@ module mod_solver_gpu
       !$acc end   host_data
 #endif
       !
-      call gaussel_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,0,a,b,c,is_periodic_z,norm,pz,work,pz_aux_1,lambdaxy)
+      call gaussel_gpu(n_z_0(1),n_z_0(2),n_z_0(3)-q,0,a,b,c,is_periodic_z,norm,pz,work,pz_aux_1,lambdaxy,is_cache_aux)
       !
 #if !defined(_USE_DIEZDECOMP)
       !$acc   host_data use_device(     pz,py,work)
@@ -300,7 +303,7 @@ module mod_solver_gpu
     end select
   end subroutine solver_gpu
   !
-  subroutine gaussel_gpu(nx,ny,n,nh,a,b,c,is_periodic,norm,p,d,p2,lambdaxy)
+  subroutine gaussel_gpu(nx,ny,n,nh,a,b,c,is_periodic,norm,p,d,p2,lambdaxy,is_cache_aux)
     implicit none
     integer , intent(in) :: nx,ny,n,nh
     real(rp), intent(in), dimension(:) :: a,b,c
@@ -310,8 +313,11 @@ module mod_solver_gpu
     real(rp),                dimension(nx,ny,n) :: d
     real(rp), intent(inout), dimension(nx,ny,n), optional :: p2
     real(rp), intent(in), dimension(:,:), optional :: lambdaxy
+    logical , intent(in), optional :: is_cache_aux
+    logical, save :: is_aux_cached = .false.
     real(rp) :: den,lxy,pivot_tol,z
     integer :: i,j,k,nn
+    logical :: is_aux_reuse
     !
     ! a single periodic point has no Z Laplacian
     !
@@ -381,33 +387,38 @@ module mod_solver_gpu
         end do
       end do
       if(is_periodic) then
+        is_aux_reuse = .false.
+        if(present(is_cache_aux)) is_aux_reuse = is_cache_aux.and.is_aux_cached
+        is_aux_cached = .false.
+        if(present(is_cache_aux)) is_aux_cached = is_cache_aux
         !$acc parallel     loop gang vector collapse(2) default(present) private(den,lxy,pivot_tol,z) async(1)
         !$omp target teams loop             collapse(2)                  private(den,lxy,pivot_tol,z)
         do j=1,ny
           do i=1,nx
             lxy = lambdaxy(i,j)
-            !
-            !$acc loop seq
-            do k=1,nn
-              p2(i,j,k) = 0.
-            end do
-            p2(i,j,1 ) = -a(1 )
-            p2(i,j,nn) = p2(i,j,nn) - c(nn)
-            !
-            z = 1._rp/(b(1) + lxy)
-            d( i,j,1) = c(1)*z
-            p2(i,j,1) = p2(i,j,1)*z
-            !$acc loop seq
-            do k=2,nn
-              z = 1._rp/(b(k) + lxy - a(k)*d(i,j,k-1))
-              p2(i,j,k) = (p2(i,j,k)-a(k)*p2(i,j,k-1))*z
-              d(i,j,k)  = c(k)*z
-            end do
-            !
-            !$acc loop seq
-            do k=nn-1,1,-1
-              p2(i,j,k) = p2(i,j,k) - d(i,j,k)*p2(i,j,k+1)
-            end do
+            if(.not.is_aux_reuse) then
+              !$acc loop seq
+              do k=1,nn
+                p2(i,j,k) = 0.
+              end do
+              p2(i,j,1 ) = -a(1 )
+              p2(i,j,nn) = p2(i,j,nn) - c(nn)
+              !
+              z = 1._rp/(b(1) + lxy)
+              d( i,j,1) = c(1)*z
+              p2(i,j,1) = p2(i,j,1)*z
+              !$acc loop seq
+              do k=2,nn
+                z = 1._rp/(b(k) + lxy - a(k)*d(i,j,k-1))
+                p2(i,j,k) = (p2(i,j,k)-a(k)*p2(i,j,k-1))*z
+                d(i,j,k)  = c(k)*z
+              end do
+              !
+              !$acc loop seq
+              do k=nn-1,1,-1
+                p2(i,j,k) = p2(i,j,k) - d(i,j,k)*p2(i,j,k+1)
+              end do
+            end if
             !
             den = b(nn+1) + lxy + c(nn+1)*p2(i,j,1) + a(nn+1)*p2(i,j,nn)
             pivot_tol = epsilon(den)*max(abs(b(nn+1)+lxy), &

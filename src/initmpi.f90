@@ -17,10 +17,16 @@ module mod_initmpi
 #elif defined(_OPENMP)
   use omp_lib
 #endif
-#if !defined(_USE_DIEZDECOMP)
-  use cudecomp
- #else
+#if defined(_USE_DIEZDECOMP)
   use diezdecomp
+#elif defined(_USE_HIP)
+  use hipdecomp
+#else
+  use cudecomp
+#endif
+#if defined(_USE_HIP)
+  use hipfort, only : cudaGetDevicecount => hipGetDevicecount, &
+                      cudaSetDevice      => hipSetDevice
 #endif
 #endif
   !@cuf use cudafor, only: cudaGetDeviceCount,cudaSetDevice
@@ -74,7 +80,6 @@ module mod_initmpi
 #if defined(_OPENACC) || defined(_OPENMP)
     call MPI_COMM_SPLIT_TYPE(MPI_COMM_WORLD,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,local_comm,ierr)
     call MPI_COMM_RANK(local_comm,mydev,ierr)
-#if !defined(_USE_HIP)
     istat = cudaGetDeviceCount(ndev)      ! may be tweaked with environment variable CUDA_VISIBLE_DEVICES
     mydev = mod(mydev,ndev)
 #if defined(_OPENMP)
@@ -82,18 +87,10 @@ module mod_initmpi
 #endif
     istat = cudaSetDevice(mydev)
     if(istat /= 0) print*,'MPI rank: ',myid,' error assigning GPU: ',mydev
-#else
 #if defined(_OPENACC)
     dev_type = acc_get_device_type()
-    ndev  = acc_get_num_devices(dev_type) ! may be tweaked with environment variable ACC_DEVICE_NUM
-    mydev = mod(mydev,ndev)
     call acc_set_device_num(mydev,dev_type)
     call acc_init(dev_type)
-#elif defined(_OPENMP)
-    ndev = omp_get_num_devices()
-    mydev = mod(mydev,ndev)
-    call omp_set_default_device(mydev)
-#endif
 #endif
     !
 #if !defined(_USE_DIEZDECOMP)
@@ -175,8 +172,11 @@ module mod_initmpi
     atune_conf%disable_nccl_backends    = .not.cudecomp_is_t_enable_nccl
     atune_conf%disable_nvshmem_backends = .not.cudecomp_is_t_enable_nvshmem
     if(all(conf_poi%transpose_comm_backend /= [CUDECOMP_TRANSPOSE_COMM_NVSHMEM, &
-                                               CUDECOMP_TRANSPOSE_COMM_NVSHMEM_PL, &
-                                               CUDECOMP_TRANSPOSE_COMM_NVSHMEM_SM])) then
+                                               CUDECOMP_TRANSPOSE_COMM_NVSHMEM_PL &
+#if !defined(_USE_HIP)
+                                             , CUDECOMP_TRANSPOSE_COMM_NVSHMEM_SM &
+#endif
+                                               ])) then
       !
       ! disable NVSHMEM halo backend autotuning when NVSHMEM is NOT used for transposes
       !

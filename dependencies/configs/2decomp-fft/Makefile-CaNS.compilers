@@ -72,7 +72,12 @@ else ifeq ($(CMP),GNU)
     FFLAGS += -g3 -Og
     FFLAGS += -ffpe-trap=invalid,zero -fcheck=all -fimplicit-none
   else
-    FFLAGS += -O3 -march=native
+    FFLAGS += -O3
+    ifeq ($(strip $(GNU_CPU_TARGET)),)
+      FFLAGS += -march=native
+    else
+      FFLAGS += -march=$(GNU_CPU_TARGET)
+    endif
   endif
   ifeq ($(findstring openmpi,$(shell $(FC) -show | grep openmpi)),openmpi)
     MPI_FAMILY = openmpi
