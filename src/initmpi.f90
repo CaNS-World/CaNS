@@ -17,10 +17,12 @@ module mod_initmpi
   use diezdecomp
 #elif defined(_USE_HIP)
   use hipdecomp
-  use hipfort, only : cudaGetDevicecount => hipGetDevicecount, &
-                      cudaSetDevice      => hipSetDevice
 #else
   use cudecomp
+#endif
+#if defined(_USE_HIP)
+  use hipfort, only : cudaGetDevicecount => hipGetDevicecount, &
+                      cudaSetDevice      => hipSetDevice
 #endif
 #endif
   !@cuf use cudafor, only: cudaGetDeviceCount,cudaSetDevice
