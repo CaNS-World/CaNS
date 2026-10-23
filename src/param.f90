@@ -59,6 +59,7 @@ real(rp)        , protected, dimension(0:1,3)   ::   bcpre
 real(rp), protected, dimension(3) :: bforce
 logical , protected, dimension(3) :: is_forced
 real(rp), protected, dimension(3) :: velf
+logical , protected :: is_bulk_forcing_wall_shear
 !
 real(rp), protected, dimension(3) :: dl,dli
 real(rp), protected :: visc
@@ -136,6 +137,7 @@ contains
                   bforce, &
                   is_forced, &
                   velf, &
+                  is_bulk_forcing_wall_shear, &
                   gacc, &
                   nscal, &
                   dims,ipencil_axis
@@ -168,6 +170,7 @@ contains
     !
     dt_f = -1.
     tout0d = 0.; tout1d = 0.; tout2d = 0.; tout3d = 0.; tsave = 0.
+    is_bulk_forcing_wall_shear = .false.
     gacc(:) = 0.
     nscal = 0
     !

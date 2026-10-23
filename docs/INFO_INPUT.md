@@ -237,6 +237,14 @@ These lines set the flow forcing.
 
 `velf` is the **target bulk velocity** in the direction in question (where `is_forced` is true). The three values correspond to the three domain directions.
 
+By default, the forcing restores the bulk velocity to `velf` at every Runge-Kutta substage, from a volume average of the velocity. For wall-bounded flows, the optional entry of `&dns`
+
+```fortran
+is_bulk_forcing_wall_shear = F
+```
+
+if true, forces the flow instead with a pressure gradient that balances **exactly the wall shear** over each substage, which avoids the round-off error of the volume average in the reported pressure gradient. The bulk velocity is then conserved from the initial condition.
+
 ---
 
 ```fortran

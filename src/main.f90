@@ -42,7 +42,8 @@ program cans
   use mod_initmpi        , only: initmpi
   use mod_initsolver     , only: initsolver
   use mod_load           , only: load_one
-  use mod_rk             , only: rk,rk_scal
+  use mod_mom            , only: cmpt_wallshear
+  use mod_rk             , only: rk,rk_scal,bulk_forcing_wall_shear
   use mod_output         , only: is_output_due, &
                                  out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
   use mod_param          , only: ng,l,dl,dli, &
@@ -56,6 +57,7 @@ program cans
                                  tout0d,tout1d,tout2d,tout3d,tsave, &
                                  cbcvel,bcvel,cbcpre,bcpre, &
                                  is_forced,bforce,velf, &
+                                 is_bulk_forcing_wall_shear, &
                                  gacc,nscal,beta, &
                                  dims, &
                                  nb,is_bound, &
@@ -89,7 +91,7 @@ program cans
   integer , dimension(3) :: lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z
   real(rp), target, allocatable, dimension(:,:,:) :: u,v,w,p,pp
   real(rp), allocatable, dimension(:,:,:) :: dudtrko,dvdtrko,dwdtrko
-  real(rp), dimension(0:1,3) :: tauxo,tauyo,tauzo
+  real(rp), dimension(0:1,3,3) :: tau,tauo
   real(rp), dimension(3) :: f
 #if !defined(_OPENACC) || defined(_USE_HIP)
   type(C_PTR), dimension(2,2) :: arrplanp
@@ -122,6 +124,7 @@ program cans
                                          grid_vol_ratio_c,grid_vol_ratio_f
   real(rp) :: meanvelu,meanvelv,meanvelw
   real(rp), dimension(3) :: dpdl
+  logical , dimension(3) :: is_forced_rk
   !
   type(scalar), target, allocatable, dimension(:) :: scalars
   type(scalar), pointer :: s
@@ -444,6 +447,8 @@ program cans
   if(myid == 0) print*, 'dt_cfl = ', dt_cfl, 'dt = ', dt
   dti = 1./dt
   kill = .false.
+  is_forced_rk(:) = is_forced(:).and..not.is_bulk_forcing_wall_shear
+  tau(:,:,:) = 0.
   !
   ! main loop
   !
@@ -458,7 +463,6 @@ program cans
     time_start = time
     time = time + dt
     if(myid == 0) print*, 'Time step #', istep, 'Time = ', time
-    tauxo(:,:) = 0.; tauyo(:,:) = 0.; tauzo(:,:) = 0.
     dpdl(:)     = 0.
     fs(1:nscal) = 0.
     do irk=1,3
@@ -476,9 +480,12 @@ program cans
         end if
         call boundp(s%cbc,n,s%bc,nb,is_bound,dl,dzc,s%val)
       end do
+      if(is_bulk_forcing_wall_shear) then
+        tauo(:,:,:) = tau(:,:,:)
+        call cmpt_wallshear(n,is_forced,is_bound,l,dli,dzci,dzfi,visc,u,v,w,tau(:,:,1),tau(:,:,2),tau(:,:,3))
+      end if
       call rk(rkcoeff(:,irk),n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,dt,visc,p, &
-              is_forced,velf,bforce,gacc,beta,scalars,dudtrko,dvdtrko,dwdtrko,u,v,w,f)
-      dpdl(:) = dpdl(:) + f(:)
+              is_forced_rk,velf,bforce,gacc,beta,scalars,dudtrko,dvdtrko,dwdtrko,u,v,w,f)
       if(is_impdiff) then
         alpha = -.5*visc*dtrk
         call solve_helmholtz(n,ng,hi,arrplanu,normfftu,alpha, &
@@ -488,6 +495,11 @@ program cans
         call solve_helmholtz(n,ng,hi,arrplanw,normfftw,alpha, &
                              lambdaxyw,aw,bw,cw,rhsbw%x,rhsbw%y,rhsbw%z,is_bound,cbcvel(:,:,3),['c','c','f'],w)
       end if
+      if(is_bulk_forcing_wall_shear) then
+        call bulk_forcing_wall_shear(irk,rkcoeff(:,irk),dt,n,ng,lo,l,dli,dzc,dzci,dzfi,dzci_g,dzfi_g, &
+                                     grid_vol_ratio_c,grid_vol_ratio_f,visc,is_bound,is_forced,velf,bforce,tau,tauo,u,v,w,f)
+      end if
+      dpdl(:) = dpdl(:) + f(:)
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,.false.,-1)
       call fillps(n,dli,dzfi,dtrki,u,v,w,pp)
       call updt_rhs_b(['c','c','c'],cbcpre,n,is_bound,rhsbp%x,rhsbp%y,rhsbp%z,pp)
