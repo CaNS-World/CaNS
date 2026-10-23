@@ -130,7 +130,7 @@ program cans
   real(rp), dimension(42) :: var
   !
   real(rp) :: dt12,dt12av,dt12min,dt12max
-  real(rp) :: twi,tw
+  real(dp) :: twi,tw
   !
   integer  :: savecounter
   character(len=7  ) :: fldnum
@@ -495,6 +495,7 @@ program cans
     end if
     if(stop_type(3)) then ! maximum wall-clock time reached
       tw = (MPI_WTIME()-twi)/3600.
+      call MPI_ALLREDUCE(MPI_IN_PLACE,tw,1,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,ierr)
       if(tw    >= tw_max  ) is_done = is_done.or..true.
     end if
     if(icheck > 0.and.mod(istep,max(icheck,1)) == 0) then
@@ -502,22 +503,14 @@ program cans
       call chkdt(n,dl,dzci,dzfi,visc,alpha_max,u,v,w,dt_cfl)
       dt = merge(dt_f,min(cfl*dt_cfl,dtmax),dt_f > 0.)
       if(myid == 0) print*, 'dt_cfl = ', dt_cfl, 'dt = ', dt
-      if(dt_cfl < small) then
-        if(myid == 0) print*, 'ERROR: time step is too small.'
-        if(myid == 0) print*, 'Aborting...'
-        is_done = .true.
-        kill = .true.
-      end if
       dti = 1./dt
       call chkdiv(lo,hi,l,dli,dzfi,u,v,w,divtot,divmax)
       if(myid == 0) print*, 'Velocity divergence norms: Mean = ', divtot, '| Maximum = ', divmax
-      if(.not.is_mask_divergence_check) then
-        if(divmax > small.or.is_nan(divtot)) then
-          if(myid == 0) print*, 'ERROR: maximum divergence is too large.'
-          if(myid == 0) print*, 'Aborting...'
-          is_done = .true.
-          kill = .true.
-        end if
+      if((divmax > small.and..not.is_mask_divergence_check).or.is_nan(divtot)) then
+        if(myid == 0) print*, 'ERROR: maximum divergence is too large.'
+        if(myid == 0) print*, 'Aborting...'
+        is_done = .true.
+        kill = .true.
       end if
     end if
     !
@@ -587,7 +580,7 @@ program cans
       end do
       include 'out3d.h90'
     end if
-    if(isave > 0.and.((mod(istep,max(isave,1)) == 0).or.(is_done.and..not.kill))) then
+    if(isave > 0.and.(.not.kill).and.((mod(istep,max(isave,1)) == 0).or.is_done)) then
       if(is_overwrite_save.and.nsaves_max <= 0) then
         filename = 'fld'
       else
@@ -664,4 +657,5 @@ program cans
   call cudecomp_finalize
 #endif
   call MPI_FINALIZE(ierr)
+  if(kill) error stop
 end program cans

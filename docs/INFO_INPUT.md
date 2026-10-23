@@ -175,7 +175,7 @@ icheck = 10, iout0d = 10, iout1d = 100, iout2d = 500, iout3d = 10000, isave = 50
 
 These lines set the frequency of time step checking and output:
 
-* every `icheck` time steps **the new time step size** is computed according to the stability criterion and `cfl` (above)
+* every `icheck` time steps **the new time step size** is computed according to the stability criterion and `cfl` (above), and the **velocity divergence is checked**: if it is too large or NaN, the simulation is aborted without saving a checkpoint (see also `is_mask_divergence_check` under `&other_options`)
 * every `iout0d` time steps **history files with global scalar variables** are appended; currently the forcing pressure gradient and time step history are reported
 * every `iout1d` time steps **1d profiles** are written (e.g. velocity and its moments) to a file
 * every `iout2d` time steps **2d slices of a 3d scalar field** are written to a file
@@ -399,10 +399,13 @@ This namelist defines other parameters related to the monitoring, debugging, or 
 ```fortran
 &other_options
 is_debug = T, is_timing = T
+is_mask_divergence_check = F
 /
 ```
 
 In these lines, `is_debug` performs some **sanity checks for debugging purposes** that do not introduce computational overhead, and `is_timing` reports the wall-clock time per step.
+
+Finally, `is_mask_divergence_check`, if true, skips the threshold test of the **velocity divergence check** performed every `icheck` time steps: by default, the simulation is aborted when the maximum divergence exceeds a small, precision-dependent threshold, which may be smaller than the round-off divergence of very large grids in single precision. A NaN in the velocity field always aborts the simulation, regardless of this option.
 
 Note: other parameters for `&numerics` and `&other_options` are not exposed here, as they are meant for very specific, advanced use or developers. They can be found in `param.f90`.
 
