@@ -89,11 +89,13 @@ module mod_initgrid
     end if
     !
     ! step 4) compute coordinates of cell centers zc and faces zf
+    !         (each center from the faces of its cell: accumulating the center
+    !          spacings instead drifts on fine single-precision grids)
     !
     zc(0)    = -dzf(0)/2.
     zf(0)    = 0.
     do k=1,n+1
-      zc(k) = zc(k-1) + dzc(k-1)
+      zc(k) = zf(k-1) + .5*dzf(k)
       zf(k) = zf(k-1) + dzf(k)
     end do
   end subroutine initgrid
