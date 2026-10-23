@@ -320,7 +320,11 @@ contains
     ! device memory and allocate larger buffers, and use a dedicated
     ! cuDecomp grid descriptor without axis-contiguous layout
     !
+#if defined(_USE_HIP)
+    use hipdecomp
+#else
     use cudecomp
+#endif
     use mod_common_cudecomp, only: buf => solver_buf_0, work, &
                                    dtype_rp => cudecomp_real_rp, &
                                    ap_x   => ap_x_poi, &

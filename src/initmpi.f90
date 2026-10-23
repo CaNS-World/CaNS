@@ -13,10 +13,14 @@ module mod_initmpi
   use mod_types
 #if defined(_OPENACC)
   use openacc
-#if !defined(_USE_DIEZDECOMP)
-  use cudecomp
-#else
+#if defined(_USE_DIEZDECOMP)
   use diezdecomp
+#elif defined(_USE_HIP)
+  use hipdecomp
+  use hipfort, only : cudaGetDevicecount => hipGetDevicecount, &
+                      cudaSetDevice      => hipSetDevice
+#else
+  use cudecomp
 #endif
 #endif
   !@cuf use cudafor, only: cudaGetDeviceCount,cudaSetDevice
@@ -69,15 +73,10 @@ module mod_initmpi
     call MPI_COMM_SPLIT_TYPE(MPI_COMM_WORLD,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,local_comm,ierr)
     call MPI_COMM_RANK(local_comm,mydev,ierr)
     dev_type = acc_get_device_type()
-#if !defined(_USE_HIP)
     istat = cudaGetDeviceCount(ndev)      ! may be tweaked with environment variable CUDA_VISIBLE_DEVICES
     mydev = mod(mydev,ndev)
     istat = cudaSetDevice(mydev)
     if(istat /= 0) print*,'MPI rank: ',myid,' error assigning GPU: ',mydev
-#else
-    ndev  = acc_get_num_devices(dev_type) ! may be tweaked with environment variable ACC_DEVICE_NUM
-    mydev = mod(mydev,ndev)
-#endif
     call acc_set_device_num(mydev,dev_type)
     call acc_init(dev_type)
     !
@@ -160,8 +159,11 @@ module mod_initmpi
     atune_conf%disable_nccl_backends    = .not.cudecomp_is_t_enable_nccl
     atune_conf%disable_nvshmem_backends = .not.cudecomp_is_t_enable_nvshmem
     if(all(conf_poi%transpose_comm_backend /= [CUDECOMP_TRANSPOSE_COMM_NVSHMEM, &
-                                               CUDECOMP_TRANSPOSE_COMM_NVSHMEM_PL, &
-                                               CUDECOMP_TRANSPOSE_COMM_NVSHMEM_SM])) then
+                                               CUDECOMP_TRANSPOSE_COMM_NVSHMEM_PL &
+#if !defined(_USE_HIP)
+                                             , CUDECOMP_TRANSPOSE_COMM_NVSHMEM_SM &
+#endif
+                                               ])) then
       !
       ! disable NVSHMEM halo backend autotuning when NVSHMEM is NOT used for transposes
       !

@@ -22,10 +22,12 @@ contains
     use mod_fft            , only: wsize_fft,wsize_tmp
     use mod_param          , only: ng,dims,cudecomp_is_t_in_place,cbcpre,ipencil => ipencil_axis,is_poisson_dtdma, &
                                    is_use_diezdecomp
-#if !defined(_USE_DIEZDECOMP)
-    use cudecomp
-#else
+#if defined(_USE_DIEZDECOMP)
     use diezdecomp
+#elif defined(_USE_HIP)
+    use hipdecomp
+#else
+    use cudecomp
 #endif
     use openacc
     implicit none
@@ -54,7 +56,11 @@ contains
     !$acc enter data create(work) if(is_use_diezdecomp)
 #if !defined(_USE_DIEZDECOMP)
     istat = cudecompMalloc(handle,gd_poi,work_cuda,max_wsize)
-    call acc_map_data(work,work_cuda,max_wsize*f_sizeof(work(1)))
+#if defined(_USE_HIP)
+    call acc_map_data(work,c_loc(work_cuda),max_wsize*f_sizeof(work(1)))
+#else
+    call acc_map_data(work,work_cuda       ,max_wsize*f_sizeof(work(1)))
+#endif
 #endif
     !
     ! allocate cuDecomp workspace buffer for halos
@@ -68,7 +74,11 @@ contains
     !$acc enter data create(work_halo) if(is_use_diezdecomp)
 #if !defined(_USE_DIEZDECOMP)
     istat = cudecompMalloc(handle,gd_halo,work_halo_cuda,max_wsize)
-    call acc_map_data(work_halo,work_halo_cuda,max_wsize*f_sizeof(work_halo(1)))
+#if defined(_USE_HIP)
+    call acc_map_data(work_halo,c_loc(work_halo_cuda),max_wsize*f_sizeof(work_halo(1)))
+#else
+    call acc_map_data(work_halo,work_halo_cuda       ,max_wsize*f_sizeof(work_halo(1)))
+#endif
 #endif
     !
     ! allocate transpose buffers
@@ -99,7 +109,11 @@ contains
       !$acc enter data create(work_dtdma) if(is_use_diezdecomp)
 #if !defined(_USE_DIEZDECOMP)
       istat = cudecompMalloc(handle,gd_dtdma,work_dtdma_cuda,wsize)
-      call acc_map_data(work_dtdma,work_dtdma_cuda,wsize*f_sizeof(work_dtdma(1)))
+#if defined(_USE_HIP)
+      call acc_map_data(work_dtdma,c_loc(work_dtdma_cuda),wsize*f_sizeof(work_dtdma(1)))
+#else
+      call acc_map_data(work_dtdma,work_dtdma_cuda       ,wsize*f_sizeof(work_dtdma(1)))
+#endif
 #endif
     end if
     !
@@ -132,27 +146,34 @@ contains
 #else
     type(C_PTR), intent(in) :: arrplan(:)
 #endif
+#if defined(_USE_HIP) && !defined(_USE_DIEZDECOMP)
+    type(C_PTR), target, intent(in), optional :: istream
+#else
     integer(acc_handle_kind), target, intent(in), optional :: istream
+#endif
     integer :: istat,i
     do i=1,size(arrplan)
       !$acc host_data use_device(work)
 #if !defined(_USE_HIP)
       istat = cufftSetWorkArea(arrplan(i),work(wsize_tmp + 1))
+#else
+      istat = cufftSetWorkArea(arrplan(i),c_loc(work(wsize_tmp + 1)))
+#endif
+#if !defined(_USE_DIEZDECOMP)
       if(present(istream)) then
         istat = cufftSetStream(arrplan(i),istream)
       end if
-#else
-      istat = cufftSetWorkArea(arrplan(i),c_loc(work(wsize_tmp + 1)))
-      !if(present(istream)) then
-      !  istat = cufftSetStream(arrplan(i),c_loc(istream))
-      !end if
 #endif
       !$acc end host_data
     end do
   end subroutine set_cufft_wspace
   subroutine cudecomp_finalize
 #if !defined(_USE_DIEZDECOMP)
+#if defined(_USE_HIP)
+    use hipdecomp
+#else
     use cudecomp
+#endif
     use mod_common_cudecomp, only: handle,gd_halo,gd_poi,gd_poi_io,gd_dtdma
     use mod_param          , only: is_poisson_dtdma
     !

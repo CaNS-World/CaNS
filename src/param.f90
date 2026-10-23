@@ -7,7 +7,11 @@
 module mod_param
 use mod_types
 #if defined(_OPENACC) && !defined(_USE_DIEZDECOMP)
+#if defined (_USE_HIP)
+use hipdecomp
+#else
 use cudecomp
+#endif
 #endif
 implicit none
 public
@@ -241,8 +245,10 @@ contains
           cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_NVSHMEM
         case(7)
           cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_NVSHMEM_PL
+#if !defined(_USE_HIP)
         case(8)
           cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_NVSHMEM_SM
+#endif
         case default
           cudecomp_t_comm_backend = CUDECOMP_TRANSPOSE_COMM_MPI_P2P
         end select
