@@ -475,7 +475,7 @@ program cans
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,.false.,-1)
       call fillps(n,dli,dzfi,dtrki,u,v,w,pp)
       call updt_rhs_b(['c','c','c'],cbcpre,n,is_bound,rhsbp%x,rhsbp%y,rhsbp%z,pp)
-      call solver(n,ng,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre,['c','c','c'],pp,is_dtdma_update_p,ap_d,cp_d)
+      call solver(n,ng,arrplanp,normfftp,lambdaxyp,ap,bp,cp,cbcpre,['c','c','c'],pp,is_dtdma_update_p,ap_d,cp_d,.not.is_impdiff)
       call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,pp)
       call correc(n,dli,dzci,dtrk,pp,u,v,w)
       call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,.true.,1,0)
