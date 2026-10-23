@@ -184,6 +184,12 @@ These lines set the frequency of time step checking and output:
 
 1d, 2d, and 3d outputs can be tweaked by modifying files `out?d.h90` and recompiling the source. See also `output.f90` for more details. _Set any of these variables to `0` to skip the corresponding operation._
 
+```fortran
+tout0d = 0., tout1d = 0., tout2d = 0., tout3d = 0., tsave = 0.
+```
+
+These optional entries of `&dns` set the same outputs in **physical time**: a positive period (default `0`) takes priority over the corresponding time-step interval above. An output is written at the end of the first time step that reaches a multiple of the period, at the actual time of that step (the time step is not adjusted).
+
 ---
 
 ```fortran

@@ -43,7 +43,8 @@ program cans
   use mod_initsolver     , only: initsolver
   use mod_load           , only: load_one
   use mod_rk             , only: rk,rk_scal
-  use mod_output         , only: out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
+  use mod_output         , only: is_output_due, &
+                                 out0d,gen_alias,out1d,out1d_chan,out2d,out3d,write_log_output,write_visu_2d,write_visu_3d
   use mod_param          , only: ng,l,dl,dli, &
                                  gtype,gr, &
                                  cfl,dtmax,dt_f, &
@@ -52,6 +53,7 @@ program cans
                                  nstep,time_max,tw_max,stop_type, &
                                  restart,is_overwrite_save,nsaves_max, &
                                  icheck,iout0d,iout1d,iout2d,iout3d,isave, &
+                                 tout0d,tout1d,tout2d,tout3d,tsave, &
                                  cbcvel,bcvel,cbcpre,bcpre, &
                                  is_forced,bforce,velf, &
                                  gacc,nscal,beta, &
@@ -112,7 +114,7 @@ program cans
   real(rp) :: normfftu,normfftv,normfftw
   type(rhs_bound) :: rhsbu,rhsbv,rhsbw
   !
-  real(rp) :: dt,dti,dt_cfl,time,dtrk,dtrki,divtot,divmax
+  real(rp) :: dt,dti,dt_cfl,time,time_start,dtrk,dtrki,divtot,divmax
   integer :: irk,istep,iunit
   real(rp), allocatable, dimension(:) :: dzc  ,dzf  ,zc  ,zf  ,dzci  ,dzfi, &
                                          dzc_g,dzf_g,zc_g,zf_g,dzci_g,dzfi_g, &
@@ -427,13 +429,13 @@ program cans
   do iscal=1,nscal
     !$acc update self(scalars(iscal)%val)
   end do
-  if(iout1d > 0.and.mod(istep,max(iout1d,1)) == 0) then
+  if(is_output_due(istep,iout1d,tout1d,time,time,restart)) then
     include 'out1d.h90'
   end if
-  if(iout2d > 0.and.mod(istep,max(iout2d,1)) == 0) then
+  if(is_output_due(istep,iout2d,tout2d,time,time,restart)) then
     include 'out2d.h90'
   end if
-  if(iout3d > 0.and.mod(istep,max(iout3d,1)) == 0) then
+  if(is_output_due(istep,iout3d,tout3d,time,time,restart)) then
     include 'out3d.h90'
   end if
   !
@@ -453,6 +455,7 @@ program cans
       dt12 = MPI_WTIME()
     end if
     istep = istep + 1
+    time_start = time
     time = time + dt
     if(myid == 0) print*, 'Time step #', istep, 'Time = ', time
     tauxo(:,:) = 0.; tauyo(:,:) = 0.; tauzo(:,:) = 0.
@@ -529,7 +532,7 @@ program cans
     !
     ! output routines below
     !
-    if(iout0d > 0.and.mod(istep,max(iout0d,1)) == 0) then
+    if(is_output_due(istep,iout0d,tout0d,time_start,time)) then
       !allocate(var(4))
       var(1) = 1.*istep
       var(2) = dt
@@ -569,7 +572,7 @@ program cans
       end do
     end if
     write(fldnum,'(i7.7)') istep
-    if(iout1d > 0.and.mod(istep,max(iout1d,1)) == 0) then
+    if(is_output_due(istep,iout1d,tout1d,time_start,time)) then
       !$acc wait
       !$acc update self(u,v,w,p)
       do iscal=1,nscal
@@ -577,7 +580,7 @@ program cans
       end do
       include 'out1d.h90'
     end if
-    if(iout2d > 0.and.mod(istep,max(iout2d,1)) == 0) then
+    if(is_output_due(istep,iout2d,tout2d,time_start,time)) then
       !$acc wait
       !$acc update self(u,v,w,p)
       do iscal=1,nscal
@@ -585,7 +588,7 @@ program cans
       end do
       include 'out2d.h90'
     end if
-    if(iout3d > 0.and.mod(istep,max(iout3d,1)) == 0) then
+    if(is_output_due(istep,iout3d,tout3d,time_start,time)) then
       !$acc wait
       !$acc update self(u,v,w,p)
       do iscal=1,nscal
@@ -593,7 +596,7 @@ program cans
       end do
       include 'out3d.h90'
     end if
-    if(isave > 0.and.(.not.kill).and.((mod(istep,max(isave,1)) == 0).or.is_done)) then
+    if((isave > 0.or.tsave > 0.).and.(.not.kill).and.(is_output_due(istep,isave,tsave,time_start,time).or.is_done)) then
       if(is_overwrite_save.and.nsaves_max <= 0) then
         filename = 'fld'
       else

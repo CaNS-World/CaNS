@@ -44,6 +44,7 @@ logical , protected, dimension(3) :: stop_type
 logical , protected :: restart,is_overwrite_save
 integer , protected :: nsaves_max
 integer , protected :: icheck,iout0d,iout1d,iout2d,iout3d,isave
+real(rp), protected :: tout0d,tout1d,tout2d,tout3d,tsave
 !
 integer , dimension(2) :: dims ! not protected -> overwritten when autotuning
 integer , protected :: ipencil_axis = 1
@@ -130,6 +131,7 @@ contains
                   stop_type, &
                   restart,is_overwrite_save,nsaves_max, &
                   icheck,iout0d,iout1d,iout2d,iout3d,isave, &
+                  tout0d,tout1d,tout2d,tout3d,tsave, &
                   cbcvel,cbcpre,bcvel,bcpre, &
                   bforce, &
                   is_forced, &
@@ -165,6 +167,7 @@ contains
     ! defaults
     !
     dt_f = -1.
+    tout0d = 0.; tout1d = 0.; tout2d = 0.; tout3d = 0.; tsave = 0.
     gacc(:) = 0.
     nscal = 0
     !
