@@ -31,6 +31,7 @@ jobs:
       fail-fast: false # ensures that jobs run in parallel
     env:
       NVHPC_CPU_TARGET: ${{ inputs.cpu_target }}
+      GNU_CPU_TARGET: ${{ inputs.cpu_target }}
     name: build-${{ matrix.mode.name }}
     steps:
     - name: Checkout code
