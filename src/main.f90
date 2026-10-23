@@ -76,6 +76,7 @@ program cans
   use mod_common_cudecomp, only: istream_acc_queue_1,ap_z_dtdma
 #endif
   use mod_updatep        , only: updatep
+  use mod_posix          , only: rename_file,read_link
   use mod_utils          , only: bulk_mean
 #if defined(_OPENACC)
   use mod_utils          , only: device_memory_footprint
@@ -137,6 +138,9 @@ program cans
   character(len=3  ) :: scalnum
   character(len=4  ) :: chkptnum
   character(len=100) :: filename
+  character(len=256) :: fname_save
+  logical :: is_save_tmp
+  integer :: istat
   type :: arr_ptr
     real(rp), pointer, contiguous , dimension(:,:,:) :: arr
   end type arr_ptr
@@ -392,9 +396,18 @@ program cans
   else
     do is=1,4+nscal
       call load_one('r',trim(datadir)//'fld_'//trim(c_io_vars(is))//trim(io_ext), &
-                    MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,trim(c_io_vars(is)),time,istep)
+                    MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,trim(c_io_vars(is)),time,istep, &
+                    is_check_time=is > 1)
     end do
     if(myid == 0) print*, '*** Checkpoint loaded at time = ', time, 'time step = ', istep, '. ***'
+    if(is_overwrite_save.and.nsaves_max > 0) then
+      if(myid == 0) then
+        istat = read_link(trim(datadir)//'fld_'//trim(c_io_vars(1))//trim(io_ext),fname_save)
+        if(istat == 0) read(fname_save(5:8),'(i4)',iostat=istat) savecounter
+        if(istat /= 0) savecounter = 0
+      end if
+      call MPI_BCAST(savecounter,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+    end if
   end if
   !$acc enter data copyin(u,v,w,p,pp,dudtrko,dvdtrko,dwdtrko)
   call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,restart)
@@ -590,10 +603,6 @@ program cans
           savecounter = savecounter + 1
           write(chkptnum,'(i4.4)') savecounter
           filename = 'fld_'//chkptnum
-          var(1) = 1.*istep
-          var(2) = time
-          var(3) = 1.*savecounter
-          call out0d(trim(datadir)//'log_checkpoints.out',3,var)
         end if
       end if
       !$acc wait
@@ -601,26 +610,39 @@ program cans
       do iscal=1,nscal
         !$acc update self(scalars(iscal)%val)
       end do
+      is_save_tmp = trim(io_ext) /= '.bp'
       do is=1,4+nscal
+        fname_save = trim(datadir)//trim(filename)//'_'//trim(c_io_vars(is))//trim(io_ext)
+        if(is_save_tmp) fname_save = trim(datadir)//'fld_'//trim(c_io_vars(is))//'.tmp'//trim(io_ext)
         select case(trim(c_io_vars(is)))
         case('u')
-          call load_one('w',trim(datadir)//trim(filename)//'_'//trim(c_io_vars(is))//trim(io_ext), &
+          call load_one('w',trim(fname_save), &
                         MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,trim(c_io_vars(is)),time,istep, &
                         xf_g,yc_g,zc_g)
         case('v')
-          call load_one('w',trim(datadir)//trim(filename)//'_'//trim(c_io_vars(is))//trim(io_ext), &
+          call load_one('w',trim(fname_save), &
                         MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,trim(c_io_vars(is)),time,istep, &
                         xc_g,yf_g,zc_g)
         case('w')
-          call load_one('w',trim(datadir)//trim(filename)//'_'//trim(c_io_vars(is))//trim(io_ext), &
+          call load_one('w',trim(fname_save), &
                         MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,trim(c_io_vars(is)),time,istep, &
                         xc_g,yc_g,zf_g)
         case default
-          call load_one('w',trim(datadir)//trim(filename)//'_'//trim(c_io_vars(is))//trim(io_ext), &
+          call load_one('w',trim(fname_save), &
                         MPI_COMM_WORLD,ng,[1,1,1],lo,hi,io_vars(is)%arr,trim(c_io_vars(is)),time,istep, &
                         xc_g,yc_g,zc_g)
         end select
       end do
+      if(is_save_tmp) then
+        call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+        if(myid == 0) then
+          do is=1,4+nscal
+            istat = rename_file(trim(datadir)//'fld_'//trim(c_io_vars(is))//'.tmp'//trim(io_ext), &
+                                trim(datadir)//trim(filename)//'_'//trim(c_io_vars(is))//trim(io_ext))
+            if(istat /= 0) print*, 'WARNING: could not rename the temporary checkpoint file of ', trim(c_io_vars(is)), '.'
+          end do
+        end if
+      end if
       if(.not.is_overwrite_save.or.nsaves_max > 0) then
         !
         ! fld_*.<ext> -> last checkpoint file (symbolic link)
@@ -629,6 +651,12 @@ program cans
           call gen_alias(myid,trim(datadir),trim(filename)//'_'//trim(c_io_vars(is))//trim(io_ext), &
                          'fld_'//trim(c_io_vars(is))//trim(io_ext))
         end do
+      end if
+      if(is_overwrite_save.and.nsaves_max > 0) then
+        var(1) = 1.*istep
+        var(2) = time
+        var(3) = 1.*savecounter
+        call out0d(trim(datadir)//'log_checkpoints.out',3,var)
       end if
       if(myid == 0) print*, '*** Checkpoint saved at time = ', time, 'time step = ', istep, '. ***'
     end if

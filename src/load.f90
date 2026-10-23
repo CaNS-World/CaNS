@@ -427,7 +427,7 @@ contains
   end subroutine transpose_to_or_from_x_gpu
 #endif
 #endif
-  subroutine load_one(io,filename,comm,ng,nh,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
+  subroutine load_one(io,filename,comm,ng,nh,lo,hi,p,varname,time,istep,x_g,y_g,z_g,is_check_time)
     !
     ! dispatches single-field restart I/O to the selected backend
     !
@@ -443,8 +443,18 @@ contains
     real(rp), intent(inout), dimension(1-nh(1):), optional :: x_g
     real(rp), intent(inout), dimension(1-nh(2):), optional :: y_g
     real(rp), intent(inout), dimension(1-nh(3):), optional :: z_g
+    logical , intent(in   ), optional :: is_check_time
     integer :: file_type
+    real(rp) :: time_in
+    integer  :: istep_in
+    logical  :: is_check
     !
+    is_check = .false.
+    if(present(is_check_time)) is_check = is_check_time.and.io == 'r'
+    if(is_check) then
+      time_in  = time
+      istep_in = istep
+    end if
     file_type = fetch_file_type(filename)
     select case(file_type)
     case(FILETYPE_MPIIO)
@@ -460,6 +470,15 @@ contains
     case default
       call load_one_mpiio(io,filename,comm,ng,nh,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
     end select
+    if(is_check) then
+      if(istep /= istep_in.or.abs(time-time_in) > 0.) then
+        if(myid == 0) print*, ''
+        if(myid == 0) print*, '*** Simulation aborted due to checkpoint files from different saves ***'
+        if(myid == 0) print*, '    file: ', filename, ' | time step: ', istep, '| expected: ', istep_in
+        call MPI_FINALIZE(ierr)
+        error stop
+      end if
+    end if
   end subroutine load_one
   !
   subroutine load_one_mpiio(io,filename,comm,ng,nh,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
