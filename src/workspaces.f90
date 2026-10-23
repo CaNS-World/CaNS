@@ -59,7 +59,7 @@ contains
 #if defined(_USE_HIP)
     call acc_map_data(work,c_loc(work_cuda),max_wsize*f_sizeof(work(1)))
 #else
-    call acc_map_data(work,work_cuda,max_wsize*f_sizeof(work(1)))
+    call acc_map_data(work,work_cuda       ,max_wsize*f_sizeof(work(1)))
 #endif
 #endif
     !
@@ -77,7 +77,7 @@ contains
 #if defined(_USE_HIP)
     call acc_map_data(work_halo,c_loc(work_halo_cuda),max_wsize*f_sizeof(work_halo(1)))
 #else
-    call acc_map_data(work_halo,work_halo_cuda,max_wsize*f_sizeof(work_halo(1)))
+    call acc_map_data(work_halo,work_halo_cuda       ,max_wsize*f_sizeof(work_halo(1)))
 #endif
 #endif
     !
@@ -112,7 +112,7 @@ contains
 #if defined(_USE_HIP)
       call acc_map_data(work_dtdma,c_loc(work_dtdma_cuda),wsize*f_sizeof(work_dtdma(1)))
 #else
-      call acc_map_data(work_dtdma,work_dtdma_cuda,wsize*f_sizeof(work_dtdma(1)))
+      call acc_map_data(work_dtdma,work_dtdma_cuda       ,wsize*f_sizeof(work_dtdma(1)))
 #endif
 #endif
     end if

@@ -18,7 +18,7 @@ module mod_initmpi
 #elif defined(_USE_HIP)
   use hipdecomp
   use hipfort, only : cudaGetDevicecount => hipGetDevicecount, &
-                      cudaSetDevice => hipSetDevice
+                      cudaSetDevice      => hipSetDevice
 #else
   use cudecomp
 #endif
@@ -161,7 +161,7 @@ module mod_initmpi
     if(all(conf_poi%transpose_comm_backend /= [CUDECOMP_TRANSPOSE_COMM_NVSHMEM, &
                                                CUDECOMP_TRANSPOSE_COMM_NVSHMEM_PL &
 #if !defined(_USE_HIP)
-                                               , CUDECOMP_TRANSPOSE_COMM_NVSHMEM_SM &
+                                             , CUDECOMP_TRANSPOSE_COMM_NVSHMEM_SM &
 #endif
                                                ])) then
       !
