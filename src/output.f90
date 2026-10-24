@@ -33,22 +33,33 @@ module mod_output
     integer , intent(in) :: istep,interval
     real(rp), intent(in) :: period,time_start,time_end
     logical , intent(in), optional :: restart
-    real(rp) :: tol,ratio_start,ratio_end
+    real(rp) :: ratio_start,ratio_end
     !
     is_due = .false.
     if(period > 0.) then
       if(present(restart)) then
         is_due = .not.restart
       else
-        tol = 4*epsilon(1._rp)
         ratio_start = time_start/period
         ratio_end   = time_end/period
-        is_due = floor(ratio_end  +tol*max(1._rp,abs(ratio_end  )),kind=i8) > &
-                 floor(ratio_start+tol*max(1._rp,abs(ratio_start)),kind=i8)
+        is_due = floor(ratio_end  +tol(istep  ,ratio_end  ),kind=i8) > &
+                 floor(ratio_start+tol(istep-1,ratio_start),kind=i8)
       end if
     else if(interval > 0) then
       is_due = mod(istep,interval) == 0
     end if
+  contains
+    pure real(rp) function tol(k,ratio)
+      !
+      ! round-off tolerance of the time after k steps, which accumulates errors of up to ~k*epsilon*time;
+      ! capped at sqrt(epsilon) of a period, and evaluated with the step count of each end of a time step,
+      ! so that consecutive steps agree
+      !
+      implicit none
+      integer , intent(in) :: k
+      real(rp), intent(in) :: ratio
+      tol = min(4*epsilon(1._rp)*max(1,k)*max(1._rp,abs(ratio)),sqrt(epsilon(1._rp)))
+    end function tol
   end function is_output_due
   !
   subroutine out0d(fname,n,var)
