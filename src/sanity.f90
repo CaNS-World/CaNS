@@ -28,7 +28,7 @@ module mod_sanity
   use mod_types
   implicit none
   private
-  public test_sanity_input,test_sanity_solver
+  public test_sanity_input,test_sanity_solver,test_sanity_halo
   contains
   subroutine test_sanity_input(ng,dims,stop_type,cbcvel,cbcpre,bcvel,bcpre,is_forced)
     !
@@ -293,7 +293,7 @@ module mod_sanity
     end if
   end subroutine chk_forcing
   !
-  subroutine test_sanity_solver(ng,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,l,dli,dzc,dzf,dzci,dzfi,dzci_g,dzfi_g, &
+  subroutine test_sanity_solver(ng,lo,hi,n,nh_v,nh_p,nh_g,n_x_fft,n_y_fft,lo_z,hi_z,n_z,l,dli,dzc,dzf,dzci,dzfi,dzci_g,dzfi_g, &
                                 nb,is_bound,cbcvel,cbcpre,bcvel,bcpre)
 #if defined(_OPENACC)
     use mod_workspaces     , only: set_cufft_wspace
@@ -301,9 +301,10 @@ module mod_sanity
 #endif
     implicit none
     integer , intent(in), dimension(3) :: ng,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z
+    integer , intent(in)               :: nh_v,nh_p,nh_g
     real(rp), intent(in), dimension(3) :: l
     real(rp), intent(in), dimension(3) :: dli
-    real(rp), intent(in), dimension(0:) :: dzc,dzf,dzci,dzfi,dzci_g,dzfi_g
+    real(rp), intent(in), dimension(1-nh_g:) :: dzc,dzf,dzci,dzfi,dzci_g,dzfi_g
     integer , intent(in), dimension(0:1,3) :: nb
     logical , intent(in), dimension(0:1,3) :: is_bound
     character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
@@ -327,10 +328,10 @@ module mod_sanity
     logical :: passed,passed_loc
     passed = .true.
     !$acc wait
-    allocate(u(0:n(1)+1,0:n(2)+1,0:n(3)+1), &
-             v(0:n(1)+1,0:n(2)+1,0:n(3)+1), &
-             w(0:n(1)+1,0:n(2)+1,0:n(3)+1), &
-             p(0:n(1)+1,0:n(2)+1,0:n(3)+1), &
+    allocate(u(1-nh_v:n(1)+nh_v,1-nh_v:n(2)+nh_v,1-nh_v:n(3)+nh_v), &
+             v(1-nh_v:n(1)+nh_v,1-nh_v:n(2)+nh_v,1-nh_v:n(3)+nh_v), &
+             w(1-nh_v:n(1)+nh_v,1-nh_v:n(2)+nh_v,1-nh_v:n(3)+nh_v), &
+             p(1-nh_p:n(1)+nh_p,1-nh_p:n(2)+nh_p,1-nh_p:n(3)+nh_p), &
              lambdaxy(n_z(1),n_z(2)), &
              a(n_z(3)),b(n_z(3)),c(n_z(3)), &
              rhsbx(n(2),n(3),0:1), &
@@ -351,7 +352,7 @@ module mod_sanity
     !
     ! test pressure correction
     !
-    call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:), &
+    call initsolver(ng,nh_g,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:), &
                     lambdaxy,['c','c','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
     !$acc enter data copyin(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
 #if defined(_OPENACC)
@@ -360,14 +361,14 @@ module mod_sanity
     dl  = dli**(-1)
     dt  = acos(-1.) ! value is irrelevant
     dti = dt**(-1)
-    call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,.false.,-1)
-    call fillps(n,dli,dzfi,dti,u,v,w,p)
-    call updt_rhs_b(['c','c','c'],cbcpre,n,is_bound,rhsbx,rhsby,rhsbz,p)
-    call solver(n,ng,arrplan,normfft,lambdaxy,a,b,c,cbcpre,['c','c','c'],p)
-    call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
-    call correc(n,dli,dzci,dt,p,u,v,w)
-    call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,.true.,1,0)
-    call chkdiv(lo,hi,l,dli,dzfi,u,v,w,divtot,divmax)
+    call bounduvw(cbcvel,n,nh_v,nh_g,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,.false.,-1)
+    call fillps(n,nh_v,nh_p,nh_g,dli,dzfi,dti,u,v,w,p)
+    call updt_rhs_b(['c','c','c'],cbcpre,n,nh_p,is_bound,rhsbx,rhsby,rhsbz,p)
+    call solver(n,nh_p,ng,arrplan,normfft,lambdaxy,a,b,c,cbcpre,['c','c','c'],p)
+    call boundp(cbcpre,n,nh_p,nh_g,bcpre,nb,is_bound,dl,dzc,p)
+    call correc(n,nh_v,nh_p,nh_g,dli,dzci,dt,p,u,v,w)
+    call bounduvw(cbcvel,n,nh_v,nh_g,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,.true.,1,0)
+    call chkdiv(lo,hi,nh_v,nh_g,l,dli,dzfi,u,v,w,divtot,divmax)
     passed_loc = divmax < small
     if(myid == 0.and.(.not.passed_loc)) &
     print*, 'ERROR: Pressure correction: Divergence is too large, with maximum = ', divmax
@@ -393,13 +394,13 @@ module mod_sanity
       call add_noise(ng,lo,789,.5_rp,w(1:n(1),1:n(2),1:n(3)))
       !$acc update device(u,v,w)
       !$acc enter data create(bb)
-      call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1), &
+      call initsolver(ng,nh_g,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1), &
                       lambdaxy,['f','c','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
       !$acc update device(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
 #if defined(_OPENACC)
       call set_cufft_wspace(pack(arrplan,.true.),istream_acc_queue_1)
 #endif
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
+      call bounduvw(cbcvel,n,nh_v,nh_g,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
       !$acc parallel loop collapse(3) default(present)
       !$OMP parallel do   collapse(3) DEFAULT(shared)
       do k=0,n(3)+1
@@ -415,23 +416,24 @@ module mod_sanity
       do k=1,n_z(3)
         bb(k) = b(k) + alpha
       end do
-      call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,is_bound,rhsbx,rhsby,rhsbz,u)
-      call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,1),['f','c','c'],u)
+      call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,nh_v,is_bound,rhsbx,rhsby,rhsbz,u)
+      call solver(n,nh_v,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,1),['f','c','c'],u)
       call fftend(arrplan)
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w) ! actually, we are only interested in the boundary condition in `u`
-      call chk_helmholtz(lo,hi,l,dli,dzci,dzfi,alpha,p,u,cbcvel(:,:,1),is_bound,['f','c','c'],restot,resmax)
+      ! actually, we are only interested in the boundary condition in `u`
+      call bounduvw(cbcvel,n,nh_v,nh_g,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
+      call chk_helmholtz(lo,hi,nh_p,nh_v,nh_g,l,dli,dzci,dzfi,alpha,p,u,cbcvel(:,:,1),is_bound,['f','c','c'],restot,resmax)
       passed_loc = resmax < small
       if(myid == 0.and.(.not.passed_loc)) &
       print*, 'ERROR: wrong solution of Helmholtz equation in x direction.'
       passed = passed.and.passed_loc
       !
-      call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2), &
+      call initsolver(ng,nh_g,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2), &
                       lambdaxy,['c','f','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
       !$acc update device(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
 #if defined(_OPENACC)
       call set_cufft_wspace(pack(arrplan,.true.),istream_acc_queue_1)
 #endif
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
+      call bounduvw(cbcvel,n,nh_v,nh_g,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
       !$acc parallel loop collapse(3) default(present)
       !$OMP parallel do   collapse(3) DEFAULT(shared)
       do k=0,n(3)+1
@@ -447,23 +449,24 @@ module mod_sanity
       do k=1,n_z(3)
         bb(k) = b(k) + alpha
       end do
-      call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,is_bound,rhsbx,rhsby,rhsbz,v)
-      call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,2),['c','f','c'],v)
+      call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,nh_v,is_bound,rhsbx,rhsby,rhsbz,v)
+      call solver(n,nh_v,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,2),['c','f','c'],v)
       call fftend(arrplan)
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w) ! actually, we are only interested in the boundary condition in `v`
-      call chk_helmholtz(lo,hi,l,dli,dzci,dzfi,alpha,p,v,cbcvel(:,:,2),is_bound,['c','f','c'],restot,resmax)
+      ! actually, we are only interested in the boundary condition in `v`
+      call bounduvw(cbcvel,n,nh_v,nh_g,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
+      call chk_helmholtz(lo,hi,nh_p,nh_v,nh_g,l,dli,dzci,dzfi,alpha,p,v,cbcvel(:,:,2),is_bound,['c','f','c'],restot,resmax)
       passed_loc = resmax < small
       if(myid == 0.and.(.not.passed_loc)) &
       print*, 'ERROR: wrong solution of Helmholtz equation in y direction.'
       passed = passed.and.passed_loc
       !
-      call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3), &
+      call initsolver(ng,nh_g,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3), &
                       lambdaxy,['c','c','f'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
       !$acc update device(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
 #if defined(_OPENACC)
       call set_cufft_wspace(pack(arrplan,.true.),istream_acc_queue_1)
 #endif
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
+      call bounduvw(cbcvel,n,nh_v,nh_g,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
       !$acc parallel loop collapse(3) default(present)
       !$OMP parallel do   collapse(3) DEFAULT(shared)
       do k=0,n(3)+1
@@ -479,11 +482,12 @@ module mod_sanity
       do k=1,n_z(3)
         bb(k) = b(k) + alpha
       end do
-      call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,is_bound,rhsbx,rhsby,rhsbz,w)
-      call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,3),['c','c','f'],w)
+      call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,nh_v,is_bound,rhsbx,rhsby,rhsbz,w)
+      call solver(n,nh_v,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,3),['c','c','f'],w)
       call fftend(arrplan)
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w) ! actually, we are only interested in the boundary condition in `w`
-      call chk_helmholtz(lo,hi,l,dli,dzci,dzfi,alpha,p,w,cbcvel(:,:,3),is_bound,['c','c','f'],restot,resmax)
+      ! actually, we are only interested in the boundary condition in `w`
+      call bounduvw(cbcvel,n,nh_v,nh_g,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
+      call chk_helmholtz(lo,hi,nh_p,nh_v,nh_g,l,dli,dzci,dzfi,alpha,p,w,cbcvel(:,:,3),is_bound,['c','c','f'],restot,resmax)
       passed_loc = resmax < small
       if(myid == 0.and.(.not.passed_loc)) &
       print*, 'ERROR: wrong solution of Helmholtz equation in z direction.'
@@ -507,4 +511,222 @@ module mod_sanity
     call MPI_FINALIZE(ierr)
     error stop
   end subroutine abortit
+  !
+  subroutine test_sanity_halo(ng,lo,n,nh_v,nh_p,nh_s,nh_g,dl,dzc,dzf,zc_g,zf_g,nb,is_bound, &
+                              cbcvel,bcvel,cbcpre,bcpre,cbcscal,bcscal)
+    !
+    ! checks the halo exchanges and boundary conditions on all ghost layers, edges and
+    ! corners included: the interior of each field is set to f(i,j,k), a function of the
+    ! global indices, the halos are updated, and every point is compared against its
+    ! expected value (see `expected_value`)
+    !
+    implicit none
+    integer , intent(in), dimension(3) :: ng,lo,n
+    integer , intent(in)               :: nh_v,nh_p,nh_s,nh_g
+    real(rp), intent(in), dimension(3) :: dl
+    real(rp), intent(in), dimension(1-nh_g:) :: dzc,dzf,zc_g,zf_g
+    integer , intent(in), dimension(0:1,3) :: nb
+    logical , intent(in), dimension(0:1,3) :: is_bound
+    character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
+    real(rp)        , intent(in), dimension(0:1,3,3) :: bcvel
+    character(len=1), intent(in), dimension(0:1,3)   :: cbcpre
+    real(rp)        , intent(in), dimension(0:1,3)   :: bcpre
+    character(len=1), intent(in), dimension(0:1,3), optional :: cbcscal
+    real(rp)        , intent(in), dimension(0:1,3), optional :: bcscal
+    real(rp), allocatable, dimension(:,:,:) :: u,v,w,p
+    real(rp), dimension(3) :: errmax
+    logical , dimension(3,3) :: is_c
+    logical :: passed
+    integer :: ivel
+    !
+    is_c(:,:) = .true.
+    do ivel=1,3
+      is_c(ivel,ivel) = .false. ! velocity component `ivel` is staggered along `ivel`
+    end do
+    passed = .true.
+    !
+    ! velocity
+    !
+    allocate(u(1-nh_v:n(1)+nh_v,1-nh_v:n(2)+nh_v,1-nh_v:n(3)+nh_v), &
+             v(1-nh_v:n(1)+nh_v,1-nh_v:n(2)+nh_v,1-nh_v:n(3)+nh_v), &
+             w(1-nh_v:n(1)+nh_v,1-nh_v:n(2)+nh_v,1-nh_v:n(3)+nh_v))
+    call set_field(n,nh_v,lo,u)
+    call set_field(n,nh_v,lo,v)
+    call set_field(n,nh_v,lo,w)
+    !$acc enter data copyin(u,v,w)
+    call bounduvw(cbcvel,n,nh_v,nh_g,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
+    !$acc wait
+    !$acc exit data copyout(u,v,w)
+    errmax(1) = field_error(ng,lo,n,nh_v,is_c(:,1),cbcvel(:,:,1),bcvel(:,:,1),dl,nh_g,zc_g,zf_g,u)
+    errmax(2) = field_error(ng,lo,n,nh_v,is_c(:,2),cbcvel(:,:,2),bcvel(:,:,2),dl,nh_g,zc_g,zf_g,v)
+    errmax(3) = field_error(ng,lo,n,nh_v,is_c(:,3),cbcvel(:,:,3),bcvel(:,:,3),dl,nh_g,zc_g,zf_g,w)
+    call MPI_ALLREDUCE(MPI_IN_PLACE,errmax,3,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
+    if(myid == 0.and.any(errmax(:) > 0.)) &
+      print*, 'ERROR: wrong velocity halo values; maximum relative errors of u, v, w = ', errmax(:)
+    passed = passed.and.all(errmax(:) <= 0.)
+    deallocate(u,v,w)
+    !
+    ! pressure
+    !
+    allocate(p(1-nh_p:n(1)+nh_p,1-nh_p:n(2)+nh_p,1-nh_p:n(3)+nh_p))
+    call set_field(n,nh_p,lo,p)
+    !$acc enter data copyin(p)
+    call boundp(cbcpre,n,nh_p,nh_g,bcpre,nb,is_bound,dl,dzc,p)
+    !$acc wait
+    !$acc exit data copyout(p)
+    errmax(1) = field_error(ng,lo,n,nh_p,[.true.,.true.,.true.],cbcpre,bcpre,dl,nh_g,zc_g,zf_g,p)
+    call MPI_ALLREDUCE(MPI_IN_PLACE,errmax(1),1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
+    if(myid == 0.and.errmax(1) > 0.) &
+      print*, 'ERROR: wrong pressure halo values; maximum relative error = ', errmax(1)
+    passed = passed.and.errmax(1) <= 0.
+    deallocate(p)
+    !
+    ! scalar
+    !
+    if(present(cbcscal).and.present(bcscal)) then
+      allocate(p(1-nh_s:n(1)+nh_s,1-nh_s:n(2)+nh_s,1-nh_s:n(3)+nh_s))
+      call set_field(n,nh_s,lo,p)
+      !$acc enter data copyin(p)
+      call boundp(cbcscal,n,nh_s,nh_g,bcscal,nb,is_bound,dl,dzc,p)
+      !$acc wait
+      !$acc exit data copyout(p)
+      errmax(1) = field_error(ng,lo,n,nh_s,[.true.,.true.,.true.],cbcscal,bcscal,dl,nh_g,zc_g,zf_g,p)
+      call MPI_ALLREDUCE(MPI_IN_PLACE,errmax(1),1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
+      if(myid == 0.and.errmax(1) > 0.) &
+        print*, 'ERROR: wrong scalar halo values; maximum relative error = ', errmax(1)
+      passed = passed.and.errmax(1) <= 0.
+      deallocate(p)
+    end if
+    if(.not.passed) then
+      call decomp_2d_finalize
+      call MPI_FINALIZE(ierr)
+      error stop
+    end if
+    if(myid == 0) print*, '*** Halo check passed for widths (velocity, pressure, scalars): ', nh_v,nh_p,nh_s, ' ***'
+  end subroutine test_sanity_halo
+  !
+  pure real(rp) function fval(i,j,k)
+    !
+    ! test field: exact and distinct for less than 64 points per direction, halos included
+    !
+    implicit none
+    integer, intent(in) :: i,j,k
+    fval = i + 64._rp*j + 4096._rp*k
+  end function fval
+  !
+  subroutine set_field(n,nh,lo,p)
+    implicit none
+    integer , intent(in), dimension(3) :: n,lo
+    integer , intent(in)               :: nh
+    real(rp), intent(out), dimension(1-nh:,1-nh:,1-nh:) :: p
+    integer :: i,j,k
+    p(:,:,:) = -huge(1._rp)/8 ! stale halo values
+    do k=1,n(3)
+      do j=1,n(2)
+        do i=1,n(1)
+          p(i,j,k) = fval(i+lo(1)-1,j+lo(2)-1,k+lo(3)-1)
+        end do
+      end do
+    end do
+  end subroutine set_field
+  !
+  function field_error(ng,lo,n,nh,is_c,cbc,bc,dl,nh_g,zc_g,zf_g,p) result(errmax)
+    !
+    ! maximum relative error over all points, halos included (zero if within round-off)
+    !
+    implicit none
+    integer , intent(in), dimension(3) :: ng,lo,n
+    integer , intent(in)               :: nh
+    logical , intent(in), dimension(3) :: is_c
+    character(len=1), intent(in), dimension(0:1,3) :: cbc
+    real(rp), intent(in), dimension(0:1,3) :: bc
+    real(rp), intent(in), dimension(3) :: dl
+    integer , intent(in)               :: nh_g
+    real(rp), intent(in), dimension(1-nh_g:) :: zc_g,zf_g
+    real(rp), intent(in), dimension(1-nh:,1-nh:,1-nh:) :: p
+    real(rp) :: errmax,val,err
+    integer :: i,j,k
+    errmax = 0.
+    do k=1-nh,n(3)+nh
+      do j=1-nh,n(2)+nh
+        do i=1-nh,n(1)+nh
+          val = expected_value([i,j,k]+lo(:)-1,ng,is_c,cbc,bc,dl,nh_g,zc_g,zf_g)
+          err = abs(p(i,j,k)-val)/max(1._rp,abs(val))
+          if(err > small) errmax = max(errmax,err)
+        end do
+      end do
+    end do
+  end function field_error
+  !
+  recursive function expected_value(ii,ng,is_c,cbc,bc,dl,nh_g,zc_g,zf_g) result(val)
+    !
+    ! value of the test field at global index `ii`, inside or outside the domain, after the halo
+    ! exchange and the boundary conditions, which are imposed along x, y, and z, in this order:
+    ! outside the domain, it is the value at the periodic image or, for a boundary, the value at
+    ! the mirror point transformed by the boundary condition (cf. `set_bc` under `bound.f90`),
+    ! starting from the last direction of the sequence along which `ii` is outside
+    !
+    implicit none
+    integer , intent(in), dimension(3) :: ii,ng
+    logical , intent(in), dimension(3) :: is_c
+    character(len=1), intent(in), dimension(0:1,3) :: cbc
+    real(rp), intent(in), dimension(0:1,3) :: bc
+    real(rp), intent(in), dimension(3) :: dl
+    integer , intent(in)               :: nh_g
+    real(rp), intent(in), dimension(1-nh_g:) :: zc_g,zf_g
+    real(rp) :: val
+    integer , dimension(3) :: im
+    integer :: idir,i,ib,dh
+    real(rp) :: dr
+    do idir=3,1,-1
+      i = ii(idir)
+      im(:) = ii(:)
+      if(cbc(0,idir)//cbc(1,idir) == 'PP') then
+        if(i >= 1 .and. i <= ng(idir)) cycle
+        im(idir) = modulo(i-1,ng(idir))+1
+        val = expected_value(im,ng,is_c,cbc,bc,dl,nh_g,zc_g,zf_g)
+        return
+      end if
+      if(is_c(idir)) then
+        if(     i < 1       ) then
+          ib = 0; dh = -i         ; im(idir) = 1+dh
+        else if(i > ng(idir)) then
+          ib = 1; dh = i-ng(idir)-1; im(idir) = ng(idir)-dh
+        else
+          cycle
+        end if
+      else ! the boundary node is also set by the boundary condition
+        if(     i <= 0       ) then
+          ib = 0; dh = -i         ; im(idir) = max(dh,1)
+        else if(i >= ng(idir)) then
+          ib = 1; dh = i-ng(idir) ; im(idir) = ng(idir)-max(dh,1)
+        else
+          cycle
+        end if
+      end if
+      if(idir == 3) then
+        if(is_c(idir)) then
+          dr = abs(zc_g(im(idir))-zc_g(i))
+        else
+          dr = abs(zf_g(im(idir))-zf_g(i))
+        end if
+      else
+        dr = abs(im(idir)-i)*dl(idir)
+      end if
+      select case(cbc(ib,idir))
+      case('D')
+        if(.not.is_c(idir) .and. dh == 0) then
+          val = bc(ib,idir)
+        else
+          val = 2.*bc(ib,idir) - expected_value(im,ng,is_c,cbc,bc,dl,nh_g,zc_g,zf_g)
+        end if
+      case('N')
+        val = expected_value(im,ng,is_c,cbc,bc,dl,nh_g,zc_g,zf_g) + (2*ib-1)*dr*bc(ib,idir)
+      case default
+        val = huge(1._rp)
+      end select
+      return
+    end do
+    val = fval(ii(1),ii(2),ii(3))
+  end function expected_value
 end module mod_sanity

@@ -37,7 +37,7 @@ module mod_load
 #endif
   public :: load_all,load_one,io_field,io_write_subset
 contains
-  subroutine load_all(io,filename,comm,ng,nh,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
+  subroutine load_all(io,filename,comm,ng,nh_v,nh_p,nh_s,nh_g,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
     !
     ! dispatches restart I/O to the selected backend
     !
@@ -45,35 +45,37 @@ contains
     character(len=1), intent(in) :: io
     character(len=*), intent(in) :: filename
     integer         , intent(in) :: comm
-    integer , intent(in), dimension(3) :: ng,nh,lo,hi
+    integer , intent(in), dimension(3) :: ng,lo,hi
+    integer , intent(in)               :: nh_v,nh_p,nh_s,nh_g
     integer , intent(in)               :: nscal
-    real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: u,v,w,p
+    real(rp), intent(inout), dimension(lo(1)-nh_v:,lo(2)-nh_v:,lo(3)-nh_v:) :: u,v,w
+    real(rp), intent(inout), dimension(lo(1)-nh_p:,lo(2)-nh_p:,lo(3)-nh_p:) :: p
     type(scalar), intent(inout), dimension(:) :: s
     real(rp), intent(inout) :: time
     integer , intent(inout) :: istep
-    real(rp), intent(inout), dimension(1-nh(1):), optional :: x_g
-    real(rp), intent(inout), dimension(1-nh(2):), optional :: y_g
-    real(rp), intent(inout), dimension(1-nh(3):), optional :: z_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: x_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: y_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: z_g
     integer :: file_type
     !
     file_type = fetch_file_type(filename)
     select case(file_type)
     case(FILETYPE_MPIIO)
-      call load_all_mpiio(io,filename,comm,ng,nh,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
+      call load_all_mpiio(io,filename,comm,ng,nh_v,nh_p,nh_s,nh_g,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
 #if defined(_USE_HDF5)
     case(FILETYPE_HDF5)
-      call load_all_hdf5(io,filename,comm,ng,nh,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
+      call load_all_hdf5(io,filename,comm,ng,nh_v,nh_p,nh_s,nh_g,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
 #endif
 #if defined(_USE_ADIOS2)
     case(FILETYPE_ADIOS2)
-      call load_all_adios2(io,filename,comm,ng,nh,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
+      call load_all_adios2(io,filename,comm,ng,nh_v,nh_p,nh_s,nh_g,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
 #endif
     case default
-      call load_all_mpiio(io,filename,comm,ng,nh,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
+      call load_all_mpiio(io,filename,comm,ng,nh_v,nh_p,nh_s,nh_g,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
     end select
   end subroutine load_all
   !
-  subroutine load_all_mpiio(io,filename,comm,ng,nh,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
+  subroutine load_all_mpiio(io,filename,comm,ng,nh_v,nh_p,nh_s,nh_g,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
     !
     ! reads/writes a restart file
     !
@@ -81,15 +83,17 @@ contains
     character(len=1), intent(in) :: io
     character(len=*), intent(in) :: filename
     integer         , intent(in) :: comm
-    integer , intent(in), dimension(3) :: ng,nh,lo,hi
+    integer , intent(in), dimension(3) :: ng,lo,hi
+    integer , intent(in)               :: nh_v,nh_p,nh_s,nh_g
     integer , intent(in)               :: nscal
-    real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: u,v,w,p
+    real(rp), intent(inout), dimension(lo(1)-nh_v:,lo(2)-nh_v:,lo(3)-nh_v:) :: u,v,w
+    real(rp), intent(inout), dimension(lo(1)-nh_p:,lo(2)-nh_p:,lo(3)-nh_p:) :: p
     type(scalar), intent(inout), dimension(:) :: s
     real(rp), intent(inout) :: time
     integer , intent(inout) :: istep
-    real(rp), intent(inout), dimension(1-nh(1):), optional :: x_g
-    real(rp), intent(inout), dimension(1-nh(2):), optional :: y_g
-    real(rp), intent(inout), dimension(1-nh(3):), optional :: z_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: x_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: y_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: z_g
     real(rp), dimension(2) :: fldinfo
     integer :: iscal
     integer :: fh
@@ -117,12 +121,12 @@ contains
       !
       disp = 0_MPI_OFFSET_KIND
 #if !defined(_DECOMP_X_IO)
-      call io_field(io,fh,ng,nh,lo,hi,disp,u)
-      call io_field(io,fh,ng,nh,lo,hi,disp,v)
-      call io_field(io,fh,ng,nh,lo,hi,disp,w)
-      call io_field(io,fh,ng,nh,lo,hi,disp,p)
+      call io_field(io,fh,ng,[nh_v,nh_v,nh_v],lo,hi,disp,u)
+      call io_field(io,fh,ng,[nh_v,nh_v,nh_v],lo,hi,disp,v)
+      call io_field(io,fh,ng,[nh_v,nh_v,nh_v],lo,hi,disp,w)
+      call io_field(io,fh,ng,[nh_p,nh_p,nh_p],lo,hi,disp,p)
       do iscal=1,nscal
-        call io_field(io,fh,ng,nh,lo,hi,disp,s(iscal)%val)
+        call io_field(io,fh,ng,[nh_s,nh_s,nh_s],lo,hi,disp,s(iscal)%val)
       end do
 #else
       block
@@ -145,16 +149,16 @@ contains
                    tmp_z(zstart(1):zend(1),zstart(2):zend(2),zstart(3):zend(3)))
         end select
         call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
-        call transpose_to_or_from_x(io,ipencil,nh,u,tmp_x,tmp_y,tmp_z)
+        call transpose_to_or_from_x(io,ipencil,[nh_v,nh_v,nh_v],u,tmp_x,tmp_y,tmp_z)
         call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
-        call transpose_to_or_from_x(io,ipencil,nh,v,tmp_x,tmp_y,tmp_z)
+        call transpose_to_or_from_x(io,ipencil,[nh_v,nh_v,nh_v],v,tmp_x,tmp_y,tmp_z)
         call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
-        call transpose_to_or_from_x(io,ipencil,nh,w,tmp_x,tmp_y,tmp_z)
+        call transpose_to_or_from_x(io,ipencil,[nh_v,nh_v,nh_v],w,tmp_x,tmp_y,tmp_z)
         call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
-        call transpose_to_or_from_x(io,ipencil,nh,p,tmp_x,tmp_y,tmp_z)
+        call transpose_to_or_from_x(io,ipencil,[nh_p,nh_p,nh_p],p,tmp_x,tmp_y,tmp_z)
         do iscal=1,nscal
           call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
-          call transpose_to_or_from_x(io,ipencil,nh,s(iscal)%val,tmp_x,tmp_y,tmp_z)
+          call transpose_to_or_from_x(io,ipencil,[nh_s,nh_s,nh_s],s(iscal)%val,tmp_x,tmp_y,tmp_z)
         end do
         deallocate(tmp_x,tmp_y,tmp_z)
       end block
@@ -177,12 +181,12 @@ contains
       call MPI_FILE_SET_SIZE(fh,filesize,ierr)
       disp = 0_MPI_OFFSET_KIND
 #if !defined(_DECOMP_X_IO)
-      call io_field(io,fh,ng,nh,lo,hi,disp,u)
-      call io_field(io,fh,ng,nh,lo,hi,disp,v)
-      call io_field(io,fh,ng,nh,lo,hi,disp,w)
-      call io_field(io,fh,ng,nh,lo,hi,disp,p)
+      call io_field(io,fh,ng,[nh_v,nh_v,nh_v],lo,hi,disp,u)
+      call io_field(io,fh,ng,[nh_v,nh_v,nh_v],lo,hi,disp,v)
+      call io_field(io,fh,ng,[nh_v,nh_v,nh_v],lo,hi,disp,w)
+      call io_field(io,fh,ng,[nh_p,nh_p,nh_p],lo,hi,disp,p)
       do iscal=1,nscal
-        call io_field(io,fh,ng,nh,lo,hi,disp,s(iscal)%val)
+        call io_field(io,fh,ng,[nh_s,nh_s,nh_s],lo,hi,disp,s(iscal)%val)
       end do
 #else
       block
@@ -204,16 +208,16 @@ contains
                    tmp_y(ystart(1):yend(1),ystart(2):yend(2),ystart(3):yend(3)), &
                    tmp_z(zstart(1):zend(1),zstart(2):zend(2),zstart(3):zend(3)))
         end select
-        call transpose_to_or_from_x(io,ipencil,nh,u,tmp_x,tmp_y,tmp_z)
+        call transpose_to_or_from_x(io,ipencil,[nh_v,nh_v,nh_v],u,tmp_x,tmp_y,tmp_z)
         call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
-        call transpose_to_or_from_x(io,ipencil,nh,v,tmp_x,tmp_y,tmp_z)
+        call transpose_to_or_from_x(io,ipencil,[nh_v,nh_v,nh_v],v,tmp_x,tmp_y,tmp_z)
         call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
-        call transpose_to_or_from_x(io,ipencil,nh,w,tmp_x,tmp_y,tmp_z)
+        call transpose_to_or_from_x(io,ipencil,[nh_v,nh_v,nh_v],w,tmp_x,tmp_y,tmp_z)
         call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
-        call transpose_to_or_from_x(io,ipencil,nh,p,tmp_x,tmp_y,tmp_z)
+        call transpose_to_or_from_x(io,ipencil,[nh_p,nh_p,nh_p],p,tmp_x,tmp_y,tmp_z)
         call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
         do iscal=1,nscal
-          call transpose_to_or_from_x(io,ipencil,nh,s(iscal)%val,tmp_x,tmp_y,tmp_z)
+          call transpose_to_or_from_x(io,ipencil,[nh_s,nh_s,nh_s],s(iscal)%val,tmp_x,tmp_y,tmp_z)
           call io_field(io,fh,ng,[0,0,0],lo,hi,disp,tmp_x)
         end do
         deallocate(tmp_x,tmp_y,tmp_z)
@@ -427,7 +431,7 @@ contains
   end subroutine transpose_to_or_from_x_gpu
 #endif
 #endif
-  subroutine load_one(io,filename,comm,ng,nh,lo,hi,p,varname,time,istep,x_g,y_g,z_g,is_check_time)
+  subroutine load_one(io,filename,comm,ng,nh,nh_g,lo,hi,p,varname,time,istep,x_g,y_g,z_g,is_check_time)
     !
     ! dispatches single-field restart I/O to the selected backend
     !
@@ -436,13 +440,14 @@ contains
     character(len=*), intent(in) :: filename
     integer         , intent(in) :: comm
     integer , intent(in), dimension(3) :: ng,nh,lo,hi
+    integer , intent(in)               :: nh_g
     real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
     character(len=*), intent(in) :: varname
     real(rp), intent(inout), optional :: time
     integer , intent(inout), optional :: istep
-    real(rp), intent(inout), dimension(1-nh(1):), optional :: x_g
-    real(rp), intent(inout), dimension(1-nh(2):), optional :: y_g
-    real(rp), intent(inout), dimension(1-nh(3):), optional :: z_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: x_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: y_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: z_g
     logical , intent(in   ), optional :: is_check_time
     integer :: file_type
     real(rp) :: time_in
@@ -458,17 +463,17 @@ contains
     file_type = fetch_file_type(filename)
     select case(file_type)
     case(FILETYPE_MPIIO)
-      call load_one_mpiio(io,filename,comm,ng,nh,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
+      call load_one_mpiio(io,filename,comm,ng,nh,nh_g,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
 #if defined(_USE_HDF5)
     case(FILETYPE_HDF5)
-      call load_one_hdf5(io,filename,comm,ng,nh,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
+      call load_one_hdf5(io,filename,comm,ng,nh,nh_g,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
 #endif
 #if defined(_USE_ADIOS2)
     case(FILETYPE_ADIOS2)
-      call load_one_adios2(io,filename,comm,ng,nh,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
+      call load_one_adios2(io,filename,comm,ng,nh,nh_g,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
 #endif
     case default
-      call load_one_mpiio(io,filename,comm,ng,nh,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
+      call load_one_mpiio(io,filename,comm,ng,nh,nh_g,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
     end select
     if(is_check) then
       if(istep /= istep_in.or.abs(time-time_in) > 0.) then
@@ -481,7 +486,7 @@ contains
     end if
   end subroutine load_one
   !
-  subroutine load_one_mpiio(io,filename,comm,ng,nh,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
+  subroutine load_one_mpiio(io,filename,comm,ng,nh,nh_g,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
     !
     ! reads/writes a restart file for a single field
     !
@@ -490,13 +495,14 @@ contains
     character(len=*), intent(in) :: filename
     integer         , intent(in) :: comm
     integer , intent(in), dimension(3) :: ng,nh,lo,hi
+    integer , intent(in)               :: nh_g
     real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
     character(len=*), intent(in) :: varname
     real(rp), intent(inout), optional :: time
     integer , intent(inout), optional :: istep
-    real(rp), intent(inout), dimension(1-nh(1):), optional :: x_g
-    real(rp), intent(inout), dimension(1-nh(2):), optional :: y_g
-    real(rp), intent(inout), dimension(1-nh(3):), optional :: z_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: x_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: y_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: z_g
     real(rp), dimension(2) :: fldinfo
     integer :: fh
     integer :: nreals_myid
@@ -611,7 +617,7 @@ contains
     end select
   end subroutine load_one_mpiio
   !
-  subroutine io_write_subset(filename,varname,comm,ng,nh,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
+  subroutine io_write_subset(filename,varname,comm,ng,nh,nh_g,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
     !
     ! writes a structured subset of a 3D field
     !
@@ -619,29 +625,30 @@ contains
     character(len=*), intent(in) :: filename,varname
     integer         , intent(in) :: comm
     integer         , intent(in), dimension(3) :: ng,nh,lo,hi,lo_out,hi_out,nskip
+    integer         , intent(in)               :: nh_g
     real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: var
     real(rp), intent(in), optional :: time
     integer , intent(in), optional :: istep
-    real(rp), intent(in), dimension(1-nh(1):), optional :: x_g
-    real(rp), intent(in), dimension(1-nh(2):), optional :: y_g
-    real(rp), intent(in), dimension(1-nh(3):), optional :: z_g
+    real(rp), intent(in), dimension(1-nh_g:), optional :: x_g
+    real(rp), intent(in), dimension(1-nh_g:), optional :: y_g
+    real(rp), intent(in), dimension(1-nh_g:), optional :: z_g
     logical , intent(in), optional :: is_pack
     integer :: file_type
     !
     file_type = fetch_file_type(filename)
     select case(file_type)
     case(FILETYPE_MPIIO)
-      call write_subset_mpiio(filename,varname,comm,ng,nh,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
+      call write_subset_mpiio(filename,varname,comm,ng,nh,nh_g,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
 #if defined(_USE_HDF5)
     case(FILETYPE_HDF5)
-      call write_subset_hdf5(filename,varname,comm,ng,nh,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
+      call write_subset_hdf5(filename,varname,comm,ng,nh,nh_g,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
 #endif
 #if defined(_USE_ADIOS2)
     case(FILETYPE_ADIOS2)
-      call write_subset_adios2(filename,varname,comm,ng,nh,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
+      call write_subset_adios2(filename,varname,comm,ng,nh,nh_g,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
 #endif
     case default
-      call write_subset_mpiio(filename,varname,comm,ng,nh,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
+      call write_subset_mpiio(filename,varname,comm,ng,nh,nh_g,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
     end select
     call MPI_BARRIER(comm,ierr)
   end subroutine io_write_subset
@@ -709,7 +716,7 @@ contains
     end if
   end subroutine subset_stage_field
   !
-  subroutine write_subset_mpiio(filename,varname,comm,ng,nh,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
+  subroutine write_subset_mpiio(filename,varname,comm,ng,nh,nh_g,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
     !
     ! writes a structured subset to a raw binary file in parallel
     !
@@ -717,12 +724,13 @@ contains
     character(len=*), intent(in) :: filename,varname
     integer         , intent(in) :: comm
     integer         , intent(in), dimension(3) :: ng,nh,lo,hi,lo_out,hi_out,nskip
+    integer         , intent(in)               :: nh_g
     real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: var
     real(rp), intent(in), optional :: time
     integer , intent(in), optional :: istep
-    real(rp), intent(in), dimension(1-nh(1):), optional :: x_g
-    real(rp), intent(in), dimension(1-nh(2):), optional :: y_g
-    real(rp), intent(in), dimension(1-nh(3):), optional :: z_g
+    real(rp), intent(in), dimension(1-nh_g:), optional :: x_g
+    real(rp), intent(in), dimension(1-nh_g:), optional :: y_g
+    real(rp), intent(in), dimension(1-nh_g:), optional :: z_g
     logical , intent(in), optional :: is_pack
     real(rp), allocatable, dimension(:,:,:) :: buf
     real(rp), allocatable, dimension(:) :: x_sel,y_sel,z_sel
@@ -760,7 +768,7 @@ contains
   end subroutine write_subset_mpiio
   !
 #if defined(_USE_HDF5)
-  subroutine write_subset_hdf5(filename,varname,comm,ng,nh,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
+  subroutine write_subset_hdf5(filename,varname,comm,ng,nh,nh_g,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
     use hdf5
     use mod_param, only: is_use_compression
     !
@@ -770,12 +778,13 @@ contains
     character(len=*), intent(in) :: filename,varname
     integer         , intent(in) :: comm
     integer         , intent(in), dimension(3) :: ng,nh,lo,hi,lo_out,hi_out,nskip
+    integer         , intent(in)               :: nh_g
     real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: var
     real(rp), intent(in), optional :: time
     integer , intent(in), optional :: istep
-    real(rp), intent(in), dimension(1-nh(1):), optional :: x_g
-    real(rp), intent(in), dimension(1-nh(2):), optional :: y_g
-    real(rp), intent(in), dimension(1-nh(3):), optional :: z_g
+    real(rp), intent(in), dimension(1-nh_g:), optional :: x_g
+    real(rp), intent(in), dimension(1-nh_g:), optional :: y_g
+    real(rp), intent(in), dimension(1-nh_g:), optional :: z_g
     logical , intent(in), optional :: is_pack
     real(rp), allocatable, dimension(:,:,:) :: buf
     real(rp), allocatable, dimension(:) :: x_sel,y_sel,z_sel
@@ -866,7 +875,7 @@ contains
   !
 #endif
 #if defined(_USE_ADIOS2)
-  subroutine write_subset_adios2(filename,varname,comm,ng,nh,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
+  subroutine write_subset_adios2(filename,varname,comm,ng,nh,nh_g,lo,hi,lo_out,hi_out,nskip,var,time,istep,x_g,y_g,z_g,is_pack)
     use mod_param, only: is_use_compression
     !
     ! writes a structured subset to an ADIOS2 file in parallel
@@ -875,12 +884,13 @@ contains
     character(len=*), intent(in) :: filename,varname
     integer         , intent(in) :: comm
     integer         , intent(in), dimension(3) :: ng,nh,lo,hi,lo_out,hi_out,nskip
+    integer         , intent(in)               :: nh_g
     real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: var
     real(rp), intent(in), optional :: time
     integer , intent(in), optional :: istep
-    real(rp), intent(in), optional, dimension(1-nh(1):) :: x_g
-    real(rp), intent(in), optional, dimension(1-nh(2):) :: y_g
-    real(rp), intent(in), optional, dimension(1-nh(3):) :: z_g
+    real(rp), intent(in), optional, dimension(1-nh_g:) :: x_g
+    real(rp), intent(in), optional, dimension(1-nh_g:) :: y_g
+    real(rp), intent(in), optional, dimension(1-nh_g:) :: z_g
     logical , intent(in), optional :: is_pack
     real(rp), allocatable, dimension(:,:,:) :: buf
     real(rp), allocatable, dimension(:) :: x_sel,y_sel,z_sel
@@ -1066,7 +1076,7 @@ contains
   end function fetch_file_type
   !
 #if defined(_USE_HDF5)
-  subroutine load_all_hdf5(io,filename,comm,ng,nh,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
+  subroutine load_all_hdf5(io,filename,comm,ng,nh_v,nh_p,nh_s,nh_g,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
     use mod_param, only: is_use_compression
     !
     ! reads/writes a restart file for all fields using HDF5
@@ -1075,43 +1085,57 @@ contains
     character(len=1), intent(in) :: io
     character(len=*), intent(in) :: filename
     integer         , intent(in) :: comm
-    integer , intent(in), dimension(3) :: ng,nh,lo,hi
+    integer , intent(in), dimension(3) :: ng,lo,hi
+    integer , intent(in)               :: nh_v,nh_p,nh_s,nh_g
     integer , intent(in)               :: nscal
-    real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: u,v,w,p
+    real(rp), intent(inout), dimension(lo(1)-nh_v:,lo(2)-nh_v:,lo(3)-nh_v:) :: u,v,w
+    real(rp), intent(inout), dimension(lo(1)-nh_p:,lo(2)-nh_p:,lo(3)-nh_p:) :: p
     type(scalar), intent(inout), dimension(:) :: s
     real(rp), intent(inout) :: time
     integer , intent(inout) :: istep
-    real(rp), intent(inout), dimension(1-nh(1):), optional :: x_g
-    real(rp), intent(inout), dimension(1-nh(2):), optional :: y_g
-    real(rp), intent(inout), dimension(1-nh(3):), optional :: z_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: x_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: y_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: z_g
     character(len=5) :: scalnum
     integer :: iscal
     !
     select case(io)
     case('r')
-      call io_field_hdf5(io,filename,'u',comm,ng,nh,lo,hi,u,time,istep,x_g,y_g,z_g)
-      call io_field_hdf5(io,filename,'v',comm,ng,nh,lo,hi,v)
-      call io_field_hdf5(io,filename,'w',comm,ng,nh,lo,hi,w)
-      call io_field_hdf5(io,filename,'p',comm,ng,nh,lo,hi,p)
+      if(present(x_g).and.present(y_g).and.present(z_g)) then
+        ! coordinates with one ghost point on each side, as written for a single halo layer
+        call io_field_hdf5(io,filename,'u',comm,ng,[nh_v,nh_v,nh_v],lo,hi,u,time,istep,x_g(0:ng(1)+1),y_g(0:ng(2)+1),z_g(0:ng(3)+1))
+      else
+        call io_field_hdf5(io,filename,'u',comm,ng,[nh_v,nh_v,nh_v],lo,hi,u,time,istep)
+      end if
+      call io_field_hdf5(io,filename,'v',comm,ng,[nh_v,nh_v,nh_v],lo,hi,v)
+      call io_field_hdf5(io,filename,'w',comm,ng,[nh_v,nh_v,nh_v],lo,hi,w)
+      call io_field_hdf5(io,filename,'p',comm,ng,[nh_p,nh_p,nh_p],lo,hi,p)
       do iscal=1,nscal
         write(scalnum,'(i3.3)') iscal
-        call io_field_hdf5(io,filename,'s_'//scalnum,comm,ng,nh,lo,hi,s(iscal)%val)
+        call io_field_hdf5(io,filename,'s_'//scalnum,comm,ng,[nh_s,nh_s,nh_s],lo,hi,s(iscal)%val)
       end do
     case('w')
-      call io_field_hdf5(io,filename,'u',comm,ng,nh,lo,hi,u,time,istep,x_g,y_g,z_g, &
-                         first_write=.true.,is_compress=is_use_compression)
-      call io_field_hdf5(io,filename,'v',comm,ng,nh,lo,hi,v,first_write=.false.,is_compress=is_use_compression)
-      call io_field_hdf5(io,filename,'w',comm,ng,nh,lo,hi,w,first_write=.false.,is_compress=is_use_compression)
-      call io_field_hdf5(io,filename,'p',comm,ng,nh,lo,hi,p,first_write=.false.,is_compress=is_use_compression)
+      if(present(x_g).and.present(y_g).and.present(z_g)) then
+        ! coordinates with one ghost point on each side, as written for a single halo layer
+        call io_field_hdf5(io,filename,'u',comm,ng,[nh_v,nh_v,nh_v],lo,hi,u,time,istep, &
+                           x_g(0:ng(1)+1),y_g(0:ng(2)+1),z_g(0:ng(3)+1), &
+                           first_write=.true.,is_compress=is_use_compression)
+      else
+        call io_field_hdf5(io,filename,'u',comm,ng,[nh_v,nh_v,nh_v],lo,hi,u,time,istep, &
+                           first_write=.true.,is_compress=is_use_compression)
+      end if
+      call io_field_hdf5(io,filename,'v',comm,ng,[nh_v,nh_v,nh_v],lo,hi,v,first_write=.false.,is_compress=is_use_compression)
+      call io_field_hdf5(io,filename,'w',comm,ng,[nh_v,nh_v,nh_v],lo,hi,w,first_write=.false.,is_compress=is_use_compression)
+      call io_field_hdf5(io,filename,'p',comm,ng,[nh_p,nh_p,nh_p],lo,hi,p,first_write=.false.,is_compress=is_use_compression)
       do iscal=1,nscal
         write(scalnum,'(i3.3)') iscal
-        call io_field_hdf5(io,filename,'s_'//scalnum,comm,ng,nh,lo,hi,s(iscal)%val, &
+        call io_field_hdf5(io,filename,'s_'//scalnum,comm,ng,[nh_s,nh_s,nh_s],lo,hi,s(iscal)%val, &
                            first_write=.false.,is_compress=is_use_compression)
       end do
     end select
   end subroutine load_all_hdf5
   !
-  subroutine load_one_hdf5(io,filename,comm,ng,nh,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
+  subroutine load_one_hdf5(io,filename,comm,ng,nh,nh_g,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
     use mod_param, only: is_use_compression
     !
     ! reads/writes a restart file for a single field using HDF5
@@ -1122,23 +1146,35 @@ contains
     character(len=*), intent(in) :: filename
     integer         , intent(in) :: comm
     integer , intent(in), dimension(3) :: ng,nh,lo,hi
+    integer , intent(in)               :: nh_g
     real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
     character(len=*), intent(in) :: varname
     real(rp), intent(inout), optional :: time
     integer , intent(inout), optional :: istep
-    real(rp), intent(inout), dimension(1-nh(1):), optional :: x_g
-    real(rp), intent(inout), dimension(1-nh(2):), optional :: y_g
-    real(rp), intent(inout), dimension(1-nh(3):), optional :: z_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: x_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: y_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: z_g
     character(len=NAME_LEN_MAX) :: field_name
     !
     field_name = trim(varname)
     select case(io)
     case('r')
-      call io_field_hdf5(io,filename,field_name,comm,ng,nh,lo,hi,p,time,istep,x_g,y_g,z_g)
+      if(present(x_g).and.present(y_g).and.present(z_g)) then
+        ! coordinates with one ghost point on each side, as written for a single halo layer
+        call io_field_hdf5(io,filename,field_name,comm,ng,nh,lo,hi,p,time,istep,x_g(0:ng(1)+1),y_g(0:ng(2)+1),z_g(0:ng(3)+1))
+      else
+        call io_field_hdf5(io,filename,field_name,comm,ng,nh,lo,hi,p,time,istep)
+      end if
     case('w')
       ! single-field writes always start from a fresh file
-      call io_field_hdf5(io,filename,field_name,comm,ng,nh,lo,hi,p,time,istep,x_g,y_g,z_g, &
-                         first_write=.true.,is_compress=is_use_compression)
+      if(present(x_g).and.present(y_g).and.present(z_g)) then
+        ! coordinates with one ghost point on each side, as written for a single halo layer
+        call io_field_hdf5(io,filename,field_name,comm,ng,nh,lo,hi,p,time,istep,x_g(0:ng(1)+1),y_g(0:ng(2)+1),z_g(0:ng(3)+1), &
+                           first_write=.true.,is_compress=is_use_compression)
+      else
+        call io_field_hdf5(io,filename,field_name,comm,ng,nh,lo,hi,p,time,istep, &
+                           first_write=.true.,is_compress=is_use_compression)
+      end if
     end select
   end subroutine load_one_hdf5
   !
@@ -1436,7 +1472,7 @@ contains
   end function HDF5_REAL_RP
 #endif
 #if defined(_USE_ADIOS2)
-  subroutine load_all_adios2(io,filename,comm,ng,nh,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
+  subroutine load_all_adios2(io,filename,comm,ng,nh_v,nh_p,nh_s,nh_g,lo,hi,nscal,u,v,w,p,s,time,istep,x_g,y_g,z_g)
     use mod_param, only: is_use_compression
     !
     ! reads/writes a restart file for all fields using ADIOS2
@@ -1445,15 +1481,17 @@ contains
     character(len=1), intent(in) :: io
     character(len=*), intent(in) :: filename
     integer         , intent(in) :: comm
-    integer , intent(in), dimension(3) :: ng,nh,lo,hi
+    integer , intent(in), dimension(3) :: ng,lo,hi
+    integer , intent(in)               :: nh_v,nh_p,nh_s,nh_g
     integer , intent(in)               :: nscal
-    real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: u,v,w,p
+    real(rp), intent(inout), dimension(lo(1)-nh_v:,lo(2)-nh_v:,lo(3)-nh_v:) :: u,v,w
+    real(rp), intent(inout), dimension(lo(1)-nh_p:,lo(2)-nh_p:,lo(3)-nh_p:) :: p
     type(scalar), intent(inout), dimension(:) :: s
     real(rp), intent(inout) :: time
     integer , intent(inout) :: istep
-    real(rp), intent(inout), dimension(1-nh(1):), optional :: x_g
-    real(rp), intent(inout), dimension(1-nh(2):), optional :: y_g
-    real(rp), intent(inout), dimension(1-nh(3):), optional :: z_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: x_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: y_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: z_g
     type(adios2_adios) :: adios
     type(adios2_io) :: io_handle
     type(adios2_engine) :: engine
@@ -1486,13 +1524,13 @@ contains
     !
     select case(io)
     case('r')
-      call io_field_adios2(io,engine,io_handle,'u',ng,nh,lo,hi,u,is_pack)
-      call io_field_adios2(io,engine,io_handle,'v',ng,nh,lo,hi,v,is_pack)
-      call io_field_adios2(io,engine,io_handle,'w',ng,nh,lo,hi,w,is_pack)
-      call io_field_adios2(io,engine,io_handle,'p',ng,nh,lo,hi,p,is_pack)
+      call io_field_adios2(io,engine,io_handle,'u',ng,[nh_v,nh_v,nh_v],lo,hi,u,is_pack)
+      call io_field_adios2(io,engine,io_handle,'v',ng,[nh_v,nh_v,nh_v],lo,hi,v,is_pack)
+      call io_field_adios2(io,engine,io_handle,'w',ng,[nh_v,nh_v,nh_v],lo,hi,w,is_pack)
+      call io_field_adios2(io,engine,io_handle,'p',ng,[nh_p,nh_p,nh_p],lo,hi,p,is_pack)
       do iscal=1,nscal
         write(scalnum,'(i3.3)') iscal
-        call io_field_adios2(io,engine,io_handle,'s_'//scalnum,ng,nh,lo,hi,s(iscal)%val,is_pack)
+        call io_field_adios2(io,engine,io_handle,'s_'//scalnum,ng,[nh_s,nh_s,nh_s],lo,hi,s(iscal)%val,is_pack)
       end do
       call io_field_adios2_1d(io,engine,io_handle,'time',meta_rp,comm)
       call io_field_adios2_1d(io,engine,io_handle,'istep',meta_i4,comm)
@@ -1503,23 +1541,23 @@ contains
       istep = meta_i4(1)
     case('w')
       if(is_compress) then
-        call io_field_adios2(io,engine,io_handle,'u',ng,nh,lo,hi,u,is_pack,compress,compress_params)
-        call io_field_adios2(io,engine,io_handle,'v',ng,nh,lo,hi,v,is_pack,compress,compress_params)
-        call io_field_adios2(io,engine,io_handle,'w',ng,nh,lo,hi,w,is_pack,compress,compress_params)
-        call io_field_adios2(io,engine,io_handle,'p',ng,nh,lo,hi,p,is_pack,compress,compress_params)
+        call io_field_adios2(io,engine,io_handle,'u',ng,[nh_v,nh_v,nh_v],lo,hi,u,is_pack,compress,compress_params)
+        call io_field_adios2(io,engine,io_handle,'v',ng,[nh_v,nh_v,nh_v],lo,hi,v,is_pack,compress,compress_params)
+        call io_field_adios2(io,engine,io_handle,'w',ng,[nh_v,nh_v,nh_v],lo,hi,w,is_pack,compress,compress_params)
+        call io_field_adios2(io,engine,io_handle,'p',ng,[nh_p,nh_p,nh_p],lo,hi,p,is_pack,compress,compress_params)
       else
-        call io_field_adios2(io,engine,io_handle,'u',ng,nh,lo,hi,u,is_pack)
-        call io_field_adios2(io,engine,io_handle,'v',ng,nh,lo,hi,v,is_pack)
-        call io_field_adios2(io,engine,io_handle,'w',ng,nh,lo,hi,w,is_pack)
-        call io_field_adios2(io,engine,io_handle,'p',ng,nh,lo,hi,p,is_pack)
+        call io_field_adios2(io,engine,io_handle,'u',ng,[nh_v,nh_v,nh_v],lo,hi,u,is_pack)
+        call io_field_adios2(io,engine,io_handle,'v',ng,[nh_v,nh_v,nh_v],lo,hi,v,is_pack)
+        call io_field_adios2(io,engine,io_handle,'w',ng,[nh_v,nh_v,nh_v],lo,hi,w,is_pack)
+        call io_field_adios2(io,engine,io_handle,'p',ng,[nh_p,nh_p,nh_p],lo,hi,p,is_pack)
       end if
       do iscal=1,nscal
         write(scalnum,'(i3.3)') iscal
         if(is_compress) then
-          call io_field_adios2(io,engine,io_handle,'s_'//scalnum,ng,nh,lo,hi,s(iscal)%val,is_pack,compress, &
+          call io_field_adios2(io,engine,io_handle,'s_'//scalnum,ng,[nh_s,nh_s,nh_s],lo,hi,s(iscal)%val,is_pack,compress, &
                                compress_params)
         else
-          call io_field_adios2(io,engine,io_handle,'s_'//scalnum,ng,nh,lo,hi,s(iscal)%val,is_pack)
+          call io_field_adios2(io,engine,io_handle,'s_'//scalnum,ng,[nh_s,nh_s,nh_s],lo,hi,s(iscal)%val,is_pack)
         end if
       end do
       meta_rp(1) = time
@@ -1534,7 +1572,7 @@ contains
     call adios2_close_engine(adios,engine)
   end subroutine load_all_adios2
   !
-  subroutine load_one_adios2(io,filename,comm,ng,nh,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
+  subroutine load_one_adios2(io,filename,comm,ng,nh,nh_g,lo,hi,p,varname,time,istep,x_g,y_g,z_g)
     use mod_param, only: is_use_compression
     !
     ! reads/writes a restart file for a single field using ADIOS2
@@ -1545,13 +1583,14 @@ contains
     character(len=*), intent(in) :: filename
     integer         , intent(in) :: comm
     integer , intent(in), dimension(3) :: ng,nh,lo,hi
+    integer , intent(in)               :: nh_g
     real(rp), intent(inout), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
     character(len=*), intent(in) :: varname
     real(rp), intent(inout), optional :: time
     integer , intent(inout), optional :: istep
-    real(rp), intent(inout), dimension(1-nh(1):), optional :: x_g
-    real(rp), intent(inout), dimension(1-nh(2):), optional :: y_g
-    real(rp), intent(inout), dimension(1-nh(3):), optional :: z_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: x_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: y_g
+    real(rp), intent(inout), dimension(1-nh_g:), optional :: z_g
     type(adios2_adios) :: adios
     type(adios2_io) :: io_handle
     type(adios2_engine) :: engine

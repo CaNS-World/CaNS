@@ -11,18 +11,19 @@ module mod_initgrid
   private
   public initgrid,save_grid
   contains
-  subroutine initgrid(gtype,n,gr,lz,dzc,dzf,zc,zf,is_periodic)
+  subroutine initgrid(gtype,n,nh,gr,lz,dzc,dzf,zc,zf,is_periodic)
     !
-    ! initializes the non-uniform grid along z
+    ! initializes the non-uniform grid along z, with `nh` ghost layers mirrored about
+    ! the boundaries (or wrapped around them, for a periodic direction)
     !
     implicit none
     integer, parameter :: CLUSTER_TWO_END   = 1, &
                           CLUSTER_ONE_END   = 2, &
                           CLUSTER_ONE_END_R = 3, &
                           CLUSTER_MIDDLE    = 4
-    integer , intent(in ) :: gtype,n
+    integer , intent(in ) :: gtype,n,nh
     real(rp), intent(in ) :: gr,lz
-    real(rp), intent(out), dimension(0:n+1) :: dzc,dzf,zc,zf
+    real(rp), intent(out), dimension(1-nh:n+nh) :: dzc,dzf,zc,zf
     logical , intent(in ) :: is_periodic
     real(rp) :: z0
     integer :: k
@@ -68,23 +69,20 @@ module mod_initgrid
       do k=1,n
         dzf(k) = zf(k)-zf(k-1)
       end do
-      if(.not.is_periodic) then
-        dzf(0  ) = dzf(1)
-        dzf(n+1) = dzf(n)
-      else
-        dzf(0  ) = dzf(n)
-        dzf(n+1) = dzf(1)
-      end if
+      do k=1-nh,n+nh
+        if(k >= 1 .and. k <= n) cycle
+        dzf(k) = dzf(ghost_image(k,n,is_periodic))
+      end do
       !
       ! step 3) determine grid spacing between centers dzc
       !
-      do k=0,n
+      do k=1-nh,n+nh-1
         dzc(k) = .5*(dzf(k)+dzf(k+1))
       end do
       if(.not.is_periodic) then
-        dzc(n+1) = dzc(n)
+        dzc(n+nh) = dzc(n+nh-1)
       else
-        dzc(n+1) = dzc(1)
+        dzc(n+nh) = dzc(ghost_image(n+nh,n,is_periodic))
       end if
     end if
     !
@@ -94,11 +92,36 @@ module mod_initgrid
     !
     zc(0)    = -dzf(0)/2.
     zf(0)    = 0.
-    do k=1,n+1
+    do k=1,n+nh
       zc(k) = zf(k-1) + .5*dzf(k)
       zf(k) = zf(k-1) + dzf(k)
     end do
+    do k=-1,1-nh,-1
+      zf(k) = zf(k+1) - dzf(k+1)
+      zc(k) = zf(k) - .5*dzf(k)
+    end do
   end subroutine initgrid
+  !
+  pure integer function ghost_image(k,n,is_periodic)
+    !
+    ! index in 1:n of the image of ghost cell `k` -- its mirror about the
+    ! boundaries, or its periodic image
+    !
+    implicit none
+    integer, intent(in) :: k,n
+    logical, intent(in) :: is_periodic
+    integer :: kk
+    if(is_periodic) then
+      ghost_image = modulo(k-1,n)+1
+    else
+      kk = modulo(k-1,2*n)
+      if(kk < n) then
+        ghost_image = kk+1
+      else
+        ghost_image = 2*n-kk
+      end if
+    end if
+  end function ghost_image
   !
   ! grid stretching functions
   ! see e.g., Fluid Flow Phenomena -- A Numerical Toolkit, by P. Orlandi
@@ -205,7 +228,7 @@ module mod_initgrid
     if( kg > nzg-kg ) z = 1._rp-z
   end subroutine gridpoint_natural
   !
-  subroutine save_grid(datadir,fname,ng,zc,zf,dzc,dzf)
+  subroutine save_grid(datadir,fname,ng,nh,zc,zf,dzc,dzf)
     !
     ! saves grid for post-processing
     !
@@ -215,7 +238,8 @@ module mod_initgrid
     implicit none
     character(len=*), intent(in) :: datadir,fname
     integer , intent(in), dimension(3) :: ng
-    real(rp), intent(in), dimension(0:) :: zc,zf,dzc,dzf
+    integer , intent(in)               :: nh
+    real(rp), intent(in), dimension(1-nh:) :: zc,zf,dzc,dzf
     integer :: iunit,k
 #if defined(_USE_HDF5)
     integer :: ierr_h5

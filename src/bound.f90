@@ -12,29 +12,45 @@ module mod_bound
   implicit none
   private
   integer, parameter :: HALO_LOWER = -1, HALO_NONE = 0, HALO_UPPER = 1
-  public boundp,bounduvw,updt_rhs_b,set_bc
+  public boundp,bounduvw,updt_rhs_b,set_bc,bc_dist
   contains
-  subroutine bounduvw(cbc,n,bc,nb,is_bound,dl,dzc,dzf,u,v,w,keep_norm_values,halos_norm,halos_tang)
+  subroutine bounduvw(cbc,n,nh,nh_g,bc,nb,is_bound,dl,dzc,dzf,u,v,w,keep_norm_values,halos_norm,halos_tang)
     !
     ! imposes velocity boundary conditions
     !
     implicit none
     character(len=1), intent(in), dimension(0:1,3,3) :: cbc
     integer , intent(in), dimension(3) :: n
+    integer , intent(in)               :: nh,nh_g
     real(rp), intent(in), dimension(0:1,3,3) :: bc
     integer , intent(in), dimension(0:1,3  ) :: nb
     logical , intent(in), dimension(0:1,3  ) :: is_bound
     real(rp), intent(in), dimension(3 ) :: dl
-    real(rp), intent(in), dimension(0:) :: dzc,dzf
-    real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
+    real(rp), intent(in), dimension(1-nh_g:) :: dzc,dzf
+    real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: u,v,w
     logical , intent(in), optional :: keep_norm_values
     integer , intent(in), optional :: halos_norm,halos_tang
     logical, dimension(0:1,3) :: apply_norm_bc
     logical, dimension(0:1) :: updt_norm
     logical :: keep_norm,updt_tang
-    integer :: idir,nh
+    integer :: idir,ib
+    real(rp), dimension(1-nh_g:n(1)+nh_g) :: dsx
+    real(rp), dimension(1-nh_g:n(2)+nh_g) :: dsy
+    real(rp), dimension(0:nh,0:1,3)       :: drc,drf
     !
-    nh = 1
+    ! distances between the ghost layers and their mirror points, for centered (drc)
+    ! and non-centered (drf) components
+    !
+    dsx(:) = dl(1)
+    dsy(:) = dl(2)
+    do ib=0,1
+      drc(:,ib,1) = bc_dist(nh,nh_g,n(1),ib,.true. ,dsx)
+      drf(:,ib,1) = bc_dist(nh,nh_g,n(1),ib,.false.,dsx)
+      drc(:,ib,2) = bc_dist(nh,nh_g,n(2),ib,.true. ,dsy)
+      drf(:,ib,2) = bc_dist(nh,nh_g,n(2),ib,.false.,dsy)
+      drc(:,ib,3) = bc_dist(nh,nh_g,n(3),ib,.true. ,dzc)
+      drf(:,ib,3) = bc_dist(nh,nh_g,n(3),ib,.false.,dzf)
+    end do
     keep_norm = .false.
     if(present(keep_norm_values)) keep_norm = keep_norm_values
     updt_norm(:) = .true.
@@ -64,15 +80,15 @@ module mod_bound
     end do
     !
 #if !defined(_OPENACC)
-    call updthalo(nh,halo(1),nb(:,1),1,u,halos_norm)
-    call updthalo(nh,halo(1),nb(:,1),1,v,halos_tang)
-    call updthalo(nh,halo(1),nb(:,1),1,w,halos_tang)
-    call updthalo(nh,halo(2),nb(:,2),2,u,halos_tang)
-    call updthalo(nh,halo(2),nb(:,2),2,v,halos_norm)
-    call updthalo(nh,halo(2),nb(:,2),2,w,halos_tang)
-    call updthalo(nh,halo(3),nb(:,3),3,u,halos_tang)
-    call updthalo(nh,halo(3),nb(:,3),3,v,halos_tang)
-    call updthalo(nh,halo(3),nb(:,3),3,w,halos_norm)
+    call updthalo(nh,halo(1,nh),nb(:,1),1,u,halos_norm)
+    call updthalo(nh,halo(1,nh),nb(:,1),1,v,halos_tang)
+    call updthalo(nh,halo(1,nh),nb(:,1),1,w,halos_tang)
+    call updthalo(nh,halo(2,nh),nb(:,2),2,u,halos_tang)
+    call updthalo(nh,halo(2,nh),nb(:,2),2,v,halos_norm)
+    call updthalo(nh,halo(2,nh),nb(:,2),2,w,halos_tang)
+    call updthalo(nh,halo(3,nh),nb(:,3),3,u,halos_tang)
+    call updthalo(nh,halo(3,nh),nb(:,3),3,v,halos_tang)
+    call updthalo(nh,halo(3,nh),nb(:,3),3,w,halos_norm)
 #else
     if(any(updt_norm(:))) then
       call updthalo_gpu(nh,cbc(0,:,1)//cbc(1,:,1)==['PP','PP','PP'],u,1)
@@ -90,34 +106,34 @@ module mod_bound
 #endif
     !
     if(is_bound(0,1)) then
-      if(apply_norm_bc(0,1)) call set_bc(cbc(0,1,1),0,1,nh,.false.,bc(0,1,1),dl(1),u)
-                             call set_bc(cbc(0,1,2),0,1,nh,.true. ,bc(0,1,2),dl(1),v)
-                             call set_bc(cbc(0,1,3),0,1,nh,.true. ,bc(0,1,3),dl(1),w)
+      if(apply_norm_bc(0,1)) call set_bc(cbc(0,1,1),0,1,nh,.false.,bc(0,1,1),drf(:,0,1),u)
+                             call set_bc(cbc(0,1,2),0,1,nh,.true. ,bc(0,1,2),drc(:,0,1),v)
+                             call set_bc(cbc(0,1,3),0,1,nh,.true. ,bc(0,1,3),drc(:,0,1),w)
     end if
     if(is_bound(1,1)) then
-      if(apply_norm_bc(1,1)) call set_bc(cbc(1,1,1),1,1,nh,.false.,bc(1,1,1),dl(1),u)
-                             call set_bc(cbc(1,1,2),1,1,nh,.true. ,bc(1,1,2),dl(1),v)
-                             call set_bc(cbc(1,1,3),1,1,nh,.true. ,bc(1,1,3),dl(1),w)
+      if(apply_norm_bc(1,1)) call set_bc(cbc(1,1,1),1,1,nh,.false.,bc(1,1,1),drf(:,1,1),u)
+                             call set_bc(cbc(1,1,2),1,1,nh,.true. ,bc(1,1,2),drc(:,1,1),v)
+                             call set_bc(cbc(1,1,3),1,1,nh,.true. ,bc(1,1,3),drc(:,1,1),w)
     end if
     if(is_bound(0,2)) then
-                             call set_bc(cbc(0,2,1),0,2,nh,.true. ,bc(0,2,1),dl(2),u)
-      if(apply_norm_bc(0,2)) call set_bc(cbc(0,2,2),0,2,nh,.false.,bc(0,2,2),dl(2),v)
-                             call set_bc(cbc(0,2,3),0,2,nh,.true. ,bc(0,2,3),dl(2),w)
+                             call set_bc(cbc(0,2,1),0,2,nh,.true. ,bc(0,2,1),drc(:,0,2),u)
+      if(apply_norm_bc(0,2)) call set_bc(cbc(0,2,2),0,2,nh,.false.,bc(0,2,2),drf(:,0,2),v)
+                             call set_bc(cbc(0,2,3),0,2,nh,.true. ,bc(0,2,3),drc(:,0,2),w)
     end if
     if(is_bound(1,2)) then
-                             call set_bc(cbc(1,2,1),1,2,nh,.true. ,bc(1,2,1),dl(2),u)
-      if(apply_norm_bc(1,2)) call set_bc(cbc(1,2,2),1,2,nh,.false.,bc(1,2,2),dl(2),v)
-                             call set_bc(cbc(1,2,3),1,2,nh,.true. ,bc(1,2,3),dl(2),w)
+                             call set_bc(cbc(1,2,1),1,2,nh,.true. ,bc(1,2,1),drc(:,1,2),u)
+      if(apply_norm_bc(1,2)) call set_bc(cbc(1,2,2),1,2,nh,.false.,bc(1,2,2),drf(:,1,2),v)
+                             call set_bc(cbc(1,2,3),1,2,nh,.true. ,bc(1,2,3),drc(:,1,2),w)
     end if
     if(is_bound(0,3)) then
-                             call set_bc(cbc(0,3,1),0,3,nh,.true. ,bc(0,3,1),dzc(0)   ,u)
-                             call set_bc(cbc(0,3,2),0,3,nh,.true. ,bc(0,3,2),dzc(0)   ,v)
-      if(apply_norm_bc(0,3)) call set_bc(cbc(0,3,3),0,3,nh,.false.,bc(0,3,3),dzf(0)   ,w)
+                             call set_bc(cbc(0,3,1),0,3,nh,.true. ,bc(0,3,1),drc(:,0,3),u)
+                             call set_bc(cbc(0,3,2),0,3,nh,.true. ,bc(0,3,2),drc(:,0,3),v)
+      if(apply_norm_bc(0,3)) call set_bc(cbc(0,3,3),0,3,nh,.false.,bc(0,3,3),drf(:,0,3),w)
     end if
     if(is_bound(1,3)) then
-                             call set_bc(cbc(1,3,1),1,3,nh,.true. ,bc(1,3,1),dzc(n(3)),u)
-                             call set_bc(cbc(1,3,2),1,3,nh,.true. ,bc(1,3,2),dzc(n(3)),v)
-      if(apply_norm_bc(1,3)) call set_bc(cbc(1,3,3),1,3,nh,.false.,bc(1,3,3),dzf(n(3)),w)
+                             call set_bc(cbc(1,3,1),1,3,nh,.true. ,bc(1,3,1),drc(:,1,3),u)
+                             call set_bc(cbc(1,3,2),1,3,nh,.true. ,bc(1,3,2),drc(:,1,3),v)
+      if(apply_norm_bc(1,3)) call set_bc(cbc(1,3,3),1,3,nh,.false.,bc(1,3,3),drf(:,1,3),w)
     end if
     !
     ! refresh normal halos after imposing upper physical boundary values
@@ -128,11 +144,11 @@ module mod_bound
         select case(idir)
 #if !defined(_OPENACC)
         case(1)
-          call updthalo(nh,halo(1),nb(:,1),1,u,HALO_UPPER)
+          call updthalo(nh,halo(1,nh),nb(:,1),1,u,HALO_UPPER)
         case(2)
-          call updthalo(nh,halo(2),nb(:,2),2,v,HALO_UPPER)
+          call updthalo(nh,halo(2,nh),nb(:,2),2,v,HALO_UPPER)
         case(3)
-          call updthalo(nh,halo(3),nb(:,3),3,w,HALO_UPPER)
+          call updthalo(nh,halo(3,nh),nb(:,3),3,w,HALO_UPPER)
 #else
         case(1)
           call updthalo_gpu(nh,cbc(0,:,1)//cbc(1,:,1)==['PP','PP','PP'],u,1)
@@ -146,24 +162,36 @@ module mod_bound
     end if
   end subroutine bounduvw
   !
-  subroutine boundp(cbc,n,bc,nb,is_bound,dl,dzc,p,halo_side)
+  subroutine boundp(cbc,n,nh,nh_g,bc,nb,is_bound,dl,dzc,p,halo_side)
     !
     ! imposes pressure boundary conditions
     !
     implicit none
     character(len=1), intent(in), dimension(0:1,3) :: cbc
     integer , intent(in), dimension(3) :: n
+    integer , intent(in)               :: nh,nh_g
     real(rp), intent(in), dimension(0:1,3) :: bc
     integer , intent(in), dimension(0:1,3) :: nb
     logical , intent(in), dimension(0:1,3) :: is_bound
     real(rp), intent(in), dimension(3 ) :: dl
-    real(rp), intent(in), dimension(0:) :: dzc
-    real(rp), intent(inout), dimension(0:,0:,0:) :: p
+    real(rp), intent(in), dimension(1-nh_g:) :: dzc
+    real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
     integer , intent(in), optional :: halo_side
     logical, dimension(0:1) :: update_halo
-    integer :: idir,nh
+    integer :: idir,ib
+    real(rp), dimension(1-nh_g:n(1)+nh_g) :: dsx
+    real(rp), dimension(1-nh_g:n(2)+nh_g) :: dsy
+    real(rp), dimension(0:nh,0:1,3)       :: dr
     !
-    nh = 1
+    ! distances between the ghost layers and their mirror points
+    !
+    dsx(:) = dl(1)
+    dsy(:) = dl(2)
+    do ib=0,1
+      dr(:,ib,1) = bc_dist(nh,nh_g,n(1),ib,.true.,dsx)
+      dr(:,ib,2) = bc_dist(nh,nh_g,n(2),ib,.true.,dsy)
+      dr(:,ib,3) = bc_dist(nh,nh_g,n(3),ib,.true.,dzc)
+    end do
     update_halo(:) = .true.
     if(present(halo_side)) then
       select case(halo_side)
@@ -178,59 +206,104 @@ module mod_bound
     !
 #if !defined(_OPENACC)
     do idir = 1,3
-      call updthalo(nh,halo(idir),nb(:,idir),idir,p,halo_side)
+      call updthalo(nh,halo(idir,nh),nb(:,idir),idir,p,halo_side)
     end do
 #else
     if(any(update_halo(:))) call updthalo_gpu(nh,cbc(0,:)//cbc(1,:)==['PP','PP','PP'],p)
 #endif
     !
     if(is_bound(0,1).and.update_halo(0)) then
-      call set_bc(cbc(0,1),0,1,nh,.true.,bc(0,1),dl(1),p)
+      call set_bc(cbc(0,1),0,1,nh,.true.,bc(0,1),dr(:,0,1),p)
     end if
     if(is_bound(1,1).and.update_halo(1)) then
-      call set_bc(cbc(1,1),1,1,nh,.true.,bc(1,1),dl(1),p)
+      call set_bc(cbc(1,1),1,1,nh,.true.,bc(1,1),dr(:,1,1),p)
     end if
     if(is_bound(0,2).and.update_halo(0)) then
-      call set_bc(cbc(0,2),0,2,nh,.true.,bc(0,2),dl(2),p)
+      call set_bc(cbc(0,2),0,2,nh,.true.,bc(0,2),dr(:,0,2),p)
     end if
     if(is_bound(1,2).and.update_halo(1)) then
-      call set_bc(cbc(1,2),1,2,nh,.true.,bc(1,2),dl(2),p)
+      call set_bc(cbc(1,2),1,2,nh,.true.,bc(1,2),dr(:,1,2),p)
     end if
     if(is_bound(0,3).and.update_halo(0)) then
-      call set_bc(cbc(0,3),0,3,nh,.true.,bc(0,3),dzc(0)   ,p)
+      call set_bc(cbc(0,3),0,3,nh,.true.,bc(0,3),dr(:,0,3),p)
     end if
     if(is_bound(1,3).and.update_halo(1)) then
-      call set_bc(cbc(1,3),1,3,nh,.true.,bc(1,3),dzc(n(3)),p)
+      call set_bc(cbc(1,3),1,3,nh,.true.,bc(1,3),dr(:,1,3),p)
     end if
   end subroutine boundp
   !
+  function bc_dist(nh,nh_g,n,ibound,centered,ds) result(dr)
+    !
+    ! distances between the `nh` ghost layers next to boundary `ibound` and their
+    ! mirror points across it, from the grid spacing `ds` (cell-center spacing for a
+    ! centered variable, face spacing otherwise); for a non-centered variable, `dr(0)`
+    ! is the spacing of the one-sided Neumann condition at the boundary node
+    !
+    implicit none
+    integer , intent(in) :: nh,nh_g,n,ibound
+    logical , intent(in) :: centered
+    real(rp), intent(in), dimension(1-nh_g:) :: ds
+    real(rp), dimension(0:nh)                :: dr
+    integer :: dh,m,m0,m1
+    !
+    dr(:) = 0.
+    do dh=0,nh
+      if(centered) then
+        if(dh == nh) cycle ! a centered variable has `nh` ghost layers
+        if(ibound == 0) then
+          m0 = -dh  ; m1 = dh
+        else
+          m0 = n-dh ; m1 = n+dh
+        end if
+      else
+        if(     dh == 0     ) then
+          m0 = ibound*n; m1 = m0
+        else if(ibound == 0) then
+          m0 = 1-dh  ; m1 = dh
+        else
+          m0 = n+1-dh; m1 = n+dh
+        end if
+      end if
+      do m=m0,m1
+        dr(dh) = dr(dh) + ds(m)
+      end do
+    end do
+  end function bc_dist
+  !
   subroutine set_bc(ctype,ibound,idir,nh,centered,rvalue,dr,p)
+    !
+    ! imposes a boundary condition on the `nh` ghost layers of `p` next to boundary
+    ! `ibound` of direction `idir`, and on the boundary node of a non-centered variable;
+    ! the ghost values mirror the interior about the boundary:
+    !
+    ! - Dirichlet: p(ghost) = 2*rvalue - p(mirror); p(boundary node) = rvalue;
+    ! - Neumann  : p(ghost) = p(mirror) -/+ dr*rvalue at the lower/upper boundary;
+    !              p(boundary node) = p(adjacent node) -/+ dr(0)*rvalue;
+    !
+    ! dr(dh) -> distance between ghost layer `dh` and its mirror point (see `bc_dist`)
+    !
+    ! each layer takes one kernel, p(ghost) = factor + sgn*p(mirror) (sgn = 0 for a Dirichlet
+    ! boundary node); the boundary node of a non-centered variable at the upper boundary is set
+    ! together with the first ghost layer
+    !
     implicit none
     character(len=1), intent(in) :: ctype
     integer , intent(in) :: ibound,idir,nh
     logical , intent(in) :: centered
-    real(rp), intent(in) :: rvalue,dr
+    real(rp), intent(in) :: rvalue
+    real(rp), intent(in), dimension(0:) :: dr
     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
-    real(rp) :: factor,sgn
-    integer  :: n,dh
+    real(rp) :: factor,sgn,factor_b,sgn_b
+    integer  :: n,dh,ig,im,l
+    logical  :: is_with_bnode
     integer  :: i,j,k
     !
     n = size(p,idir) - 2*nh
-    factor = rvalue
-    if(ctype == 'D'.and.centered) then
-      factor = 2.*factor
-      sgn    = -1.
-    end if
-    if(ctype == 'N') then
-      if(     ibound == 0) then
-        factor = -dr*factor ! n.b.: only valid for nh /= 1 or factor /= 0
-      else if(ibound == 1) then
-        factor =  dr*factor ! n.b.: only valid for nh /= 1 or factor /= 0
-      end if
-      sgn    = 1.
-    end if
-    !
     do dh=0,nh-1
+      is_with_bnode = .false.
+      !
+      ! index `ig` of the ghost layer (or boundary node) and index `im` of its mirror (or source) layer
+      !
       select case(ctype)
       case('P')
         !
@@ -242,264 +315,149 @@ module mod_bound
         ! along decomposed directions, periodicity is naturally set via the
         ! halo exchange
         !
+        if(ibound == 0) then
+          ig = 0-dh  ; im = n-dh
+        else
+          ig = n+1+dh; im = 1+dh
+        end if
+      case('D','N')
+        l = dh ! layer of the distance `dr`
+        if(centered) then
+          if(ibound == 0) then
+            ig = 0-dh  ; im = 1+dh
+          else
+            ig = n+1+dh; im = n-dh
+          end if
+        else
+          if(ibound == 0) then
+            ig = 0-dh  ; im = max(dh,1) ! `dh = 0` -> boundary node
+          else
+            ig = n+1+dh; im = n-1-dh; l = dh+1
+            is_with_bnode = dh == 0
+          end if
+        end if
+        if(ctype == 'D') then
+          factor = 2.*rvalue
+          sgn    = -1.
+          if(.not.centered.and.ibound == 0.and.dh == 0) then
+            factor = rvalue
+            sgn    = 0.
+          end if
+          factor_b = rvalue
+          sgn_b    = 0.
+        else
+          if(ibound == 0) factor = -dr(l)*rvalue
+          if(ibound == 1) factor =  dr(l)*rvalue
+          sgn    = 1.
+          factor_b = dr(0)*rvalue
+          sgn_b    = 1.
+        end if
+      case default
+        return
+      end select
+      !
+      if(ctype == 'P') then
         select case(idir)
         case(1)
-          if     (ibound == 0) then
-            !$acc parallel loop collapse(2) default(present) async(1)
-            !$OMP parallel do   collapse(2) DEFAULT(shared)
-            do k=1-nh,size(p,3)-nh
-              do j=1-nh,size(p,2)-nh
-                p(  0-dh,j,k) = p(n-dh,j,k)
-              end do
+          !$acc parallel loop collapse(2) default(present) async(1)
+          !$OMP parallel do   collapse(2) DEFAULT(shared)
+          do k=1-nh,size(p,3)-nh
+            do j=1-nh,size(p,2)-nh
+              p(ig,j,k) = p(im,j,k)
             end do
-          else if(ibound == 1) then
-            !$acc parallel loop collapse(2) default(present) async(1)
-            !$OMP parallel do   collapse(2) DEFAULT(shared)
-            do k=1-nh,size(p,3)-nh
-              do j=1-nh,size(p,2)-nh
-                p(n+1+dh,j,k) = p(1+dh,j,k)
-              end do
-            end do
-          end if
+          end do
         case(2)
-          if     (ibound == 0) then
-            !$acc parallel loop collapse(2) default(present) async(1)
-            !$OMP parallel do   collapse(2) DEFAULT(shared)
-            do k=1-nh,size(p,3)-nh
-              do i=1-nh,size(p,1)-nh
-                p(i,  0-dh,k) = p(i,n-dh,k)
-              end do
+          !$acc parallel loop collapse(2) default(present) async(1)
+          !$OMP parallel do   collapse(2) DEFAULT(shared)
+          do k=1-nh,size(p,3)-nh
+            do i=1-nh,size(p,1)-nh
+              p(i,ig,k) = p(i,im,k)
             end do
-          else if(ibound == 1) then
-            !$acc parallel loop collapse(2) default(present) async(1)
-            !$OMP parallel do   collapse(2) DEFAULT(shared)
-            do k=1-nh,size(p,3)-nh
-              do i=1-nh,size(p,1)-nh
-                p(i,n+1+dh,k) = p(i,1+dh,k)
-              end do
-            end do
-          end if
+          end do
         case(3)
-          if     (ibound == 0) then
-            !$acc parallel loop collapse(2) default(present) async(1)
-            !$OMP parallel do   collapse(2) DEFAULT(shared)
-            do j=1-nh,size(p,2)-nh
-              do i=1-nh,size(p,1)-nh
-                p(i,j,  0-dh) = p(i,j,n-dh)
-              end do
+          !$acc parallel loop collapse(2) default(present) async(1)
+          !$OMP parallel do   collapse(2) DEFAULT(shared)
+          do j=1-nh,size(p,2)-nh
+            do i=1-nh,size(p,1)-nh
+              p(i,j,ig) = p(i,j,im)
             end do
-          else if(ibound == 1) then
-            !$acc parallel loop collapse(2) default(present) async(1)
-            !$OMP parallel do   collapse(2) DEFAULT(shared)
-            do j=1-nh,size(p,2)-nh
-              do i=1-nh,size(p,1)-nh
-                p(i,j,n+1+dh) = p(i,j,1+dh)
-              end do
-            end do
-          end if
+          end do
         end select
-      case('D','N')
-        if(centered) then
-          select case(idir)
-          case(1)
-            if     (ibound == 0) then
-              !$acc parallel loop collapse(2) default(present) async(1)
-              !$OMP parallel do   collapse(2) DEFAULT(shared)
-              do k=1-nh,size(p,3)-nh
-                do j=1-nh,size(p,2)-nh
-                  p(  0-dh,j,k) = factor+sgn*p(1+dh,j,k)
-                end do
-              end do
-            else if(ibound == 1) then
-              !$acc parallel loop collapse(2) default(present) async(1)
-              !$OMP parallel do   collapse(2) DEFAULT(shared)
-              do k=1-nh,size(p,3)-nh
-                do j=1-nh,size(p,2)-nh
-                  p(n+1+dh,j,k) = factor+sgn*p(n-dh,j,k)
-                end do
-              end do
-            end if
-          case(2)
-            if     (ibound == 0) then
-              !$acc parallel loop collapse(2) default(present) async(1)
-              !$OMP parallel do   collapse(2) DEFAULT(shared)
-              do k=1-nh,size(p,3)-nh
-                do i=1-nh,size(p,1)-nh
-                  p(i,  0-dh,k) = factor+sgn*p(i,1+dh,k)
-                end do
-              end do
-            else if(ibound == 1) then
-              !$acc parallel loop collapse(2) default(present) async(1)
-              !$OMP parallel do   collapse(2) DEFAULT(shared)
-              do k=1-nh,size(p,3)-nh
-                do i=1-nh,size(p,1)-nh
-                  p(i,n+1+dh,k) = factor+sgn*p(i,n-dh,k)
-                end do
-              end do
-            end if
-          case(3)
-            if     (ibound == 0) then
-              !$acc parallel loop collapse(2) default(present) async(1)
-              !$OMP parallel do   collapse(2) DEFAULT(shared)
-              do j=1-nh,size(p,2)-nh
-                do i=1-nh,size(p,1)-nh
-                  p(i,j,  0-dh) = factor+sgn*p(i,j,1+dh)
-                end do
-              end do
-            else if(ibound == 1) then
-              !$acc parallel loop collapse(2) default(present) async(1)
-              !$OMP parallel do   collapse(2) DEFAULT(shared)
-              do j=1-nh,size(p,2)-nh
-                do i=1-nh,size(p,1)-nh
-                  p(i,j,n+1+dh) = factor+sgn*p(i,j,n-dh)
-                end do
-              end do
-            end if
-          end select
-        else if(.not.centered.and.ctype == 'D') then
-          select case(idir)
-          case(1)
-            if     (ibound == 0) then
-              !$acc parallel loop collapse(2) default(present) async(1)
-              !$OMP parallel do   collapse(2) DEFAULT(shared)
-              do k=1-nh,size(p,3)-nh
-                do j=1-nh,size(p,2)-nh
-                  p(0-dh,j,k) = factor
-                end do
-              end do
-            else if(ibound == 1) then
-              !$acc parallel loop collapse(2) default(present) async(1)
-              !$OMP parallel do   collapse(2) DEFAULT(shared)
-              do k=1-nh,size(p,3)-nh
-                do j=1-nh,size(p,2)-nh
-                  p(n+1,j,k) = p(n-1,j,k) ! unused
-                  p(n+dh,j,k) = factor
-                end do
-              end do
-            end if
-          case(2)
-            if     (ibound == 0) then
-              !$acc parallel loop collapse(2) default(present) async(1)
-              !$OMP parallel do   collapse(2) DEFAULT(shared)
-              do k=1-nh,size(p,3)-nh
-                do i=1-nh,size(p,1)-nh
-                  p(i,0-dh,k) = factor
-                end do
-              end do
-            else if(ibound == 1) then
-              !$acc parallel loop collapse(2) default(present) async(1)
-              !$OMP parallel do   collapse(2) DEFAULT(shared)
-              do k=1-nh,size(p,3)-nh
-                do i=1-nh,size(p,1)-nh
-                  p(i,n+1,k) = p(i,n-1,k) ! unused
-                  p(i,n+dh,k) = factor
-                end do
-              end do
-            end if
-          case(3)
-            if     (ibound == 0) then
-              !$acc parallel loop collapse(2) default(present) async(1)
-              !$OMP parallel do   collapse(2) DEFAULT(shared)
-              do j=1-nh,size(p,2)-nh
-                do i=1-nh,size(p,1)-nh
-                  p(i,j,0-dh) = factor
-                end do
-              end do
-            else if(ibound == 1) then
-              !$acc parallel loop collapse(2) default(present) async(1)
-              !$OMP parallel do   collapse(2) DEFAULT(shared)
-              do j=1-nh,size(p,2)-nh
-                do i=1-nh,size(p,1)-nh
-                  p(i,j,n+1) = p(i,j,n-1) ! unused
-                  p(i,j,n+dh) = factor
-                end do
-              end do
-            end if
-          end select
-        else if(.not.centered.and.ctype == 'N') then
-          select case(idir)
-          case(1)
-            if     (ibound == 0) then
-              !$acc parallel loop collapse(2) default(present) async(1)
-              !$OMP parallel do   collapse(2) DEFAULT(shared)
-              do k=1-nh,size(p,3)-nh
-                do j=1-nh,size(p,2)-nh
-                  !p(0-dh,j,k) = 1./3.*(-2.*factor+4.*p(1+dh,j,k)-p(2+dh,j,k))
-                  p(0-dh,j,k) = 1.*factor + p(  1+dh,j,k)
-                end do
-              end do
-            else if(ibound == 1) then
-              !$acc parallel loop collapse(2) default(present) async(1)
-              !$OMP parallel do   collapse(2) DEFAULT(shared)
-              do k=1-nh,size(p,3)-nh
-                do j=1-nh,size(p,2)-nh
-                  !p(n+1,j,k) = 1./3.*(-2.*factor+4.*p(n-1,j,k)-p(n-2,j,k))
-                  p(n+1,j,k) = p(n,j,k) ! unused
-                  p(n+dh,j,k) = 1.*factor + p(n-1-dh,j,k)
-                end do
-              end do
-            end if
-          case(2)
-            if     (ibound == 0) then
-              !$acc parallel loop collapse(2) default(present) async(1)
-              !$OMP parallel do   collapse(2) DEFAULT(shared)
-              do k=1-nh,size(p,3)-nh
-                do i=1-nh,size(p,1)-nh
-                  !p(i,0-dh,k) = 1./3.*(-2.*factor+4.*p(i,1+dh,k)-p(i,2+dh,k))
-                  p(i,0-dh,k) = 1.*factor + p(i,  1+dh,k)
-                end do
-              end do
-            else if(ibound == 1) then
-              !$acc parallel loop collapse(2) default(present) async(1)
-              !$OMP parallel do   collapse(2) DEFAULT(shared)
-              do k=1-nh,size(p,3)-nh
-                do i=1-nh,size(p,1)-nh
-                  !p(i,n+1,k) = 1./3.*(-2.*factor+4.*p(i,n-1,k)-p(i,n-2,k))
-                  p(i,n+1,k) = p(i,n,k) ! unused
-                  p(i,n+dh,k) = 1.*factor + p(i,n-1-dh,k)
-                end do
-              end do
-            end if
-          case(3)
-            if     (ibound == 0) then
-              !$acc parallel loop collapse(2) default(present) async(1)
-              !$OMP parallel do   collapse(2) DEFAULT(shared)
-              do j=1-nh,size(p,2)-nh
-                do i=1-nh,size(p,1)-nh
-                  !p(i,j,0-dh) = 1./3.*(-2.*factor+4.*p(i,j,1+dh)-p(i,j,2+dh))
-                  p(i,j,0-dh) = 1.*factor + p(i,j,  1+dh)
-                end do
-              end do
-            else if(ibound == 1) then
-              !$acc parallel loop collapse(2) default(present) async(1)
-              !$OMP parallel do   collapse(2) DEFAULT(shared)
-              do j=1-nh,size(p,2)-nh
-                do i=1-nh,size(p,1)-nh
-                  !p(i,j,n+1) = 1./3.*(-2.*factor+4.*p(i,j,n-1)-p(i,j,n-2))
-                  p(i,j,n+1) = p(i,j,n) ! unused
-                  p(i,j,n+dh) = 1.*factor + p(i,j,n-1-dh)
-                end do
-              end do
-            end if
-          end select
-        end if
-      end select
+      else if(is_with_bnode) then
+        select case(idir)
+        case(1)
+          !$acc parallel loop collapse(2) default(present) async(1)
+          !$OMP parallel do   collapse(2) DEFAULT(shared)
+          do k=1-nh,size(p,3)-nh
+            do j=1-nh,size(p,2)-nh
+              p(n ,j,k) = factor_b+sgn_b*p(n-1,j,k)
+              p(ig,j,k) = factor  +sgn  *p(im ,j,k)
+            end do
+          end do
+        case(2)
+          !$acc parallel loop collapse(2) default(present) async(1)
+          !$OMP parallel do   collapse(2) DEFAULT(shared)
+          do k=1-nh,size(p,3)-nh
+            do i=1-nh,size(p,1)-nh
+              p(i,n ,k) = factor_b+sgn_b*p(i,n-1,k)
+              p(i,ig,k) = factor  +sgn  *p(i,im ,k)
+            end do
+          end do
+        case(3)
+          !$acc parallel loop collapse(2) default(present) async(1)
+          !$OMP parallel do   collapse(2) DEFAULT(shared)
+          do j=1-nh,size(p,2)-nh
+            do i=1-nh,size(p,1)-nh
+              p(i,j,n ) = factor_b+sgn_b*p(i,j,n-1)
+              p(i,j,ig) = factor  +sgn  *p(i,j,im )
+            end do
+          end do
+        end select
+      else
+        select case(idir)
+        case(1)
+          !$acc parallel loop collapse(2) default(present) async(1)
+          !$OMP parallel do   collapse(2) DEFAULT(shared)
+          do k=1-nh,size(p,3)-nh
+            do j=1-nh,size(p,2)-nh
+              p(ig,j,k) = factor+sgn*p(im,j,k)
+            end do
+          end do
+        case(2)
+          !$acc parallel loop collapse(2) default(present) async(1)
+          !$OMP parallel do   collapse(2) DEFAULT(shared)
+          do k=1-nh,size(p,3)-nh
+            do i=1-nh,size(p,1)-nh
+              p(i,ig,k) = factor+sgn*p(i,im,k)
+            end do
+          end do
+        case(3)
+          !$acc parallel loop collapse(2) default(present) async(1)
+          !$OMP parallel do   collapse(2) DEFAULT(shared)
+          do j=1-nh,size(p,2)-nh
+            do i=1-nh,size(p,1)-nh
+              p(i,j,ig) = factor+sgn*p(i,j,im)
+            end do
+          end do
+        end select
+      end if
     end do
   end subroutine set_bc
   !
-  subroutine inflow(idir,is_bound,vel2d,u,v,w)
+  subroutine inflow(idir,is_bound,nh,vel2d,u,v,w)
     implicit none
     integer , intent(in   )  :: idir
     logical , intent(in   ), dimension(0:1,3) :: is_bound
+    integer , intent(in   )                   :: nh
     real(rp), intent(in   ), dimension(0:,0:   ) :: vel2d
-    real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
+    real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: u,v,w
     integer :: i,j,k
     integer, dimension(3) :: n
     !
     select case(idir)
       case(1) ! x direction
         if(is_bound(0,1)) then
-          n(:) = shape(u) - 2*1
+          n(:) = shape(u) - 2*nh
           i = 0
           !$acc parallel loop collapse(2) default(present) async(1)
           !$OMP parallel do   collapse(2) DEFAULT(shared)
@@ -511,7 +469,7 @@ module mod_bound
         end if
       case(2) ! y direction
         if(is_bound(0,2)) then
-          n(:) = shape(v) - 2*1
+          n(:) = shape(v) - 2*nh
           j = 0
           !$acc parallel loop collapse(2) default(present) async(1)
           !$OMP parallel do   collapse(2) DEFAULT(shared)
@@ -523,7 +481,7 @@ module mod_bound
         end if
       case(3) ! z direction
         if(is_bound(0,3)) then
-          n(:) = shape(w) - 2*1
+          n(:) = shape(w) - 2*nh
           k = 0
           !$acc parallel loop collapse(2) default(present) async(1)
           !$OMP parallel do   collapse(2) DEFAULT(shared)
@@ -536,14 +494,15 @@ module mod_bound
     end select
   end subroutine inflow
   !
-  subroutine updt_rhs_b(c_or_f,cbc,n,is_bound,rhsbx,rhsby,rhsbz,p,alpha)
+  subroutine updt_rhs_b(c_or_f,cbc,n,nh,is_bound,rhsbx,rhsby,rhsbz,p,alpha)
     implicit none
     character(len=1), intent(in), dimension(3    ) :: c_or_f
     character(len=1), intent(in), dimension(0:1,3) :: cbc
     integer , intent(in), dimension(3) :: n
+    integer , intent(in)               :: nh
     logical , intent(in), dimension(0:1,3) :: is_bound
     real(rp), intent(in), dimension(:,:,0:), optional :: rhsbx,rhsby,rhsbz
-    real(rp), intent(inout), dimension(0:,0:,0:) :: p
+    real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
     real(rp), intent(in), optional :: alpha
     integer , dimension(3) :: q
     integer :: idir

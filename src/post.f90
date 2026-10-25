@@ -10,17 +10,18 @@ module mod_post
   private
   public vorticity,rotation_rate,strain_rate,q_criterion
   contains
-  subroutine vorticity(n,dli,dzci,ux,uy,uz,vox,voy,voz)
+  subroutine vorticity(n,nh_v,nh_g,nh,dli,dzci,ux,uy,uz,vox,voy,voz)
     !
     ! computes the vorticity components at their natural edge centers:
     !   vox: (cell,face,face), voy: (face,cell,face), voz: (face,face,cell)
     !
     implicit none
     integer , intent(in ), dimension(3)        :: n
+    integer , intent(in )                      :: nh_v,nh_g,nh
     real(rp), intent(in ), dimension(3)        :: dli
-    real(rp), intent(in ), dimension(0:)       :: dzci
-    real(rp), intent(in ), dimension(0:,0:,0:) :: ux ,uy ,uz
-    real(rp), intent(out), dimension(0:,0:,0:) :: vox,voy,voz
+    real(rp), intent(in ), dimension(1-nh_g:)  :: dzci
+    real(rp), intent(in ), dimension(1-nh_v:,1-nh_v:,1-nh_v:) :: ux ,uy ,uz
+    real(rp), intent(out), dimension(1-nh:,1-nh:,1-nh:)       :: vox,voy,voz
     real(rp) :: dxi,dyi
     integer :: i,j,k
     dxi = dli(1)
@@ -60,16 +61,17 @@ module mod_post
     end do
   end subroutine vorticity
   !
-  subroutine strain_rate(n,dli,dzci,dzfi,ux,uy,uz,str)
+  subroutine strain_rate(n,nh,nh_g,dli,dzci,dzfi,ux,uy,uz,str)
     !
     ! computes Sij*Sij at cell centers, evaluating each shear strain once
     ! at its natural edge center before interpolation
     !
     implicit none
     integer , intent(in ), dimension(3)        :: n
+    integer , intent(in )                      :: nh,nh_g
     real(rp), intent(in ), dimension(3)        :: dli
-    real(rp), intent(in ), dimension(0:)       :: dzci,dzfi
-    real(rp), intent(in ), dimension(0:,0:,0:) :: ux,uy,uz
+    real(rp), intent(in ), dimension(1-nh_g:)  :: dzci,dzfi
+    real(rp), intent(in ), dimension(1-nh:,1-nh:,1-nh:) :: ux,uy,uz
     real(rp), intent(out), dimension(1:,1:,1:) :: str
     real(rp), allocatable, dimension(:,:,:) :: s12e,s13e,s23e
     real(rp) :: s11,s22,s33,s12c,s13c,s23c
@@ -136,15 +138,16 @@ module mod_post
     deallocate(s12e,s13e,s23e)
   end subroutine strain_rate
   !
-  subroutine rotation_rate(n,dli,dzci,ux,uy,uz,ens)
+  subroutine rotation_rate(n,nh,nh_g,dli,dzci,ux,uy,uz,ens)
     !
     ! computes Wij*Wij at cell centers from edge-centered vorticity
     !
     implicit none
     integer , intent(in ), dimension(3)        :: n
+    integer , intent(in )                      :: nh,nh_g
     real(rp), intent(in ), dimension(3)        :: dli
-    real(rp), intent(in ), dimension(0:)       :: dzci
-    real(rp), intent(in ), dimension(0:,0:,0:) :: ux,uy,uz
+    real(rp), intent(in ), dimension(1-nh_g:)  :: dzci
+    real(rp), intent(in ), dimension(1-nh:,1-nh:,1-nh:) :: ux,uy,uz
     real(rp), intent(out), dimension(1:,1:,1:) :: ens
     real(rp), allocatable, dimension(:,:,:) :: vox,voy,voz
     integer :: i,j,k
@@ -155,7 +158,7 @@ module mod_post
              voy(0:n(1),0:n(2),0:n(3)), &
              voz(0:n(1),0:n(2),0:n(3)))
     !$acc enter data create(vox,voy,voz)
-    call vorticity(n,dli,dzci,ux,uy,uz,vox,voy,voz)
+    call vorticity(n,nh,nh_g,1,dli,dzci,ux,uy,uz,vox,voy,voz)
     !
     ! Wij*Wij = |vorticity|^2/2; interpolate squared edge values to cells
     !
@@ -176,11 +179,12 @@ module mod_post
     deallocate(vox,voy,voz)
   end subroutine rotation_rate
   !
-  subroutine q_criterion(n,ens,str,qcr)
+  subroutine q_criterion(n,nh,ens,str,qcr)
     implicit none
     integer , intent(in ), dimension(3)        :: n
+    integer , intent(in )                      :: nh
     real(rp), intent(in ), dimension(1:,1:,1:) :: ens,str
-    real(rp), intent(out), dimension(0:,0:,0:) :: qcr
+    real(rp), intent(out), dimension(1-nh:,1-nh:,1-nh:) :: qcr
     integer  :: i,j,k
     !
     !$acc parallel loop collapse(3) default(present)

@@ -5,7 +5,7 @@
 !
 ! -
   !
-  ! write_visu_2d(datadir,fname_bin,fname_log,varname,ng,nh,lo,hi,inorm,islice,time,istep,p,x_g,y_g,z_g)
+  ! write_visu_2d(datadir,fname_bin,fname_log,varname,ng,nh,nh_g,lo,hi,inorm,islice,time,istep,p,x_g,y_g,z_g)
   !
   ! saves a planar slice through the structured subset output path and appends
   ! the corresponding metadata to a log file used for xdmf generation
@@ -20,7 +20,8 @@
   ! inorm     -> plane is perpendicular to direction inorm (1, 2, or 3)
   ! islice    -> plane is of constant index islice in direction inorm
   ! ng        -> array with the global number of points in each direction
-  ! nh        -> halo extents
+  ! nh        -> halo extents of the field, e.g. [nh_v,nh_v,nh_v] for a velocity component
+  ! nh_g      -> halo width of the global coordinate arrays
   ! lo,hi     -> local interior ownership in global indices
   ! time      -> physical time
   ! istep     -> time step number
@@ -30,20 +31,20 @@
   ! modify the calls below as desired
   !
   call write_visu_2d(datadir,'vex_slice_fld_'//fldnum//trim(io_ext),'log_visu_2d_slice_1.out','Velocity_X', &
-                     ng,[1,1,1],lo,hi,2,max(1,ng(2)/2),time,istep, &
+                     ng,[nh_v,nh_v,nh_v],nh_g,lo,hi,2,max(1,ng(2)/2),time,istep, &
                      u,xc_g,yc_g,zc_g,.true.)
   call write_visu_2d(datadir,'vey_slice_fld_'//fldnum//trim(io_ext),'log_visu_2d_slice_1.out','Velocity_Y', &
-                     ng,[1,1,1],lo,hi,2,max(1,ng(2)/2),time,istep, &
+                     ng,[nh_v,nh_v,nh_v],nh_g,lo,hi,2,max(1,ng(2)/2),time,istep, &
                      v,xc_g,yc_g,zc_g,.true.)
   call write_visu_2d(datadir,'vez_slice_fld_'//fldnum//trim(io_ext),'log_visu_2d_slice_1.out','Velocity_Z', &
-                     ng,[1,1,1],lo,hi,2,max(1,ng(2)/2),time,istep, &
+                     ng,[nh_v,nh_v,nh_v],nh_g,lo,hi,2,max(1,ng(2)/2),time,istep, &
                      w,xc_g,yc_g,zc_g,.true.)
   call write_visu_2d(datadir,'pre_slice_fld_'//fldnum//trim(io_ext),'log_visu_2d_slice_1.out','Pressure_P', &
-                     ng,[1,1,1],lo,hi,2,max(1,ng(2)/2),time,istep, &
+                     ng,[nh_p,nh_p,nh_p],nh_g,lo,hi,2,max(1,ng(2)/2),time,istep, &
                      p,xc_g,yc_g,zc_g,.true.)
   do iscal = 1,nscal
     write(scalnum,'(i3.3)') iscal
     call write_visu_2d(datadir,'sca_'//scalnum//'_slice_fld_'//fldnum//trim(io_ext),'log_visu_2d_slice_1.out','Scalar_S'//scalnum, &
-                       ng,[1,1,1],lo,hi,2,max(1,ng(2)/2),time,istep, &
+                       ng,[nh_s,nh_s,nh_s],nh_g,lo,hi,2,max(1,ng(2)/2),time,istep, &
                        scalars(iscal)%val,xc_g,yc_g,zc_g,.true.)
   end do
