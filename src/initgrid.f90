@@ -69,10 +69,17 @@ module mod_initgrid
       do k=1,n
         dzf(k) = zf(k)-zf(k-1)
       end do
-      do k=1-nh,n+nh
-        if(k >= 1 .and. k <= n) cycle
-        dzf(k) = dzf(ghost_image(k,n,is_periodic))
-      end do
+      if(.not.is_periodic) then
+        do k=1,nh
+          dzf(1-k) = dzf(k)
+          dzf(n+k) = dzf(n+1-k)
+        end do
+      else
+        do k=1,nh ! one layer at a time, as `nh` may exceed `n` along the undecomposed direction
+          dzf(1-k) = dzf(n+1-k)
+          dzf(n+k) = dzf(k)
+        end do
+      end if
       !
       ! step 3) determine grid spacing between centers dzc
       !
@@ -82,7 +89,7 @@ module mod_initgrid
       if(.not.is_periodic) then
         dzc(n+nh) = dzc(n+nh-1)
       else
-        dzc(n+nh) = dzc(ghost_image(n+nh,n,is_periodic))
+        dzc(n+nh) = dzc(nh)
       end if
     end if
     !
@@ -101,27 +108,6 @@ module mod_initgrid
       zc(k) = zf(k) - .5*dzf(k)
     end do
   end subroutine initgrid
-  !
-  pure integer function ghost_image(k,n,is_periodic)
-    !
-    ! index in 1:n of the image of ghost cell `k` -- its mirror about the
-    ! boundaries, or its periodic image
-    !
-    implicit none
-    integer, intent(in) :: k,n
-    logical, intent(in) :: is_periodic
-    integer :: kk
-    if(is_periodic) then
-      ghost_image = modulo(k-1,n)+1
-    else
-      kk = modulo(k-1,2*n)
-      if(kk < n) then
-        ghost_image = kk+1
-      else
-        ghost_image = 2*n-kk
-      end if
-    end if
-  end function ghost_image
   !
   ! grid stretching functions
   ! see e.g., Fluid Flow Phenomena -- A Numerical Toolkit, by P. Orlandi
