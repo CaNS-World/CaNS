@@ -93,7 +93,7 @@ logical, protected :: is_use_diezdecomp = .false.,is_diezdecomp_x2z_z2x_transpos
 !
 ! other options: debugging/benchmarking
 !
-logical, protected :: is_debug = .true., is_debug_poisson = .false., is_debug_halo = .false., &
+logical, protected :: is_debug = .true., is_debug_poisson = .false., &
                       is_timing = .true., &
                       is_mask_divergence_check = .false.
 !
@@ -167,7 +167,7 @@ contains
                        is_poisson_dtdma, &
                        is_gridpoint_natural_channel
     namelist /other_options/ &
-                            is_debug,is_debug_poisson,is_debug_halo, &
+                            is_debug,is_debug_poisson, &
                             is_timing, &
                             is_mask_divergence_check
     !
