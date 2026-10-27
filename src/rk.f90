@@ -558,6 +558,7 @@ module mod_rk
     real(rp), allocatable, dimension(:,:), save :: gg
     real(rp), dimension(3), save :: alpha_s = huge(1._rp)
     real(rp), dimension(3), save :: gmean_s
+    real(rp), allocatable, dimension(:,:), save :: dr
     real(rp), dimension(ng(3)) :: aa,bb,cc,g
     real(rp), dimension(0:1,3,3) :: tau_i
     real(rp), dimension(3,3) :: tw,two
@@ -618,14 +619,20 @@ module mod_rk
       end if
       !
       ! wall shear along z of the unforced solution, with the ghost values set from the boundary conditions
+      ! (`dr` -> distances between the ghost layers and their mirror points, computed only once)
       !
+      if(.not.allocated(dr)) then
+        allocate(dr(0:nh,0:1))
+        dr(:,0) = bc_dist(nh,nh_g,n(3),0,.true.,dzc)
+        dr(:,1) = bc_dist(nh,nh_g,n(3),1,.true.,dzc)
+      end if
       if(is_forced(1)) then
-        if(is_bound(0,3)) call set_bc(cbcvel(0,3,1),0,3,nh,.true.,bcvel(0,3,1),bc_dist(nh,nh_g,n(3),0,.true.,dzc),u)
-        if(is_bound(1,3)) call set_bc(cbcvel(1,3,1),1,3,nh,.true.,bcvel(1,3,1),bc_dist(nh,nh_g,n(3),1,.true.,dzc),u)
+        if(is_bound(0,3)) call set_bc(cbcvel(0,3,1),0,3,nh,.true.,bcvel(0,3,1),dr(:,0),u)
+        if(is_bound(1,3)) call set_bc(cbcvel(1,3,1),1,3,nh,.true.,bcvel(1,3,1),dr(:,1),u)
       end if
       if(is_forced(2)) then
-        if(is_bound(0,3)) call set_bc(cbcvel(0,3,2),0,3,nh,.true.,bcvel(0,3,2),bc_dist(nh,nh_g,n(3),0,.true.,dzc),v)
-        if(is_bound(1,3)) call set_bc(cbcvel(1,3,2),1,3,nh,.true.,bcvel(1,3,2),bc_dist(nh,nh_g,n(3),1,.true.,dzc),v)
+        if(is_bound(0,3)) call set_bc(cbcvel(0,3,2),0,3,nh,.true.,bcvel(0,3,2),dr(:,0),v)
+        if(is_bound(1,3)) call set_bc(cbcvel(1,3,2),1,3,nh,.true.,bcvel(1,3,2),dr(:,1),v)
       end if
       call cmpt_wallshear(n,nh,nh_g,is_forced,is_bound,l,dli,dzci,dzfi,visc,u,v,w,tau_i(:,:,1),tau_i(:,:,2),tau_i(:,:,3))
       do idir=1,3

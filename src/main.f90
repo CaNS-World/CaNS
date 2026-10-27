@@ -367,7 +367,7 @@ program cans
                   device_memory_footprint(n,nh_v,nh_p,nh_s,nh_g,n_z,nscal)/(1._sp*1024**3), ' ***'
 #endif
   if(is_debug_poisson) then
-    call test_sanity_solver(ng,lo,hi,n,nh_v,nh_p,nh_g,n_x_fft,n_y_fft,lo_z,hi_z,n_z,l,dli, &
+    call test_sanity_solver(ng,lo,hi,n,nh_v,nh_p,nh_g,n_x_fft,n_y_fft,lo_z,hi_z,n_z,l,dl,dli, &
                             dzc,dzf,dzci,dzfi,dzci_g,dzfi_g,nb,is_bound,cbcvel,cbcpre,bcvel,bcpre)
   end if
   if(is_debug_halo) then
