@@ -10,14 +10,14 @@ module mod_post
   private
   public vorticity,rotation_rate,strain_rate,q_criterion
   contains
-  subroutine vorticity(n,nh_v,nh_g,nh,dli,dzci,ux,uy,uz,vox,voy,voz)
+  subroutine vorticity(n,nh_v,nh,nh_g,dli,dzci,ux,uy,uz,vox,voy,voz)
     !
     ! computes the vorticity components at their natural edge centers:
     !   vox: (cell,face,face), voy: (face,cell,face), voz: (face,face,cell)
     !
     implicit none
     integer , intent(in ), dimension(3)        :: n
-    integer , intent(in )                      :: nh_v,nh_g,nh
+    integer , intent(in )                      :: nh_v,nh,nh_g
     real(rp), intent(in ), dimension(3)        :: dli
     real(rp), intent(in ), dimension(1-nh_g:)  :: dzci
     real(rp), intent(in ), dimension(1-nh_v:,1-nh_v:,1-nh_v:) :: ux ,uy ,uz
@@ -158,7 +158,7 @@ module mod_post
              voy(0:n(1),0:n(2),0:n(3)), &
              voz(0:n(1),0:n(2),0:n(3)))
     !$acc enter data create(vox,voy,voz)
-    call vorticity(n,nh,nh_g,1,dli,dzci,ux,uy,uz,vox,voy,voz)
+    call vorticity(n,nh,1,nh_g,dli,dzci,ux,uy,uz,vox,voy,voz)
     !
     ! Wij*Wij = |vorticity|^2/2; interpolate squared edge values to cells
     !

@@ -102,7 +102,7 @@ module mod_output
     if(istat /= 0) print*, 'WARNING: could not generate the alias ', flink, ' to ', trim(fname), '.'
   end subroutine gen_alias
   !
-  subroutine out1d(fname,ng,lo,hi,nh,nh_g,idir,l,dl,z_g,dz,p)
+  subroutine out1d(fname,ng,nh,nh_g,lo,hi,idir,l,dl,z_g,dz,p)
     !
     ! writes the profile of a variable averaged
     ! over two domain directions
@@ -385,7 +385,7 @@ module mod_output
                            x_g,y_g,z_g,is_pack)
   end subroutine write_visu_2d
   !
-  subroutine out1d_chan(fname,ng,lo,hi,nh,nh_g,idir,l,dl,z_g,u,v,w) ! e.g. for a channel with streamwise dir in x
+  subroutine out1d_chan(fname,ng,nh,nh_g,lo,hi,idir,l,dl,z_g,u,v,w) ! e.g. for a channel with streamwise dir in x
     implicit none
     character(len=*), intent(in) :: fname
     integer , intent(in), dimension(3) :: ng,lo,hi
@@ -454,7 +454,7 @@ module mod_output
     end select
   end subroutine out1d_chan
   !
-  subroutine out2d_duct(fname,ng,lo,hi,nh,nh_g,idir,l,dl,z_g,u,v,w) ! e.g. for a duct
+  subroutine out2d_duct(fname,ng,nh,nh_g,lo,hi,idir,l,dl,z_g,u,v,w) ! e.g. for a duct
     !
     implicit none
     character(len=*), intent(in) :: fname

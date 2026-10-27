@@ -623,8 +623,8 @@ module mod_rk
       !
       if(.not.allocated(dr)) then
         allocate(dr(0:nh,0:1))
-        dr(:,0) = bc_dist(nh,nh_g,n(3),0,.true.,dzc)
-        dr(:,1) = bc_dist(nh,nh_g,n(3),1,.true.,dzc)
+        dr(:,0) = bc_dist(n(3),nh,nh_g,0,.true.,dzc)
+        dr(:,1) = bc_dist(n(3),nh,nh_g,1,.true.,dzc)
       end if
       if(is_forced(1)) then
         if(is_bound(0,3)) call set_bc(cbcvel(0,3,1),0,3,nh,.true.,bcvel(0,3,1),dr(:,0),u)

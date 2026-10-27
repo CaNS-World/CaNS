@@ -48,12 +48,12 @@ module mod_bound
         dsx(:) = dl(1)
         dsy(:) = dl(2)
         do ib=0,1
-          drc(:,ib,1) = bc_dist(nh_g,nh_g,n(1),ib,.true. ,dsx)
-          drf(:,ib,1) = bc_dist(nh_g,nh_g,n(1),ib,.false.,dsx)
-          drc(:,ib,2) = bc_dist(nh_g,nh_g,n(2),ib,.true. ,dsy)
-          drf(:,ib,2) = bc_dist(nh_g,nh_g,n(2),ib,.false.,dsy)
-          drc(:,ib,3) = bc_dist(nh_g,nh_g,n(3),ib,.true. ,dzc)
-          drf(:,ib,3) = bc_dist(nh_g,nh_g,n(3),ib,.false.,dzf)
+          drc(:,ib,1) = bc_dist(n(1),nh_g,nh_g,ib,.true. ,dsx)
+          drf(:,ib,1) = bc_dist(n(1),nh_g,nh_g,ib,.false.,dsx)
+          drc(:,ib,2) = bc_dist(n(2),nh_g,nh_g,ib,.true. ,dsy)
+          drf(:,ib,2) = bc_dist(n(2),nh_g,nh_g,ib,.false.,dsy)
+          drc(:,ib,3) = bc_dist(n(3),nh_g,nh_g,ib,.true. ,dzc)
+          drf(:,ib,3) = bc_dist(n(3),nh_g,nh_g,ib,.false.,dzf)
         end do
       end block
     end if
@@ -199,9 +199,9 @@ module mod_bound
         dsx(:) = dl(1)
         dsy(:) = dl(2)
         do ib=0,1
-          dr(:,ib,1) = bc_dist(nh_g,nh_g,n(1),ib,.true.,dsx)
-          dr(:,ib,2) = bc_dist(nh_g,nh_g,n(2),ib,.true.,dsy)
-          dr(:,ib,3) = bc_dist(nh_g,nh_g,n(3),ib,.true.,dzc)
+          dr(:,ib,1) = bc_dist(n(1),nh_g,nh_g,ib,.true.,dsx)
+          dr(:,ib,2) = bc_dist(n(2),nh_g,nh_g,ib,.true.,dsy)
+          dr(:,ib,3) = bc_dist(n(3),nh_g,nh_g,ib,.true.,dzc)
         end do
       end block
     end if
@@ -245,7 +245,7 @@ module mod_bound
     end if
   end subroutine boundp
   !
-  function bc_dist(nh,nh_g,n,ibound,centered,ds) result(dr)
+  function bc_dist(n,nh,nh_g,ibound,centered,ds) result(dr)
     !
     ! distances between the `nh` ghost layers next to boundary `ibound` and their
     ! mirror points across it, from the grid spacing `ds` (cell-center spacing for a
@@ -253,7 +253,7 @@ module mod_bound
     ! is the spacing of the one-sided Neumann condition at the boundary node
     !
     implicit none
-    integer , intent(in) :: nh,nh_g,n,ibound
+    integer , intent(in) :: n,nh,nh_g,ibound
     logical , intent(in) :: centered
     real(rp), intent(in), dimension(1-nh_g:) :: ds
     real(rp), dimension(0:nh)                :: dr

@@ -555,9 +555,9 @@ module mod_sanity
     call bounduvw(cbcvel,n,nh_v,nh_g,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
     !$acc wait
     !$acc exit data copyout(u,v,w)
-    errmax(1) = field_error(ng,lo,n,nh_v,is_c(:,1),cbcvel(:,:,1),bcvel(:,:,1),dl,nh_g,zc_g,zf_g,u)
-    errmax(2) = field_error(ng,lo,n,nh_v,is_c(:,2),cbcvel(:,:,2),bcvel(:,:,2),dl,nh_g,zc_g,zf_g,v)
-    errmax(3) = field_error(ng,lo,n,nh_v,is_c(:,3),cbcvel(:,:,3),bcvel(:,:,3),dl,nh_g,zc_g,zf_g,w)
+    errmax(1) = field_error(ng,lo,n,nh_v,nh_g,is_c(:,1),cbcvel(:,:,1),bcvel(:,:,1),dl,zc_g,zf_g,u)
+    errmax(2) = field_error(ng,lo,n,nh_v,nh_g,is_c(:,2),cbcvel(:,:,2),bcvel(:,:,2),dl,zc_g,zf_g,v)
+    errmax(3) = field_error(ng,lo,n,nh_v,nh_g,is_c(:,3),cbcvel(:,:,3),bcvel(:,:,3),dl,zc_g,zf_g,w)
     call MPI_ALLREDUCE(MPI_IN_PLACE,errmax,3,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
     if(myid == 0.and.any(errmax(:) > 0.)) &
       print*, 'ERROR: wrong velocity halo values; maximum relative errors of u, v, w = ', errmax(:)
@@ -572,7 +572,7 @@ module mod_sanity
     call boundp(cbcpre,n,nh_p,nh_g,bcpre,nb,is_bound,dl,dzc,p)
     !$acc wait
     !$acc exit data copyout(p)
-    errmax(1) = field_error(ng,lo,n,nh_p,[.true.,.true.,.true.],cbcpre,bcpre,dl,nh_g,zc_g,zf_g,p)
+    errmax(1) = field_error(ng,lo,n,nh_p,nh_g,[.true.,.true.,.true.],cbcpre,bcpre,dl,zc_g,zf_g,p)
     call MPI_ALLREDUCE(MPI_IN_PLACE,errmax(1),1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
     if(myid == 0.and.errmax(1) > 0.) &
       print*, 'ERROR: wrong pressure halo values; maximum relative error = ', errmax(1)
@@ -588,7 +588,7 @@ module mod_sanity
       call boundp(cbcscal,n,nh_s,nh_g,bcscal,nb,is_bound,dl,dzc,p)
       !$acc wait
       !$acc exit data copyout(p)
-      errmax(1) = field_error(ng,lo,n,nh_s,[.true.,.true.,.true.],cbcscal,bcscal,dl,nh_g,zc_g,zf_g,p)
+      errmax(1) = field_error(ng,lo,n,nh_s,nh_g,[.true.,.true.,.true.],cbcscal,bcscal,dl,zc_g,zf_g,p)
       call MPI_ALLREDUCE(MPI_IN_PLACE,errmax(1),1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
       if(myid == 0.and.errmax(1) > 0.) &
         print*, 'ERROR: wrong scalar halo values; maximum relative error = ', errmax(1)
@@ -628,18 +628,17 @@ module mod_sanity
     end do
   end subroutine set_field
   !
-  function field_error(ng,lo,n,nh,is_c,cbc,bc,dl,nh_g,zc_g,zf_g,p) result(errmax)
+  function field_error(ng,lo,n,nh,nh_g,is_c,cbc,bc,dl,zc_g,zf_g,p) result(errmax)
     !
     ! maximum relative error over all points, halos included (zero if within round-off)
     !
     implicit none
     integer , intent(in), dimension(3) :: ng,lo,n
-    integer , intent(in)               :: nh
+    integer , intent(in)               :: nh,nh_g
     logical , intent(in), dimension(3) :: is_c
     character(len=1), intent(in), dimension(0:1,3) :: cbc
     real(rp), intent(in), dimension(0:1,3) :: bc
     real(rp), intent(in), dimension(3) :: dl
-    integer , intent(in)               :: nh_g
     real(rp), intent(in), dimension(1-nh_g:) :: zc_g,zf_g
     real(rp), intent(in), dimension(1-nh:,1-nh:,1-nh:) :: p
     real(rp) :: errmax,val,err
@@ -648,7 +647,7 @@ module mod_sanity
     do k=1-nh,n(3)+nh
       do j=1-nh,n(2)+nh
         do i=1-nh,n(1)+nh
-          val = expected_value([i,j,k]+lo(:)-1,ng,is_c,cbc,bc,dl,nh_g,zc_g,zf_g)
+          val = expected_value([i,j,k]+lo(:)-1,ng,nh_g,is_c,cbc,bc,dl,zc_g,zf_g)
           err = abs(p(i,j,k)-val)/max(1._rp,abs(val))
           if(err > small) errmax = max(errmax,err)
         end do
@@ -656,7 +655,7 @@ module mod_sanity
     end do
   end function field_error
   !
-  recursive function expected_value(ii,ng,is_c,cbc,bc,dl,nh_g,zc_g,zf_g) result(val)
+  recursive function expected_value(ii,ng,nh_g,is_c,cbc,bc,dl,zc_g,zf_g) result(val)
     !
     ! value of the test field at global index `ii`, inside or outside the domain, after the halo
     ! exchange and the boundary conditions, which are imposed along x, y, and z, in this order:
@@ -666,11 +665,11 @@ module mod_sanity
     !
     implicit none
     integer , intent(in), dimension(3) :: ii,ng
+    integer , intent(in)               :: nh_g
     logical , intent(in), dimension(3) :: is_c
     character(len=1), intent(in), dimension(0:1,3) :: cbc
     real(rp), intent(in), dimension(0:1,3) :: bc
     real(rp), intent(in), dimension(3) :: dl
-    integer , intent(in)               :: nh_g
     real(rp), intent(in), dimension(1-nh_g:) :: zc_g,zf_g
     real(rp) :: val
     integer , dimension(3) :: im
@@ -682,7 +681,7 @@ module mod_sanity
       if(cbc(0,idir)//cbc(1,idir) == 'PP') then
         if(i >= 1 .and. i <= ng(idir)) cycle
         im(idir) = modulo(i-1,ng(idir))+1
-        val = expected_value(im,ng,is_c,cbc,bc,dl,nh_g,zc_g,zf_g)
+        val = expected_value(im,ng,nh_g,is_c,cbc,bc,dl,zc_g,zf_g)
         return
       end if
       if(is_c(idir)) then
@@ -716,10 +715,10 @@ module mod_sanity
         if(.not.is_c(idir) .and. dh == 0) then
           val = bc(ib,idir)
         else
-          val = 2.*bc(ib,idir) - expected_value(im,ng,is_c,cbc,bc,dl,nh_g,zc_g,zf_g)
+          val = 2.*bc(ib,idir) - expected_value(im,ng,nh_g,is_c,cbc,bc,dl,zc_g,zf_g)
         end if
       case('N')
-        val = expected_value(im,ng,is_c,cbc,bc,dl,nh_g,zc_g,zf_g) + (2*ib-1)*dr*bc(ib,idir)
+        val = expected_value(im,ng,nh_g,is_c,cbc,bc,dl,zc_g,zf_g) + (2*ib-1)*dr*bc(ib,idir)
       case default
         val = huge(1._rp)
       end select
