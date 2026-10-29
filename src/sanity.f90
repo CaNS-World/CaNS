@@ -18,7 +18,7 @@ module mod_sanity
   use mod_initflow  , only: add_noise
   use mod_initmpi   , only: initmpi
   use mod_initsolver, only: initsolver
-  use mod_param     , only: ipencil_axis,is_impdiff,is_impdiff_1d,is_poisson_dtdma,small, &
+  use mod_param     , only: ipencil_axis,nh_g,is_impdiff,is_impdiff_1d,is_poisson_dtdma,small, &
                             is_bulk_forcing_wall_shear,is_boussinesq_buoyancy,gacc
 #if !defined(_OPENACC)
   use mod_solver    , only: solver
@@ -95,6 +95,7 @@ module mod_sanity
     character(len=1), intent(in), dimension(0:1,3)   :: cbcpre
     logical, intent(out) :: passed
     integer, dimension(2) :: ii
+    integer, dimension(3) :: ntasks
     logical :: passed_loc
     integer :: idir,iscal
     character(len=2) :: bc01v
@@ -108,6 +109,17 @@ module mod_sanity
     passed_loc = all(dims(:)<=ng(ii)).and.all(dims(:)>=1)
     if(myid == 0.and.(.not.passed_loc)) &
       print*, 'ERROR: 1 <= dims(:) <= [ng(1),ng(2)], or [ng(1),ng(3)], or [ng(2),ng(3)] depending on the decomposition.'
+    passed = passed.and.passed_loc
+    !
+    ! the halo layers are filled from a single neighbour, or mirrored about a boundary;
+    ! only a periodic direction held by a single task may have fewer cells than halo layers,
+    ! as its halo is then wrapped locally, one layer at a time (see `updthalo`)
+    !
+    ntasks(:) = 1
+    ntasks(ii(:)) = max(dims(:),1)
+    passed_loc = all(ng(:)/ntasks(:) >= nh_g.or.(cbcpre(0,:)//cbcpre(1,:) == 'PP'.and.ntasks(:) == 1))
+    if(myid == 0.and.(.not.passed_loc)) &
+      print*, 'ERROR: fewer cells per task than halo layers (nh_g) along a split or non-periodic direction.'
     passed = passed.and.passed_loc
     !
     if(is_impdiff) then
@@ -293,7 +305,7 @@ module mod_sanity
     end if
   end subroutine chk_forcing
   !
-  subroutine test_sanity_solver(ng,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,l,dli,dzc,dzf,dzci,dzfi,dzci_g,dzfi_g, &
+  subroutine test_sanity_solver(ng,lo,hi,n,nh_v,nh_p,nh_g,n_x_fft,n_y_fft,lo_z,hi_z,n_z,l,dl,dli,dzc,dzf,dzci,dzfi,dzci_g,dzfi_g, &
                                 nb,is_bound,cbcvel,cbcpre,bcvel,bcpre)
 #if defined(_OPENACC)
     use mod_workspaces     , only: set_cufft_wspace
@@ -301,9 +313,10 @@ module mod_sanity
 #endif
     implicit none
     integer , intent(in), dimension(3) :: ng,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z
+    integer , intent(in)               :: nh_v,nh_p,nh_g
     real(rp), intent(in), dimension(3) :: l
-    real(rp), intent(in), dimension(3) :: dli
-    real(rp), intent(in), dimension(0:) :: dzc,dzf,dzci,dzfi,dzci_g,dzfi_g
+    real(rp), intent(in), dimension(3) :: dl,dli
+    real(rp), intent(in), dimension(1-nh_g:) :: dzc,dzf,dzci,dzfi,dzci_g,dzfi_g
     integer , intent(in), dimension(0:1,3) :: nb
     logical , intent(in), dimension(0:1,3) :: is_bound
     character(len=1), intent(in), dimension(0:1,3,3) :: cbcvel
@@ -320,17 +333,16 @@ module mod_sanity
     real(rp), allocatable, dimension(:,:) ::  lambdaxy
     real(rp), allocatable, dimension(:) :: a,b,c,bb
     real(rp), allocatable, dimension(:,:,:) :: rhsbx,rhsby,rhsbz
-    real(rp), dimension(3) :: dl
     real(rp) :: dt,dti,alpha
     real(rp) :: divtot,divmax,restot,resmax
     integer :: i,j,k
     logical :: passed,passed_loc
     passed = .true.
     !$acc wait
-    allocate(u(0:n(1)+1,0:n(2)+1,0:n(3)+1), &
-             v(0:n(1)+1,0:n(2)+1,0:n(3)+1), &
-             w(0:n(1)+1,0:n(2)+1,0:n(3)+1), &
-             p(0:n(1)+1,0:n(2)+1,0:n(3)+1), &
+    allocate(u(1-nh_v:n(1)+nh_v,1-nh_v:n(2)+nh_v,1-nh_v:n(3)+nh_v), &
+             v(1-nh_v:n(1)+nh_v,1-nh_v:n(2)+nh_v,1-nh_v:n(3)+nh_v), &
+             w(1-nh_v:n(1)+nh_v,1-nh_v:n(2)+nh_v,1-nh_v:n(3)+nh_v), &
+             p(1-nh_p:n(1)+nh_p,1-nh_p:n(2)+nh_p,1-nh_p:n(3)+nh_p), &
              lambdaxy(n_z(1),n_z(2)), &
              a(n_z(3)),b(n_z(3)),c(n_z(3)), &
              rhsbx(n(2),n(3),0:1), &
@@ -351,23 +363,22 @@ module mod_sanity
     !
     ! test pressure correction
     !
-    call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:), &
+    call initsolver(ng,nh_g,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcpre,bcpre(:,:), &
                     lambdaxy,['c','c','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
     !$acc enter data copyin(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
 #if defined(_OPENACC)
     call set_cufft_wspace(pack(arrplan,.true.),istream_acc_queue_1)
 #endif
-    dl  = dli**(-1)
     dt  = acos(-1.) ! value is irrelevant
     dti = dt**(-1)
-    call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,.false.,-1)
-    call fillps(n,dli,dzfi,dti,u,v,w,p)
-    call updt_rhs_b(['c','c','c'],cbcpre,n,is_bound,rhsbx,rhsby,rhsbz,p)
-    call solver(n,ng,arrplan,normfft,lambdaxy,a,b,c,cbcpre,['c','c','c'],p)
-    call boundp(cbcpre,n,bcpre,nb,is_bound,dl,dzc,p)
-    call correc(n,dli,dzci,dt,p,u,v,w)
-    call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,.true.,1,0)
-    call chkdiv(lo,hi,l,dli,dzfi,u,v,w,divtot,divmax)
+    call bounduvw(cbcvel,n,nh_v,nh_g,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,.false.,-1)
+    call fillps(n,nh_v,nh_p,nh_g,dli,dzfi,dti,u,v,w,p)
+    call updt_rhs_b(['c','c','c'],cbcpre,n,nh_p,is_bound,rhsbx,rhsby,rhsbz,p)
+    call solver(n,nh_p,ng,arrplan,normfft,lambdaxy,a,b,c,cbcpre,['c','c','c'],p)
+    call boundp(cbcpre,n,nh_p,nh_g,bcpre,nb,is_bound,dl,dzc,p)
+    call correc(n,nh_v,nh_p,nh_g,dli,dzci,dt,p,u,v,w)
+    call bounduvw(cbcvel,n,nh_v,nh_g,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w,.true.,1,0)
+    call chkdiv(lo,hi,nh_v,nh_g,l,dli,dzfi,u,v,w,divtot,divmax)
     passed_loc = divmax < small
     if(myid == 0.and.(.not.passed_loc)) &
     print*, 'ERROR: Pressure correction: Divergence is too large, with maximum = ', divmax
@@ -393,13 +404,13 @@ module mod_sanity
       call add_noise(ng,lo,789,.5_rp,w(1:n(1),1:n(2),1:n(3)))
       !$acc update device(u,v,w)
       !$acc enter data create(bb)
-      call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1), &
+      call initsolver(ng,nh_g,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,1),bcvel(:,:,1), &
                       lambdaxy,['f','c','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
       !$acc update device(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
 #if defined(_OPENACC)
       call set_cufft_wspace(pack(arrplan,.true.),istream_acc_queue_1)
 #endif
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
+      call bounduvw(cbcvel,n,nh_v,nh_g,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
       !$acc parallel loop collapse(3) default(present)
       !$OMP parallel do   collapse(3) DEFAULT(shared)
       do k=0,n(3)+1
@@ -415,23 +426,24 @@ module mod_sanity
       do k=1,n_z(3)
         bb(k) = b(k) + alpha
       end do
-      call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,is_bound,rhsbx,rhsby,rhsbz,u)
-      call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,1),['f','c','c'],u)
+      call updt_rhs_b(['f','c','c'],cbcvel(:,:,1),n,nh_v,is_bound,rhsbx,rhsby,rhsbz,u)
+      call solver(n,nh_v,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,1),['f','c','c'],u)
       call fftend(arrplan)
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w) ! actually, we are only interested in the boundary condition in `u`
-      call chk_helmholtz(lo,hi,l,dli,dzci,dzfi,alpha,p,u,cbcvel(:,:,1),is_bound,['f','c','c'],restot,resmax)
+      ! actually, we are only interested in the boundary condition in `u`
+      call bounduvw(cbcvel,n,nh_v,nh_g,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
+      call chk_helmholtz(lo,hi,nh_p,nh_v,nh_g,l,dli,dzci,dzfi,alpha,p,u,cbcvel(:,:,1),is_bound,['f','c','c'],restot,resmax)
       passed_loc = resmax < small
       if(myid == 0.and.(.not.passed_loc)) &
       print*, 'ERROR: wrong solution of Helmholtz equation in x direction.'
       passed = passed.and.passed_loc
       !
-      call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2), &
+      call initsolver(ng,nh_g,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,2),bcvel(:,:,2), &
                       lambdaxy,['c','f','c'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
       !$acc update device(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
 #if defined(_OPENACC)
       call set_cufft_wspace(pack(arrplan,.true.),istream_acc_queue_1)
 #endif
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
+      call bounduvw(cbcvel,n,nh_v,nh_g,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
       !$acc parallel loop collapse(3) default(present)
       !$OMP parallel do   collapse(3) DEFAULT(shared)
       do k=0,n(3)+1
@@ -447,23 +459,24 @@ module mod_sanity
       do k=1,n_z(3)
         bb(k) = b(k) + alpha
       end do
-      call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,is_bound,rhsbx,rhsby,rhsbz,v)
-      call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,2),['c','f','c'],v)
+      call updt_rhs_b(['c','f','c'],cbcvel(:,:,2),n,nh_v,is_bound,rhsbx,rhsby,rhsbz,v)
+      call solver(n,nh_v,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,2),['c','f','c'],v)
       call fftend(arrplan)
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w) ! actually, we are only interested in the boundary condition in `v`
-      call chk_helmholtz(lo,hi,l,dli,dzci,dzfi,alpha,p,v,cbcvel(:,:,2),is_bound,['c','f','c'],restot,resmax)
+      ! actually, we are only interested in the boundary condition in `v`
+      call bounduvw(cbcvel,n,nh_v,nh_g,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
+      call chk_helmholtz(lo,hi,nh_p,nh_v,nh_g,l,dli,dzci,dzfi,alpha,p,v,cbcvel(:,:,2),is_bound,['c','f','c'],restot,resmax)
       passed_loc = resmax < small
       if(myid == 0.and.(.not.passed_loc)) &
       print*, 'ERROR: wrong solution of Helmholtz equation in y direction.'
       passed = passed.and.passed_loc
       !
-      call initsolver(ng,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3), &
+      call initsolver(ng,nh_g,n_x_fft,n_y_fft,lo_z,hi_z,dli,dzci_g,dzfi_g,cbcvel(:,:,3),bcvel(:,:,3), &
                       lambdaxy,['c','c','f'],a,b,c,arrplan,normfft,rhsbx,rhsby,rhsbz)
       !$acc update device(lambdaxy,a,b,c,rhsbx,rhsby,rhsbz)
 #if defined(_OPENACC)
       call set_cufft_wspace(pack(arrplan,.true.),istream_acc_queue_1)
 #endif
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
+      call bounduvw(cbcvel,n,nh_v,nh_g,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
       !$acc parallel loop collapse(3) default(present)
       !$OMP parallel do   collapse(3) DEFAULT(shared)
       do k=0,n(3)+1
@@ -479,11 +492,12 @@ module mod_sanity
       do k=1,n_z(3)
         bb(k) = b(k) + alpha
       end do
-      call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,is_bound,rhsbx,rhsby,rhsbz,w)
-      call solver(n,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,3),['c','c','f'],w)
+      call updt_rhs_b(['c','c','f'],cbcvel(:,:,3),n,nh_v,is_bound,rhsbx,rhsby,rhsbz,w)
+      call solver(n,nh_v,ng,arrplan,normfft,lambdaxy,a,bb,c,cbcvel(:,:,3),['c','c','f'],w)
       call fftend(arrplan)
-      call bounduvw(cbcvel,n,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w) ! actually, we are only interested in the boundary condition in `w`
-      call chk_helmholtz(lo,hi,l,dli,dzci,dzfi,alpha,p,w,cbcvel(:,:,3),is_bound,['c','c','f'],restot,resmax)
+      ! actually, we are only interested in the boundary condition in `w`
+      call bounduvw(cbcvel,n,nh_v,nh_g,bcvel,nb,is_bound,dl,dzc,dzf,u,v,w)
+      call chk_helmholtz(lo,hi,nh_p,nh_v,nh_g,l,dli,dzci,dzfi,alpha,p,w,cbcvel(:,:,3),is_bound,['c','c','f'],restot,resmax)
       passed_loc = resmax < small
       if(myid == 0.and.(.not.passed_loc)) &
       print*, 'ERROR: wrong solution of Helmholtz equation in z direction.'

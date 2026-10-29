@@ -104,6 +104,11 @@ logical, protected :: is_impdiff = .false., is_impdiff_1d = .false., &
                       is_fast_mom_kernels = .true., &
                       is_gridpoint_natural_channel = .false.
 !
+! halo widths of the velocity, pressure, and scalar fields; the grid arrays take the largest
+! (one layer suffices for CaNS; extensions with wider stencils may increase them here)
+!
+integer, parameter :: nh_v = 1, nh_p = 1, nh_s = 1, nh_g = max(nh_v,nh_p,nh_s)
+!
 ! i/o backend parameters
 !
 character(len=16), protected :: io_backend = 'mpiio'

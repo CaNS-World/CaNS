@@ -21,7 +21,7 @@ module mod_rk
   implicit none
   public rk,rk_scal,bulk_forcing_wall_shear
   contains
-  subroutine rk(rkpar,n,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,dt,visc,p, &
+  subroutine rk(rkpar,n,nh_v,nh_p,nh_g,dli,dzci,dzfi,grid_vol_ratio_c,grid_vol_ratio_f,dt,visc,p, &
                 is_forced,velf,bforce,gacc,beta,scalars,dudtrko,dvdtrko,dwdtrko,u,v,w,f)
 #if defined(_OPENACC)
     use mod_common_cudecomp, only: dudtrk_t => work, &
@@ -35,18 +35,19 @@ module mod_rk
     implicit none
     real(rp), intent(in   ), dimension(2)        :: rkpar
     integer , intent(in   ), dimension(3)        :: n
+    integer , intent(in   )                      :: nh_v,nh_p,nh_g
     real(rp), intent(in   ), dimension(3)        :: dli
-    real(rp), intent(in   ), dimension(0:)       :: dzci,dzfi
-    real(rp), intent(in   ), dimension(0:)       :: grid_vol_ratio_c,grid_vol_ratio_f
+    real(rp), intent(in   ), dimension(1-nh_g:)  :: dzci,dzfi
+    real(rp), intent(in   ), dimension(1-nh_g:)  :: grid_vol_ratio_c,grid_vol_ratio_f
     real(rp), intent(in   )                      :: dt,visc
-    real(rp), intent(in   ), dimension(0:,0:,0:) :: p
+    real(rp), intent(in   ), dimension(1-nh_p:,1-nh_p:,1-nh_p:) :: p
     logical , intent(in   ), dimension(3)        :: is_forced
     real(rp), intent(in   ), dimension(3)        :: velf,bforce
     real(rp), intent(in   ), dimension(3)        :: gacc
     real(rp), intent(in   )                      :: beta
     type(scalar), intent(in   ), target, dimension(:), optional :: scalars
     real(rp), intent(inout), dimension(1:,1:,1:) :: dudtrko,dvdtrko,dwdtrko
-    real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
+    real(rp), intent(inout), dimension(1-nh_v:,1-nh_v:,1-nh_v:) :: u,v,w
     real(rp), intent(out  ), dimension(3)        :: f
     real(rp), pointer, contiguous, dimension(:,:,:) :: s
 #if !defined(_OPENACC)
@@ -105,7 +106,7 @@ module mod_rk
     end if
     !
     if(is_fast_mom_kernels) then
-      call mom_xyz_ad(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,u,v,w,dudtrk,dvdtrk,dwdtrk,dudtrkd,dvdtrkd,dwdtrkd)
+      call mom_xyz_ad(n(1),n(2),n(3),nh_v,nh_g,dli(1),dli(2),dzci,dzfi,visc,u,v,w,dudtrk,dvdtrk,dwdtrk,dudtrkd,dvdtrkd,dwdtrkd)
     else
       !$acc parallel loop collapse(3) default(present) async(1)
       !$OMP parallel do   collapse(3) DEFAULT(shared)
@@ -119,9 +120,9 @@ module mod_rk
         end do
       end do
       if(.not.is_impdiff) then
-        call momx_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,u,dudtrk)
-        call momy_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,v,dvdtrk)
-        call momz_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,w,dwdtrk)
+        call momx_d(n(1),n(2),n(3),nh_v,nh_g,dli(1),dli(2),dzci,dzfi,visc,u,dudtrk)
+        call momy_d(n(1),n(2),n(3),nh_v,nh_g,dli(1),dli(2),dzci,dzfi,visc,v,dvdtrk)
+        call momz_d(n(1),n(2),n(3),nh_v,nh_g,dli(1),dli(2),dzci,dzfi,visc,w,dwdtrk)
       else
         !$acc parallel loop collapse(3) default(present) async(1)
         !$OMP parallel do   collapse(3) DEFAULT(shared)
@@ -135,21 +136,21 @@ module mod_rk
           end do
         end do
         if(.not.is_impdiff_1d) then
-          call momx_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,u,dudtrkd)
-          call momy_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,v,dvdtrkd)
-          call momz_d(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,visc,w,dwdtrkd)
+          call momx_d(n(1),n(2),n(3),nh_v,nh_g,dli(1),dli(2),dzci,dzfi,visc,u,dudtrkd)
+          call momy_d(n(1),n(2),n(3),nh_v,nh_g,dli(1),dli(2),dzci,dzfi,visc,v,dvdtrkd)
+          call momz_d(n(1),n(2),n(3),nh_v,nh_g,dli(1),dli(2),dzci,dzfi,visc,w,dwdtrkd)
         else
-          call momx_d_xy(n(1),n(2),n(3),dli(1),dli(2),visc,u,dudtrk )
-          call momy_d_xy(n(1),n(2),n(3),dli(1),dli(2),visc,v,dvdtrk )
-          call momz_d_xy(n(1),n(2),n(3),dli(1),dli(2),visc,w,dwdtrk )
-          call momx_d_z( n(1),n(2),n(3),dzci  ,dzfi  ,visc,u,dudtrkd)
-          call momy_d_z( n(1),n(2),n(3),dzci  ,dzfi  ,visc,v,dvdtrkd)
-          call momz_d_z( n(1),n(2),n(3),dzci  ,dzfi  ,visc,w,dwdtrkd)
+          call momx_d_xy(n(1),n(2),n(3),nh_v     ,dli(1),dli(2),visc,u,dudtrk )
+          call momy_d_xy(n(1),n(2),n(3),nh_v     ,dli(1),dli(2),visc,v,dvdtrk )
+          call momz_d_xy(n(1),n(2),n(3),nh_v     ,dli(1),dli(2),visc,w,dwdtrk )
+          call momx_d_z( n(1),n(2),n(3),nh_v,nh_g,dzci  ,dzfi  ,visc,u,dudtrkd)
+          call momy_d_z( n(1),n(2),n(3),nh_v,nh_g,dzci  ,dzfi  ,visc,v,dvdtrkd)
+          call momz_d_z( n(1),n(2),n(3),nh_v,nh_g,dzci  ,dzfi  ,visc,w,dwdtrkd)
         end if
       end if
-      call momx_a(n(1),n(2),n(3),dli(1),dli(2),dzfi,u,v,w,dudtrk)
-      call momy_a(n(1),n(2),n(3),dli(1),dli(2),dzfi,u,v,w,dvdtrk)
-      call momz_a(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,u,v,w,dwdtrk)
+      call momx_a(n(1),n(2),n(3),nh_v,nh_g,dli(1),dli(2),dzfi,u,v,w,dudtrk)
+      call momy_a(n(1),n(2),n(3),nh_v,nh_g,dli(1),dli(2),dzfi,u,v,w,dvdtrk)
+      call momz_a(n(1),n(2),n(3),nh_v,nh_g,dli(1),dli(2),dzci,dzfi,u,v,w,dwdtrk)
     end if
     !
 #if !defined(_LOOP_UNSWITCHING)
@@ -286,9 +287,9 @@ module mod_rk
 !        end do
 !      end do
 !    end do
-!    call momx_p(n(1),n(2),n(3),dli(1),bforce(1),p,dudtrk)
-!    call momy_p(n(1),n(2),n(3),dli(2),bforce(2),p,dvdtrk)
-!    call momz_p(n(1),n(2),n(3),dzci  ,bforce(3),p,dwdtrk)
+!    call momx_p(n(1),n(2),n(3),nh_p     ,dli(1),bforce(1),p,dudtrk)
+!    call momy_p(n(1),n(2),n(3),nh_p     ,dli(2),bforce(2),p,dvdtrk)
+!    call momz_p(n(1),n(2),n(3),nh_p,nh_g,dzci  ,bforce(3),p,dwdtrk)
 !    !$acc parallel loop collapse(3)
 !    !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
 !    do k=1,n(3)
@@ -304,7 +305,7 @@ module mod_rk
     !
     ! compute bulk velocity forcing
     !
-    call cmpt_bulk_forcing(n,is_forced,velf,grid_vol_ratio_c,grid_vol_ratio_f,u,v,w,f)
+    call cmpt_bulk_forcing(n,nh_v,nh_g,is_forced,velf,grid_vol_ratio_c,grid_vol_ratio_f,u,v,w,f)
     forcing_u = f(1)
     forcing_v = f(2)
     forcing_w = f(3)
@@ -328,11 +329,11 @@ module mod_rk
       !
       ! apply bulk forcing
       !
-      call bulk_forcing(n,is_forced,f,u,v,w)
+      call bulk_forcing(n,nh_v,is_forced,f,u,v,w)
     end if
   end subroutine rk
   !
-  subroutine rk_scal(rkpar,n,dli,l,dzci,dzfi,grid_vol_ratio_f,alpha,dt,is_bound,u,v,w, &
+  subroutine rk_scal(rkpar,n,nh_v,nh_s,nh_g,dli,l,dzci,dzfi,grid_vol_ratio_f,alpha,dt,is_bound,u,v,w, &
                      is_forced,scalf,ssource,fluxo,dsdtrko,s,f)
 #if defined(_OPENACC)
     use mod_common_cudecomp, only: dsdtrk_t => work
@@ -345,17 +346,18 @@ module mod_rk
     logical , parameter :: is_cmpt_wallflux = .false.
     real(rp), intent(in   ), dimension(2) :: rkpar
     integer , intent(in   ), dimension(3) :: n
+    integer , intent(in   )               :: nh_v,nh_s,nh_g
     real(rp), intent(in   ), dimension(3) :: dli,l
-    real(rp), intent(in   ), dimension(0:) :: dzci,dzfi
+    real(rp), intent(in   ), dimension(1-nh_g:) :: dzci,dzfi
     real(rp), intent(in   ), dimension(:) :: grid_vol_ratio_f
     real(rp), intent(in   ) :: alpha,dt
     logical , intent(in   ), dimension(0:1,3)    :: is_bound
-    real(rp), intent(in   ), dimension(0:,0:,0:) :: u,v,w
+    real(rp), intent(in   ), dimension(1-nh_v:,1-nh_v:,1-nh_v:) :: u,v,w
     logical , intent(in   ) :: is_forced
     real(rp), intent(in   ) :: scalf,ssource
     real(rp), intent(inout), dimension(0:1,3) :: fluxo
     real(rp), intent(inout), dimension(1:,1:,1:) :: dsdtrko
-    real(rp), intent(inout), dimension(0:,0:,0:) :: s
+    real(rp), intent(inout), dimension(1-nh_s:,1-nh_s:,1-nh_s:) :: s
     real(rp), intent(out  ) :: f
     !
 #if !defined(_OPENACC)
@@ -407,7 +409,7 @@ module mod_rk
     dsdtrk => dsdtrk_t
 #endif
     !
-    call scal(n(1),n(2),n(3),dli(1),dli(2),dzci,dzfi,alpha,u,v,w,s,dsdtrk,dsdtrkd)
+    call scal(n(1),n(2),n(3),nh_v,nh_s,nh_g,dli(1),dli(2),dzci,dzfi,alpha,u,v,w,s,dsdtrk,dsdtrkd)
 #if !defined(_LOOP_UNSWITCHING)
     !$acc parallel loop collapse(3) default(present) async(1)
     !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
@@ -449,7 +451,7 @@ module mod_rk
     ! compute wall scalar flux
     !
     if(is_cmpt_wallflux) then
-      call cmpt_scalflux(n,is_bound,l,dli,dzci,dzfi,alpha,s(:,:,:),flux)
+      call cmpt_scalflux(n,nh_s,nh_g,is_bound,l,dli,dzci,dzfi,alpha,s(:,:,:),flux)
       f = (factor1*sum((flux( 0,:)+flux( 1,:))/l(:)) + &
            factor2*sum((fluxo(0,:)+fluxo(1,:))/l(:)))
       fluxo(:,:) = flux(:,:)
@@ -458,7 +460,7 @@ module mod_rk
     ! bulk scalar forcing
     !
     if(is_forced) then
-      call bulk_mean(n,grid_vol_ratio_f,s(:,:,:),mean)
+      call bulk_mean(n,nh_s,nh_g,grid_vol_ratio_f,s(:,:,:),mean)
       f = scalf - mean
     end if
     if(is_impdiff) then
@@ -490,13 +492,14 @@ module mod_rk
     end do
   end subroutine rk_scal
   !
-  subroutine cmpt_bulk_forcing(n,is_forced,velf,grid_vol_ratio_c,grid_vol_ratio_f,u,v,w,f)
+  subroutine cmpt_bulk_forcing(n,nh,nh_g,is_forced,velf,grid_vol_ratio_c,grid_vol_ratio_f,u,v,w,f)
     implicit none
     integer , intent(in   ), dimension(3) :: n
+    integer , intent(in   )               :: nh,nh_g
     logical , intent(in   ), dimension(3) :: is_forced
     real(rp), intent(in   ), dimension(3) :: velf
-    real(rp), intent(in   ), dimension(0:) :: grid_vol_ratio_c,grid_vol_ratio_f
-    real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
+    real(rp), intent(in   ), dimension(1-nh_g:) :: grid_vol_ratio_c,grid_vol_ratio_f
+    real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: u,v,w
     real(rp), intent(out  ), dimension(3) :: f
     real(rp) :: mean
     !
@@ -504,20 +507,20 @@ module mod_rk
     !
     f(:) = 0.
     if(is_forced(1)) then
-      call bulk_mean(n,grid_vol_ratio_f,u,mean)
+      call bulk_mean(n,nh,nh_g,grid_vol_ratio_f,u,mean)
       f(1) = velf(1) - mean
     end if
     if(is_forced(2)) then
-      call bulk_mean(n,grid_vol_ratio_f,v,mean)
+      call bulk_mean(n,nh,nh_g,grid_vol_ratio_f,v,mean)
       f(2) = velf(2) - mean
     end if
     if(is_forced(3)) then
-      call bulk_mean(n,grid_vol_ratio_c,w,mean)
+      call bulk_mean(n,nh,nh_g,grid_vol_ratio_c,w,mean)
       f(3) = velf(3) - mean
     end if
   end subroutine cmpt_bulk_forcing
   !
-  subroutine bulk_forcing_wall_shear(irk,rkpar,dt,n,ng,lo,l,dli,dzc,dzci,dzfi,dzci_g,dzfi_g, &
+  subroutine bulk_forcing_wall_shear(irk,rkpar,dt,n,nh,nh_g,ng,lo,l,dli,dzc,dzci,dzfi,dzci_g,dzfi_g, &
                                      grid_vol_ratio_c,grid_vol_ratio_f,visc,is_bound,is_forced,velf,bforce,tau,tauo,u,v,w,f)
     !
     ! bulk forcing that balances exactly the wall shear over a Runge-Kutta substage
@@ -532,7 +535,7 @@ module mod_rk
     ! which can counter a slow drift of the bulk velocity due to round-off errors, at the cost of one
     ! volume average per time step
     !
-    use mod_bound, only: set_bc
+    use mod_bound, only: set_bc,bc_dist
     use mod_param, only: cbcvel,bcvel,cbcpre
     implicit none
     real(rp), parameter :: relax_time = 0.
@@ -540,20 +543,22 @@ module mod_rk
     real(rp), intent(in   ), dimension(2)        :: rkpar
     real(rp), intent(in   )                      :: dt
     integer , intent(in   ), dimension(3)        :: n,ng,lo
+    integer , intent(in   )                      :: nh,nh_g
     real(rp), intent(in   ), dimension(3)        :: l,dli
-    real(rp), intent(in   ), dimension(0:)       :: dzc,dzci,dzfi,dzci_g,dzfi_g,grid_vol_ratio_c,grid_vol_ratio_f
+    real(rp), intent(in   ), dimension(1-nh_g:)  :: dzc,dzci,dzfi,dzci_g,dzfi_g,grid_vol_ratio_c,grid_vol_ratio_f
     real(rp), intent(in   )                      :: visc
     logical , intent(in   ), dimension(0:1,3)    :: is_bound
     logical , intent(in   ), dimension(3)        :: is_forced
     real(rp), intent(in   ), dimension(3)        :: velf,bforce
     real(rp), intent(in   ), dimension(0:1,3,3)  :: tau,tauo
-    real(rp), intent(inout), dimension(0:,0:,0:) :: u,v,w
+    real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: u,v,w
     real(rp), intent(out  ), dimension(3)        :: f
     real(rp), dimension(3), save :: ubulk
     logical , save :: is_ubulk = .false.
     real(rp), allocatable, dimension(:,:), save :: gg
     real(rp), dimension(3), save :: alpha_s = huge(1._rp)
     real(rp), dimension(3), save :: gmean_s
+    real(rp), allocatable, dimension(:,:), save :: dr
     real(rp), dimension(ng(3)) :: aa,bb,cc,g
     real(rp), dimension(0:1,3,3) :: tau_i
     real(rp), dimension(3,3) :: tw,two
@@ -579,7 +584,7 @@ module mod_rk
         if(.not.is_forced(idir)) cycle
         f(idir) = db(idir) - factor12*bforce(idir) + (factor1*sum(tw(:,idir)) + factor2*sum(two(:,idir)))
       end do
-      call bulk_forcing(n,is_forced,f,u,v,w)
+      call bulk_forcing(n,nh,is_forced,f,u,v,w)
     else
       if(.not.allocated(gg)) then
         allocate(gg(n(3),3))
@@ -614,37 +619,44 @@ module mod_rk
       end if
       !
       ! wall shear along z of the unforced solution, with the ghost values set from the boundary conditions
+      ! (`dr` -> mirror distances, computed once)
       !
+      if(.not.allocated(dr)) then
+        allocate(dr(0:nh,0:1))
+        dr(:,0) = bc_dist(n(3),nh,nh_g,0,.true.,dzc)
+        dr(:,1) = bc_dist(n(3),nh,nh_g,1,.true.,dzc)
+      end if
       if(is_forced(1)) then
-        if(is_bound(0,3)) call set_bc(cbcvel(0,3,1),0,3,1,.true.,bcvel(0,3,1),dzc(0)   ,u)
-        if(is_bound(1,3)) call set_bc(cbcvel(1,3,1),1,3,1,.true.,bcvel(1,3,1),dzc(n(3)),u)
+        if(is_bound(0,3)) call set_bc(cbcvel(0,3,1),0,3,nh,.true.,bcvel(0,3,1),dr(:,0),u)
+        if(is_bound(1,3)) call set_bc(cbcvel(1,3,1),1,3,nh,.true.,bcvel(1,3,1),dr(:,1),u)
       end if
       if(is_forced(2)) then
-        if(is_bound(0,3)) call set_bc(cbcvel(0,3,2),0,3,1,.true.,bcvel(0,3,2),dzc(0)   ,v)
-        if(is_bound(1,3)) call set_bc(cbcvel(1,3,2),1,3,1,.true.,bcvel(1,3,2),dzc(n(3)),v)
+        if(is_bound(0,3)) call set_bc(cbcvel(0,3,2),0,3,nh,.true.,bcvel(0,3,2),dr(:,0),v)
+        if(is_bound(1,3)) call set_bc(cbcvel(1,3,2),1,3,nh,.true.,bcvel(1,3,2),dr(:,1),v)
       end if
-      call cmpt_wallshear(n,is_forced,is_bound,l,dli,dzci,dzfi,visc,u,v,w,tau_i(:,:,1),tau_i(:,:,2),tau_i(:,:,3))
+      call cmpt_wallshear(n,nh,nh_g,is_forced,is_bound,l,dli,dzci,dzfi,visc,u,v,w,tau_i(:,:,1),tau_i(:,:,2),tau_i(:,:,3))
       do idir=1,3
         if(.not.is_forced(idir)) cycle
         f(idir) = (db(idir) - factor12*bforce(idir) + (factor1*sum(tw(1:2,idir)) + factor2*sum(two(1:2,idir))) &
                    + .5*factor12*(tw(3,idir) + sum(tau_i(:,3,idir))/l(3)))/gmean_s(irk)
       end do
-      if(is_forced(1)) call add_profile_z(n,f(1),gg(:,irk),u)
-      if(is_forced(2)) call add_profile_z(n,f(2),gg(:,irk),v)
+      if(is_forced(1)) call add_profile_z(n,nh,f(1),gg(:,irk),u)
+      if(is_forced(2)) call add_profile_z(n,nh,f(2),gg(:,irk),v)
     end if
     if(relax_time > 0..and.irk == 3) then
-      if(is_forced(1)) call bulk_mean(n,grid_vol_ratio_f,u,ubulk(1))
-      if(is_forced(2)) call bulk_mean(n,grid_vol_ratio_f,v,ubulk(2))
-      if(is_forced(3)) call bulk_mean(n,grid_vol_ratio_c,w,ubulk(3))
+      if(is_forced(1)) call bulk_mean(n,nh,nh_g,grid_vol_ratio_f,u,ubulk(1))
+      if(is_forced(2)) call bulk_mean(n,nh,nh_g,grid_vol_ratio_f,v,ubulk(2))
+      if(is_forced(3)) call bulk_mean(n,nh,nh_g,grid_vol_ratio_c,w,ubulk(3))
       is_ubulk = .true.
     end if
   contains
-    subroutine add_profile_z(n,ff,gg,p)
+    subroutine add_profile_z(n,nh,ff,gg,p)
       implicit none
       integer , intent(in   ), dimension(3)        :: n
+      integer , intent(in   )                      :: nh
       real(rp), intent(in   )                      :: ff
       real(rp), intent(in   ), dimension(:)        :: gg
-      real(rp), intent(inout), dimension(0:,0:,0:) :: p
+      real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
       integer :: i,j,k
       !$acc parallel loop collapse(3) default(present) async(1)
       !$OMP PARALLEL DO   COLLAPSE(3) DEFAULT(shared)
