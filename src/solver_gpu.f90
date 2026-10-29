@@ -694,7 +694,7 @@ module mod_solver_gpu
       end do
     end do
     if(is_periodic) then
-      associate(cc_z => cc_z_0)
+      associate(cc_z => cc_z_0) ! note: does not work with CCE 19.0.0, fixed in CCE 20.0.0
       !$acc parallel loop gang vector collapse(2) default(present) private(z,den,pivot_tol) async(1)
       do j=1,ny_r
         do i=1,nx_r
