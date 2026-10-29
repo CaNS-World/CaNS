@@ -619,7 +619,7 @@ module mod_rk
       end if
       !
       ! wall shear along z of the unforced solution, with the ghost values set from the boundary conditions
-      ! (`dr` -> distances between the ghost layers and their mirror points, computed only once)
+      ! (`dr` -> mirror distances, computed once)
       !
       if(.not.allocated(dr)) then
         allocate(dr(0:nh,0:1))

@@ -36,9 +36,7 @@ module mod_bound
     integer :: idir,ib
     real(rp), allocatable, dimension(:,:,:), save :: drc,drf
     !
-    ! distances between the ghost layers and their mirror points, for centered (drc)
-    ! and non-centered (drf) components; these depend only on the grid, so they are
-    ! computed only once, for the widest halo
+    ! mirror distances of the centered (drc) and non-centered (drf) components, computed once
     !
     if(.not.allocated(drc) .and. .not.allocated(drf)) then
       allocate(drc(0:nh_g,0:1,3),drf(0:nh_g,0:1,3))
@@ -187,9 +185,7 @@ module mod_bound
     integer :: idir,ib
     real(rp), allocatable, dimension(:,:,:), save :: dr
     !
-    ! distances between the ghost layers and their mirror points; these depend only
-    ! on the grid, so they are computed only once, for the widest halo, which serves
-    ! the pressure and all scalars
+    ! mirror distances, computed once
     !
     if(.not.allocated(dr)) then
       allocate(dr(0:nh_g,0:1,3))
@@ -247,40 +243,28 @@ module mod_bound
   !
   function bc_dist(n,nh,nh_g,ibound,centered,ds) result(dr)
     !
-    ! distances between the `nh` ghost layers next to boundary `ibound` and their
-    ! mirror points across it, from the grid spacing `ds` (cell-center spacing for a
-    ! centered variable, face spacing otherwise); for a non-centered variable, `dr(0)`
-    ! is the spacing of the one-sided Neumann condition at the boundary node
+    ! distances between the ghost layers and their mirror points
+    ! (`dr(0)`: spacing at the boundary node of a non-centered variable)
     !
     implicit none
     integer , intent(in) :: n,nh,nh_g,ibound
     logical , intent(in) :: centered
     real(rp), intent(in), dimension(1-nh_g:) :: ds
     real(rp), dimension(0:nh)                :: dr
-    integer :: dh,m,m0,m1
+    integer :: dh,b
     !
+    b = ibound*n ! boundary index
     dr(:) = 0.
-    do dh=0,nh
-      if(centered) then
-        if(dh == nh) cycle ! a centered variable has `nh` ghost layers
-        if(ibound == 0) then
-          m0 = -dh  ; m1 = dh
-        else
-          m0 = n-dh ; m1 = n+dh
-        end if
-      else
-        if(     dh == 0     ) then
-          m0 = ibound*n; m1 = m0
-        else if(ibound == 0) then
-          m0 = 1-dh  ; m1 = dh
-        else
-          m0 = n+1-dh; m1 = n+dh
-        end if
-      end if
-      do m=m0,m1
-        dr(dh) = dr(dh) + ds(m)
+    if(centered) then
+      do dh=0,nh-1
+        dr(dh) = sum(ds(b-dh:b+dh))
       end do
-    end do
+    else
+      dr(0) = ds(b)
+      do dh=1,nh
+        dr(dh) = sum(ds(b+1-dh:b+dh))
+      end do
+    end if
   end function bc_dist
   !
   subroutine set_bc(ctype,ibound,idir,nh,centered,rvalue,dr,p)
