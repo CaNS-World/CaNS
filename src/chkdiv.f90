@@ -12,16 +12,17 @@ module mod_chkdiv
   private
   public chkdiv
   contains
-  subroutine chkdiv(lo,hi,l,dli,dzfi,u,v,w,divtot,divmax)
+  subroutine chkdiv(lo,hi,nh,nh_g,l,dli,dzfi,u,v,w,divtot,divmax)
     !
     ! checks the divergence of the velocity field
     !
     implicit none
     integer , intent(in), dimension(3) :: lo,hi
+    integer , intent(in)               :: nh,nh_g
     real(rp), intent(in), dimension(3) :: l
     real(rp), intent(in), dimension(3) :: dli
-    real(rp), intent(in), dimension(lo(3)-1:) :: dzfi
-    real(rp), intent(in), dimension(lo(1)-1:,lo(2)-1:,lo(3)-1:) :: u,v,w
+    real(rp), intent(in), dimension(lo(3)-nh_g:) :: dzfi
+    real(rp), intent(in), dimension(lo(1)-nh:,lo(2)-nh:,lo(3)-nh:) :: u,v,w
     real(rp), intent(out) :: divtot,divmax
     real(rp) :: dxi,dyi,div!,dzi
     integer :: i,j,k

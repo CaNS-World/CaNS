@@ -7,10 +7,10 @@ override LIBS += -L$(LIBS_DIR)/diezDecomp/build/lib -ldiezdecomp
 override INCS += -I$(LIBS_DIR)/diezDecomp/build/include
 else
 ifeq ($(strip $(USE_HIP)),1)
-override LIBS += -L$(LIBS_DIR)/hipDecomp/build/lib -lhipdecomp -lhipdecomp_fort
+override LIBS += -L$(LIBS_DIR)/hipDecomp/build/lib -lhipdecomp -lhipdecomp_fort -Wl,-rpath,$(abspath $(LIBS_DIR)/hipDecomp/build/lib)
 override INCS += -I$(LIBS_DIR)/hipDecomp/build/include
 else
-override LIBS += -L$(LIBS_DIR)/cuDecomp/build/lib -lcudecomp -lcudecomp_fort
+override LIBS += -L$(LIBS_DIR)/cuDecomp/build/lib -lcudecomp -lcudecomp_fort -Wl,-rpath,$(abspath $(LIBS_DIR)/cuDecomp/build/lib)
 override INCS += -I$(LIBS_DIR)/cuDecomp/build/include
 endif
 endif

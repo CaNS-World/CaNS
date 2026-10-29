@@ -9,7 +9,7 @@ module mod_common_mpi
   implicit none
   public
   integer :: myid,ierr
-  integer :: halo(3)
+  integer, allocatable, dimension(:,:) :: halo ! MPI halo datatypes, halo(idir,nh) for halo width nh
   integer :: ipencil_axis
   type(decomp_info) :: dinfo_dtdma
 end module mod_common_mpi

@@ -33,9 +33,10 @@ module mod_solver_gpu
   private
   public solver_gpu,solver_gaussel_z_gpu
   contains
-  subroutine solver_gpu(n,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p,is_dtdma_update,aa_z,cc_z,is_cache_aux)
+  subroutine solver_gpu(n,nh,ng,arrplan,normfft,lambdaxy,a,b,c,bc,c_or_f,p,is_dtdma_update,aa_z,cc_z,is_cache_aux)
     implicit none
     integer , intent(in), dimension(3) :: n,ng
+    integer , intent(in)               :: nh
 #if !defined(_USE_HIP)
     integer    , intent(in), dimension(2,2) :: arrplan
 #else
@@ -46,7 +47,7 @@ module mod_solver_gpu
     real(rp), intent(in), dimension(:) :: a,b,c
     character(len=1), dimension(0:1,3), intent(in) :: bc
     character(len=1), intent(in), dimension(3) :: c_or_f
-    real(rp), intent(inout), dimension(0:,0:,0:) :: p
+    real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
     logical , intent(inout), target, optional :: is_dtdma_update
     real(rp), intent(inout), dimension(:,:,:), optional :: aa_z,cc_z
     logical , intent(in   ), optional :: is_cache_aux
@@ -104,7 +105,7 @@ module mod_solver_gpu
       !$acc   host_data use_device(     p,px,work)
       !$omp target data use_device_addr(p,px,work)
 #endif
-      istat = cudecompTransposeYtoX(ch,gd_io,p ,px,work,dtype_rp,input_halo_extents  = [1,1,1], &
+      istat = cudecompTransposeYtoX(ch,gd_io,p ,px,work,dtype_rp,input_halo_extents  = [nh,nh,nh], &
                                                                  output_halo_extents = [0,0,0], &
                                                                  input_padding       = [0,0,0], &
                                                                  output_padding      = pad_io, &
@@ -122,7 +123,7 @@ module mod_solver_gpu
         !$acc   host_data use_device(     p,py,px,work)
         !$omp target data use_device_addr(p,py,px,work)
 #endif
-        istat = cudecompTransposeZtoY(ch,gd_io,p ,py,work,dtype_rp,input_halo_extents  = [1,1,1], &
+        istat = cudecompTransposeZtoY(ch,gd_io,p ,py,work,dtype_rp,input_halo_extents  = [nh,nh,nh], &
                                                                    output_halo_extents = [0,0,0], &
                                                                    input_padding       = [0,0,0], &
                                                                    output_padding      = pad_io, &
@@ -262,7 +263,7 @@ module mod_solver_gpu
       !$omp target data use_device_addr(px,p,work)
 #endif
       istat = cudecompTransposeXtoY(ch,gd_io,px,p ,work,dtype_rp,input_halo_extents  = [0,0,0], &
-                                                                 output_halo_extents = [1,1,1], &
+                                                                 output_halo_extents = [nh,nh,nh], &
                                                                  input_padding       = pad_io, &
                                                                  output_padding      = [0,0,0], &
                                                                  stream=istream)
@@ -278,7 +279,7 @@ module mod_solver_gpu
 #endif
         istat = cudecompTransposeXtoY(ch,gd   ,px,py,work,dtype_rp,stream=istream)
         istat = cudecompTransposeYtoZ(ch,gd_io,py,p ,work,dtype_rp,input_halo_extents  = [0,0,0], &
-                                                                   output_halo_extents = [1,1,1], &
+                                                                   output_halo_extents = [nh,nh,nh], &
                                                                    input_padding       = pad_io, &
                                                                    output_padding      = [0,0,0], &
                                                                    stream=istream)
@@ -734,7 +735,7 @@ module mod_solver_gpu
       end do
     end do
     if(is_periodic) then
-      associate(cc_z => cc_z_0)
+      associate(cc_z => cc_z_0) ! note: does not work with CCE 19.0.0, fixed in CCE 20.0.0
       !$acc parallel     loop gang vector collapse(2) default(present) private(z,den,pivot_tol) async(1)
       !$omp target teams loop             collapse(2)                  private(z,den,pivot_tol)
       do j=1,ny_r
@@ -1094,14 +1095,15 @@ module mod_solver_gpu
     end do
   end subroutine gaussel_dtdma_gpu_fast_1d
   !
-  subroutine solver_gaussel_z_gpu(n,ng,hi,a,b,c,bcz,c_or_f,norm,p)
+  subroutine solver_gaussel_z_gpu(n,nh,ng,hi,a,b,c,bcz,c_or_f,norm,p)
     implicit none
     integer , intent(in), dimension(3) :: n,ng,hi
+    integer , intent(in)               :: nh
     real(rp), intent(in), dimension(:) :: a,b,c
     character(len=1), dimension(0:1), intent(in) :: bcz
     character(len=1), intent(in), dimension(3) :: c_or_f
     real(rp), intent(in) :: norm
-    real(rp), intent(inout), dimension(0:,0:,0:) :: p
+    real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
     real(rp), pointer, contiguous, dimension(:,:,:) :: px,py,pz
     integer :: i,j,k,q
     logical :: is_periodic_z
@@ -1201,11 +1203,11 @@ module mod_solver_gpu
           integer :: ng_q
           !
           ng_q = ng(3)-merge(1,0,(c_or_f(3) == 'f').and.(bcz(1) /= 'P'))
-          call gaussel_dtdma_gpu_fast_1d(n(1),n(2),n(3)-q,lo_z,1,a(:ng_q),b(:ng_q),c(:ng_q),is_periodic_z,norm,p)
+          call gaussel_dtdma_gpu_fast_1d(n(1),n(2),n(3)-q,lo_z,nh,a(:ng_q),b(:ng_q),c(:ng_q),is_periodic_z,norm,p)
         end block
       end if
     else
-      call gaussel_gpu(n(1),n(2),n(3)-q,1,a,b,c,is_periodic_z,norm,p,work,solver_buf_0)
+      call gaussel_gpu(n(1),n(2),n(3)-q,nh,a,b,c,is_periodic_z,norm,p,work,solver_buf_0)
     end if
     !
     if((.not.is_poisson_dtdma).and.(.not.is_no_decomp_z)) then

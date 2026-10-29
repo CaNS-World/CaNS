@@ -102,7 +102,7 @@ module mod_output
     if(istat /= 0) print*, 'WARNING: could not generate the alias ', flink, ' to ', trim(fname), '.'
   end subroutine gen_alias
   !
-  subroutine out1d(fname,ng,lo,hi,idir,l,dl,z_g,dz,p)
+  subroutine out1d(fname,ng,nh,nh_g,lo,hi,idir,l,dl,z_g,dz,p)
     !
     ! writes the profile of a variable averaged
     ! over two domain directions
@@ -119,11 +119,12 @@ module mod_output
     implicit none
     character(len=*), intent(in) :: fname
     integer , intent(in), dimension(3) :: ng,lo,hi
+    integer , intent(in)               :: nh,nh_g
     integer , intent(in) :: idir
     real(rp), intent(in), dimension(3) :: l,dl
-    real(rp), intent(in), dimension(0:       ) :: z_g
-    real(rp), intent(in), dimension(lo(3)-1:) :: dz
-    real(rp), intent(in), dimension(lo(1)-1:,lo(2)-1:,lo(3)-1:) :: p
+    real(rp), intent(in), dimension(1-nh_g:) :: z_g
+    real(rp), intent(in), dimension(lo(3)-nh_g:) :: dz
+    real(rp), intent(in), dimension(lo(1)-nh:,lo(2)-nh:,lo(3)-nh:) :: p
     real(rp), allocatable, dimension(:) :: p1d
     integer :: i,j,k
     integer :: iunit
@@ -216,13 +217,14 @@ module mod_output
     end select
   end subroutine out1d
   !
-  subroutine out2d(fname,ng,nh,lo,hi,inorm,islice,p,varname,time,istep,x_g,y_g,z_g,is_pack)
+  subroutine out2d(fname,ng,nh,nh_g,lo,hi,inorm,islice,p,varname,time,istep,x_g,y_g,z_g,is_pack)
     !
     ! saves a planar slice of a scalar field using the structured subset engine
     !
     ! fname  -> name of the output file
     ! ng     -> global domain sizes
     ! nh     -> local halo extents
+    ! nh_g   -> halo width of the global coordinate arrays
     ! lo,hi  -> local interior ownership in global indices
     ! inorm  -> plane is perpendicular to direction inorm (1,2,3)
     ! islice -> plane is of constant index islice in direction inorm
@@ -232,14 +234,15 @@ module mod_output
     implicit none
     character(len=*), intent(in) :: fname
     integer , intent(in), dimension(3) :: ng,nh,lo,hi
+    integer , intent(in)               :: nh_g
     integer , intent(in) :: inorm,islice
     real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
     character(len=*), intent(in) :: varname
     real(rp), intent(in) :: time
     integer , intent(in) :: istep
-    real(rp), intent(in), dimension(1-nh(1):) :: x_g
-    real(rp), intent(in), dimension(1-nh(2):) :: y_g
-    real(rp), intent(in), dimension(1-nh(3):) :: z_g
+    real(rp), intent(in), dimension(1-nh_g:) :: x_g
+    real(rp), intent(in), dimension(1-nh_g:) :: y_g
+    real(rp), intent(in), dimension(1-nh_g:) :: z_g
     logical , intent(in), optional :: is_pack
     integer, dimension(3) :: lo_out,hi_out
     !
@@ -254,16 +257,17 @@ module mod_output
       lo_out(:) = [1    ,1    ,islice]
       hi_out(:) = [ng(1),ng(2),islice]
     end select
-    call io_write_subset(fname,varname,MPI_COMM_WORLD,ng,nh,lo,hi,lo_out,hi_out,[1,1,1],p,time,istep,x_g,y_g,z_g,is_pack)
+    call io_write_subset(fname,varname,MPI_COMM_WORLD,ng,nh,nh_g,lo,hi,lo_out,hi_out,[1,1,1],p,time,istep,x_g,y_g,z_g,is_pack)
   end subroutine out2d
   !
-  subroutine out3d(fname,ng,nh,lo,hi,lo_out,hi_out,nskip,p,varname,time,istep,x_g,y_g,z_g,is_pack)
+  subroutine out3d(fname,ng,nh,nh_g,lo,hi,lo_out,hi_out,nskip,p,varname,time,istep,x_g,y_g,z_g,is_pack)
     !
     ! saves a structured subset of a scalar field using the subset engine
     !
     ! fname  -> name of the output file
     ! ng     -> global domain sizes
     ! nh     -> local halo extents
+    ! nh_g   -> halo width of the global coordinate arrays
     ! lo,hi  -> local interior ownership in global indices
     ! lo_out -> first global point written in each direction
     ! hi_out -> last  global point written in each direction
@@ -273,17 +277,18 @@ module mod_output
     implicit none
     character(len=*), intent(in) :: fname
     integer , intent(in), dimension(3) :: ng,nh,lo,hi,lo_out,hi_out
+    integer , intent(in)               :: nh_g
     integer , intent(in), dimension(3) :: nskip
     real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
     character(len=*), intent(in) :: varname
     real(rp), intent(in) :: time
     integer , intent(in) :: istep
-    real(rp), intent(in), dimension(1-nh(1):) :: x_g
-    real(rp), intent(in), dimension(1-nh(2):) :: y_g
-    real(rp), intent(in), dimension(1-nh(3):) :: z_g
+    real(rp), intent(in), dimension(1-nh_g:) :: x_g
+    real(rp), intent(in), dimension(1-nh_g:) :: y_g
+    real(rp), intent(in), dimension(1-nh_g:) :: z_g
     logical , intent(in), optional :: is_pack
     !
-    call io_write_subset(fname,varname,MPI_COMM_WORLD,ng,nh,lo,hi,lo_out,hi_out,nskip,p,time,istep,x_g,y_g,z_g,is_pack)
+    call io_write_subset(fname,varname,MPI_COMM_WORLD,ng,nh,nh_g,lo,hi,lo_out,hi_out,nskip,p,time,istep,x_g,y_g,z_g,is_pack)
   end subroutine out3d
   !
   subroutine write_log_output(fname,fname_fld,varname,lo_out,hi_out,nskip,time,istep)
@@ -316,57 +321,63 @@ module mod_output
     end if
   end subroutine write_log_output
   !
-  subroutine write_visu_subset(datadir,fname_bin,fname_log,varname,ng,nh,lo,hi,lo_out,hi_out,nskip,time,istep,p,x_g,y_g,z_g,is_pack)
+  subroutine write_visu_subset(datadir,fname_bin,fname_log,varname,ng,nh,nh_g,lo,hi,lo_out,hi_out,nskip,time,istep,p, &
+                               x_g,y_g,z_g,is_pack)
     !
     ! wraps subset data output and subset metadata logging
     !
     implicit none
     character(len=*), intent(in)          :: datadir,fname_bin,fname_log,varname
     integer , intent(in), dimension(3)    :: ng,nh,lo,hi,lo_out,hi_out,nskip
+    integer , intent(in)                  :: nh_g
     real(rp), intent(in)                  :: time
     integer , intent(in)                  :: istep
     real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
-    real(rp), intent(in), dimension(1-nh(1):)   :: x_g
-    real(rp), intent(in), dimension(1-nh(2):)   :: y_g
-    real(rp), intent(in), dimension(1-nh(3):)   :: z_g
+    real(rp), intent(in), dimension(1-nh_g:)                                :: x_g
+    real(rp), intent(in), dimension(1-nh_g:)                                :: y_g
+    real(rp), intent(in), dimension(1-nh_g:)                                :: z_g
     logical , intent(in), optional        :: is_pack
     !
-    call out3d(trim(datadir)//trim(fname_bin),ng,nh,lo,hi,lo_out,hi_out,nskip,p,varname,time,istep,x_g,y_g,z_g,is_pack)
+    call out3d(trim(datadir)//trim(fname_bin),ng,nh,nh_g,lo,hi,lo_out,hi_out,nskip,p,varname,time,istep,x_g,y_g,z_g,is_pack)
     call write_log_output(trim(datadir)//trim(fname_log),trim(fname_bin),trim(varname),lo_out,hi_out,nskip,time,istep)
   end subroutine write_visu_subset
   !
-  subroutine write_visu_3d(datadir,fname_bin,fname_log,varname,ng,nh,lo,hi,lo_out,hi_out,nskip,time,istep,p,x_g,y_g,z_g,is_pack)
+  subroutine write_visu_3d(datadir,fname_bin,fname_log,varname,ng,nh,nh_g,lo,hi,lo_out,hi_out,nskip,time,istep,p, &
+                           x_g,y_g,z_g,is_pack)
     !
     ! wraps the calls of out3d and write_log_output into the same subroutine
     !
     implicit none
     character(len=*), intent(in)          :: datadir,fname_bin,fname_log,varname
     integer , intent(in), dimension(3)    :: ng,nh,lo,hi,lo_out,hi_out,nskip
+    integer , intent(in)                  :: nh_g
     real(rp), intent(in)                  :: time
     integer , intent(in)                  :: istep
     real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
-    real(rp), intent(in), dimension(1-nh(1):)   :: x_g
-    real(rp), intent(in), dimension(1-nh(2):)   :: y_g
-    real(rp), intent(in), dimension(1-nh(3):)   :: z_g
+    real(rp), intent(in), dimension(1-nh_g:)                                :: x_g
+    real(rp), intent(in), dimension(1-nh_g:)                                :: y_g
+    real(rp), intent(in), dimension(1-nh_g:)                                :: z_g
     logical , intent(in), optional        :: is_pack
     !
-    call write_visu_subset(datadir,fname_bin,fname_log,varname,ng,nh,lo,hi,lo_out,hi_out,nskip,time,istep,p,x_g,y_g,z_g,is_pack)
+    call write_visu_subset(datadir,fname_bin,fname_log,varname,ng,nh,nh_g,lo,hi,lo_out,hi_out,nskip,time,istep,p, &
+                           x_g,y_g,z_g,is_pack)
   end subroutine write_visu_3d
   !
-  subroutine write_visu_2d(datadir,fname_bin,fname_log,varname,ng,nh,lo,hi,inorm,nslice,time,istep,p,x_g,y_g,z_g,is_pack)
+  subroutine write_visu_2d(datadir,fname_bin,fname_log,varname,ng,nh,nh_g,lo,hi,inorm,nslice,time,istep,p,x_g,y_g,z_g,is_pack)
     !
     ! wraps the calls of out2d and write-log_output into the same subroutine
     !
     implicit none
     character(len=*), intent(in)          :: datadir,fname_bin,fname_log,varname
     integer , intent(in), dimension(3)    :: ng,nh,lo,hi
+    integer , intent(in)                  :: nh_g
     integer , intent(in)                  :: inorm,nslice
     real(rp), intent(in)                  :: time
     integer , intent(in)                  :: istep
     real(rp), intent(in), dimension(lo(1)-nh(1):,lo(2)-nh(2):,lo(3)-nh(3):) :: p
-    real(rp), intent(in), dimension(1-nh(1):)   :: x_g
-    real(rp), intent(in), dimension(1-nh(2):)   :: y_g
-    real(rp), intent(in), dimension(1-nh(3):)   :: z_g
+    real(rp), intent(in), dimension(1-nh_g:)                                :: x_g
+    real(rp), intent(in), dimension(1-nh_g:)                                :: y_g
+    real(rp), intent(in), dimension(1-nh_g:)                                :: z_g
     logical , intent(in), optional        :: is_pack
     integer , dimension(3) :: lo_out,hi_out
     !
@@ -381,17 +392,19 @@ module mod_output
       lo_out(:) = [1    ,1    ,nslice]
       hi_out(:) = [ng(1),ng(2),nslice]
     end select
-    call write_visu_subset(datadir,fname_bin,fname_log,varname,ng,nh,lo,hi,lo_out,hi_out,[1,1,1],time,istep,p,x_g,y_g,z_g,is_pack)
+    call write_visu_subset(datadir,fname_bin,fname_log,varname,ng,nh,nh_g,lo,hi,lo_out,hi_out,[1,1,1],time,istep,p, &
+                           x_g,y_g,z_g,is_pack)
   end subroutine write_visu_2d
   !
-  subroutine out1d_chan(fname,ng,lo,hi,idir,l,dl,z_g,u,v,w) ! e.g. for a channel with streamwise dir in x
+  subroutine out1d_chan(fname,ng,nh,nh_g,lo,hi,idir,l,dl,z_g,u,v,w) ! e.g. for a channel with streamwise dir in x
     implicit none
     character(len=*), intent(in) :: fname
     integer , intent(in), dimension(3) :: ng,lo,hi
+    integer , intent(in)               :: nh,nh_g
     integer , intent(in) :: idir
     real(rp), intent(in), dimension(3) :: l,dl
-    real(rp), intent(in), dimension(0:) :: z_g
-    real(rp), intent(in), dimension(lo(1)-1:,lo(2)-1:,lo(3)-1:) :: u,v,w
+    real(rp), intent(in), dimension(1-nh_g:) :: z_g
+    real(rp), intent(in), dimension(lo(1)-nh:,lo(2)-nh:,lo(3)-nh:) :: u,v,w
     real(rp), allocatable, dimension(:) :: um,vm,wm,u2,v2,w2,uw
     integer :: i,j,k
     integer :: iunit
@@ -452,15 +465,16 @@ module mod_output
     end select
   end subroutine out1d_chan
   !
-  subroutine out2d_duct(fname,ng,lo,hi,idir,l,dl,z_g,u,v,w) ! e.g. for a duct
+  subroutine out2d_duct(fname,ng,nh,nh_g,lo,hi,idir,l,dl,z_g,u,v,w) ! e.g. for a duct
     !
     implicit none
     character(len=*), intent(in) :: fname
     integer , intent(in), dimension(3) :: ng,lo,hi
+    integer , intent(in)               :: nh,nh_g
     integer , intent(in) :: idir
     real(rp), intent(in), dimension(3) :: l,dl
-    real(rp), intent(in), dimension(0:) :: z_g
-    real(rp), intent(in), dimension(lo(1)-1:,lo(2)-1:,lo(3)-1:) :: u,v,w
+    real(rp), intent(in), dimension(1-nh_g:) :: z_g
+    real(rp), intent(in), dimension(lo(1)-nh:,lo(2)-nh:,lo(3)-nh:) :: u,v,w
     real(rp), allocatable, dimension(:,:) :: um,vm,wm,u2,v2,w2,uv,uw,vw
     integer :: i,j,k
     integer :: iunit

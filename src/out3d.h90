@@ -5,7 +5,7 @@
 !
 ! -
   !
-  ! write_visu_3d(datadir,fname_bin,fname_log,varname,ng,nh,lo,hi,lo_out,hi_out,nskip,time,istep,p,x_g,y_g,z_g)
+  ! write_visu_3d(datadir,fname_bin,fname_log,varname,ng,nh,nh_g,lo,hi,lo_out,hi_out,nskip,time,istep,p,x_g,y_g,z_g)
   !
   ! saves a structured subset of field data and appends the corresponding
   ! metadata to a log file used for xdmf generation
@@ -17,7 +17,8 @@
   !              to create a vector, append _X _Y and _Z to the variable name, denoting the
   !              three components of the vector field
   ! ng        -> array with the global number of points in each direction
-  ! nh        -> halo extents
+  ! nh        -> halo extents of the field, e.g. [nh_v,nh_v,nh_v] for a velocity component
+  ! nh_g      -> halo width of the global coordinate arrays
   ! lo,hi     -> local interior ownership in global indices
   ! lo_out    -> first global point written in each direction, e.g. [1,1,1]
   ! hi_out    -> last  global point written in each direction, e.g. [ng(1),ng(2),ng(3)]
@@ -30,20 +31,20 @@
   ! modify the calls below as desired
   !
   call write_visu_3d(datadir,'vex_fld_'//fldnum//trim(io_ext),'log_visu_3d.out','Velocity_X', &
-                     ng,[1,1,1],lo,hi,[1,1,1],[ng(1),ng(2),ng(3)],[1,1,1],time,istep, &
+                     ng,[nh_v,nh_v,nh_v],nh_g,lo,hi,[1,1,1],[ng(1),ng(2),ng(3)],[1,1,1],time,istep, &
                      u,xc_g,yc_g,zc_g,.true.)
   call write_visu_3d(datadir,'vey_fld_'//fldnum//trim(io_ext),'log_visu_3d.out','Velocity_Y', &
-                     ng,[1,1,1],lo,hi,[1,1,1],[ng(1),ng(2),ng(3)],[1,1,1],time,istep, &
+                     ng,[nh_v,nh_v,nh_v],nh_g,lo,hi,[1,1,1],[ng(1),ng(2),ng(3)],[1,1,1],time,istep, &
                      v,xc_g,yc_g,zc_g,.true.)
   call write_visu_3d(datadir,'vez_fld_'//fldnum//trim(io_ext),'log_visu_3d.out','Velocity_Z', &
-                     ng,[1,1,1],lo,hi,[1,1,1],[ng(1),ng(2),ng(3)],[1,1,1],time,istep, &
+                     ng,[nh_v,nh_v,nh_v],nh_g,lo,hi,[1,1,1],[ng(1),ng(2),ng(3)],[1,1,1],time,istep, &
                      w,xc_g,yc_g,zc_g,.true.)
   call write_visu_3d(datadir,'pre_fld_'//fldnum//trim(io_ext),'log_visu_3d.out','Pressure_P', &
-                     ng,[1,1,1],lo,hi,[1,1,1],[ng(1),ng(2),ng(3)],[1,1,1],time,istep, &
+                     ng,[nh_p,nh_p,nh_p],nh_g,lo,hi,[1,1,1],[ng(1),ng(2),ng(3)],[1,1,1],time,istep, &
                      p,xc_g,yc_g,zc_g,.true.)
   do iscal = 1,nscal
     write(scalnum,'(i3.3)') iscal
     call write_visu_3d(datadir,'sca_'//scalnum//'_fld_'//fldnum//trim(io_ext),'log_visu_3d.out','Scalar_S'//scalnum, &
-                       ng,[1,1,1],lo,hi,[1,1,1],[ng(1),ng(2),ng(3)],[1,1,1],time,istep, &
+                       ng,[nh_s,nh_s,nh_s],nh_g,lo,hi,[1,1,1],[ng(1),ng(2),ng(3)],[1,1,1],time,istep, &
                        scalars(iscal)%val,xc_g,yc_g,zc_g,.true.)
   end do
