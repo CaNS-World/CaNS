@@ -6,7 +6,7 @@
 ! -
 module mod_bound
   use mpi
-  use mod_common_mpi, only: ierr,halo
+  use mod_common_mpi, only: ierr,halo,myid
   use mod_param     , only: ipencil_axis
   use mod_types
   implicit none
@@ -95,17 +95,17 @@ module mod_bound
     call updthalo(nh,halo(3,nh),nb(:,3),3,w,halos_norm)
 #else
     if(any(updt_norm(:))) then
-      call updthalo_gpu(nh,cbc(0,:,1)//cbc(1,:,1)==['PP','PP','PP'],u,1)
-      call updthalo_gpu(nh,cbc(0,:,2)//cbc(1,:,2)==['PP','PP','PP'],v,2)
-      call updthalo_gpu(nh,cbc(0,:,3)//cbc(1,:,3)==['PP','PP','PP'],w,3)
+      call updthalo_gpu(nh,cbc(0,:,1)//cbc(1,:,1)==['PP','PP','PP'],nb,u,1)
+      call updthalo_gpu(nh,cbc(0,:,2)//cbc(1,:,2)==['PP','PP','PP'],nb,v,2)
+      call updthalo_gpu(nh,cbc(0,:,3)//cbc(1,:,3)==['PP','PP','PP'],nb,w,3)
     end if
     if(updt_tang) then
-      call updthalo_gpu(nh,cbc(0,:,1)//cbc(1,:,1)==['PP','PP','PP'],u,2)
-      call updthalo_gpu(nh,cbc(0,:,1)//cbc(1,:,1)==['PP','PP','PP'],u,3)
-      call updthalo_gpu(nh,cbc(0,:,2)//cbc(1,:,2)==['PP','PP','PP'],v,1)
-      call updthalo_gpu(nh,cbc(0,:,2)//cbc(1,:,2)==['PP','PP','PP'],v,3)
-      call updthalo_gpu(nh,cbc(0,:,3)//cbc(1,:,3)==['PP','PP','PP'],w,1)
-      call updthalo_gpu(nh,cbc(0,:,3)//cbc(1,:,3)==['PP','PP','PP'],w,2)
+      call updthalo_gpu(nh,cbc(0,:,1)//cbc(1,:,1)==['PP','PP','PP'],nb,u,2)
+      call updthalo_gpu(nh,cbc(0,:,1)//cbc(1,:,1)==['PP','PP','PP'],nb,u,3)
+      call updthalo_gpu(nh,cbc(0,:,2)//cbc(1,:,2)==['PP','PP','PP'],nb,v,1)
+      call updthalo_gpu(nh,cbc(0,:,2)//cbc(1,:,2)==['PP','PP','PP'],nb,v,3)
+      call updthalo_gpu(nh,cbc(0,:,3)//cbc(1,:,3)==['PP','PP','PP'],nb,w,1)
+      call updthalo_gpu(nh,cbc(0,:,3)//cbc(1,:,3)==['PP','PP','PP'],nb,w,2)
     end if
 #endif
     !
@@ -155,11 +155,11 @@ module mod_bound
           call updthalo(nh,halo(3,nh),nb(:,3),3,w,HALO_UPPER)
 #else
         case(1)
-          call updthalo_gpu(nh,cbc(0,:,1)//cbc(1,:,1)==['PP','PP','PP'],u,1)
+          call updthalo_gpu(nh,cbc(0,:,1)//cbc(1,:,1)==['PP','PP','PP'],nb,u,1)
         case(2)
-          call updthalo_gpu(nh,cbc(0,:,2)//cbc(1,:,2)==['PP','PP','PP'],v,2)
+          call updthalo_gpu(nh,cbc(0,:,2)//cbc(1,:,2)==['PP','PP','PP'],nb,v,2)
         case(3)
-          call updthalo_gpu(nh,cbc(0,:,3)//cbc(1,:,3)==['PP','PP','PP'],w,3)
+          call updthalo_gpu(nh,cbc(0,:,3)//cbc(1,:,3)==['PP','PP','PP'],nb,w,3)
 #endif
         end select
       end do
@@ -218,7 +218,7 @@ module mod_bound
       call updthalo(nh,halo(idir,nh),nb(:,idir),idir,p,halo_side)
     end do
 #else
-    if(any(update_halo(:))) call updthalo_gpu(nh,cbc(0,:)//cbc(1,:)==['PP','PP','PP'],p)
+    if(any(update_halo(:))) call updthalo_gpu(nh,cbc(0,:)//cbc(1,:)==['PP','PP','PP'],nb,p)
 #endif
     !
     if(is_bound(0,1).and.update_halo(0)) then
@@ -304,13 +304,13 @@ module mod_bound
       select case(ctype)
       case('P')
         !
-        ! note: this periodic BC imposition assumes that the subroutine is only
-        ! called for non-decomposed directions, for which `n` is the domain
-        ! length in index space;
-        ! note that the `is_bound(:,:)` mask above (set under `initmpi.f90`)
-        ! is only true along the undecomposed pencil direction;
-        ! along decomposed directions, periodicity is naturally set via the
-        ! halo exchange
+        ! note: this periodic BC imposition assumes that the direction is held
+        ! by a single task, for which `n` is the domain length in index space:
+        ! the undecomposed pencil direction, where the `is_bound(:,:)` mask
+        ! above (set under `initmpi.f90`) is true, or a decomposed direction
+        ! with a single task (see `updthalo` and `updthalo_gpu`);
+        ! along the other decomposed directions, periodicity is naturally set
+        ! via the halo exchange
         !
         if(ibound == 0) then
           ig = 0-dh  ; im = n-dh
@@ -609,6 +609,15 @@ module mod_bound
       end select
     end if
     if(idir == ipencil_axis.or..not.(update_lower.or.update_upper)) return
+    if(all(nb(:) == myid)) then
+      !
+      ! single task along a periodic direction: the halo is wrapped locally, one layer
+      ! at a time, which also holds when the direction has fewer cells than halo layers
+      !
+      if(update_lower) call set_bc('P',0,idir,nh,.true.,0._rp,[0._rp],p)
+      if(update_upper) call set_bc('P',1,idir,nh,.true.,0._rp,[0._rp],p)
+      return
+    end if
     lo(:) = lbound(p)+nh
     hi(:) = ubound(p)-nh
     select case(idir)
@@ -693,7 +702,7 @@ module mod_bound
     end select
   end subroutine updthalo
 #if defined(_OPENACC)
-  subroutine updthalo_gpu(nh,periods,p,idir_only)
+  subroutine updthalo_gpu(nh,periods,nb,p,idir_only)
     use mod_types
 #if defined(_USE_DIEZDECOMP)
     use diezdecomp
@@ -709,17 +718,26 @@ module mod_bound
     implicit none
     integer , intent(in) :: nh
     logical , intent(in) :: periods(3)
+    integer , intent(in), dimension(0:1,3) :: nb
     real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
     integer , intent(in), optional :: idir_only
     integer :: idir,istat
-#if !defined(_USE_DIEZDECOMP)
-    !$acc host_data use_device(p,work)
-#endif
     do idir=1,3
       if(idir == ipencil_axis) cycle
       if(present(idir_only)) then
         if(idir /= idir_only) cycle
       end if
+      if(all(nb(:,idir) == myid)) then
+        !
+        ! single task along a periodic direction: local wrap, as in `updthalo`
+        !
+        call set_bc('P',0,idir,nh,.true.,0._rp,[0._rp],p)
+        call set_bc('P',1,idir,nh,.true.,0._rp,[0._rp],p)
+        cycle
+      end if
+#if !defined(_USE_DIEZDECOMP)
+      !$acc host_data use_device(p,work)
+#endif
       select case(ipencil_axis)
       case(1)
         istat = cudecompUpdateHalosX(ch,gd,p,work,dtype,[nh,nh,nh],periods,idir,stream=istream)
@@ -728,10 +746,10 @@ module mod_bound
       case(3)
         istat = cudecompUpdateHalosZ(ch,gd,p,work,dtype,[nh,nh,nh],periods,idir,stream=istream)
       end select
-    end do
 #if !defined(_USE_DIEZDECOMP)
-    !$acc end host_data
+      !$acc end host_data
 #endif
+    end do
   end subroutine updthalo_gpu
 #endif
 end module mod_bound
