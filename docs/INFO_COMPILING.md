@@ -36,7 +36,7 @@ NVIDIA GPU builds generate code for the major compute capabilities selected by t
 
 Typing `make libs` will build the 2DECOMP&FFT/cuDecomp/diezDecomp libraries; then typing `make` will compile the code and copy the executable `cans` to a `run/` folder; `make run` will also copy the default input files `*.in` under `src/` to the same `run/` folder.
 
-Note that cuDecomp needs to be dynamically linked before performing a GPU run. To do this, one should update the `LD_LIBRARY_PATH` environment variable as follows (from the root directory):
+The executable records the location of the cuDecomp (or hipDecomp) shared libraries, so a GPU run needs no further setup. If the `dependencies` folder is moved after the build, the libraries are found by updating the `LD_LIBRARY_PATH` environment variable instead, e.g. (from the root directory):
 ```shell
 export LD_LIBRARY_PATH=$PWD/dependencies/cuDecomp/build/lib:$LD_LIBRARY_PATH
 ```
