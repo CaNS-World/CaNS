@@ -18,7 +18,7 @@ module mod_sanity
   use mod_initflow  , only: add_noise
   use mod_initmpi   , only: initmpi
   use mod_initsolver, only: initsolver
-  use mod_param     , only: ipencil_axis,is_impdiff,is_impdiff_1d,is_poisson_dtdma,small, &
+  use mod_param     , only: ipencil_axis,nh_g,is_impdiff,is_impdiff_1d,is_poisson_dtdma,small, &
                             is_bulk_forcing_wall_shear,is_boussinesq_buoyancy,gacc
 #if !defined(_OPENACC)
   use mod_solver    , only: solver
@@ -95,6 +95,7 @@ module mod_sanity
     character(len=1), intent(in), dimension(0:1,3)   :: cbcpre
     logical, intent(out) :: passed
     integer, dimension(2) :: ii
+    integer, dimension(3) :: ntasks
     logical :: passed_loc
     integer :: idir,iscal
     character(len=2) :: bc01v
@@ -108,6 +109,17 @@ module mod_sanity
     passed_loc = all(dims(:)<=ng(ii)).and.all(dims(:)>=1)
     if(myid == 0.and.(.not.passed_loc)) &
       print*, 'ERROR: 1 <= dims(:) <= [ng(1),ng(2)], or [ng(1),ng(3)], or [ng(2),ng(3)] depending on the decomposition.'
+    passed = passed.and.passed_loc
+    !
+    ! the halo layers are filled from a single neighbour, or mirrored about a boundary;
+    ! only a periodic direction held by a single task may have fewer cells than halo layers,
+    ! as its halo is then wrapped locally, one layer at a time (see `updthalo`)
+    !
+    ntasks(:) = 1
+    ntasks(ii(:)) = max(dims(:),1)
+    passed_loc = all(ng(:)/ntasks(:) >= nh_g.or.(cbcpre(0,:)//cbcpre(1,:) == 'PP'.and.ntasks(:) == 1))
+    if(myid == 0.and.(.not.passed_loc)) &
+      print*, 'ERROR: fewer cells per task than halo layers (nh_g) along a split or non-periodic direction.'
     passed = passed.and.passed_loc
     !
     if(is_impdiff) then
