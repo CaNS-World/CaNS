@@ -228,9 +228,9 @@ module mod_initflow
     end if
     if(is_mean) then
       if(idir_s == 3) then
-        call set_mean(n,dzc(0:n(3)+1)/l(3)*(dl(1)/l(1))*(dl(2)/l(2)),ubulk,us(1:n(1),1:n(2),1:n(3)))
+        call set_mean(n,nh_g,dzc/l(3)*(dl(1)/l(1))*(dl(2)/l(2)),ubulk,us(1:n(1),1:n(2),1:n(3)))
       else
-        call set_mean(n,dzf(0:n(3)+1)/l(3)*(dl(1)/l(1))*(dl(2)/l(2)),ubulk,us(1:n(1),1:n(2),1:n(3)))
+        call set_mean(n,nh_g,dzf/l(3)*(dl(1)/l(1))*(dl(2)/l(2)),ubulk,us(1:n(1),1:n(2),1:n(3)))
       end if
       if(trim(ini) == 'iop') us(1:n(1),1:n(2),1:n(3)) = us(1:n(1),1:n(2),1:n(3)) - ubulk
     end if
@@ -391,7 +391,7 @@ module mod_initflow
       call add_noise(ng,lo,123,.05_rp,s(1:n(1),1:n(2),1:n(3)))
     end if
     if(is_mean) then
-      call set_mean(n,dzf(0:n(3)+1)/l(3)*(dl(1)/l(1))*(dl(2)/l(2)),sref,s(1:n(1),1:n(2),1:n(3)))
+      call set_mean(n,nh_g,dzf/l(3)*(dl(1)/l(1))*(dl(2)/l(2)),sref,s(1:n(1),1:n(2),1:n(3)))
     end if
   end subroutine initscal
   !
@@ -427,10 +427,11 @@ module mod_initflow
     end do
   end subroutine add_noise
   !
-  subroutine set_mean(n,grid_vol_ratio,mean,p)
+  subroutine set_mean(n,nh,grid_vol_ratio,mean,p)
   implicit none
   integer , intent(in), dimension(3) :: n
-  real(rp), intent(in), dimension(0:) :: grid_vol_ratio
+  integer , intent(in)               :: nh
+  real(rp), intent(in), dimension(1-nh:) :: grid_vol_ratio
   real(rp), intent(in) :: mean
   real(rp), intent(inout), dimension(:,:,:) :: p
   real(rp) :: meanold
