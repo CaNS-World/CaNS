@@ -38,17 +38,19 @@ module mod_scal
   end type scalar
   !
   contains
-  subroutine scal(nx,ny,nz,dxi,dyi,dzci,dzfi,visc,u,v,w,s,dsdt,dsdtd)
+  subroutine scal(nx,ny,nz,nh_v,nh_s,nh_g,dxi,dyi,dzci,dzfi,visc,u,v,w,s,dsdt,dsdtd)
     use mod_param, only: is_impdiff,is_impdiff_1d
     !
     ! computes convective and diffusive fluxes
     !
     implicit none
     integer , intent(in) :: nx,ny,nz
+    integer , intent(in) :: nh_v,nh_s,nh_g
     real(rp), intent(in) :: dxi,dyi
-    real(rp), intent(in), dimension(0:) :: dzci,dzfi
+    real(rp), intent(in), dimension(1-nh_g:) :: dzci,dzfi
     real(rp), intent(in) :: visc
-    real(rp), dimension(0:,0:,0:), intent(in) :: u,v,w,s
+    real(rp), dimension(1-nh_v:,1-nh_v:,1-nh_v:), intent(in) :: u,v,w
+    real(rp), dimension(1-nh_s:,1-nh_s:,1-nh_s:), intent(in) :: s
     real(rp), dimension(:,:,:), intent(out) :: dsdt
     real(rp), dimension(:,:,:), intent(out), optional :: dsdtd
     integer :: i,j,k
@@ -192,16 +194,17 @@ module mod_scal
 #endif
   end subroutine scal
   !
-  subroutine cmpt_scalflux(n,is_bound,l,dli,dzci,dzfi,alpha,s,flux)
+  subroutine cmpt_scalflux(n,nh,nh_g,is_bound,l,dli,dzci,dzfi,alpha,s,flux)
     use mpi
     use mod_param, only: cbcpre ! it is fine to use the pressure BC to check for periodicity
     implicit none
     integer , intent(in ), dimension(3) :: n
+    integer , intent(in )               :: nh,nh_g
     logical , intent(in ), dimension(0:1,3) :: is_bound
     real(rp), intent(in ), dimension(3)     :: l,dli
-    real(rp), intent(in ), dimension(0:)    :: dzci,dzfi
+    real(rp), intent(in ), dimension(1-nh_g:) :: dzci,dzfi
     real(rp), intent(in )                   :: alpha
-    real(rp), intent(in ), dimension(0:,0:,0:) :: s
+    real(rp), intent(in ), dimension(1-nh:,1-nh:,1-nh:) :: s
     real(rp), intent(out), dimension(0:1,1:3) :: flux
     real(rp) :: dsdxp,dsdxm,dsdyp,dsdym,dsdzp,dsdzm
     real(rp) :: flux_xp,flux_xm,flux_yp,flux_ym,flux_zp,flux_zm
@@ -300,12 +303,13 @@ module mod_scal
     call MPI_ALLREDUCE(MPI_IN_PLACE,flux,6,MPI_REAL_RP,MPI_SUM,MPI_COMM_WORLD,ierr)
   end subroutine cmpt_scalflux
   !
-  subroutine bulk_forcing_s(n,is_forced,ff,p)
+  subroutine bulk_forcing_s(n,nh,is_forced,ff,p)
     implicit none
     integer , intent(in   ), dimension(3) :: n
+    integer , intent(in   )               :: nh
     logical , intent(in   )               :: is_forced
     real(rp), intent(in   )               :: ff
-    real(rp), intent(inout), dimension(0:,0:,0:) :: p
+    real(rp), intent(inout), dimension(1-nh:,1-nh:,1-nh:) :: p
     integer :: i,j,k
     if(is_forced) then
       !$acc parallel     loop collapse(3) default(present) async(1)
@@ -320,7 +324,7 @@ module mod_scal
     end if
   end subroutine bulk_forcing_s
   !
-  subroutine initialize_scalars(scalars,nscal,n,n_z)
+  subroutine initialize_scalars(scalars,nscal,n,nh,n_z)
     use mod_param, only: alphai,iniscal,cbcscal,bcscal,ssource,is_sforced,scalf, &
                          is_impdiff
     !
@@ -328,10 +332,10 @@ module mod_scal
     !
     implicit none
     type(scalar), intent(inout), dimension(:) :: scalars
-    integer     , intent(in   ) :: nscal,n(3),n_z(3)
+    integer     , intent(in   ) :: nscal,n(3),nh,n_z(3)
     integer :: iscal
     do iscal=1,nscal
-      allocate(scalars(iscal)%val(0:n(1)+1,0:n(2)+1,0:n(3)+1))
+      allocate(scalars(iscal)%val(1-nh:n(1)+nh,1-nh:n(2)+nh,1-nh:n(3)+nh))
       allocate(scalars(iscal)%dsdtrko(n(1),n(2),n(3)))
       if(is_impdiff) then
         allocate(scalars(iscal)%lambdaxy(n_z(1),n_z(2)))

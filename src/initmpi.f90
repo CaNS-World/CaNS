@@ -47,16 +47,17 @@ module mod_initmpi
   integer, parameter :: CUDECOMP_RANK_NULL = -1
 #endif
   contains
-  subroutine initmpi(ng,dims,bc,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,nb,is_bound)
+  subroutine initmpi(ng,dims,bc,nh_max,lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z,nb,is_bound)
     implicit none
     integer, intent(in   ), dimension(3) :: ng
     integer, intent(inout), dimension(2) :: dims
     character(len=1), intent(in), dimension(0:1,3) :: bc
+    integer, intent(in   )                         :: nh_max
     integer, intent(out), dimension(3    ) :: lo,hi,n,n_x_fft,n_y_fft,lo_z,hi_z,n_z
     integer, intent(out), dimension(0:1,3) :: nb
     logical, intent(out), dimension(0:1,3) :: is_bound
     logical, dimension(3) :: periods
-    integer :: l,ipencil_t(2)
+    integer :: l,nh,ipencil_t(2)
 #if defined(_OPENACC) || defined(_OPENMP)
 #if defined(_OPENACC)
     integer(acc_device_kind) :: dev_type
@@ -165,7 +166,7 @@ module mod_initmpi
     conf%halo_comm_backend = cudecomp_h_comm_backend
     conf%transpose_axis_contiguous(:) = .false.
     istat = cudecompGridDescAutotuneOptionsSetDefaults(atune_conf)
-    atune_conf%halo_extents(:) = 1
+    atune_conf%halo_extents(:) = nh_max
     atune_conf%halo_periods(:) = periods(:)
     atune_conf%dtype = cudecomp_real_rp
     atune_conf%autotune_halo_backend = cudecomp_is_h_comm_autotune
@@ -273,8 +274,11 @@ module mod_initmpi
       hi_z(:) = yend(:)
       n_z(:)  = ysize(:)
     end if
-    do l=1,3
-      call makehalo(l,1,n(:),halo(l))
+    allocate(halo(3,nh_max))
+    do nh=1,nh_max
+      do l=1,3
+        call makehalo(l,nh,n(:),halo(l,nh))
+      end do
     end do
     nb(:,ipencil) = MPI_PROC_NULL
     call MPI_CART_SHIFT(comm_cart,0,1,nb(0,ipencil_t(1)),nb(1,ipencil_t(1)),ierr)

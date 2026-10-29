@@ -13,18 +13,20 @@ module mod_debug
   public chk_helmholtz
   contains
   !
-  subroutine chk_helmholtz(lo,hi,l,dli,dzci,dzfi,alpha,fp,fpp,bc,is_bound,c_or_f,difftot,diffmax)
+  subroutine chk_helmholtz(lo,hi,nh_fp,nh_fpp,nh_g,l,dli,dzci,dzfi,alpha,fp,fpp,bc,is_bound,c_or_f,difftot,diffmax)
     !
     ! this subroutine checks the correctness of the solution of a Helmholtz equation
     ! with collocated or staggered boundary conditions
     !
     implicit none
     integer , intent(in), dimension(3) :: lo,hi
+    integer , intent(in)               :: nh_fp,nh_fpp,nh_g
     real(rp), intent(in), dimension(3) :: l
     real(rp), intent(in), dimension(2) :: dli
-    real(rp), intent(in), dimension(lo(3)-1:) :: dzci,dzfi
+    real(rp), intent(in), dimension(lo(3)-nh_g:) :: dzci,dzfi
     real(rp), intent(in) :: alpha
-    real(rp), intent(in), dimension(lo(1)-1:,lo(2)-1:,lo(3)-1:) :: fp,fpp
+    real(rp), intent(in), dimension(lo(1)-nh_fp :,lo(2)-nh_fp :,lo(3)-nh_fp :) :: fp
+    real(rp), intent(in), dimension(lo(1)-nh_fpp:,lo(2)-nh_fpp:,lo(3)-nh_fpp:) :: fpp
     character(len=1), intent(in), dimension(0:1,3) :: bc
     character(len=1), intent(in), dimension(3) :: c_or_f
     logical         , intent(in), dimension(0:1,3) :: is_bound
@@ -90,7 +92,7 @@ module mod_debug
     call MPI_ALLREDUCE(MPI_IN_PLACE,diffmax,1,MPI_REAL_RP,MPI_MAX,MPI_COMM_WORLD,ierr)
     difftot = difftot/product(l(:))
   end subroutine chk_helmholtz
-  subroutine chk_poisson(lo,hi,l,dli,dzci,dzfi,fp,fpp,difftot,diffmax)
+  subroutine chk_poisson(lo,hi,nh,nh_g,l,dli,dzci,dzfi,fp,fpp,difftot,diffmax)
     !
     ! this subroutine checks if the Poisson equation is correctly solved;
     ! the inputs should be downcasted to precision `gp` to ensure proper
@@ -98,10 +100,11 @@ module mod_debug
     !
     implicit none
     integer , intent(in), dimension(3) :: lo,hi
+    integer , intent(in)               :: nh,nh_g
     real(rp), intent(in), dimension(3) :: l
     real(rp), intent(in), dimension(2) :: dli
-    real(rp), intent(in), dimension(lo(3)-1:) :: dzci,dzfi
-    real(rp), intent(in), dimension(lo(1)-1:,lo(2)-1:,lo(3)-1:) :: fp,fpp
+    real(rp), intent(in), dimension(lo(3)-nh_g:) :: dzci,dzfi
+    real(rp), intent(in), dimension(lo(1)-nh:,lo(2)-nh:,lo(3)-nh:) :: fp,fpp
     real(rp), intent(out) :: difftot,diffmax
     real(rp) :: val,res
     integer :: i,j,k

@@ -13,16 +13,17 @@ module mod_chkdt
   private
   public chkdt
   contains
-  subroutine chkdt(n,dl,dzci,dzfi,visc,alpha,u,v,w,dtmax)
+  subroutine chkdt(n,nh,nh_g,dl,dzci,dzfi,visc,alpha,u,v,w,dtmax)
     !
     ! computes maximum allowed time step
     !
     implicit none
     integer , intent(in), dimension(3) :: n
+    integer , intent(in)               :: nh,nh_g
     real(rp), intent(in), dimension(3) :: dl
-    real(rp), intent(in), dimension(0:) :: dzci,dzfi
+    real(rp), intent(in), dimension(1-nh_g:) :: dzci,dzfi
     real(rp), intent(in) :: visc,alpha
-    real(rp), intent(in), dimension(0:,0:,0:) :: u,v,w
+    real(rp), intent(in), dimension(1-nh:,1-nh:,1-nh:) :: u,v,w
     real(rp), intent(out) :: dtmax
     real(rp) :: dxi,dyi,dzi
     real(rp) :: ux,uy,uz,vx,vy,vz,wx,wy,wz

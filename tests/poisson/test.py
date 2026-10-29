@@ -4,6 +4,7 @@ import itertools
 import os
 from pathlib import Path
 import re
+import shlex
 import signal
 import subprocess
 
@@ -31,6 +32,9 @@ def main():
     rundir = testdir.parent.parent/'run'
     exe = rundir/'cans'
     output = rundir/'poisson'
+    # MPI launcher, e.g. MPIEXEC='srun -n' under Slurm; the rank count is appended.
+    launcher = shlex.split(os.environ.get('MPIEXEC', 'mpirun -n'))
+    timeout = float(os.environ.get('POISSON_TIMEOUT', '60'))
     # Allow oversubscription with both Open MPI 4 (ORTE) and 5 (PRRTE).
     os.environ.setdefault('OMPI_MCA_rmaps_base_oversubscribe', '1')
     os.environ.setdefault('PRTE_MCA_rmaps_default_mapping_policy', ':oversubscribe')
@@ -56,10 +60,10 @@ def main():
             text = re.sub(r'^'+re.escape(key)+r'\s*=.*$', key+' = '+value, text, flags=re.M)
         (case/'input.nml').write_text(text)
         with (case/'run.log').open('w') as log:
-            process = subprocess.Popen(['mpirun', '-n', str(dims[0]*dims[1]), str(exe)], cwd=case,
+            process = subprocess.Popen([*launcher, str(dims[0]*dims[1]), str(exe)], cwd=case,
                                        stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
             try:
-                status = process.wait(timeout=60)
+                status = process.wait(timeout=timeout)
             except subprocess.TimeoutExpired:
                 os.killpg(process.pid, signal.SIGKILL)
                 process.wait()
