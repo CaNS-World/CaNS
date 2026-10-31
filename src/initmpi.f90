@@ -159,8 +159,8 @@ module mod_initmpi
     atune_conf%halo_periods(:) = periods(:)
     atune_conf%dtype = cudecomp_real_rp
     atune_conf%autotune_halo_backend = cudecomp_is_h_comm_autotune
-    atune_conf%disable_nccl_backends    = .not.cudecomp_is_t_enable_nccl
-    atune_conf%disable_nvshmem_backends = .not.cudecomp_is_t_enable_nvshmem
+    atune_conf%disable_nccl_backends    = .not.cudecomp_is_h_enable_nccl
+    atune_conf%disable_nvshmem_backends = .not.cudecomp_is_h_enable_nvshmem
     if(all(conf_poi%transpose_comm_backend /= [CUDECOMP_TRANSPOSE_COMM_NVSHMEM, &
                                                CUDECOMP_TRANSPOSE_COMM_NVSHMEM_PL &
 #if !defined(_USE_HIP)
