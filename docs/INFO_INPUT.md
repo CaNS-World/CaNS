@@ -67,6 +67,8 @@ The admissible MPI process grids depend on the homogeneous direction:
 | Y | `Nx, 1, Nz` | `1, 1` | one MPI rank |
 | Z | `Nx, Ny, 1` | `P, 1` | `P <= min(Nx,Ny)` |
 
+`dims(1:2) = 0, 0` selects these process grids automatically.
+
 With `ng(3)=1`, use `is_poisson_dtdma = F`, and use a uniform Z grid.
 
 Grid and timestep formulas remain three-dimensional. Since the spacing in a one-cell direction equals its domain length, choose that length at least as large as the largest spacing in the two retained directions. Together with zero normal velocity, this avoids an artificial timestep restriction from the homogeneous direction. See the supplied 2D tests and examples.

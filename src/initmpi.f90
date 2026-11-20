@@ -53,7 +53,7 @@ module mod_initmpi
     integer, intent(out), dimension(0:1,3) :: nb
     logical, intent(out), dimension(0:1,3) :: is_bound
     logical, dimension(3) :: periods
-    integer :: l,nh,ipencil_t(2)
+    integer :: l,nh,ipencil_t(2),nrank
 #if defined(_OPENACC)
     integer(acc_device_kind) ::dev_type
     integer :: local_comm,mydev,ndev
@@ -71,6 +71,20 @@ module mod_initmpi
     !
     periods(:) = .false.
     where(bc(0,:)//bc(1,:) == 'PP') periods(:) = .true.
+    !
+    ! automatic processor grid with a single grid cell along one direction,
+    ! which cannot be partitioned in any of the pencil orientations
+    !
+    if(all(dims(:) == 0).and.any(ng(:) == 1)) then
+      call MPI_COMM_SIZE(MPI_COMM_WORLD,nrank,ierr)
+      if(     ng(1) == 1) then
+        dims(:) = [1,nrank]
+      else if(ng(3) == 1) then
+        dims(:) = [nrank,1]
+      else
+        dims(:) = [1,1] ! one grid cell along y: single task
+      end if
+    end if
     !
 #if defined(_OPENACC)
     call MPI_COMM_SPLIT_TYPE(MPI_COMM_WORLD,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,local_comm,ierr)
