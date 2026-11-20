@@ -33,7 +33,7 @@ module mod_timer
   integer, parameter :: TIMER_MAX_PENDING = 2048
   integer :: ce_slot_counter = 0
   integer :: ce_drain_n = 0
-  integer :: ce_drain_slot(    TIMER_MAX_PENDING)
+  integer :: ce_drain_slot(     TIMER_MAX_PENDING)
   integer :: ce_drain_timer_idx(TIMER_MAX_PENDING)
   integer, allocatable :: timer_tic_slot(:)
   !@cuf type(cudaEvent), allocatable :: ce_pool_start(:), ce_pool_end(:)
