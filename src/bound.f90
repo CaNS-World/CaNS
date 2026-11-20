@@ -76,9 +76,13 @@ module mod_bound
         updt_tang = .false.
       end select
     end if
+    !
+    ! the lower boundary value of the normal component is a halo cell: when the normal values are kept
+    ! (e.g., on restart, as a checkpoint does not hold it), a Dirichlet value is still set with the lower halos
+    !
     do idir = 1,3
       apply_norm_bc(0,idir) = .not.keep_norm .or. &
-                              (cbc(0,idir,idir)//cbc(1,idir,idir) == 'PP'.and.updt_norm(0))
+                              ((cbc(0,idir,idir)//cbc(1,idir,idir) == 'PP'.or.cbc(0,idir,idir) == 'D').and.updt_norm(0))
       apply_norm_bc(1,idir) = .not.keep_norm .or. &
                               (cbc(0,idir,idir)//cbc(1,idir,idir) == 'PP'.and.updt_norm(1))
     end do
